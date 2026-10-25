@@ -1,4 +1,5 @@
 using Borea.Core.Index;
+using Borea.Core.Logging;
 using Borea.Network.Index;
 using System.Net;
 using System.Net.Http.Headers;
@@ -469,6 +470,184 @@ namespace Borea.Network.Tests.Index
                 out _);
             await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        private const string VehiclesBody = """{ "snapshot_version": 1, "vehicles": [] }""";
+        private const string NewVehiclesBody = """{ "snapshot_version": 1, "vehicles": [{ "id": "ExampleRover" }] }""";
+
+        private string VehiclesPath => Path.Combine(_tempDir, "snapshot-vehicles.json");
+
+        private static ContentIndexFetcher CreateFetcherWithVehicles(HttpClient client, IBoreaLog? log = null) =>
+            new(
+                client,
+                new Uri("https://example.test/v1/content-index.json"),
+                new CandidateValidator(_ => Task.CompletedTask),
+                [ContentIndexTypeFiles.Vehicles],
+                log);
+
+        private static bool IsVehicles(HttpRequestMessage request) =>
+            request.RequestUri!.AbsoluteUri == "https://example.test/v1/snapshot-vehicles.json";
+
+        private async Task WriteCachedIndexAsync()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"index-1\"");
+        }
+
+        private async Task WriteCachedVehiclesAsync()
+        {
+            await File.WriteAllTextAsync(VehiclesPath, VehiclesBody);
+            await File.WriteAllTextAsync(VehiclesPath + ".etag", "\"vehicles-1\"");
+        }
+
+        [Fact]
+        public async Task FetchAsync_TypeFile_IsFetchedAgainstItsOwnETag()
+        {
+            await WriteCachedIndexAsync();
+            await WriteCachedVehiclesAsync();
+            var requests = new List<HttpRequestMessage>();
+            var client = FakeHttpMessageHandler.BuildClient(
+                request =>
+                {
+                    requests.Add(request);
+                    return new HttpResponseMessage(HttpStatusCode.NotModified);
+                },
+                out _);
+
+            var result = await CreateFetcherWithVehicles(client).FetchAsync(_destinationPath);
+
+            Assert.Equal(ContentIndexFetchResult.NotModified, result);
+            Assert.Equal(2, requests.Count);
+            Assert.Contains(requests[0].Headers.IfNoneMatch, tag => tag.Tag == "\"index-1\"");
+            Assert.True(IsVehicles(requests[1]));
+            Assert.Contains(requests[1].Headers.IfNoneMatch, tag => tag.Tag == "\"vehicles-1\"");
+        }
+
+        [Fact]
+        public async Task FetchAsync_TypeFileNotFoundWithoutACopy_WritesNothing()
+        {
+            var log = new ListLog();
+            var client = FakeHttpMessageHandler.BuildClient(
+                request => IsVehicles(request) ? new HttpResponseMessage(HttpStatusCode.NotFound) : JsonResponseWithETag(SampleIndexBody, "\"index-1\""),
+                out _);
+
+            var result = await CreateFetcherWithVehicles(client, log).FetchAsync(_destinationPath);
+
+            Assert.Equal(ContentIndexFetchResult.Downloaded, result);
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.False(File.Exists(VehiclesPath));
+            Assert.False(File.Exists(VehiclesPath + ".etag"));
+            Assert.Empty(log.Lines);
+        }
+
+        [Theory]
+        [InlineData(HttpStatusCode.NotFound, false)]
+        [InlineData(HttpStatusCode.InternalServerError, true)]
+        public async Task FetchAsync_TypeFileFailsWithACopy_KeepsTheCopyAndTheIndexResult(HttpStatusCode status, bool logged)
+        {
+            await WriteCachedIndexAsync();
+            await WriteCachedVehiclesAsync();
+            var log = new ListLog();
+            var client = FakeHttpMessageHandler.BuildClient(
+                request => new HttpResponseMessage(IsVehicles(request) ? status : HttpStatusCode.NotModified),
+                out _);
+
+            var result = await CreateFetcherWithVehicles(client, log).FetchAsync(_destinationPath);
+
+            Assert.Equal(ContentIndexFetchResult.NotModified, result);
+            Assert.Equal(VehiclesBody, await File.ReadAllTextAsync(VehiclesPath));
+            Assert.Equal("\"vehicles-1\"", await File.ReadAllTextAsync(VehiclesPath + ".etag"));
+            Assert.Equal(logged, log.Lines.Any(line => line.Contains("snapshot-vehicles.json", StringComparison.Ordinal)));
+        }
+
+        [Theory]
+        [InlineData("""{ "snapshot_version": 1, "vehicles": {} }""")]
+        [InlineData("""{ "snapshot_version": 2, "vehicles": [] }""")]
+        [InlineData("not json")]
+        public async Task FetchAsync_UnusableTypeFile_IsRefusedAndTheCopyKept(string body)
+        {
+            await WriteCachedIndexAsync();
+            await WriteCachedVehiclesAsync();
+            var log = new ListLog();
+            var client = FakeHttpMessageHandler.BuildClient(
+                request => IsVehicles(request) ? JsonResponseWithETag(body, "\"vehicles-2\"") : new HttpResponseMessage(HttpStatusCode.NotModified),
+                out _);
+
+            var result = await CreateFetcherWithVehicles(client, log).FetchAsync(_destinationPath);
+
+            Assert.Equal(ContentIndexFetchResult.NotModified, result);
+            Assert.Equal(VehiclesBody, await File.ReadAllTextAsync(VehiclesPath));
+            Assert.Equal("\"vehicles-1\"", await File.ReadAllTextAsync(VehiclesPath + ".etag"));
+            Assert.False(File.Exists(VehiclesPath + ".tmp"));
+            Assert.Contains(log.Lines, line => line.Contains("snapshot-vehicles.json", StringComparison.Ordinal));
+        }
+
+        [Fact]
+        public async Task FetchAsync_OnlyTheTypeFileChanged_IsDownloaded()
+        {
+            await WriteCachedIndexAsync();
+            await WriteCachedVehiclesAsync();
+            var client = FakeHttpMessageHandler.BuildClient(
+                request => IsVehicles(request) ? JsonResponseWithETag(NewVehiclesBody, "\"vehicles-2\"") : new HttpResponseMessage(HttpStatusCode.NotModified),
+                out _);
+
+            var result = await CreateFetcherWithVehicles(client).FetchAsync(_destinationPath);
+
+            Assert.Equal(ContentIndexFetchResult.Downloaded, result);
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal(NewVehiclesBody, await File.ReadAllTextAsync(VehiclesPath));
+            Assert.Equal("\"vehicles-2\"", await File.ReadAllTextAsync(VehiclesPath + ".etag"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_IndexFails_FetchesNoTypeFile()
+        {
+            var requests = 0;
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ =>
+                {
+                    requests++;
+                    return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+                },
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcherWithVehicles(client).FetchAsync(_destinationPath));
+
+            Assert.Equal(1, requests);
+        }
+
+        [Fact]
+        public async Task FetchAsync_CanceledWhileATypeFileIsFetched_Throws()
+        {
+            await WriteCachedIndexAsync();
+            using var cancellation = new CancellationTokenSource();
+            var client = FakeHttpMessageHandler.BuildClient(
+                (request, _) =>
+                {
+                    if (!IsVehicles(request))
+                        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotModified));
+
+                    cancellation.Cancel();
+                    return Task.FromCanceled<HttpResponseMessage>(cancellation.Token);
+                },
+                out _);
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateFetcherWithVehicles(client).FetchAsync(_destinationPath, cancellation.Token));
+        }
+
+        private sealed class ListLog : IBoreaLog
+        {
+            private readonly List<string> _lines = [];
+
+            public IReadOnlyList<string> Lines => _lines;
+
+            public string CurrentFilePath => "borea.log";
+
+            public void Write(string message) => _lines.Add(message);
+
+            public void Write(string message, Exception exception) => _lines.Add(message);
+
+            public IReadOnlyList<string> ReadRecentLines(int maxLines) => _lines;
         }
 
         private sealed class CandidateValidator : IContentIndexCandidateValidator

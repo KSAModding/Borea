@@ -4,8 +4,9 @@ namespace Borea.Storage.Index.Dtos;
 
 public sealed class CompatibilityDto
 {
+    /// <summary>Absent only on a vehicle or save, which ModMetadata and ModPackMetadata check.</summary>
     [JsonPropertyName("game_min")]
-    public required string GameMin { get; set; }
+    public string? GameMin { get; set; }
 
     [JsonPropertyName("game_max")]
     public string? GameMax { get; set; }

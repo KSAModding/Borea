@@ -49,6 +49,9 @@ internal sealed class ViewModelHarness : IDisposable
     /// <summary>Every request the services sent.</summary>
     public ConcurrentQueue<Uri> Requests { get; } = new();
 
+    /// <summary>The requests for the main document of the index, without the type files next to it.</summary>
+    public int IndexDocumentRequests => Requests.Count(uri => uri.AbsoluteUri == "https://ksamodding.github.io/content-index-releases/v1/index.json");
+
     private Func<HttpRequestMessage, HttpResponseMessage?>? _respond;
 
     private Func<string, string>? _editSnapshot;
@@ -383,6 +386,10 @@ internal sealed class ViewModelHarness : IDisposable
 
             if (request.RequestUri?.AbsoluteUri.StartsWith("https://ksamodding.github.io/content-index-releases/", StringComparison.Ordinal) != true)
                 return owner._respond?.Invoke(request) ?? throw new HttpRequestException($"No network in tests: {request.RequestUri}");
+
+            // The vehicle and save files answer 404 until the index publishes them.
+            if (!request.RequestUri.AbsoluteUri.EndsWith("/index.json", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
 
             if (owner.IndexRequest is { } held)
                 await held();

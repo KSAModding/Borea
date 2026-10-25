@@ -24,4 +24,20 @@ public enum ContentType
     /// A value this client version does not know.
     /// </summary>
     Unknown = 3,
+
+    /// <summary>
+    /// A vehicle, installed as one folder under Vehicles (RFC 0085).
+    /// </summary>
+    Vehicle = 4,
+
+    /// <summary>
+    /// A save, installed as one folder under saves (RFC 0085).
+    /// </summary>
+    Save = 5,
+}
+
+public static class ContentTypeExtensions
+{
+    /// <summary>True for the types the player changes in their folder: no code, no loader, and one folder each.</summary>
+    public static bool IsVehicleOrSave(this ContentType type) => type is ContentType.Vehicle or ContentType.Save;
 }

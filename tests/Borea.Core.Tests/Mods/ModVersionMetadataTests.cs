@@ -18,7 +18,8 @@ public sealed class ModVersionMetadataTests
         int specVersion = SpecVersions.Highest,
         string? changelogText = null,
         DownloadInfo? download = null,
-        bool yanked = false) =>
+        bool yanked = false,
+        IReadOnlyList<string>? manages = null) =>
         new(
             specVersion: specVersion,
             modId: "test-mod",
@@ -36,7 +37,8 @@ public sealed class ModVersionMetadataTests
             install: install,
             loader: loader,
             changelogText: changelogText,
-            yanked: yanked);
+            yanked: yanked,
+            manages: manages);
 
     [Fact]
     public void Constructor_ValidInput_SetsAllProperties()
@@ -156,5 +158,46 @@ public sealed class ModVersionMetadataTests
         var release = Build(specVersion: SpecVersions.Highest + 1);
 
         Assert.True(SpecVersions.IsAboveHighest(release.SpecVersion));
+    }
+
+    [Theory]
+    [InlineData(ContentType.Vehicle)]
+    [InlineData(ContentType.Save)]
+    public void Constructor_VehicleOrSaveWithAValidFolder_KeepsIt(ContentType type)
+    {
+        var metadata = Build(type: type, install: new InstallInfo(null, derived: true, folder: "Example Rover"));
+
+        Assert.Equal("Example Rover", metadata.Install!.Folder);
+        Assert.Null(metadata.Install.Root);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("CON")]
+    [InlineData("Example  Rover")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")]
+    public void Constructor_VehicleWithoutAFolderTheGameKeeps_ThrowsArgumentException(string? folder)
+    {
+        Assert.Throws<ArgumentException>(() => Build(type: ContentType.Vehicle, install: new InstallInfo("Example Rover", derived: true, folder: folder)));
+    }
+
+    [Fact]
+    public void Constructor_VehicleWithoutAnInstallTable_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => Build(type: ContentType.Vehicle));
+    }
+
+    [Fact]
+    public void Constructor_VehicleWithTargetPathOrManages_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => Build(type: ContentType.Vehicle, install: new InstallInfo(null, true, target: InstallAnchor.UserData, folder: "Example Rover")));
+        Assert.Throws<ArgumentException>(() => Build(type: ContentType.Vehicle, install: new InstallInfo(null, true, path: "Vehicles", folder: "Example Rover")));
+        Assert.Throws<ArgumentException>(() => Build(type: ContentType.Vehicle, install: new InstallInfo(null, true, folder: "Example Rover"), manages: ["Vehicles/Example Rover"]));
+    }
+
+    [Fact]
+    public void Constructor_ModWithoutAnInstallTable_IsStillAccepted()
+    {
+        Assert.Null(Build(type: ContentType.Mod).Install);
     }
 }

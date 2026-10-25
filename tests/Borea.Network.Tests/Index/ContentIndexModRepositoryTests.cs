@@ -458,6 +458,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetInstanceGameLogPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceLaunchLogPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstancePlaytimePath(Guid instanceId) => throw new NotSupportedException();
+        public string GetInstanceInstalledContentPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceManifestPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceMetadataPath(Guid instanceId) => throw new NotSupportedException();
         public string? GetGameDirectoryPath() => throw new NotSupportedException();

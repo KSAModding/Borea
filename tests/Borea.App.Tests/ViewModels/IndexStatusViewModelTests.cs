@@ -237,7 +237,7 @@ public sealed class IndexStatusViewModelTests
         json.Replace("\"name\": \"Advanced Flight Computer\"", "\"name\": \"" + NewName + "\"", StringComparison.Ordinal);
 
     private static int IndexRequests(ViewModelHarness harness) =>
-        harness.Requests.Count(uri => uri.AbsoluteUri.StartsWith("https://ksamodding.github.io/content-index-releases/", StringComparison.Ordinal));
+        harness.IndexDocumentRequests;
 
     /// <summary>A clock that reads a fixed span ahead of the real one.</summary>
     private sealed class ShiftedClock(TimeSpan offset) : TimeProvider

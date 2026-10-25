@@ -461,8 +461,13 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.Equal(ContentIndexModRepository.SourceName, latest.Source);
         Assert.Equal(InstallAnchor.Standalone, latest.Install!.Target);
         Assert.Equal(
-            ["https://ksamodding.github.io/content-index-releases/v1/index.json"],
+            [
+                "https://ksamodding.github.io/content-index-releases/v1/index.json",
+                "https://ksamodding.github.io/content-index-releases/v1/snapshot-vehicles.json",
+                "https://ksamodding.github.io/content-index-releases/v1/snapshot-saves.json",
+            ],
             handler.RequestUris.Select(uri => uri.AbsoluteUri));
+        Assert.Empty(retainedSnapshot.Vehicles);
     }
 
     [Fact]
@@ -731,6 +736,10 @@ public sealed class BoreaServicesTests : IDisposable
             {
                 throw new InvalidOperationException($"Unexpected request to {request.RequestUri}.");
             }
+
+            // The type files answer 404 until the index publishes them.
+            if (!request.RequestUri.AbsoluteUri.EndsWith("/index.json", StringComparison.Ordinal))
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
