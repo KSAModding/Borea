@@ -16,6 +16,25 @@ public sealed class StewardQueueKindsTests
         Assert.False(hasOtherFiles);
     }
 
+    [Theory]
+    [InlineData("vehicle", "vehicles/ExampleRover.toml", StewardQueueKind.Vehicle)]
+    [InlineData("save", "saves/ExampleSave.toml", StewardQueueKind.Save)]
+    public void Of_AnAddedVehicleOrSave_IsContentOfItsKind(string label, string path, StewardQueueKind kind)
+    {
+        var (kinds, hasOtherFiles) = StewardQueueKinds.Of(ContentIndex, [label, "needs-steward"], [new(path, "added")]);
+
+        Assert.Equal([kind], kinds);
+        Assert.False(hasOtherFiles);
+    }
+
+    [Fact]
+    public void Of_AllFourDocumentLabels_GivesTheKindsInTheirOrder()
+    {
+        var (kinds, _) = StewardQueueKinds.Of(ContentIndex, ["save", "vehicle", "pack", "listing"], Changed("saves/S.toml", "vehicles/V.toml"));
+
+        Assert.Equal([StewardQueueKind.Listing, StewardQueueKind.Pack, StewardQueueKind.Vehicle, StewardQueueKind.Save], kinds);
+    }
+
     [Fact]
     public void Of_StewardFilesOfContentIndex_AddTheirKindsToTheLabels()
     {
@@ -33,6 +52,8 @@ public sealed class StewardQueueKindsTests
     [InlineData("listings/nested/MyMod.toml")]
     [InlineData("packs/my-pack/notes.md")]
     [InlineData("Tags.toml")]
+    [InlineData("vehicles/a/b.toml")]
+    [InlineData("saves/README.md")]
     public void Of_AnyOtherFileOfContentIndex_IsReviewedOnGitHub(string path)
     {
         var (kinds, hasOtherFiles) = StewardQueueKinds.Of(ContentIndex, ["listing"], Changed("listings/MyMod.toml", path));
@@ -61,6 +82,7 @@ public sealed class StewardQueueKindsTests
     [InlineData(Releases, "releases/MyMod/1.0.1.json", "renamed", "releases/MyMod/1.0.0.json")]
     [InlineData(ContentIndex, "listings/MyMod.toml", "removed", null)]
     [InlineData(ContentIndex, "packs/my-pack/1.0.1.toml", "renamed", "packs/my-pack/1.0.0.toml")]
+    [InlineData(ContentIndex, "vehicles/ExampleRover.toml", "removed", null)]
     public void Of_RemovedOrRenamedDocument_IsReviewedOnGitHub(string repository, string path, string status, string? previousPath)
     {
         var (kinds, hasOtherFiles) = StewardQueueKinds.Of(repository, ["needs-steward"], [new(path, status, previousPath)]);
@@ -93,9 +115,14 @@ public sealed class StewardQueueKindsTests
     [InlineData(ContentIndex, "listings/MyMod.toml", "renamed", null)]
     [InlineData(ContentIndex, "tags.toml", "modified", null)]
     [InlineData(ContentIndex, "listings/nested/MyMod.toml", "added", null)]
+    [InlineData(ContentIndex, "vehicles/ExampleRover.toml", "added", StewardQueueKind.Vehicle)]
+    [InlineData(ContentIndex, "saves/ExampleSave.Toml", "modified", StewardQueueKind.Save)]
+    [InlineData(ContentIndex, "vehicles/ExampleRover.toml", "removed", null)]
+    [InlineData(ContentIndex, "vehicles/a/b.toml", "added", null)]
     [InlineData(Releases, "listings/MyMod.toml", "added", null)]
+    [InlineData(Releases, "vehicles/ExampleRover.toml", "added", null)]
     [InlineData(Releases, "releases/MyMod/1.0.0.json", "modified", null)]
-    public void DocumentOf_OnlyAWrittenListingOrPackOfContentIndex(string repository, string path, string status, StewardQueueKind? kind)
+    public void DocumentOf_OnlyAWrittenListingPackVehicleOrSaveOfContentIndex(string repository, string path, string status, StewardQueueKind? kind)
     {
         Assert.Equal(kind, StewardQueueKinds.DocumentOf(repository, path, status));
     }

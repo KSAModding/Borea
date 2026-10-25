@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Borea.Core.GitHub;
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 using Borea.Core.Stewardship;
 using Borea.Network.Listings;
 
@@ -149,10 +150,48 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
         }
 
         // The checks refuse a listing name without a lower-case .toml, and the proof reads no such listing, so it cannot be checked.
-        var ownership = kind != StewardQueueKind.Listing ? null
+        var ownership = kind is not (StewardQueueKind.Listing or StewardQueueKind.Vehicle or StewardQueueKind.Save) ? null
             : author is null || !ListingOwnershipCheck.IsListingPath(path) ? ListingOwnership.Unknown
             : await _ownership.CheckPullRequestAsync(author, path, baseBranch, head, cancellationToken).ConfigureAwait(false);
-        return new PullRequestDocument(path, kind, file.Text, document, null, ownership);
+        if (kind is not (StewardQueueKind.Vehicle or StewardQueueKind.Save))
+            return new PullRequestDocument(path, kind, file.Text, document, null, ownership);
+
+        var stem = Path.GetFileNameWithoutExtension(path);
+        var (release, failure) = await NewestReleaseAsync(document.GetString("id") is { } id && ModIds.IsValid(id) ? id : stem, cancellationToken).ConfigureAwait(false);
+        return new PullRequestDocument(path, kind, file.Text, document, null, ownership, release, failure);
+    }
+
+    /// <summary>
+    /// The newest stamped release of a vehicle or save on main of content-index-releases, which shows the install folder that the listing already holds.
+    /// Why it could not be read leaves the rest of the review readable.
+    /// </summary>
+    private async Task<(PullRequestRelease?, StewardException?)> NewestReleaseAsync(string id, CancellationToken cancellationToken)
+    {
+        if (!ModIds.IsValid(id))
+            return (null, null);
+
+        try
+        {
+            var stamped = await GitHubReleaseAmendments.StampedAsync(_api, id, ListingPullRequestLinks.DefaultBranch, cancellationToken).ConfigureAwait(false);
+            if (stamped.Count == 0)
+                return (null, null);
+
+            var newest = ReleaseAmendment.Select(stamped, ReleaseSelection.All)[0];
+            var path = ReleaseAmendment.PathOf(id, newest);
+            var file = await _api.ReadFileAsync(StewardAccess.ReleasesRepository, path, ListingPullRequestLinks.DefaultBranch, cancellationToken).ConfigureAwait(false)
+                ?? throw new GitHubApiException(GitHubApiFailure.NotFound, path);
+            return file.Text is { } text && ReleaseFileValues.Read(text) is { } values
+                ? (new PullRequestRelease(newest, values.Folder), null)
+                : (null, new StewardException(StewardFailure.UnreadableFile, $"{path} is no JSON object"));
+        }
+        catch (GitHubApiException exception) when (exception.Failure != GitHubApiFailure.SignedOut)
+        {
+            return (null, exception.ToStewardException());
+        }
+        catch (ReleaseAmendmentRefusedException exception)
+        {
+            return (null, new StewardException(StewardFailure.UnreadableFile, exception.Message, innerException: exception));
+        }
     }
 
     [GeneratedRegex(@"\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z")]

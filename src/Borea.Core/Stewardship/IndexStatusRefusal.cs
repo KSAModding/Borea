@@ -12,7 +12,7 @@ public enum IndexStatusRefusal
     /// <summary>The id already has a state, or this pack version is already retracted.</summary>
     Duplicate,
 
-    /// <summary>The id is neither under listings/ nor under packs/ of the base branch.</summary>
+    /// <summary>The id is neither a listing nor a pack on the base branch.</summary>
     UnknownId,
 
     /// <summary>Only a pack version is retracted, and the id is no pack.</summary>

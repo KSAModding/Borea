@@ -228,7 +228,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileModReplacer>(Assert.IsType<CheckedModReplacer>(Assert.IsType<LoggingModReplacer>(services.Replacer).Inner).Inner);
         Assert.IsType<FileModStateRepository>(Assert.IsType<CheckedModStateRepository>(services.ModState).Inner);
         Assert.IsType<GameShapeCheck>(services.GameShape);
-        Assert.IsType<RepositoryInstallPlanner>(Assert.IsType<LoggingInstallPlanner>(services.InstallPlanner).Inner);
+        Assert.IsType<RepositoryInstallPlanner>(Assert.IsType<Borea.Core.UserContent.RecordedContentPlanner>(Assert.IsType<LoggingInstallPlanner>(services.InstallPlanner).Inner).Inner);
         Assert.IsType<Borea.Storage.ModPacks.ModPackInstaller>(Assert.IsType<LoggingModPackInstaller>(services.ModPackInstaller).Inner);
         Assert.IsType<FileGameLogReader>(services.GameLog);
         Assert.IsType<FileGameCrashReader>(services.GameCrashes);
@@ -293,6 +293,40 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.True(result.IsComplete);
         Assert.Equal(pin.Version, Assert.Single(installer.Installed).Version);
         Assert.Contains(result.Warnings, value => value.ModId == "A" && value.Code == "release-channel");
+    }
+
+    [Fact]
+    public async Task UserContentInstaller_ArchiveWhoseHashDiffers_ChangesNothing()
+    {
+        var handler = new ArchiveHandler(Encoding.UTF8.GetBytes("not the published archive"));
+        using var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ReleaseListRepository([]), new NoCandidates(), isGameProcessRunning: () => false);
+        var instance = (await services.Instances.CreateAsync("Vehicles", InstanceSource.Custom.Value)).Instance;
+        var vehicle = new ModVersionMetadata(1, "rover", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.10.19.5638", 5638, new DownloadInfo("https://example.com/rover.zip", new string('A', 64), 1, "application/zip"), 1, [], ContentType.Vehicle, install: new InstallInfo(null, derived: false, folder: "Rover"));
+
+        await Assert.ThrowsAsync<DownloadFailedException>(() => services.UserContentInstaller.InstallAsync(instance.InstanceId, vehicle, name: null));
+
+        Assert.True(handler.Requested);
+        Assert.False(Directory.Exists(services.Paths.GetInstanceVehiclesFolder(instance.InstanceId)));
+        Assert.Empty(await services.InstalledContent.ListAsync(instance.InstanceId));
+        Assert.DoesNotContain(Directory.EnumerateDirectories(services.Paths.GetInstanceRoot(instance.InstanceId)), path => Path.GetFileName(path).StartsWith(".borea-", StringComparison.Ordinal));
+    }
+
+    private sealed class ArchiveHandler(byte[] bytes) : HttpMessageHandler
+    {
+        public bool Requested { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requested |= request.RequestUri!.AbsoluteUri == "https://example.com/rover.zip";
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) });
+        }
+    }
+
+    private sealed class NoCandidates : IInstallCandidateSource
+    {
+        public IReadOnlyList<string> GetGameDirectories() => [];
+
+        public IReadOnlyList<string> GetLoaderDirectories() => [];
     }
 
     private sealed class RecordingModInstaller(IInstanceRepository instances) : IModInstaller

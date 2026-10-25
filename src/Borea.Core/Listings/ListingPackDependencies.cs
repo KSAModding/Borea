@@ -39,11 +39,11 @@ public sealed record ListingPackFix(IReadOnlyList<ListingPackMember> Pins, IRead
 /// </summary>
 public static class ListingPackDependencies
 {
-    /// <summary>The stamped release a pin names, yanked ones included, when the pin names a listed mod.</summary>
-    public static ModVersionMetadata? Stamped(ContentIndexSnapshot snapshot, string id, string version)
+    /// <summary>The stamped release a pin names, yanked ones included, when the pin names a listing of the type of its section.</summary>
+    public static ModVersionMetadata? Stamped(ContentIndexSnapshot snapshot, string id, string version, ContentType type = ContentType.Mod)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        return ListingPackMembers.Listing(snapshot, id)?.Releases.FirstOrDefault(release => release.Version.ToString() == version);
+        return ListingPackMembers.Listing(snapshot, id, type)?.Releases.FirstOrDefault(release => release.Version.ToString() == version);
     }
 
     /// <summary>The required dependencies of a release that is not yanked, each as its choices.</summary>
@@ -134,7 +134,7 @@ public static class ListingPackDependencies
     {
         ArgumentNullException.ThrowIfNull(pins);
         ArgumentNullException.ThrowIfNull(pin);
-        if (Stamped(snapshot, pin.Id, pin.Version) is not { Yanked: false } release || UnlistedNeeds(snapshot, release).Count > 0)
+        if (Stamped(snapshot, pin.Id, pin.Version, pin.Type) is not { Yanked: false } release || UnlistedNeeds(snapshot, release).Count > 0)
             return false;
 
         var others = pins.Where(other => !ModIds.Equals(other.Id, pin.Id)).ToList();
@@ -144,7 +144,7 @@ public static class ListingPackDependencies
 
         foreach (var other in others)
         {
-            if (Stamped(snapshot, other.Id, other.Version) is not { Yanked: false } otherRelease)
+            if (Stamped(snapshot, other.Id, other.Version, other.Type) is not { Yanked: false } otherRelease)
                 continue;
 
             foreach (var dependency in otherRelease.Dependencies)
@@ -223,7 +223,7 @@ public static class ListingPackDependencies
     }
 
     private static IEnumerable<(ListingPackMember Pin, IReadOnlyList<ListingPackOption> Options)> Requirements(ContentIndexSnapshot snapshot, IEnumerable<ListingPackMember> pins) =>
-        pins.SelectMany(pin => Required(Stamped(snapshot, pin.Id, pin.Version)).Select(options => (pin, options)));
+        pins.SelectMany(pin => Required(Stamped(snapshot, pin.Id, pin.Version, pin.Type)).Select(options => (pin, options)));
 
     private static string Bounds(ListingPackOption option) => (option.Min, option.Max) switch
     {

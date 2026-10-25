@@ -71,6 +71,13 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         conflicts = [];
         foreach (var item in request.Requested.OrderBy(value => value.Release.ModId, ModIds.Comparer))
         {
+            // a vehicle or save is a folder under Vehicles or saves, never a mod of the instance, so only its exact release counts
+            if (IsContent(item.Release))
+            {
+                roots[item.Release.ModId] = item with { Exact = true };
+                continue;
+            }
+
             // an update asks for the version a mod has, so only a request for another version of a pinned mod is a conflict
             if (Pinned(request, item.Release.ModId) is { } pinned)
             {
@@ -105,7 +112,9 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             var values = new List<ModVersionMetadata>();
             var outsideChannel = false;
             roots.TryGetValue(id, out var root);
-            if (Pinned(request, id) is { } pinned)
+            if (root is not null && IsContent(root.Release))
+                values.Add(root.Release);
+            else if (Pinned(request, id) is { } pinned)
                 values.Add(pinned.Metadata);
             else if (root is { Exact: true })
                 values.Add(root.Release);
@@ -208,9 +217,26 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             if (dependency.Kind == ModDependencyKind.Suggests && !WasOffered(request, release, dependency) && !IsSatisfied(request, selected, dependency))
                 choices.Add(new PlanningChoice(ChoiceKey(release.ModId, index, "suggestion"), release.ModId, PlanningChoiceKind.Suggestion, [dependency.ModId!], null, dependency));
             if (dependency.Kind is ModDependencyKind.Optional or ModDependencyKind.Suggests) continue;
-            if (dependency.IsAnyOf) EvaluateAlternative(request, release.ModId, ChoiceKey(release.ModId, index, "alternative"), dependency, selected, unresolved, conflicts, choices);
-            else EvaluateSingle(request, release.ModId, dependency, selected, unresolved, conflicts);
+            var missing = IsContent(release) && dependency.Kind == ModDependencyKind.Required;
+            var dependencyUnresolved = missing ? new List<PlanningMessage>() : unresolved;
+            var dependencyConflicts = missing ? new List<PlanningMessage>() : conflicts;
+            if (dependency.IsAnyOf) EvaluateAlternative(request, release.ModId, ChoiceKey(release.ModId, index, "alternative"), dependency, selected, dependencyUnresolved, dependencyConflicts, choices);
+            else EvaluateSingle(request, release.ModId, dependency, selected, dependencyUnresolved, dependencyConflicts);
+            if (missing) AddMissing(release, dependency, dependencyUnresolved, dependencyConflicts, warnings, unresolved, conflicts);
         }
+    }
+
+    // RFC 0085: a required mod of a vehicle or save that cannot be installed does not stop the plan, because the player may go on without it
+    private static void AddMissing(ModVersionMetadata release, ModDependency dependency, List<PlanningMessage> dependencyUnresolved, List<PlanningMessage> dependencyConflicts, List<PlanningMessage> warnings, List<PlanningMessage> unresolved, List<PlanningMessage> conflicts)
+    {
+        foreach (var (messages, target) in new[] { (dependencyUnresolved, unresolved), (dependencyConflicts, conflicts) })
+            foreach (var message in messages)
+            {
+                if (message.Kind is PlanningMessageKind.UnsatisfiedDependency or PlanningMessageKind.PinnedDependency or PlanningMessageKind.ForeignVersionUnknown or PlanningMessageKind.UnsatisfiedAlternative or PlanningMessageKind.ForeignAlternativeUnknown)
+                    warnings.Add(new PlanningMessage(release.ModId, release.Type == ContentType.Save ? PlanningMessageKind.MissingForSave : PlanningMessageKind.MissingForVehicle) { Dependency = dependency, Value = message.Code });
+                else
+                    target.Add(message);
+            }
     }
 
     private static void EvaluateSingle(InstallPlanningRequest request, string owner, ModDependency dependency, Dictionary<string, RequestedMod> selected, List<PlanningMessage> unresolved, List<PlanningMessage> conflicts)
@@ -327,15 +353,15 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     private static Borea.Core.Instances.Instance BuildProposedInstance(InstallPlanningRequest request, Dictionary<string, RequestedMod> selected)
     {
         var retained = request.Instance.Mods.Where(value => !selected.ContainsKey(value.ModId));
-        var planned = selected.Values.Select(value => new InstalledMod(value.Release.ModId, value.Release.Version, value.Reason, DateTimeOffset.UnixEpoch, value.Release));
+        var planned = selected.Values.Where(value => !IsContent(value.Release)).Select(value => new InstalledMod(value.Release.ModId, value.Release.Version, value.Reason, DateTimeOffset.UnixEpoch, value.Release));
         var foreign = request.Instance.ForeignMods.Where(value => !selected.ContainsKey(value.ModId)).ToList();
         return Borea.Core.Instances.Instance.FromExisting(request.Instance.InstanceId, request.Instance.Name, request.Instance.Source, request.Instance.CreatedAt, retained.Concat(planned).ToList(), foreign, request.Instance.IsFavorite);
     }
 
     private static InstallPlan ToPlan(InstallPlanningRequest request, SearchResult result)
     {
-        var ordered = OrderOperations(request, result.Selected);
-        var selections = result.Selected.Values.OrderBy(value => value.Release.ModId, ModIds.Comparer).Select(value => new PlannedSelection(value.Release, value.Reason, IsInstalled(request, value.Release))).ToList();
+        var ordered = OrderOperations(request, result.Selected).Where(value => !IsContent(value.Release)).ToList();
+        var selections = result.Selected.Values.Where(value => !IsContent(value.Release)).OrderBy(value => value.Release.ModId, ModIds.Comparer).Select(value => new PlannedSelection(value.Release, value.Reason, IsInstalled(request, value.Release))).ToList();
         var operations = ordered.Where(value => !IsInstalled(request, value.Release)).Select(value => new PlannedInstall(value.Release, value.Reason, Compatibility.Evaluate(value.Release, request.GameVersion), request.TargetPlatform is { } target ? Compatibility.EvaluateOs(value.Release.Os, target) : null)).ToList();
         return new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), selections, operations, result.Warnings, result.Unresolved, result.Conflicts, result.Choices);
     }
@@ -359,6 +385,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     }
 
     private static void Validate(InstallPlanningRequest request) { ArgumentNullException.ThrowIfNull(request); ArgumentNullException.ThrowIfNull(request.Instance); ArgumentNullException.ThrowIfNull(request.Requested); ArgumentNullException.ThrowIfNull(request.Repository); }
+    private static bool IsContent(ModVersionMetadata release) => release.Type.IsVehicleOrSave();
     private static InstalledMod? Pinned(InstallPlanningRequest request, string id) => request.Instance.Mods.FirstOrDefault(value => value.IsPinned && ModIds.Equals(value.ModId, id));
     private static bool IsInstalled(InstallPlanningRequest request, ModVersionMetadata release) => request.Instance.Mods.Any(value => ModIds.Equals(value.ModId, release.ModId) && value.Version == release.Version);
     private static string ChoiceKey(string owner, int index, string kind) => $"{owner}:dependency:{index}:{kind}";
@@ -368,7 +395,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     /// <param name="Age">How far the requests that are not exact sit behind their newest candidate.</param>
     private sealed record SearchResult(Dictionary<string, RequestedMod> Selected, int Age, IReadOnlyList<PlanningMessage> Warnings, IReadOnlyList<PlanningMessage> Unresolved, IReadOnlyList<PlanningMessage> Conflicts, IReadOnlyList<PlanningChoice> Choices)
     {
-        public SearchScore Score => new(Conflicts.Count, Conflicts.Count(value => value.Kind is PlanningMessageKind.UnsatisfiedDependency or PlanningMessageKind.PinnedDependency or PlanningMessageKind.MissingRequest or PlanningMessageKind.RetainedUnsatisfied), Age, Unresolved.Count, Warnings.Count, Selected.Count);
+        public SearchScore Score => new(Conflicts.Count, Conflicts.Count(value => value.Kind is PlanningMessageKind.UnsatisfiedDependency or PlanningMessageKind.PinnedDependency or PlanningMessageKind.MissingRequest or PlanningMessageKind.RetainedUnsatisfied) + Warnings.Count(value => value.Kind is PlanningMessageKind.MissingForVehicle or PlanningMessageKind.MissingForSave), Age, Unresolved.Count, Warnings.Count, Selected.Count);
     }
     // age ranks above open choices, warnings and the number of mods, so a request does not fall back to an older release to avoid the dependencies of the newest one
     private readonly record struct SearchScore(int Conflicts, int Missing, int Age, int Unresolved, int Warnings, int Selected) : IComparable<SearchScore>

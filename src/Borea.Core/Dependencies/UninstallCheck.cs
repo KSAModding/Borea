@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 
 namespace Borea.Core.Dependencies;
@@ -20,6 +21,12 @@ public sealed class UninstallCheck
     public IReadOnlyList<string> DependentModIds { get; }
 
     /// <summary>
+    /// The recorded vehicles and saves whose release requires this mod. They never block the
+    /// uninstall, because the game only refuses them, so the player is told and goes on.
+    /// </summary>
+    public IReadOnlyList<InstalledContentRecord> DependentContent { get; }
+
+    /// <summary>
     /// Whether this mod is currently active (enabled) per this instance's
     /// manifest.
     /// </summary>
@@ -32,7 +39,8 @@ public sealed class UninstallCheck
         string modId,
         ModVersion version,
         IReadOnlyList<string> dependentModIds,
-        bool isActive)
+        bool isActive,
+        IReadOnlyList<InstalledContentRecord>? dependentContent = null)
     {
         if (string.IsNullOrWhiteSpace(modId))
             throw new ArgumentException("Mod ID cannot be null or whitespace.", nameof(modId));
@@ -45,5 +53,6 @@ public sealed class UninstallCheck
         Version = version;
         DependentModIds = new ReadOnlyCollection<string>(dependentModIds.ToArray());
         IsActive = isActive;
+        DependentContent = new ReadOnlyCollection<InstalledContentRecord>(dependentContent?.ToArray() ?? []);
     }
 }

@@ -249,6 +249,12 @@
   <data name="StewardQueueKindPack" xml:space="preserve">
     <value>Modpack</value>
   </data>
+  <data name="StewardQueueKindVehicle" xml:space="preserve">
+    <value>Fahrzeug</value>
+  </data>
+  <data name="StewardQueueKindSave" xml:space="preserve">
+    <value>Spielstand</value>
+  </data>
   <data name="StewardQueueKindRelease" xml:space="preserve">
     <value>Release</value>
   </data>
@@ -350,6 +356,21 @@
   </data>
   <data name="StewardReviewParseErrorFormat" xml:space="preserve">
     <value>Das Dokument lässt sich nicht lesen: {0}</value>
+  </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Neuestes Release</value>
+  </data>
+  <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
+    <value>Das neueste Release {0} wird in den Ordner "{1}" installiert.</value>
+  </data>
+  <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
+    <value>Das neueste Release {0} nennt keinen Installationsordner.</value>
+  </data>
+  <data name="StewardReviewNoRelease" xml:space="preserve">
+    <value>Noch ist kein Release gestempelt. Die Prüfungen lesen den Ordner aus dem Archiv.</value>
+  </data>
+  <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
+    <value>Das neueste Release ließ sich nicht aus KSAModding/content-index-releases lesen: {0}</value>
   </data>
   <data name="StewardReviewOwnership" xml:space="preserve">
     <value>Eigentumsnachweis</value>
@@ -1860,6 +1881,9 @@
   <data name="GameSaveOlderBuild" xml:space="preserve">
     <value>Älterer Build</value>
   </data>
+  <data name="GameSaveChangedSinceInstall" xml:space="preserve">
+    <value>Seit der Installation geändert</value>
+  </data>
   <data name="GameSaveBuildFormat" xml:space="preserve">
     <value>Mit dem Spiel-Build {0} erstellt</value>
   </data>
@@ -1901,6 +1925,9 @@
   </data>
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
+  </data>
+  <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
+    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Trotzdem löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
   </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
     <value>{0} in den Ordner Backups verschoben. Unter Backups wiederherstellen.</value>
@@ -2112,6 +2139,12 @@
   <data name="ContentRemoveConfirm" xml:space="preserve">
     <value>Diesen Inhalt aus der Instanz entfernen?</value>
   </data>
+  <data name="ContentRemoveChangedFormat" xml:space="preserve">
+    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Trotzdem entfernen? Borea verschiebt den Ordner in den Ordner Backups.</value>
+  </data>
+  <data name="ContentGoneFromInstance" xml:space="preserve">
+    <value>Dieses Fahrzeug oder dieser Spielstand ist nicht mehr in der Instanz.</value>
+  </data>
   <data name="ContentRemoveSteps" xml:space="preserve">
     <value>Borea entfernt die Dateien, die es installiert hat. Der Autor bittet dich, auch diese Schritte zu machen:</value>
   </data>
@@ -2120,6 +2153,18 @@
   </data>
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} bleibt, weil {1} es braucht.</value>
+  </data>
+  <data name="ContentNeededByVehicleFormat" xml:space="preserve">
+    <value>Das Fahrzeug {0} braucht diesen Mod, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
+  </data>
+  <data name="ContentNeededBySaveFormat" xml:space="preserve">
+    <value>Der Spielstand {0} braucht diesen Mod, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das ihn braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+  </data>
+  <data name="ContentDisableConfirm" xml:space="preserve">
+    <value>Trotzdem deaktivieren?</value>
+  </data>
+  <data name="ContentDisable" xml:space="preserve">
+    <value>Deaktivieren</value>
   </data>
   <data name="ContentNotOnDisk" xml:space="preserve">
     <value>Nicht auf der Festplatte</value>
@@ -2334,6 +2379,18 @@
   <data name="DiscoverCountPacksFormat" xml:space="preserve">
     <value>{0} Modpacks</value>
   </data>
+  <data name="DiscoverCountVehicleOne" xml:space="preserve">
+    <value>1 Fahrzeug</value>
+  </data>
+  <data name="DiscoverCountVehiclesFormat" xml:space="preserve">
+    <value>{0} Fahrzeuge</value>
+  </data>
+  <data name="DiscoverCountSaveOne" xml:space="preserve">
+    <value>1 Spielstand</value>
+  </data>
+  <data name="DiscoverCountSavesFormat" xml:space="preserve">
+    <value>{0} Spielstände</value>
+  </data>
   <data name="DiscoverCountShownFormat" xml:space="preserve">
     <value>{0} von {1}</value>
   </data>
@@ -2510,6 +2567,12 @@
   </data>
   <data name="ListingNoListedMatch" xml:space="preserve">
     <value>Keine eingetragene Mod passt.</value>
+  </data>
+  <data name="ListingNoListedVehicleMatch" xml:space="preserve">
+    <value>Kein eingetragenes Fahrzeug passt.</value>
+  </data>
+  <data name="ListingNoListedSaveMatch" xml:space="preserve">
+    <value>Kein eingetragener Spielstand passt.</value>
   </data>
   <data name="ListingNoListedOrPackMatch" xml:space="preserve">
     <value>Keine eingetragene Mod und kein Pack passt.</value>
@@ -2707,22 +2770,22 @@
     <value>Ein Link oder ein kurzer Text zu dieser Version. Optional.</value>
   </data>
   <data name="ListingMembers" xml:space="preserve">
-    <value>Mods im Pack</value>
+    <value>Inhalt des Packs</value>
   </data>
   <data name="ListingMembersHint" xml:space="preserve">
-    <value>Wähle eingetragene Mods. Jede wird auf ein Release festgelegt, und das neueste Release steht zuerst.</value>
+    <value>Wähle eingetragene Mods, Fahrzeuge und Spielstände. Jeder Eintrag wird auf ein Release festgelegt, und das neueste Release steht zuerst.</value>
   </data>
   <data name="ListingLeftOutFormat" xml:space="preserve">
-    <value>Diese Mods der Instanz {0} hat Borea weggelassen:</value>
+    <value>Das hat Borea aus der Instanz {0} weggelassen:</value>
   </data>
   <data name="ListingLeftOutNotInstalledByBoreaFormat" xml:space="preserve">
-    <value>{0} wurde ohne Borea installiert, deshalb kennt Borea ihr Release nicht.</value>
+    <value>{0} wurde ohne Borea installiert, deshalb kennt Borea das Release nicht.</value>
   </data>
   <data name="ListingLeftOutModLoaderFormat" xml:space="preserve">
-    <value>{0} {1} ist ein Mod-Loader, und ein Pack legt nur Mods fest.</value>
+    <value>{0} {1} ist ein Mod-Loader, und ein Pack legt keinen Mod-Loader fest.</value>
   </data>
   <data name="ListingLeftOutModLoaderUnknownVersionFormat" xml:space="preserve">
-    <value>{0} ist ein Mod-Loader, und ein Pack legt nur Mods fest.</value>
+    <value>{0} ist ein Mod-Loader, und ein Pack legt keinen Mod-Loader fest.</value>
   </data>
   <data name="ListingLeftOutDisabledFormat" xml:space="preserve">
     <value>{0} {1} ist in der Instanz deaktiviert.</value>
@@ -2739,8 +2802,35 @@
   <data name="ListingLeftOutReleaseNotListedFormat" xml:space="preserve">
     <value>Der Index führt kein Release {1} von {0}.</value>
   </data>
+  <data name="ListingLeftOutChangedFormat" xml:space="preserve">
+    <value>Du hast {0} {1} geändert, seit Borea es installiert hat, deshalb würde eine Festlegung auf {1} nicht das installieren, was du getestet hast.</value>
+  </data>
+  <data name="ListingMemberTypeMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="ListingMemberTypeVehicles" xml:space="preserve">
+    <value>Fahrzeuge</value>
+  </data>
+  <data name="ListingMemberTypeSaves" xml:space="preserve">
+    <value>Spielstände</value>
+  </data>
+  <data name="ListingMemberVehicle" xml:space="preserve">
+    <value>Fahrzeug</value>
+  </data>
+  <data name="ListingMemberSave" xml:space="preserve">
+    <value>Spielstand</value>
+  </data>
   <data name="ListingSearchMembers" xml:space="preserve">
     <value>Eingetragene Mods nach Name, ID oder Autor suchen</value>
+  </data>
+  <data name="ListingSearchVehicles" xml:space="preserve">
+    <value>Eingetragene Fahrzeuge nach Name, ID oder Autor suchen</value>
+  </data>
+  <data name="ListingSearchSaves" xml:space="preserve">
+    <value>Eingetragene Spielstände nach Name, ID oder Autor suchen</value>
+  </data>
+  <data name="ListingMemberTypeAdd" xml:space="preserve">
+    <value>Hinzufügen aus:</value>
   </data>
   <data name="ListingAddMember" xml:space="preserve">
     <value>Hinzufügen</value>
@@ -2791,7 +2881,7 @@
     <value>{0} verwenden</value>
   </data>
   <data name="ListingCopyForumList" xml:space="preserve">
-    <value>Mitgliederliste für deinen Forenthread kopieren</value>
+    <value>Mod-Liste für deinen Forenthread kopieren</value>
   </data>
   <data name="ListingNextVersionFormat" xml:space="preserve">
     <value>Die nächste Version des Packs {0} nach Version {1}. Sie ist eine neue Datei, und die ID kann sich nicht ändern.</value>
@@ -3600,6 +3690,18 @@
   <data name="InstallMessageUnlistedPin" xml:space="preserve">
     <value>Die festgelegte Version ist nicht gelistet, deshalb kann Borea sie nicht installieren.</value>
   </data>
+  <data name="InstallMessageMissingForVehicleFormat" xml:space="preserve">
+    <value>Borea kann {0} nicht installieren oder aktivieren, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
+  </data>
+  <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
+    <value>Borea kann {0} nicht installieren oder aktivieren, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+  </data>
+  <data name="InstallMessageBreaksVehicleFormat" xml:space="preserve">
+    <value>Das Fahrzeug {1} braucht {0}, deshalb lädt das Spiel dieses Fahrzeug nach dieser Änderung nicht.</value>
+  </data>
+  <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
+    <value>Der Spielstand {1} braucht {0}, deshalb lässt das Spiel nach dieser Änderung jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} oder {1}</value>
   </data>
@@ -3669,6 +3771,9 @@
   <data name="ContentTabDependencies" xml:space="preserve">
     <value>Abhängigkeiten</value>
   </data>
+  <data name="ContentTabNeedsMods" xml:space="preserve">
+    <value>Braucht diese Mods</value>
+  </data>
   <data name="ContentTabVersions" xml:space="preserve">
     <value>Versionen</value>
   </data>
@@ -3690,11 +3795,17 @@
   <data name="ContentDependencyRequiredHint" xml:space="preserve">
     <value>Wird mit dieser Mod installiert</value>
   </data>
+  <data name="ContentDependencyRequiredItemHint" xml:space="preserve">
+    <value>Wird mitinstalliert</value>
+  </data>
   <data name="ContentDependencyAnyOf" xml:space="preserve">
     <value>Alternativen</value>
   </data>
   <data name="ContentDependencyAnyOfHint" xml:space="preserve">
     <value>Aus jeder Gruppe wird eine mit dieser Mod installiert</value>
+  </data>
+  <data name="ContentDependencyAnyOfItemHint" xml:space="preserve">
+    <value>Aus jeder Gruppe wird eine mitinstalliert</value>
   </data>
   <data name="ContentDependencyConflicts" xml:space="preserve">
     <value>Konflikte</value>
@@ -3708,6 +3819,9 @@
   <data name="ContentDependencyRecommendedHint" xml:space="preserve">
     <value>Beim Hinzufügen ausgewählt</value>
   </data>
+  <data name="ContentDependencyRecommendedItemHint" xml:space="preserve">
+    <value>Beim Hinzufügen ausgewählt</value>
+  </data>
   <data name="ContentDependencySuggested" xml:space="preserve">
     <value>Vorgeschlagen</value>
   </data>
@@ -3718,6 +3832,9 @@
     <value>Optional</value>
   </data>
   <data name="ContentDependencyOptionalHint" xml:space="preserve">
+    <value>Wird genutzt, wenn vorhanden, aber nicht mitinstalliert</value>
+  </data>
+  <data name="ContentDependencyOptionalItemHint" xml:space="preserve">
     <value>Wird genutzt, wenn vorhanden, aber nicht mitinstalliert</value>
   </data>
   <data name="ContentDependencyOther" xml:space="preserve">
@@ -3741,6 +3858,9 @@
   <data name="ContentDependencyInstalledFormat" xml:space="preserve">
     <value>Installiert {0}</value>
   </data>
+  <data name="ContentDependencyDisabledFormat" xml:space="preserve">
+    <value>Installiert {0}, deaktiviert</value>
+  </data>
   <data name="ContentDependencyNotInstalled" xml:space="preserve">
     <value>Nicht installiert</value>
   </data>
@@ -3758,6 +3878,9 @@
   </data>
   <data name="ContentCompatibility" xml:space="preserve">
     <value>Kompatibilität</value>
+  </data>
+  <data name="ContentFileBuildFormat" xml:space="preserve">
+    <value>Braucht KSA {0} oder neuer</value>
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
@@ -4095,6 +4218,9 @@
   <data name="PackResultNotAttempted" xml:space="preserve">
     <value>Nicht versucht</value>
   </data>
+  <data name="PackResultSkipped" xml:space="preserve">
+    <value>Übersprungen</value>
+  </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>stabil</value>
   </data>
@@ -4373,6 +4499,54 @@
   </data>
   <data name="PackNewerReleasesFormat" xml:space="preserve">
     <value>{0} von {1} Mods haben neuere Versionen</value>
+  </data>
+  <data name="PackNewerItemsOneFormat" xml:space="preserve">
+    <value>1 von {0} Mods, Fahrzeugen und Spielständen hat eine neuere Version</value>
+  </data>
+  <data name="PackNewerItemsFormat" xml:space="preserve">
+    <value>{0} von {1} Mods, Fahrzeugen und Spielständen haben neuere Versionen</value>
+  </data>
+  <data name="PackContentNameTakenFormat" xml:space="preserve">
+    <value>Im Ordner {2} gibt es schon einen Eintrag namens '{1}', der {0} im Weg steht. Wähle einen anderen Namen oder mache ohne {0} weiter.</value>
+  </data>
+  <data name="ContentNameTakenFormat" xml:space="preserve">
+    <value>Im Ordner {1} gibt es schon einen Eintrag namens '{0}'. Wähle einen anderen Namen.</value>
+  </data>
+  <data name="PackContentChangedFormat" xml:space="preserve">
+    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Weitermachen ersetzt es, und Borea verschiebt den alten Ordner in den Ordner Backups.</value>
+  </data>
+  <data name="PackContentNameTitleFormat" xml:space="preserve">
+    <value>Neuer Name für {0}</value>
+  </data>
+  <data name="PackContentNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} wurde nicht installiert: {2}</value>
+  </data>
+  <data name="PackContentNameTakenShortFormat" xml:space="preserve">
+    <value>Ein Eintrag namens '{0}' steht im Weg.</value>
+  </data>
+  <data name="PackContentChangedShort" xml:space="preserve">
+    <value>Du hast es geändert, seit Borea es installiert hat.</value>
+  </data>
+  <data name="PackContentNotReached" xml:space="preserve">
+    <value>Borea ist nicht dazu gekommen.</value>
+  </data>
+  <data name="PackContentFailed" xml:space="preserve">
+    <value>Borea konnte es nicht installieren.</value>
+  </data>
+  <data name="PackContentSkippedFormat" xml:space="preserve">
+    <value>{0} {1} wurde übersprungen: {2}</value>
+  </data>
+  <data name="PackContentSkipFormat" xml:space="preserve">
+    <value>Ohne {0} weitermachen</value>
+  </data>
+  <data name="PackContentNameConfirm" xml:space="preserve">
+    <value>Namen verwenden</value>
+  </data>
+  <data name="PackContentChooseName" xml:space="preserve">
+    <value>Namen wählen</value>
+  </data>
+  <data name="PackContentEnablesFormat" xml:space="preserve">
+    <value>Borea aktiviert {0} für {1}.</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>Dieses Modpack braucht die Spielversion {0} oder neuer.</value>

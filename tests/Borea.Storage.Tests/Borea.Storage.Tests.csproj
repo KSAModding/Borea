@@ -33,7 +33,7 @@
     <None Update="Listings\Fixtures\vectors.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- Copies of index-status.toml and its schema from content-index. -->
     <None Update="Stewardship\Fixtures\*" CopyToOutputDirectory="PreserveNewest" />
-    <!-- A copy of schemas/pack-vectors.json of content-index at f99a2ed148d7, the merge of content-index #178 (sha256 13509dc1). -->
+    <!-- A copy of schemas/pack-vectors.json of content-index at 75e9e89da0bc, the commit of content-index #209 that adds the vehicle and save cases, not merged yet (sha256 4bc1d91a). -->
     <None Update="Listings\Fixtures\pack-vectors.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- The copies of real game files, which the game check runs against. -->
     <None Update="Game\Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />

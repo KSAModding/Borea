@@ -40,6 +40,22 @@ public enum PlanningMessageKind
     RetractedPack,
     UnlistedPin,
     AboveGameMax,
+
+    /// <summary>A required mod of a vehicle that Borea cannot install or enable. A warning, so the player can go on without it.</summary>
+    MissingForVehicle,
+
+    /// <summary>A required mod of a save that Borea cannot install or enable. A warning, so the player can go on without it.</summary>
+    MissingForSave,
+
+    /// <summary>
+    /// The plan takes a mod out of the range that a recorded vehicle needs, or removes it. <see cref="PlanningMessage.Value"/> is the folder of the vehicle,
+    /// and <see cref="PlanningMessage.Version"/> is null for a removal.
+    /// A warning only, because the game refuses the vehicle and changes nothing else.
+    /// </summary>
+    BreaksVehicle,
+
+    /// <summary>The plan takes a mod out of the range that a recorded save needs. <see cref="PlanningMessage.Value"/> is the folder of the save.</summary>
+    BreaksSave,
 }
 
 /// <summary>
@@ -61,7 +77,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
 
     public OsPlatform? Platform { get; init; }
 
-    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, or the pinned mod a release needs.</summary>
+    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, the pinned mod a release needs, the code of the reason a required mod of a vehicle or save is missing, or the folder of a vehicle or save a plan breaks.</summary>
     public string? Value { get; init; }
 
     public int? Limit { get; init; }
@@ -104,6 +120,10 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.SearchLimit => "search-limit",
         PlanningMessageKind.RetractedPack => "retracted-pack",
         PlanningMessageKind.UnlistedPin => "unlisted-pin",
+        PlanningMessageKind.MissingForVehicle => "missing-for-vehicle",
+        PlanningMessageKind.MissingForSave => "missing-for-save",
+        PlanningMessageKind.BreaksVehicle => "breaks-vehicle",
+        PlanningMessageKind.BreaksSave => "breaks-save",
         _ => throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "The planning message kind is not defined."),
     };
 
@@ -132,8 +152,42 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.SearchLimit => $"Planning exceeded the deterministic limit of {Limit} candidate states.",
         PlanningMessageKind.RetractedPack => Value ?? "The selected pack version is retracted.",
         PlanningMessageKind.UnlistedPin => "The exact pinned release is not listed and cannot be installed by Borea.",
+        PlanningMessageKind.MissingForVehicle => $"{Dependency} cannot be installed or enabled, so the game refuses the vehicle file.",
+        PlanningMessageKind.MissingForSave => $"{Dependency} cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles.",
+        PlanningMessageKind.BreaksVehicle => $"{Change} does not meet the {Dependency} of the vehicle {Value}, so the game refuses that vehicle.",
+        PlanningMessageKind.BreaksSave => $"{Change} does not meet the {Dependency} of the save {Value}, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.",
         _ => $"{Dependency}",
     };
+
+    // A plan that removes the mod, as a pack update can, has no version for it.
+    private string Change => Version is { } version ? $"{ModId} {version}" : $"Removing {ModId}";
+
+    /// <summary>
+    /// Whether <paramref name="other"/> says the same. The dependency entry counts by its values, because a later plan
+    /// reads the entry again, for example from the record file of a vehicle, and so holds a new object.
+    /// </summary>
+    public bool SameAs(PlanningMessage other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        return this with { Dependency = null } == other with { Dependency = null } && SameEntry(Dependency, other.Dependency);
+    }
+
+    private static bool SameEntry(ModDependency? left, ModDependency? right)
+    {
+        if (ReferenceEquals(left, right))
+            return true;
+        if (left is null || right is null || left.Kind != right.Kind || !ModIds.Equals(left.ModId, right.ModId)
+            || left.MinVersion != right.MinVersion || left.MaxVersion != right.MaxVersion)
+            return false;
+
+        return (left.AnyOf, right.AnyOf) switch
+        {
+            (null, null) => true,
+            ({ } first, { } second) => first.Count == second.Count && first.Zip(second).All(pair =>
+                ModIds.Equals(pair.First.ModId, pair.Second.ModId) && pair.First.MinVersion == pair.Second.MinVersion && pair.First.MaxVersion == pair.Second.MaxVersion),
+            _ => false,
+        };
+    }
 
     private static string StatusName(ReleaseStatus? status) => status switch
     {

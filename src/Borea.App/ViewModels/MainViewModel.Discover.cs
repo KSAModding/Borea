@@ -76,11 +76,31 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsModsTab))]
     [NotifyPropertyChangedFor(nameof(IsLoadersTab))]
     [NotifyPropertyChangedFor(nameof(IsModpacksTab))]
+    [NotifyPropertyChangedFor(nameof(IsVehiclesTab))]
+    [NotifyPropertyChangedFor(nameof(IsSavesTab))]
+    [NotifyPropertyChangedFor(nameof(ShowsCategories))]
+    [NotifyPropertyChangedFor(nameof(ShowsModAuthors))]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private ContentType _discoverType = ContentType.Mod;
 
     public bool IsModsTab => DiscoverType == ContentType.Mod;
 
     public bool IsLoadersTab => DiscoverType == ContentType.ModLoader;
+
+    public bool IsVehiclesTab => DiscoverType == ContentType.Vehicle;
+
+    public bool IsSavesTab => DiscoverType == ContentType.Save;
+
+    /// <summary>Vehicles and saves have free-form tags only, so their tabs show no categories.</summary>
+    public bool ShowsCategories => !DiscoverType.IsVehicleOrSave();
+
+    /// <summary>The panel for mod authors asks for a mod, so the vehicle and save tabs leave it out.</summary>
+    public bool ShowsModAuthors => !DiscoverType.IsVehicleOrSave();
+
+    /// <summary>Whether the snapshot lists a vehicle, which enables the Vehicles tab.</summary>
+    public bool HasDiscoverVehicles => _listings.Any(item => item.Type == ContentType.Vehicle);
+
+    public bool HasDiscoverSaves => _listings.Any(item => item.Type == ContentType.Save);
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -142,7 +162,7 @@ public partial class MainViewModel
         ({ } min, { } max) => $"{min.Text} - {max.Text}",
     };
 
-    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenses.Count > 0 || SelectedCategories.Count > 0 || HasGameVersionRange;
+    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenses.Count > 0 || (ShowsCategories && SelectedCategories.Count > 0) || HasGameVersionRange;
 
     /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
@@ -186,6 +206,8 @@ public partial class MainViewModel
             {
                 ContentType.ModLoader => Localization.FormatDiscoverLoaderCount(total),
                 ContentType.ModPack => Localization.FormatDiscoverPackCount(total),
+                ContentType.Vehicle => Localization.FormatDiscoverVehicleCount(total),
+                ContentType.Save => Localization.FormatDiscoverSaveCount(total),
                 _ => Localization.FormatDiscoverModCount(total),
             };
         }
@@ -214,7 +236,7 @@ public partial class MainViewModel
 
             // the download counts and the first release dates sit next to a listing in the snapshot, not inside it
             var listingEntries = new Dictionary<string, ContentIndexListing>(ModIds.Comparer);
-            foreach (var entry in snapshot.Listings)
+            foreach (var entry in snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves))
                 listingEntries.TryAdd(entry.Id, entry);
             var packEntries = new Dictionary<string, ContentIndexPack>(ModIds.Comparer);
             foreach (var entry in snapshot.Packs)
@@ -222,7 +244,8 @@ public partial class MainViewModel
 
             await EnsureFavoritesLoadedAsync(services);
             var listings = await services.ContentIndex.GetAvailableModsAsync();
-            _listings = listings
+            var content = await services.UserContent.GetAvailableAsync();
+            _listings = listings.Concat(content)
                 .Select(listing => new DiscoverItem(this, listing, listing.Source == "index" ? listingEntries.GetValueOrDefault(listing.ModId) : null))
                 .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
@@ -241,7 +264,7 @@ public partial class MainViewModel
             MarkChoice(OsOptions, SelectedOs);
 
             LicenseOptions.Clear();
-            foreach (var license in LicenseFilter.Options(listings.Select(listing => listing.License).Concat(packs.Select(pack => pack.License))))
+            foreach (var license in LicenseFilter.Options(listings.Concat(content).Select(listing => listing.License).Concat(packs.Select(pack => pack.License))))
                 LicenseOptions.Add(new DiscoverChoice(license));
             MarkLicenses();
 
@@ -265,6 +288,8 @@ public partial class MainViewModel
         UpdateIndexRefreshStatus();
         RefreshInstalledFlags();
         ApplyDiscoverFilters();
+        OnPropertyChanged(nameof(HasDiscoverVehicles));
+        OnPropertyChanged(nameof(HasDiscoverSaves));
     }
 
     private void ApplyDiscoverFilters()
@@ -291,7 +316,7 @@ public partial class MainViewModel
         if (HasGameVersionRange)
             filtered = filtered.Where(item => item.LatestInChannel is { } release
                 && Borea.Core.Game.Compatibility.SupportsAnyBuild(release.GameMinRevision, release.GameMaxRevision, DiscoverGameMin?.Revision, DiscoverGameMax?.Revision));
-        if (SelectedCategories.Count > 0)
+        if (ShowsCategories && SelectedCategories.Count > 0)
         {
             var matching = ContentTagFilter.Filter(
                 filtered.Select(item => item.Listing),
@@ -412,14 +437,15 @@ public partial class MainViewModel
     /// </summary>
     private void RefreshInstalledFlags()
     {
-        var installed = new HashSet<string>(ActiveInstance?.ModIds ?? [], ModIds.Comparer);
-        var installedElsewhere = new HashSet<string>(OtherInstances.SelectMany(instance => instance.ModIds), ModIds.Comparer);
+        var installed = new HashSet<string>(ActiveInstance is { } active ? active.ModIds.Concat(active.ContentIds) : [], ModIds.Comparer);
+        var installedElsewhere = new HashSet<string>(OtherInstances.SelectMany(instance => instance.ModIds.Concat(instance.ContentIds)), ModIds.Comparer);
         var elsewhereChanged = false;
         foreach (var item in _listings)
         {
             item.IsInstalled = installed.Contains(item.ModId);
             var mod = _activeInstanceEntity?.Mods.FirstOrDefault(entry => ModIds.Equals(entry.ModId, item.ModId));
             item.RemoveBlockedText = item.IsInstalled ? RemoveBlockedReason(_activeInstanceEntity, mod) : null;
+            item.NeededByText = mod is not null && _activeInstanceEntity is { } entity ? ContentNeededByText(entity, mod.ModId) : null;
             var inOtherInstance = installedElsewhere.Contains(item.ModId);
             elsewhereChanged |= item.IsInOtherInstance != inOtherInstance;
             item.IsInOtherInstance = inOtherInstance;
@@ -469,7 +495,9 @@ public partial class MainViewModel
         _compatibilityGame = installed;
         foreach (var item in _listings)
         {
-            var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel) : null;
+            var latest = item.Source != "index" ? null
+                : item.Type.IsVehicleOrSave() ? await _services.UserContent.GetLatestReleaseAsync(item.ModId, _services.Settings.ReleaseChannel)
+                : await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel);
             item.Compatibility = latest is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(latest, installed);
 
             // the age on the row belongs to the same release as the chip and Add, so a newer release in another channel does not show there
@@ -548,6 +576,12 @@ public partial class MainViewModel
 
     [RelayCommand]
     private void ShowDiscoverModpacks() => DiscoverType = ContentType.ModPack;
+
+    [RelayCommand]
+    private void ShowDiscoverVehicles() => DiscoverType = ContentType.Vehicle;
+
+    [RelayCommand]
+    private void ShowDiscoverSaves() => DiscoverType = ContentType.Save;
 
     // choosing the chosen one again, or null from its chip, clears the filter
     [RelayCommand]
@@ -661,12 +695,28 @@ public partial class MainViewModel
     /// <summary>
     /// Plans the install of the newest release into the active instance.
     /// </summary>
-    internal Task InstallAsync(DiscoverItem item)
+    internal async Task InstallAsync(DiscoverItem item)
     {
-        var services = _services;
-        return services is null
-            ? Task.CompletedTask
-            : PlanInstallAsync(item, () => services.Mods.GetLatestReleaseAsync(item.ModId), exactVersion: null);
+        if (_services is not { } services)
+            return;
+
+        if (!item.Type.IsVehicleOrSave())
+        {
+            await PlanInstallAsync(item, () => services.Mods.GetLatestReleaseAsync(item.ModId), exactVersion: null);
+            return;
+        }
+
+        if (ActiveInstance is not { } instance)
+        {
+            ShowInstanceHintToast();
+            return;
+        }
+
+        // the row offers the release of the saved channel, so Add installs that one
+        if ((item.LatestInChannel ?? await services.UserContent.GetLatestReleaseAsync(item.ModId, services.Settings.ReleaseChannel)) is { } release)
+            await PlanContentAsync(item, instance.InstanceId, release);
+        else
+            item.InstallError = Localization.DiscoverNoRelease;
     }
 
     /// <summary>
@@ -690,6 +740,12 @@ public partial class MainViewModel
         if (libraryUse is null)
         {
             item.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
+        if (item.Type.IsVehicleOrSave())
+        {
+            await RemoveRecordedContentAsync(item, instance);
             return;
         }
 
@@ -722,7 +778,7 @@ public partial class MainViewModel
 /// <summary>
 /// One row of the Discover list (c/content-row in #8).
 /// </summary>
-public sealed partial class DiscoverItem : ObservableObject, IInstallRow
+public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 {
     private readonly MainViewModel _owner;
     private ModMetadata _listing;
@@ -752,6 +808,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         {
             _latestInChannel = value;
             OnPropertyChanged(nameof(DownloadSizeText));
+            OnPropertyChanged(nameof(GameVersionText));
         }
     }
 
@@ -764,12 +821,20 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public IReadOnlyDictionary<string, string> Links => _listing.Links;
 
-    /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
-    public string GameVersionText => _listing.GameMax is null ? $">= {_listing.GameMin}" : $"{_listing.GameMin} - {_listing.GameMax}";
+    /// <summary>
+    /// ">= min" or "min - max", as the compatibility chip shows it. A vehicle or save states no range of
+    /// its own, so it shows the game build its file was saved in.
+    /// </summary>
+    public string GameVersionText => _listing.GameMax is null ? $">= {GameMin}" : $"{GameMin} - {_listing.GameMax}";
+
+    // A vehicle or save may author only game_max, and then its release gives the lower bound.
+    private string? GameMin => _listing.GameMin ?? LatestInChannel?.GameMin;
 
     public string TypeText => Type switch
     {
         ContentType.ModLoader => _owner.Localization.ContentTypeModLoader,
+        ContentType.Vehicle => _owner.Localization.ContentTypeVehicle,
+        ContentType.Save => _owner.Localization.ContentTypeSave,
         _ => _owner.Localization.ContentTypeMod,
     };
 
@@ -894,6 +959,9 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
+    /// <summary>The vehicle or save install that waits for a confirmation, see <see cref="IContentPlanRow"/>.</summary>
+    public Borea.Core.UserContent.UserContentPlan? PendingContentPlan { get; set; }
+
     public bool IsConfirmingInstall => PendingPlan is not null || Choices is not null;
 
     /// <summary>The button of the confirmation, with what the plan downloads: "Add (38.0 MB)".</summary>
@@ -926,15 +994,28 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     public string? LinkRequestText => _linkRequest?.Invoke();
 
     /// <summary>
-    /// Mods install into an instance; a loader is set up from the settings.
+    /// Mods, vehicles and saves install into an instance; a loader is set up from the settings.
     /// </summary>
-    public bool CanInstall => !IsInstalled && !IsInstalling && Type == ContentType.Mod;
+    public bool CanInstall => !IsInstalled && !IsInstalling && (Type == ContentType.Mod || Type.IsVehicleOrSave());
 
     /// <summary>
-    /// Only a mod has a version to pick, because the Versions table of a
-    /// loader offers no install button.
+    /// A loader has no version to pick, because its Versions table offers no install button.
     /// </summary>
-    public bool CanChangeVersion => Type == ContentType.Mod;
+    public bool CanChangeVersion => Type == ContentType.Mod || Type.IsVehicleOrSave();
+
+    /// <summary>The files the player changed in a recorded vehicle or save, which a remove found and names before the second go.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RemoveConfirmText))]
+    private string? _removeChanges;
+
+    /// <summary>What the game does to the recorded vehicles and saves of the active instance that need the mod, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RemoveConfirmText))]
+    private string? _neededByText;
+
+    public string RemoveConfirmText => RemoveChanges is { } files ? _owner.Localization.FormatContentRemoveChanged(Name, files)
+        : NeededByText is { } needed ? $"{needed} {_owner.Localization.ContentRemoveConfirm}"
+        : _owner.Localization.ContentRemoveConfirm;
 
     public bool CanRemove => IsInstalled && !IsRemoving && RemoveBlockedText is null;
 
@@ -1011,8 +1092,10 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         InstallError = null;
         InstallWarning = null;
         PendingPlan = null;
+        PendingContentPlan = null;
         Choices = null;
         IsConfirmingRemove = false;
+        RemoveChanges = null;
     }
 
     internal void RefreshText()
@@ -1036,6 +1119,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(InstallSteps));
         OnPropertyChanged(nameof(UninstallSteps));
         OnPropertyChanged(nameof(RemoveSteps));
+        OnPropertyChanged(nameof(RemoveConfirmText));
         OnPropertyChanged(nameof(InstalledAutomationName));
         OnPropertyChanged(nameof(LinkRequestText));
         OnPropertyChanged(nameof(FavoriteText));
@@ -1104,11 +1188,16 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     private void BeginRemove()
     {
         InstallError = null;
+        RemoveChanges = null;
         IsConfirmingRemove = true;
     }
 
     [RelayCommand]
-    private void CancelRemove() => IsConfirmingRemove = false;
+    private void CancelRemove()
+    {
+        IsConfirmingRemove = false;
+        RemoveChanges = null;
+    }
 
     [RelayCommand]
     private Task ConfirmRemoveAsync() => _owner.RemoveAsync(this);

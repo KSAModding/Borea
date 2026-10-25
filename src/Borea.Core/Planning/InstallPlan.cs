@@ -45,4 +45,8 @@ public sealed class InstallPlan
     /// <summary>The same plan, guarded against <paramref name="instanceState"/> instead of the state it was planned against.</summary>
     public InstallPlan WithInstanceState(InstallPlanningState instanceState)
         => new(InstanceId, instanceState, Selections, Operations, Warnings, UnresolvedChoices, Conflicts, Choices);
+
+    /// <summary>The same plan with <paramref name="warnings"/> after its own warnings.</summary>
+    public InstallPlan WithWarnings(IReadOnlyList<PlanningMessage> warnings)
+        => warnings.Count == 0 ? this : new(InstanceId, InstanceState, Selections, Operations, [.. Warnings, .. warnings], UnresolvedChoices, Conflicts, Choices);
 }

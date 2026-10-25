@@ -192,6 +192,12 @@
   <data name="StewardQueueKindPack" xml:space="preserve">
     <value>Fleet</value>
   </data>
+  <data name="StewardQueueKindVehicle" xml:space="preserve">
+    <value>Ship</value>
+  </data>
+  <data name="StewardQueueKindSave" xml:space="preserve">
+    <value>Tale</value>
+  </data>
   <data name="StewardReviewLoading" xml:space="preserve">
     <value>Haulin' the pull request aboard from GitHub...</value>
   </data>
@@ -200,6 +206,21 @@
   </data>
   <data name="StewardReviewVerdict" xml:space="preserve">
     <value>What the lookouts say</value>
+  </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Newest haul</value>
+  </data>
+  <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
+    <value>The newest haul {0} docks in the berth "{1}".</value>
+  </data>
+  <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
+    <value>The newest haul {0} names nary a berth.</value>
+  </data>
+  <data name="StewardReviewNoRelease" xml:space="preserve">
+    <value>Nary a haul be stamped yet. The lookouts read the berth from the chest.</value>
+  </data>
+  <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
+    <value>The newest haul couldn't be read from KSAModding/content-index-releases: {0}</value>
   </data>
   <data name="StewardActionApprove" xml:space="preserve">
     <value>Give it the nod</value>
@@ -1254,6 +1275,9 @@
   <data name="GameSaveOlderBuild" xml:space="preserve">
     <value>Build o' the past</value>
   </data>
+  <data name="GameSaveChangedSinceInstall" xml:space="preserve">
+    <value>Tampered with since boardin'</value>
+  </data>
   <data name="GameSaveBuildFormat" xml:space="preserve">
     <value>Put t'getter with build {0}</value>
   </data>
@@ -1295,6 +1319,9 @@
   </data>
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Send to Davy Jones' locker? The Borea hauls the treasure chest into the Backups treasure chest, and Restore fetches it back.</value>
+  </data>
+  <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} since The Borea hauled it onboard: {1}. Send it to Davy Jones' locker anyway? The Borea hauls the treasure chest into the Backups treasure chest, and Restore fetches it back.</value>
   </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
     <value>Hauled {0} into the Backups treasure chest. Fetch it back under Backups.</value>
@@ -1470,6 +1497,12 @@
   <data name="ContentRemoveConfirm" xml:space="preserve">
     <value>Toss the booty from this sea overboard?</value>
   </data>
+  <data name="ContentRemoveChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} since The Borea hauled it onboard: {1}. Toss it overboard anyway? The Borea hauls the chest into the Backups treasure chest.</value>
+  </data>
+  <data name="ContentGoneFromInstance" xml:space="preserve">
+    <value>This ship or tale ain't in the sea any longer.</value>
+  </data>
   <data name="ContentRemoveSteps" xml:space="preserve">
     <value>The Borea tosses overboard the planks it hauled aboard. The cap'n who made this booty also bids ye do these deeds:</value>
   </data>
@@ -1478,6 +1511,18 @@
   </data>
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} stows away 'cause {1} be needin' it.</value>
+  </data>
+  <data name="ContentNeededByVehicleFormat" xml:space="preserve">
+    <value>The ship {0} be needin' this barrel, so the game be refusin' that ship.</value>
+  </data>
+  <data name="ContentNeededBySaveFormat" xml:space="preserve">
+    <value>The tale {0} be needin' this barrel, so the game be leavin' out every ship o' that tale that be needin' it, and savin' again sends them ships to Davy Jones.</value>
+  </data>
+  <data name="ContentDisableConfirm" xml:space="preserve">
+    <value>Put it to sleep anyway?</value>
+  </data>
+  <data name="ContentDisable" xml:space="preserve">
+    <value>Put to sleep</value>
   </data>
   <data name="ContentNotOnDisk" xml:space="preserve">
     <value>Not in the hold</value>
@@ -1689,6 +1734,18 @@
   <data name="DiscoverCountPacksFormat" xml:space="preserve">
     <value>{0} packs o' barrels o' fun</value>
   </data>
+  <data name="DiscoverCountVehicleOne" xml:space="preserve">
+    <value>1 ship</value>
+  </data>
+  <data name="DiscoverCountVehiclesFormat" xml:space="preserve">
+    <value>{0} ships</value>
+  </data>
+  <data name="DiscoverCountSaveOne" xml:space="preserve">
+    <value>1 tale</value>
+  </data>
+  <data name="DiscoverCountSavesFormat" xml:space="preserve">
+    <value>{0} tales</value>
+  </data>
   <data name="DiscoverCountShownFormat" xml:space="preserve">
     <value>{0} o' {1}</value>
   </data>
@@ -1893,6 +1950,18 @@
   <data name="InstallMessageUnlistedPin" xml:space="preserve">
     <value>The pinned bounty ain't be listed, so The Borea ain't able to haul it onboard.</value>
   </data>
+  <data name="InstallMessageMissingForVehicleFormat" xml:space="preserve">
+    <value>The Borea ain't able to haul {0} onboard or wake it, so the game be refusin' this vessel.</value>
+  </data>
+  <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
+    <value>The Borea ain't able to haul {0} onboard or wake it, so the game be leavin' out every ship o' this tale that be needin' that barrel, and savin' again sends them ships to Davy Jones.</value>
+  </data>
+  <data name="InstallMessageBreaksVehicleFormat" xml:space="preserve">
+    <value>The vessel {1} be needin' {0}, so after this change the game be refusin' that vessel.</value>
+  </data>
+  <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
+    <value>The tale {1} be needin' {0}, so after this change the game be leavin' out every ship o' that tale that be needin' it, and savin' again sends them ships to Davy Jones.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
   </data>
@@ -1956,6 +2025,24 @@
   <data name="ContentTabVersions" xml:space="preserve">
     <value>Versions</value>
   </data>
+  <data name="ContentTabNeedsMods" xml:space="preserve">
+    <value>Barrels it be needin'</value>
+  </data>
+  <data name="ContentDependencyRequiredItemHint" xml:space="preserve">
+    <value>Hauled aboard with it</value>
+  </data>
+  <data name="ContentDependencyAnyOfItemHint" xml:space="preserve">
+    <value>One o' each set be hauled aboard with it</value>
+  </data>
+  <data name="ContentDependencyRecommendedItemHint" xml:space="preserve">
+    <value>Picked when ye add it</value>
+  </data>
+  <data name="ContentDependencyOptionalItemHint" xml:space="preserve">
+    <value>Used when aboard, not hauled with it</value>
+  </data>
+  <data name="ContentDependencyDisabledFormat" xml:space="preserve">
+    <value>Aboard {0}, but asleep</value>
+  </data>
   <data name="CompatibilityCompatible" xml:space="preserve">
     <value>Compatible</value>
   </data>
@@ -1967,6 +2054,9 @@
   </data>
   <data name="ContentCompatibility" xml:space="preserve">
     <value>Compatibility</value>
+  </data>
+  <data name="ContentFileBuildFormat" xml:space="preserve">
+    <value>Be needin' KSA {0} or newer</value>
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Compass headin's</value>
@@ -2095,7 +2185,7 @@
     <value>Ship</value>
   </data>
   <data name="ContentTypeSave" xml:space="preserve">
-    <value>Logbook</value>
+    <value>Tale</value>
   </data>
   <data name="PackMods" xml:space="preserve">
     <value>Barrels o' fun</value>
@@ -2295,6 +2385,39 @@
   <data name="ListingShareUnreadableFileFormat" xml:space="preserve">
     <value>The Borea couldn't read {0}, so it don't know what that scroll makes.</value>
   </data>
+  <data name="ListingNoListedVehicleMatch" xml:space="preserve">
+    <value>No listed ship matches.</value>
+  </data>
+  <data name="ListingNoListedSaveMatch" xml:space="preserve">
+    <value>No listed tale matches.</value>
+  </data>
+  <data name="ListingSearchVehicles" xml:space="preserve">
+    <value>Search listed ships by name, id or captain</value>
+  </data>
+  <data name="ListingSearchSaves" xml:space="preserve">
+    <value>Search listed tales by name, id or captain</value>
+  </data>
+  <data name="ListingMemberTypeAdd" xml:space="preserve">
+    <value>Haul from:</value>
+  </data>
+  <data name="ListingLeftOutChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} {1} since The Borea hauled it onboard, so pinnin' {1} wouldn't haul what ye tested.</value>
+  </data>
+  <data name="ListingMemberTypeMods" xml:space="preserve">
+    <value>Barrels</value>
+  </data>
+  <data name="ListingMemberTypeVehicles" xml:space="preserve">
+    <value>Ships</value>
+  </data>
+  <data name="ListingMemberTypeSaves" xml:space="preserve">
+    <value>Tales</value>
+  </data>
+  <data name="ListingMemberVehicle" xml:space="preserve">
+    <value>Ship</value>
+  </data>
+  <data name="ListingMemberSave" xml:space="preserve">
+    <value>Tale</value>
+  </data>
   <data name="ListingAddMissingDependencies" xml:space="preserve">
     <value>Haul aboard the missin' barrels</value>
   </data>
@@ -2462,6 +2585,9 @@
   </data>
   <data name="PackResultNotAttempted" xml:space="preserve">
     <value>Ain't be attempted</value>
+  </data>
+  <data name="PackResultSkipped" xml:space="preserve">
+    <value>Left ashore</value>
   </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>seaworthy</value>
@@ -2741,6 +2867,54 @@
   </data>
   <data name="PackNewerReleasesFormat" xml:space="preserve">
     <value>{0} o' {1} barrels have fresher hauls</value>
+  </data>
+  <data name="PackNewerItemsOneFormat" xml:space="preserve">
+    <value>1 o' {0} barrels, ships and tales has a fresher haul</value>
+  </data>
+  <data name="PackNewerItemsFormat" xml:space="preserve">
+    <value>{0} o' {1} barrels, ships and tales have fresher hauls</value>
+  </data>
+  <data name="PackContentNameTakenFormat" xml:space="preserve">
+    <value>The {2} chest already holds a haul named '{1}', blockin' {0}. Pick another name, or sail on without {0}.</value>
+  </data>
+  <data name="ContentNameTakenFormat" xml:space="preserve">
+    <value>The {1} chest already holds a haul named '{0}'. Pick another name.</value>
+  </data>
+  <data name="PackContentChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} since The Borea hauled it onboard: {1}. Sailin' on swaps it out, and the old chest stays in the stash.</value>
+  </data>
+  <data name="PackContentNameTitleFormat" xml:space="preserve">
+    <value>New name fer {0}</value>
+  </data>
+  <data name="PackContentNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} weren't hauled onboard: {2}</value>
+  </data>
+  <data name="PackContentNameTakenShortFormat" xml:space="preserve">
+    <value>A haul named '{0}' be blockin' the way.</value>
+  </data>
+  <data name="PackContentChangedShort" xml:space="preserve">
+    <value>Ye changed it since The Borea hauled it onboard.</value>
+  </data>
+  <data name="PackContentNotReached" xml:space="preserve">
+    <value>The Borea never got 'round to it.</value>
+  </data>
+  <data name="PackContentFailed" xml:space="preserve">
+    <value>The Borea couldn't haul it onboard.</value>
+  </data>
+  <data name="PackContentSkippedFormat" xml:space="preserve">
+    <value>{0} {1} were left ashore: {2}</value>
+  </data>
+  <data name="PackContentSkipFormat" xml:space="preserve">
+    <value>Sail on without {0}</value>
+  </data>
+  <data name="PackContentNameConfirm" xml:space="preserve">
+    <value>Use this name</value>
+  </data>
+  <data name="PackContentChooseName" xml:space="preserve">
+    <value>Pick a name</value>
+  </data>
+  <data name="PackContentEnablesFormat" xml:space="preserve">
+    <value>The Borea wakes {0} fer {1}.</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack be needin' game {0} or fresher.</value>

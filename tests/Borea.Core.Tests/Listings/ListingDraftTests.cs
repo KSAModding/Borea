@@ -1,4 +1,5 @@
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 
 namespace Borea.Core.Tests.Listings;
 
@@ -67,6 +68,28 @@ public sealed class ListingDraftTests
 
         Assert.NotNull(document.GetTable("links"));
         Assert.Equal(string.Empty, document.GetTable("compatibility")!.GetString("game_min"));
+    }
+
+    [Fact]
+    public void Pack_VehiclesAndSaves_AreReadWithTheirTypeAndWrittenToTheirSections()
+    {
+        var pack = new ListingDraft
+        {
+            Type = ListingDraft.ModPackType,
+            Id = "RoverPack",
+            Version = "1.0.0",
+            Mods = [new ListingPackMember("PartsMod", "1.0.0")],
+            Vehicles = [new ListingPackMember("ExampleRover", "1.0.0") { Type = ContentType.Vehicle }],
+            Saves = [new ListingPackMember("MoonBase", "2.0.0") { Type = ContentType.Save }],
+        };
+
+        var read = ListingDraft.FromDocument(pack.ToDocument());
+        var withoutSaves = (read with { Saves = [] }).ToDocument();
+
+        Assert.Equal(["PartsMod", "ExampleRover", "MoonBase"], read.Pins.Select(pin => pin.Id));
+        Assert.Equal([ContentType.Mod, ContentType.Vehicle, ContentType.Save], read.Pins.Select(pin => pin.Type));
+        Assert.Equal("ExampleRover", ((AuthoredTable)withoutSaves.GetList("vehicles")![0]).GetString("id"));
+        Assert.False(withoutSaves.Contains("saves"));
     }
 
     [Fact]

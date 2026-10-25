@@ -16,8 +16,11 @@ public interface IInstalledContentRecords
     /// <exception cref="InvalidOperationException">A record of that type and folder name exists.</exception>
     Task AddAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default);
 
-    /// <exception cref="InvalidOperationException">No record of that type and folder name exists.</exception>
-    Task ReplaceAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default);
+    /// <summary>Puts <paramref name="record"/> in the place of the record of <paramref name="oldFolderName"/>, in one write, so an update may change the folder name.</summary>
+    /// <exception cref="InvalidOperationException">
+    /// No record of that type has the old folder name, or another record of that type has the new one.
+    /// </exception>
+    Task ReplaceAsync(Guid instanceId, string oldFolderName, InstalledContentRecord record, CancellationToken cancellationToken = default);
 
     /// <returns>False when there was no such record.</returns>
     Task<bool> RemoveAsync(Guid instanceId, ContentType type, string folderName, CancellationToken cancellationToken = default);

@@ -1,0 +1,45 @@
+{
+  "spec_version": 1,
+  "id": "ExampleRover",
+  "type": "vehicle",
+  "version": "1.0.0",
+  "version_scheme": "semver",
+  "release_status": "stable",
+  "release_date": "2026-08-11T16:41:04Z",
+  "game_min": "2026.8.3.5117",
+  "game_min_revision": 5117,
+  "game_max": "2026.8.19.5261",
+  "game_max_revision": 5261,
+  "download": {
+    "url": "https://example.invalid/ExampleRover/releases/download/v1.0.0/ExampleRover.zip",
+    "sha256": "AA5ED25CA585B5C69CE039D1E233F843C1D884A1781B7EB515853A6B377BAF94",
+    "size": 501,
+    "content_type": "application/zip"
+  },
+  "install_size": 231,
+  "install": {
+    "root": "Example Rover",
+    "derived": true,
+    "folder": "Example Rover"
+  },
+  "dependencies": [
+    {
+      "id": "ExampleParts",
+      "kind": "required",
+      "min": "1.0.0",
+      "source": "authored"
+    }
+  ],
+  "changelog": "https://example.invalid/ExampleRover/releases/tag/v1.0.0",
+  "listing": {
+    "name": "Example Rover",
+    "authors": [
+      "Example Author"
+    ],
+    "abstract": "A rover for the Moon.",
+    "license": "CC-BY-4.0",
+    "tags": [
+      "rover"
+    ]
+  }
+}

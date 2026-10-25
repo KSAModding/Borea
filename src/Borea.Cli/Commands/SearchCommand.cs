@@ -12,21 +12,35 @@ internal static class SearchCommand
     {
         var text = ArgumentRules.Text("text", "Text to find in a listing id, name, abstract, description, or tag.");
         var json = ArgumentRules.Json();
+        var type = new Option<string?>("--type") { Description = $"Search only listings of this type: {string.Join(", ", Types.Select(ContentOutput.Name))}. Vehicles and saves show only with it." };
+        type.Validators.Add(result =>
+        {
+            if (ParseType(result.GetValueOrDefault<string?>()) is null)
+                result.AddError($"'{result.GetValueOrDefault<string?>()}' is not a type to search. Use {string.Join(", ", Types.Select(ContentOutput.Name))}.");
+        });
         var search = new Command("search", "Search the cached content index.");
         search.Arguments.Add(text);
         search.Options.Add(json);
+        search.Options.Add(type);
 
         search.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
         {
             var query = parseResult.GetRequiredValue(text);
             var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
-            var listings = await cli.Mods.SearchAsync(query, ct).ConfigureAwait(false);
-            var results = new List<SearchResultView>(listings.Count);
-
-            foreach (var listing in listings)
+            var only = ParseType(parseResult.GetValue(type));
+            var results = new List<SearchResultView>();
+            if (only is { } content && content.IsVehicleOrSave())
             {
-                var latest = await cli.Mods.GetLatestReleaseAsync(listing.ModId, ct).ConfigureAwait(false);
-                results.Add(SearchResultView.From(listing, latest, installed));
+                foreach (var listing in await cli.UserContent.SearchAsync(content, query, ct).ConfigureAwait(false))
+                    results.Add(SearchResultView.From(listing, await cli.UserContent.GetLatestReleaseAsync(listing.ModId, cli.Settings.ReleaseChannel, ct).ConfigureAwait(false), installed));
+            }
+            else
+            {
+                foreach (var listing in (await cli.Mods.SearchAsync(query, ct).ConfigureAwait(false)).Where(listing => only is null || listing.Type == only))
+                {
+                    var latest = await cli.Mods.GetLatestReleaseAsync(listing.ModId, ct).ConfigureAwait(false);
+                    results.Add(SearchResultView.From(listing, latest, installed));
+                }
             }
 
             var snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
@@ -53,7 +67,7 @@ internal static class SearchCommand
             }
 
             var indexListings = new Dictionary<string, ContentIndexListing>(ModIds.Comparer);
-            foreach (var indexListing in snapshot.Listings)
+            foreach (var indexListing in snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves))
                 indexListings.TryAdd(indexListing.Id, indexListing);
 
             for (var index = 0; index < results.Count; index++)
@@ -83,6 +97,11 @@ internal static class SearchCommand
 
         return search;
     }
+
+    private static readonly ContentType[] Types = [ContentType.Mod, ContentType.ModLoader, ContentType.Vehicle, ContentType.Save];
+
+    private static ContentType? ParseType(string? value) =>
+        value is null ? null : Types.Cast<ContentType?>().FirstOrDefault(type => string.Equals(ContentOutput.Name(type!.Value), value, StringComparison.OrdinalIgnoreCase));
 
     private static void WriteHuman(TextWriter output, SearchView view)
     {
