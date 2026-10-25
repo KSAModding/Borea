@@ -40,47 +40,7 @@ public sealed class FileGameSaveBackupStore : IGameSaveBackupStore
         => Task.Run(() => Delete(Resolve(backup)), cancellationToken);
 
     public Task<int> DeleteOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default)
-        => Task.Run(async () =>
-        {
-            var root = new DirectoryInfo(_paths.GetBackupsRoot());
-            if (!root.Exists)
-                return 0;
-
-            var deleted = 0;
-            foreach (var folder in root.EnumerateDirectories())
-            {
-                if (!Guid.TryParse(folder.Name, out var instanceId))
-                    continue;
-
-                IReadOnlyList<GameSaveBackup> backups;
-                try
-                {
-                    backups = await ListCoreAsync(instanceId, cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-                {
-                    continue;
-                }
-
-                foreach (var backup in backups)
-                {
-                    if (backup.CreatedAt >= cutoff)
-                        continue;
-
-                    try
-                    {
-                        Delete(Resolve(backup));
-                        deleted++;
-                    }
-                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-                    {
-                        // one backup that cannot be deleted now does not keep the others
-                    }
-                }
-            }
-
-            return deleted;
-        }, cancellationToken);
+        => Task.Run(() => DeleteOlderThanCoreAsync(cutoff, cancellationToken), cancellationToken);
 
     private async Task<IReadOnlyList<GameSaveBackup>> ListCoreAsync(Guid instanceId, CancellationToken cancellationToken)
     {
@@ -274,6 +234,48 @@ public sealed class FileGameSaveBackupStore : IGameSaveBackupStore
 
         var folders = Directory.GetDirectories(staging);
         return folders.Length == 1 && Directory.GetFiles(staging).Length == 0 ? folders[0] : staging;
+    }
+
+    private async Task<int> DeleteOlderThanCoreAsync(DateTimeOffset cutoff, CancellationToken cancellationToken)
+    {
+        var root = new DirectoryInfo(_paths.GetBackupsRoot());
+        if (!root.Exists)
+            return 0;
+
+        var deleted = 0;
+        foreach (var folder in root.EnumerateDirectories())
+        {
+            if (!Guid.TryParse(folder.Name, out var instanceId))
+                continue;
+
+            IReadOnlyList<GameSaveBackup> backups;
+            try
+            {
+                backups = await ListCoreAsync(instanceId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                continue;
+            }
+
+            foreach (var backup in backups)
+            {
+                if (backup.CreatedAt >= cutoff)
+                    continue;
+
+                try
+                {
+                    Delete(Resolve(backup));
+                    deleted++;
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    // one backup that cannot be deleted now does not keep the others
+                }
+            }
+        }
+
+        return deleted;
     }
 
     /// <summary>
