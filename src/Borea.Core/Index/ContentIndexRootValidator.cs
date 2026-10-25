@@ -40,7 +40,7 @@ public static class ContentIndexRootValidator
         }
         catch (InvalidOperationException ex)
         {
-            throw new HttpRequestException($"{ex}");
+            throw new HttpRequestException(ex.Message, ex);
         }
 
         return result;
