@@ -475,6 +475,20 @@ public sealed class ListingOwnershipCheckTests
         Assert.Equal(repository, ownership.Repository);
     }
 
+    [Theory]
+    [InlineData("vehicles/ExampleRover.toml")]
+    [InlineData("saves/ExampleSave.toml")]
+    public async Task CheckPullRequestAsync_NewVehicleOrSave_ChecksTheHostOfTheHeadInItsFolder(string path)
+    {
+        On("GET", $"{Upstream}/contents/{path}?ref={Head}", () => Json(Content(Document("alice/Mine", SubmittedForums))));
+        On("GET", Api + "/repos/alice/Mine", () => Json(Repository("alice/Mine", 5)));
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckPullRequestAsync(Alice, path, "main", Head);
+
+        Assert.Equal((ListingOwnershipState.Verified, "alice/Mine"), (ownership.State, ownership.Repository));
+    }
+
     [Fact]
     public async Task CheckPullRequestAsync_NewListing_ChecksTheHostOfTheHead()
     {
@@ -538,6 +552,8 @@ public sealed class ListingOwnershipCheckTests
     [InlineData("listings/.toml")]
     [InlineData("listings/MyMod.json")]
     [InlineData("index-status.toml")]
+    [InlineData("vehicles/a/b.toml")]
+    [InlineData("saves/ExampleSave.TOML")]
     public async Task CheckPullRequestAsync_NoListingDocument_SendsNothing(string path)
     {
         var check = await SignedInAsync();

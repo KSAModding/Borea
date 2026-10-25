@@ -16,7 +16,7 @@ namespace Borea.Storage.Instances;
 /// </summary>
 public sealed partial class FileGameSaveStore : IGameSaveStore
 {
-    private const string MetadataFileName = "meta.toml";
+    internal const string MetadataFileName = "meta.toml";
 
     private static readonly EnumerationOptions SizeOptions = new()
     {
@@ -32,7 +32,7 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
         AttributesToSkip = FileAttributes.ReparsePoint,
     };
 
-    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    internal static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     private readonly IGamePathProvider _paths;
     private readonly GameSaveBackupFolder _backups;
@@ -102,6 +102,46 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
 
     public Task<GameSaveRenameOutcome> RenameAsync(Guid instanceId, GameSaveEntry entry, string newName, CancellationToken cancellationToken = default)
         => Task.Run(() => RenameCoreAsync(instanceId, RequireInInstance(instanceId, entry), newName, cancellationToken), cancellationToken);
+
+    public Task<GameSaveArchive> WriteShareArchiveAsync(Guid instanceId, GameSaveEntry entry, string name, Stream destination, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        ArgumentNullException.ThrowIfNull(destination);
+        return Task.Run(() => WriteShareArchive(RequireInInstance(instanceId, entry), name, destination, cancellationToken), cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads the name again, because the player may have played since the share was checked, and the release checks take the
+    /// top-level directory as the name the game shows.
+    /// </summary>
+    private static GameSaveArchive WriteShareArchive(GameSaveEntry entry, string name, Stream destination, CancellationToken cancellationToken)
+    {
+        var metadata = Path.Combine(entry.Path, MetadataFileName);
+        if (!string.Equals(ReadMetadata(metadata).Name, name, StringComparison.Ordinal))
+            throw new InvalidOperationException($"The name in {metadata} is no longer '{name}'.");
+
+        var source = new DirectoryInfo(entry.Path);
+        using var hashing = new HashingWriteStream(destination);
+        using (var zip = new ZipArchive(hashing, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var item in source.EnumerateFileSystemInfos("*", EveryEntry).OrderBy(item => item.FullName, StringComparer.Ordinal))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var path = $"{name}/{Path.GetRelativePath(source.FullName, item.FullName).Replace(Path.DirectorySeparatorChar, '/')}";
+                if (item is FileInfo file)
+                {
+                    // Sets a time the zip format cannot hold to 1980-01-01, as a backup does.
+                    zip.CreateEntryFromFile(file.FullName, path, CompressionLevel.Optimal);
+                }
+                else if (item is DirectoryInfo directory && !directory.EnumerateFileSystemInfos().Any())
+                {
+                    zip.CreateEntry(path + "/");
+                }
+            }
+        }
+
+        return new GameSaveArchive(hashing.Sha256(), hashing.Length);
+    }
 
     private static ContentType ContentTypeOf(GameSaveKind kind) => kind == GameSaveKind.Save ? ContentType.Save : ContentType.Vehicle;
 

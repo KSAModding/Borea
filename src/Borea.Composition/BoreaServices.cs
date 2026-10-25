@@ -16,6 +16,7 @@ using Borea.Core.Paths;
 using Borea.Core.Planning;
 using Borea.Core.Preferences;
 using Borea.Core.Settings;
+using Borea.Core.Sharing;
 using Borea.Core.State;
 using Borea.Core.Stewardship;
 using Borea.Core.Updates;
@@ -125,6 +126,12 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>Installs or updates a vehicle or save with the mods it needs.</summary>
     public required UserContentInstallation UserContentInstallation { get; init; }
+
+    /// <summary>The ids a vehicle or a save names, for sharing it.</summary>
+    public required IContentIdReader ContentIds { get; init; }
+
+    /// <summary>Which mod of an instance defines which ids, for sharing a vehicle or a save.</summary>
+    public required IContentProviderMap ContentProviders { get; init; }
 
     public required IGameLogReader GameLog { get; init; }
 
@@ -546,6 +553,8 @@ public sealed class BoreaServices : IDisposable
             InstalledContent = installedContent,
             UserContentInstaller = userContentInstaller,
             UserContentInstallation = new UserContentInstallation(installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), checkedModState, userContentInstaller),
+            ContentIds = new XmlContentIdReader(),
+            ContentProviders = new FileContentProviderMap(paths),
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),

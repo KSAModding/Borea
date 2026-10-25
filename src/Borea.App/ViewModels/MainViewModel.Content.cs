@@ -86,6 +86,7 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
+    [NotifyPropertyChangedFor(nameof(ContentShareHostText))]
     [NotifyPropertyChangedFor(nameof(HasContentTags))]
     [NotifyPropertyChangedFor(nameof(IsLoaderContent))]
     [NotifyPropertyChangedFor(nameof(HasContentDependenciesTab))]
@@ -115,6 +116,11 @@ public partial class MainViewModel
     public bool HasVersionDownloads => _contentReleases.Any(release => release.HasDownloads);
 
     public bool HasContentLinks => ContentLinks.Count > 0;
+
+    /// <summary>The share host that the listing names under [releases] (RFC 0094), or null.</summary>
+    public string? ContentShareHostText => SelectedContent?.Listing.Releases?.Hosts.FirstOrDefault(host => host.Kind == ReleaseHostKind.Share) is { } host
+        ? Localization.FormatContentSharedOn(host.Host)
+        : null;
 
     /// <summary>The share page of the listing on the landing site, or null when it has none.</summary>
     public string? ContentShareUrl => SelectedContent is { } item ? ShareLinks.For(item.Listing) : null;
@@ -306,6 +312,7 @@ public partial class MainViewModel
                 item.Update(full);
                 FillLinks(ContentLinks, item.Links);
                 OnPropertyChanged(nameof(HasContentLinks));
+                OnPropertyChanged(nameof(ContentShareHostText));
                 OnPropertyChanged(nameof(HasContentTags));
             }
 

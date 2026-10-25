@@ -245,6 +245,16 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(NameModalTitle), nameof(NameModalConfirmText), nameof(NameModalPlaceholder), nameof(ShowsGameSaveNameRules))]
     private GameSaveItem? _renamingGameSave;
 
+    /// <summary>Why the name modal asks for a rename before a share. Null when the player opened the rename.</summary>
+    [ObservableProperty]
+    private string? _gameSaveRenameReason;
+
+    partial void OnRenamingGameSaveChanged(GameSaveItem? value)
+    {
+        if (value is null)
+            GameSaveRenameReason = null;
+    }
+
     /// <summary>The name the modal creates or renames an instance, a save or a vehicle with.</summary>
     [ObservableProperty]
     private string _modalInstanceName = string.Empty;
@@ -497,6 +507,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
+        OnPropertyChanged(nameof(ContentShareHostText));
 
         // the instance page shows fresh rows after a change; any other page
         // stays where the user is instead of jumping to that instance

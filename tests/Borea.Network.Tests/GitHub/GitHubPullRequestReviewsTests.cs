@@ -25,6 +25,7 @@ public sealed partial class GitHubPullRequestReviewsTests
     private const string IndexMarker = "<!-- content-index:verdict -->";
     private const string ReleasesMarker = "<!-- content-index-releases:verdict -->";
     private const string Listing = "id = \"MyMod\"\nname = \"My Mod\"\n[releases]\ngithub = \"alice/MyMod\"\n";
+    private const string VehicleListing = "id = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\n[releases]\ngithub = \"alice/ExampleRover\"\n";
 
     private readonly List<Sent> _sent = [];
     private readonly Dictionary<string, Func<HttpResponseMessage>> _routes = new(StringComparer.Ordinal);
@@ -64,6 +65,88 @@ public sealed partial class GitHubPullRequestReviewsTests
         Assert.DoesNotContain(_sent, sent => sent.Url.Contains("/repos/alice/", StringComparison.Ordinal));
         Assert.All(_sent, sent => Assert.Equal(sent.Url.Contains("/status", StringComparison.Ordinal) ? null : "Bearer " + Token, sent.Authorization));
         Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+    }
+
+    [Theory]
+    [InlineData("vehicles/ExampleRover.toml", StewardQueueKind.Vehicle)]
+    [InlineData("saves/ExampleSave.toml", StewardQueueKind.Save)]
+    public async Task ReadAsync_VehicleOrSave_IsADocumentWhoseAuthorIsCheckedAsForAListing(string path, StewardQueueKind kind)
+    {
+        Pull(Index, 9, First, "alice/content-index", labels: [kind.ToString().ToLowerInvariant(), "needs-steward"]);
+        Files(Index, 9, File(path, "added", "@@"));
+        Status(Index, First, ("validate", "success", "validated, a steward decides"));
+        Content(Index, path, First, VehicleListing);
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 9);
+
+        var document = Assert.Single(review.Documents);
+        Assert.Equal((path, kind, "Example Rover"), (document.Path, document.Kind, document.Document?.GetString("name")));
+        Assert.Same(_ownership.Result, document.Ownership);
+        Assert.Equal([(new GitHubAccount("alice", 5), path, "main", First)], _ownership.Calls);
+        Assert.Equal((null, null), (document.NewestRelease, document.NewestReleaseFailure));
+    }
+
+    [Fact]
+    public async Task ReadAsync_Vehicle_ReadsTheInstallFolderOfItsNewestReleaseOnMainOfTheReleases()
+    {
+        VehiclePull();
+        _routes[$"{Api}/repos/{Releases}/contents/releases/ExampleRover?ref=main"] = () => Json(JsonSerializer.Serialize(
+            new[] { "1.2.0.json", "1.10.0.json", "notes.md" }.Select(name => new { name, path = "releases/ExampleRover/" + name, type = "file" })));
+        Content(Releases, "releases/ExampleRover/1.10.0.json", "main", """{"id": "ExampleRover", "type": "vehicle", "version": "1.10.0", "install": {"root": "Example Rover", "derived": true, "folder": "Example Rover"}}""");
+        var reviews = await SignedInAsync();
+
+        var document = Assert.Single((await reviews.ReadAsync(Index, 9)).Documents);
+
+        Assert.Equal(new PullRequestRelease("1.10.0", "Example Rover"), document.NewestRelease);
+        Assert.Null(document.NewestReleaseFailure);
+        Assert.DoesNotContain(_sent, sent => sent.Url.Contains("1.2.0.json", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError, StewardFailure.UnexpectedResponse)]
+    [InlineData(HttpStatusCode.Forbidden, StewardFailure.Forbidden)]
+    public async Task ReadAsync_VehicleWhoseReleasesCannotBeRead_StillShowsWithItsOwnership(HttpStatusCode status, StewardFailure failure)
+    {
+        VehiclePull();
+        _routes[$"{Api}/repos/{Releases}/contents/releases/ExampleRover?ref=main"] = () => Json("""{"message":"Resource not accessible by integration"}""", status);
+        var reviews = await SignedInAsync();
+
+        var document = Assert.Single((await reviews.ReadAsync(Index, 9)).Documents);
+
+        Assert.Null(document.NewestRelease);
+        Assert.Equal(failure, document.NewestReleaseFailure?.Failure);
+        Assert.Same(_ownership.Result, document.Ownership);
+        Assert.Equal("Example Rover", document.Document?.GetString("name"));
+    }
+
+    [Fact]
+    public async Task ReadAsync_VehicleWhoseNewestReleaseIsNoJsonObject_SaysItCannotBeRead()
+    {
+        VehiclePull();
+        _routes[$"{Api}/repos/{Releases}/contents/releases/ExampleRover?ref=main"] = () => Json("""[{"name": "1.0.0.json", "type": "file"}]""");
+        Content(Releases, "releases/ExampleRover/1.0.0.json", "main", "[1]");
+        var reviews = await SignedInAsync();
+
+        var document = Assert.Single((await reviews.ReadAsync(Index, 9)).Documents);
+
+        Assert.Null(document.NewestRelease);
+        Assert.Equal(StewardFailure.UnreadableFile, document.NewestReleaseFailure?.Failure);
+    }
+
+    [Fact]
+    public async Task ReadAsync_ListingOrPack_ReadsNoRelease()
+    {
+        Pull(Index, 5, First, Index, labels: ["listing"]);
+        Files(Index, 5, File("listings/MyMod.toml", "added", "@@"));
+        Status(Index, First);
+        Content(Index, "listings/MyMod.toml", First, Listing);
+        var reviews = await SignedInAsync();
+
+        var document = Assert.Single((await reviews.ReadAsync(Index, 5)).Documents);
+
+        Assert.Null(document.NewestRelease);
+        Assert.DoesNotContain(_sent, sent => sent.Url.Contains(Releases, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -317,6 +400,15 @@ public sealed partial class GitHubPullRequestReviewsTests
             head = new { @ref = "listing-MyMod", sha = head, repo = headRepository is null ? null : new { full_name = headRepository } },
             @base = new { @ref = baseBranch, sha = "fedcba9876543210fedcba9876543210fedcba98", repo = new { full_name = repository } },
         }));
+    }
+
+    /// <summary>A pull request that changes vehicles/ExampleRover.toml, whose releases the test gives.</summary>
+    private void VehiclePull()
+    {
+        Pull(Index, 9, First, Index, labels: ["vehicle"]);
+        Files(Index, 9, File("vehicles/ExampleRover.toml", "modified", "@@"));
+        Status(Index, First);
+        Content(Index, "vehicles/ExampleRover.toml", First, VehicleListing);
     }
 
     private static object File(string path, string status, string? patch, int additions = 1) =>
