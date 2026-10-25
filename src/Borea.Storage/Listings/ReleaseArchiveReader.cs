@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Stewardship;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Listings;
 
@@ -69,7 +70,7 @@ public sealed class ReleaseArchiveReader : IReleaseArchiveReader
         }
         finally
         {
-            TryDeleteFile(archivePath);
+            LeftoverCleanup.TryDeleteFile(archivePath);
         }
     }
 
@@ -115,21 +116,6 @@ public sealed class ReleaseArchiveReader : IReleaseArchiveReader
     }
 
     private static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
 
     /// <summary>Stops the download once it sends more bytes than the release states.</summary>
     private sealed class SizeLimit(long maxBytes, CancellationTokenSource stop) : IProgress<DownloadProgress>

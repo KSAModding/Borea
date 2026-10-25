@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Storage.Files;
 using Borea.Storage.Launch;
 
 namespace Borea.Storage.ModLoaders;
@@ -73,7 +74,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
 
         var settings = await _settings.GetAsync(cancellationToken).ConfigureAwait(false) ?? new BoreaSettings(null);
         if (settings.LoaderInstallations.TryGetValue(loader.ModId, out var recorded)
-            && !SamePath(recorded.DirectoryPath, loaderDirectory))
+            && !FileSystemPaths.SamePath(recorded.DirectoryPath, loaderDirectory))
         {
             throw new InvalidOperationException(
                 $"{loader.Name} is already recorded at '{recorded.DirectoryPath}'. Remove that record or adopt that directory instead.");
@@ -220,7 +221,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         if (!Path.IsPathFullyQualified(managed) || !Path.IsPathFullyQualified(configured))
             return false;
 
-        return SamePath(managed, configured);
+        return FileSystemPaths.SamePath(managed, configured);
     }
 
     private static string Absolute(string path, string paramName)
@@ -232,14 +233,5 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             throw new ArgumentException("The loader directory must be absolute.", paramName);
 
         return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
-    }
-
-    private static bool SamePath(string left, string right)
-    {
-        var comparison = OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-        return string.Equals(
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
-            comparison);
     }
 }

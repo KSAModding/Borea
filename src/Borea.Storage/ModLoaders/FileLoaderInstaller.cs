@@ -2,6 +2,7 @@ using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
+using Borea.Storage.Files;
 using Borea.Storage.Mods;
 
 namespace Borea.Storage.ModLoaders;
@@ -82,7 +83,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         var destination = Resolve(loader, target, path, directory, settings.GameDirectoryPath);
 
         var replacing = recorded is not null;
-        if (replacing && !SamePath(recorded!, destination))
+        if (replacing && !FileSystemPaths.SamePath(recorded!, destination))
         {
             throw new InvalidOperationException(
                 $"{loader.Name} is already installed at '{recorded}'. Install into that directory to replace it, remove it first, or correct its directory in the settings.");
@@ -123,9 +124,9 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
             return directory;
 
         var loaderFolder = Path.Combine(_pathProvider.GetLoadersRoot(), loader.ModId);
-        var isLoaderFolder = (recorded is not null && SamePath(given, recorded))
-            || SamePath(given, loaderFolder)
-            || (Path.GetDirectoryName(given) is { } parent && SamePath(parent, loaderFolder) && ModVersion.TryParse(Path.GetFileName(given), out _));
+        var isLoaderFolder = (recorded is not null && FileSystemPaths.SamePath(given, recorded))
+            || FileSystemPaths.SamePath(given, loaderFolder)
+            || (Path.GetDirectoryName(given) is { } parent && FileSystemPaths.SamePath(parent, loaderFolder) && ModVersion.TryParse(Path.GetFileName(given), out _));
         if (!isLoaderFolder)
         {
             throw new InvalidOperationException(
@@ -189,7 +190,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
 
         if (Directory.Exists(versionDirectory) && Directory.EnumerateFileSystemEntries(versionDirectory).Any())
         {
-            var holder = installed.FirstOrDefault(v => SamePath(v.DirectoryPath, versionDirectory));
+            var holder = installed.FirstOrDefault(v => FileSystemPaths.SamePath(v.DirectoryPath, versionDirectory));
             throw new InvalidOperationException(holder is null
                 ? $"'{versionDirectory}' already holds files that Borea did not install."
                 : $"'{versionDirectory}' holds {loader.Name} {holder.Version?.ToString() ?? "of an unknown version"}, not {release.Version}. Remove that version first, then install {release.Version} again.");
@@ -250,7 +251,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
             destination,
             current =>
             {
-                if (!current.LoaderInstallations.TryGetValue(loader.ModId, out var record) || !SamePath(record.DirectoryPath, destination))
+                if (!current.LoaderInstallations.TryGetValue(loader.ModId, out var record) || !FileSystemPaths.SamePath(record.DirectoryPath, destination))
                     return Repoint(current, loader.ModId, release.Version, destination, loaderFolder, replacesUnfitRecord);
 
                 var isAdopted = !IsBelowLoadersRoot(destination) && record.IsAdopted;
@@ -279,7 +280,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         if (!IsBelowLoadersRoot(record.DirectoryPath))
             return null;
 
-        if (SamePath(record.DirectoryPath, loaderFolder) || record.Version is not { } recordedVersion)
+        if (FileSystemPaths.SamePath(record.DirectoryPath, loaderFolder) || record.Version is not { } recordedVersion)
             return current.WithLoaderInstallation(loaderId, installation);
 
         if (version.PreRelease is not null && recordedVersion.PreRelease is null && current.ReleaseChannel == ReleaseChannel.Stable)
@@ -389,7 +390,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         }
         finally
         {
-            TryDeleteFile(archivePath);
+            LeftoverCleanup.TryDeleteFile(archivePath);
             if (mode != Mode.Fresh)
                 TryDeleteDirectory(stagingDirectory);
         }
@@ -530,7 +531,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
 
                 var gameRoot = Absolute(gameDirectory, nameof(gameDirectory));
                 var placed = Below(gameRoot, path);
-                if (SamePath(placed, gameRoot))
+                if (FileSystemPaths.SamePath(placed, gameRoot))
                     throw new NotSupportedException($"{loader.Name} installs into the game folder itself, which Borea cannot take back out again.");
 
                 return placed;
@@ -593,15 +594,6 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
     }
 
-    private static bool SamePath(string left, string right)
-    {
-        var comparison = OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-        return string.Equals(
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
-            comparison);
-    }
-
     /// <summary>
     /// Cleanup must not replace the error that caused it, here and below.
     /// </summary>
@@ -646,21 +638,6 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 else
                     File.Delete(entry);
             }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
         }
         catch (IOException)
         {
