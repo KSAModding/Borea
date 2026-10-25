@@ -231,6 +231,18 @@ public sealed class FileLoaderAdopterTests : IDisposable
     }
 
     [Fact]
+    public async Task AdoptAsync_FolderBelowTheLoadersRoot_IsBoreaOwned()
+    {
+        var directory = Path.Combine(_paths.GetLoadersRoot(), "StarMap");
+        PlaceStarMap(GameDirectory, directory);
+        var adopter = new FileLoaderAdopter(_settings, new LoaderConfigurator(), _paths.GetLoadersRoot());
+
+        await adopter.AdoptAsync(StarMap(), new[] { StarMapRelease() }, directory);
+
+        Assert.False((await _settings.GetAsync())!.LoaderInstallations["StarMap"].IsAdopted);
+    }
+
+    [Fact]
     public async Task AdoptAsync_RelativeDirectory_ThrowsArgumentException()
     {
         await Assert.ThrowsAsync<ArgumentException>(
@@ -246,15 +258,16 @@ public sealed class FileLoaderAdopterTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => new FileLoaderAdopter(_settings, null!));
     }
 
-    private void PlaceStarMap(string configuredGameDirectory)
+    private void PlaceStarMap(string configuredGameDirectory, string? directory = null)
     {
-        Directory.CreateDirectory(LoaderDirectory);
+        directory ??= LoaderDirectory;
+        Directory.CreateDirectory(directory);
         File.Copy(
             Path.Combine(AppContext.BaseDirectory, LoaderVersionFixture),
-            Path.Combine(LoaderDirectory, "StarMap.exe"));
-        File.WriteAllText(Path.Combine(LoaderDirectory, "StarMap.dll"), "loader");
+            Path.Combine(directory, "StarMap.exe"));
+        File.WriteAllText(Path.Combine(directory, "StarMap.dll"), "loader");
         File.WriteAllText(
-            Path.Combine(LoaderDirectory, "StarMapConfig.json"),
+            Path.Combine(directory, "StarMapConfig.json"),
             JsonSerializer.Serialize(new
             {
                 GameLocation = configuredGameDirectory,

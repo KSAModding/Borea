@@ -54,10 +54,10 @@ public sealed class FileInstanceSizeReader : IInstanceSizeReader
         var root = new DirectoryInfo(_pathProvider.GetInstanceRoot(instanceId));
         long total = 0;
 
-        total += Size(root, cancellationToken, skip: modsFolder);
+        total += SizeWithout(root, modsFolder, cancellationToken);
         if (modsFolder.Exists)
         {
-            total += Size(modsFolder, cancellationToken, skip: null, recurse: false);
+            total += Files(modsFolder, TopFiles, cancellationToken);
             foreach (var folder in Children(modsFolder, TopFoldersWithLinks))
             {
                 var size = Size(folder, cancellationToken);
@@ -69,18 +69,13 @@ public sealed class FileInstanceSizeReader : IInstanceSizeReader
         return new InstanceSizes(total, mods);
     }
 
-    /// <summary>
-    /// The size of <paramref name="folder"/>. With <paramref name="skip"/>, a
-    /// child folder of that name is left out; without recursion, only the files
-    /// directly in it count.
-    /// </summary>
-    private static long Size(DirectoryInfo folder, CancellationToken cancellationToken, DirectoryInfo? skip = null, bool recurse = true)
+    private static long Size(DirectoryInfo folder, CancellationToken cancellationToken)
+        => folder.Exists ? Files(folder, AllFiles, cancellationToken) : 0;
+
+    private static long SizeWithout(DirectoryInfo folder, DirectoryInfo skip, CancellationToken cancellationToken)
     {
         if (!folder.Exists)
             return 0;
-
-        if (skip is null)
-            return Files(folder, recurse ? AllFiles : TopFiles, cancellationToken);
 
         var size = Files(folder, TopFiles, cancellationToken);
         foreach (var child in Children(folder))
@@ -122,5 +117,4 @@ public sealed class FileInstanceSizeReader : IInstanceSizeReader
             return [];
         }
     }
-
 }

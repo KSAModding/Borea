@@ -383,10 +383,11 @@ namespace Borea.Network.Tests.Index
             await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
 
             var client = FakeHttpMessageHandler.BuildClient(
-                _ => JsonResponse("""{ "snapshot_version": 1, "listings": {}, "game_versions": {} }"""),
+                _ => JsonResponse("""{ "snapshot_version": 1, "listings": [], "game_versions": {} }"""),
                 out _);
 
-            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            var exception = await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Contains("'packs'", exception.Message);
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
         }
 
@@ -397,10 +398,11 @@ namespace Borea.Network.Tests.Index
             await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
 
             var client = FakeHttpMessageHandler.BuildClient(
-                _ => JsonResponse("""{ "snapshot_version": 1, "listings": {}, "packs": {} }"""),
+                _ => JsonResponse("""{ "snapshot_version": 1, "listings": [], "packs": [] }"""),
                 out _);
 
-            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            var exception = await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Contains("'game_versions'", exception.Message);
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
         }
 
@@ -449,7 +451,7 @@ namespace Borea.Network.Tests.Index
         }
 
         [Theory]
-        [InlineData("""{ "snapshot_version": 1, "listings": {}, "packs": {} }""")] // missing game_versions
+        [InlineData("""{ "snapshot_version": 1, "listings": [], "packs": [] }""")] // missing game_versions
         [InlineData("<Html>Please Log In</Html>")]
         [InlineData("{\"error\": \"Could not log you in\"}")]
         [InlineData("Plain Text")]

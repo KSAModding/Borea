@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Storage.Instances;
 
 namespace Borea.Cli.Tests;
 
@@ -69,6 +71,25 @@ public sealed class LoaderCommandTests : IDisposable
         Assert.Contains("Use --version", refused.Error);
         Assert.Equal(0, exact.ExitCode);
         Assert.Equal("0.4.6", Assert.Single(installer.Calls).Release.Version.ToString());
+    }
+
+    [Fact]
+    public async Task Install_WithoutVersion_AnUnrecordedVersionOutsideTheChannel_DoesNotBlockTheUpdate()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.7"));
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.8"));
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.5.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        var recorded = CreateVersionFolder(_host, "0.4.7");
+        CreateVersionFolder(_host, "0.5.0-dev.1");
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{recorded}'\nVersion = '0.4.7'\nIsAdopted = false\n");
+
+        var run = await _host.RunAsync("loader", "install", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("0.4.8", Assert.Single(installer.Calls).Release.Version.ToString());
     }
 
     [Fact]
@@ -271,6 +292,29 @@ public sealed class LoaderCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Uninstall_WhileTheGameRuns_FailsAndKeepsTheRecordAndFolder()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(_host.Paths.GetLoadersRoot(), "StarMap")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(directory, "StarMap.exe"), "loader");
+        var settings = $"""
+            [LoaderInstallations.StarMap]
+            DirectoryPath = '{directory}'
+            Version = '0.4.7'
+            IsAdopted = false
+            """;
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), settings);
+        _host.GameRunning = true;
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Close the game before you remove StarMap.", run.Error);
+        Assert.DoesNotContain("was not recorded", run.Output);
+        Assert.True(File.Exists(Path.Combine(directory, "StarMap.exe")));
+        Assert.Equal(settings, await File.ReadAllTextAsync(_host.Paths.GetBoreaSettingsPath()));
+    }
+
+    [Fact]
     public async Task Install_PrintsTheInstallStepsOfTheLoaderAfterTheResult()
     {
         _host.LoaderInstaller = new FakeLoaderInstaller();
@@ -322,6 +366,130 @@ public sealed class LoaderCommandTests : IDisposable
         Assert.DoesNotContain("steps", run.Output, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task UninstallVersion_WhileTheGameRuns_KeepsTheFolder()
+    {
+        var folder = CreateVersionFolder(_host, "0.4.7");
+        _host.GameRunning = true;
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap", "--version", "0.4.7");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Close the game before you remove StarMap.", run.Error);
+        Assert.True(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task UninstallVersion_PinnedByAnInstance_IsRefusedAndNamesTheInstance()
+    {
+        var folder = CreateVersionFolder(_host, "0.4.7");
+        await SavePinnedInstanceAsync(_host, "Flight Test", "0.4.7");
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap", "--version", "0.4.7");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'Flight Test' (pinned)", run.Error);
+        Assert.True(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task Uninstall_OtherVersionStays_MovesTheRecordThereAndThenRefusesItsPinnedUser()
+    {
+        var pinned = CreateVersionFolder(_host, "0.4.7");
+        var recorded = CreateVersionFolder(_host, "0.4.8");
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{recorded}'\nVersion = '0.4.8'\nIsAdopted = false\n");
+        await SavePinnedInstanceAsync(_host, "Flight Test", "0.4.7");
+
+        var removed = await _host.RunAsync("loader", "uninstall", "StarMap");
+        var refused = await _host.RunAsync("loader", "uninstall", "StarMap");
+        var show = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(0, removed.ExitCode);
+        Assert.False(Directory.Exists(recorded));
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("Borea keeps StarMap 0.4.7, because 'Flight Test' (pinned) starts it.", refused.Error);
+        Assert.True(Directory.Exists(pinned));
+        var version = Assert.Single(show.Json.GetProperty("loaderVersions").EnumerateArray());
+        Assert.Equal("0.4.7", version.GetProperty("version").GetString());
+        Assert.True(version.GetProperty("recorded").GetBoolean());
+    }
+
+    [Fact]
+    public async Task UninstallUnused_RemovesTheUnusedVersionAndKeepsThePinnedOne()
+    {
+        var pinned = CreateVersionFolder(_host, "0.4.7");
+        var unused = CreateVersionFolder(_host, "0.4.8");
+        await SavePinnedInstanceAsync(_host, "Flight Test", "0.4.7");
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap", "--unused");
+        var show = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Removed StarMap 0.4.8", run.Output);
+        Assert.Contains("Kept StarMap 0.4.7, because 'Flight Test' (pinned) starts it.", run.Output);
+        Assert.False(Directory.Exists(unused));
+        Assert.True(Directory.Exists(pinned));
+        var version = Assert.Single(show.Json.GetProperty("loaderVersions").EnumerateArray());
+        Assert.Equal("0.4.7", version.GetProperty("version").GetString());
+    }
+
+    [Fact]
+    public async Task UninstallUnused_KeepsTheVersionThatAnAutomaticInstanceStarts()
+    {
+        _host.IndexReader.Snapshot = LaunchCommandTests.StarMapIndex();
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        var older = CreateVersionFolder(_host, "0.4.7");
+        var started = CreateVersionFolder(_host, "0.4.8");
+
+        // the record is on the version that goes, so the loop must read the uses again after the record moves
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{older}'\nVersion = '0.4.7'\nIsAdopted = false\n");
+        var mod = ContentCommandFixtures.Release("flight-tools", loader: new LoaderRequirement("StarMap", ModVersion.Parse("0.4.0"), null));
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Flight Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [new InstalledMod(mod.ModId, mod.Version, InstallReason.Manual, DateTimeOffset.UtcNow, mod)], isFavorite: false);
+        await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
+
+        var refused = await _host.RunAsync("loader", "uninstall", "StarMap", "--version", "0.4.8");
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap", "--unused");
+
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("'Flight Test' (automatic)", refused.Error);
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Removed StarMap 0.4.7", run.Output);
+        Assert.Contains("Kept StarMap 0.4.8, because 'Flight Test' (automatic) starts it.", run.Output);
+        Assert.False(Directory.Exists(older));
+        Assert.True(Directory.Exists(started));
+    }
+
+    [Fact]
+    public async Task Install_WhileTheGameRuns_IsRefusedBeforeTheInstallerRuns()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release());
+        _host.GameRunning = true;
+
+        var run = await _host.RunAsync("loader", "install", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Close the game before you install StarMap.", run.Error);
+        Assert.Empty(installer.Calls);
+    }
+
+    /// <summary>A Borea-owned version folder Loaders/StarMap/&lt;version&gt; that the store lists.</summary>
+    internal static string CreateVersionFolder(CliHost host, string version)
+    {
+        var folder = Directory.CreateDirectory(host.Paths.GetLoaderVersionDirectoryPath("StarMap", ModVersion.Parse(version))).FullName;
+        File.WriteAllText(Path.Combine(folder, "StarMap.exe"), "loader");
+        return folder;
+    }
+
+    internal static async Task SavePinnedInstanceAsync(CliHost host, string name, string version)
+    {
+        var instance = new Instance(name, InstanceSource.Custom.Value);
+        instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse(version)));
+        await new FileInstanceRepository(host.Paths).SaveAsync(instance);
+    }
+
     internal static string CreateLoaderDirectory(string loaderId, string executableContents, string root, string? gameDirectory = null)
     {
         var directory = Directory.CreateDirectory(Path.Combine(root, loaderId)).FullName;
@@ -348,6 +516,7 @@ public sealed class LoaderCommandTests : IDisposable
             ModMetadata loader,
             ModVersionMetadata release,
             string? directory = null,
+            bool replacesUnfitRecord = false,
             IProgress<InstallProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
@@ -391,5 +560,8 @@ public sealed class LoaderCommandTests : IDisposable
             LoaderIds.Add(loaderId);
             return Task.FromResult(Result);
         }
+
+        public Task<LoaderUninstallResult> UninstallVersionAsync(string loaderId, ModVersion version, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

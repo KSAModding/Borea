@@ -110,8 +110,24 @@ public sealed class ListingImageMeasurer : IListingImageMeasurer, IDisposable
         }
     }
 
-    /// <summary>The commit the branch points to, whether GitHub has no such branch, or neither when GitHub did not answer.</summary>
-    private Task<BranchAnswer> BranchCommitAsync(GitHubBranchAddress address, bool fresh, CancellationToken cancellationToken)
+    /// <summary>
+    /// The commit the branch points to, whether GitHub has no such branch, or neither when GitHub did not answer. A read that another caller
+    /// started and then canceled is read again, because that cancel is not this caller's.
+    /// </summary>
+    private async Task<BranchAnswer> BranchCommitAsync(GitHubBranchAddress address, bool fresh, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await SharedBranchCommitAsync(address, fresh, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return await SharedBranchCommitAsync(address, fresh, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>The read of the branch that callers share for <see cref="BranchCommitLifetime"/>, with the token of the caller that started it.</summary>
+    private Task<BranchAnswer> SharedBranchCommitAsync(GitHubBranchAddress address, bool fresh, CancellationToken cancellationToken)
     {
         var now = _time.GetUtcNow();
         var key = $"{address.Owner}/{address.Repository}/{address.Branch}".ToUpperInvariant();

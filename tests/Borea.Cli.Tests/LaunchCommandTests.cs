@@ -569,6 +569,90 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.Empty(_host.ProcessStarter.Plans);
     }
 
+    [Fact]
+    public async Task Launch_RecordedFolderWasDeleted_ReportsItAndMakesNoFolder()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "game", Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        Directory.Delete(loaderDirectory, recursive: true);
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains($"The folder '{loaderDirectory}' of StarMap is not there.", run.Error);
+        Assert.False(Directory.Exists(loaderDirectory));
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_PinnedVersionBesideTheRecordedOne_StartsThePinnedFolder()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var versions = Path.Combine(_host.Paths.GetLoadersRoot(), "StarMap");
+        var recorded = LoaderCommandTests.CreateLoaderDirectory("0.4.8", "not a program", versions);
+        var pinned = LoaderCommandTests.CreateLoaderDirectory("0.4.7", "not a program", versions);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"""
+            [LoaderInstallations.StarMap]
+            DirectoryPath = '{recorded}'
+            Version = '0.4.8'
+            IsAdopted = false
+            """);
+        await SavePinnedInstanceAsync("0.4.7");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("0.4.7", run.Json.GetProperty("loaderVersion").GetString());
+        var plan = Assert.Single(_host.ProcessStarter.Plans);
+        Assert.Equal(Path.GetFullPath(pinned), plan.WorkingDirectory);
+        Assert.Equal(Path.Combine(Path.GetFullPath(pinned), "StarMap.exe"), plan.Executable);
+    }
+
+    [Fact]
+    public async Task Launch_PinnedVersionNotInstalled_NamesTheVersionToInstall()
+    {
+        _host.IndexReader.Snapshot = StarMapIndex();
+        await SavePinnedInstanceAsync("0.4.7");
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'borea loader install StarMap --version 0.4.7'", run.Error);
+        Assert.DoesNotContain("Mod loader 'StarMap' is not installed", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_NoLoaderInstalledForAnEmptyInstance_NamesTheNewestStarMapThatFitsTheGame()
+    {
+        _host.IndexReader.Snapshot = StarMapIndex();
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'borea loader install StarMap --version 0.4.8'", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    internal static ContentIndexSnapshot StarMapIndex() => new(
+        1,
+        [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.7", gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638")], null)],
+        [],
+        null,
+        []);
+
+    private async Task SavePinnedInstanceAsync(string version)
+    {
+        var instance = new Instance("Flight Test", InstanceSource.Custom.Value);
+        instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse(version)));
+        await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
+    }
+
     /// <summary>Records each refresh with the number of processes started before it, and throws <paramref name="failure"/> when set.</summary>
     private sealed class RefreshRecorder(FakeProcessStarter starter, Exception? failure = null) : ILoaderConfigurator
     {
@@ -582,6 +666,9 @@ public sealed class LaunchCommandTests : IDisposable
             Refreshes.Add((loader.ModId, loaderDirectory, gameDirectory, starter.Plans.Count));
             return failure is null ? Task.FromResult<string?>(null) : Task.FromException<string?>(failure);
         }
+
+        public Task<string?> PrepareForLaunchAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, bool isAdopted, CancellationToken cancellationToken = default) =>
+            RefreshForWineAsync(loader, loaderDirectory, gameDirectory, cancellationToken);
 
         public string GamePathValue(string gameDirectory) => gameDirectory;
     }

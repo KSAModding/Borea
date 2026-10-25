@@ -29,6 +29,10 @@ public sealed class LoaderConfigurator : ILoaderConfigurator, ILoaderConfigurati
 
     private static readonly JsonSerializerOptions JsonWriteOptions = new() { WriteIndented = true };
 
+    private static readonly StringComparer PathComparer = OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+
+    private const string GameAssemblyFileName = "KSA.dll";
+
     private readonly IWinePrefixProbe _wine;
 
     public LoaderConfigurator()
@@ -128,6 +132,73 @@ public sealed class LoaderConfigurator : ILoaderConfigurator, ILoaderConfigurati
         catch (UnauthorizedAccessException exception)
         {
             throw new InvalidOperationException($"Borea could not write the Windows game path to the configuration of {loader.Name} in '{directory}', so {loader.Name} in the Wine prefix could not find the game. {exception.Message}", exception);
+        }
+    }
+
+    public async Task<string?> PrepareForLaunchAsync(
+        ModMetadata loader,
+        string loaderDirectory,
+        string gameDirectory,
+        bool isAdopted,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(loader);
+
+        if (loader.Type != ContentType.ModLoader)
+            throw new ArgumentException("Only a mod loader has a configuration file to write.", nameof(loader));
+
+        var configure = loader.Provides?.Configure;
+        if (configure?.GamePath is null
+            || configure.Format is not (ConfigureFormat.Json or ConfigureFormat.Toml)
+            || string.IsNullOrWhiteSpace(loaderDirectory) || !Path.IsPathFullyQualified(loaderDirectory)
+            || string.IsNullOrWhiteSpace(gameDirectory) || !Path.IsPathFullyQualified(gameDirectory))
+        {
+            return null;
+        }
+
+        // a write would make the folder again with only the configuration file in it, and the launcher reports the missing folder
+        var directory = Path.GetFullPath(loaderDirectory);
+        if (!Directory.Exists(directory))
+            return null;
+
+        var game = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameDirectory));
+        var configured = await ReadConfiguredGamePathAsync(loader, directory, game, cancellationToken).ConfigureAwait(false);
+        var assembly = GameAssemblyOf(configured, directory);
+
+        var stale = isAdopted
+            ? assembly is null || !File.Exists(assembly)
+            : assembly is null || !PathComparer.Equals(assembly, Path.Combine(game, GameAssemblyFileName));
+        if (!stale)
+            return await RefreshForWineAsync(loader, directory, game, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            return await ConfigureAsync(loader, directory, game, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+        {
+            throw new InvalidOperationException($"Borea could not write the game path to the configuration of {loader.Name} in '{directory}', so {loader.Name} would not find the game. {exception.Message}", exception);
+        }
+    }
+
+    /// <summary>
+    /// The file StarMap loads for a configured value in LoaderConfig.TryLoadConfig, which appends KSA.dll to a folder and
+    /// takes any other value as the file. The loader starts in its own folder, so a relative value is relative to that folder.
+    /// Null when the value is absent, empty or no path.
+    /// </summary>
+    private static string? GameAssemblyOf(string? configured, string loaderDirectory)
+    {
+        if (string.IsNullOrEmpty(configured))
+            return null;
+
+        try
+        {
+            var path = Path.GetFullPath(configured, loaderDirectory);
+            return Directory.Exists(path) ? Path.Combine(Path.TrimEndingDirectorySeparator(path), GameAssemblyFileName) : path;
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return null;
         }
     }
 

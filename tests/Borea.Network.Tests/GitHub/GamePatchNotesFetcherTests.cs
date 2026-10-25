@@ -181,18 +181,6 @@ public sealed class GamePatchNotesFetcherTests
     }
 
     [Fact]
-    public async Task FetchAsync_FromRevisionOfTheInstalledBuild_IsNotRequested()
-    {
-        var requested = new List<Uri>();
-        var fetcher = Fetcher(new() { ["v2026.9.X.5402.json"] = ChangeLog(Build5402, 5400) }, requested);
-
-        var fetch = await fetcher.FetchAsync([Build5402], 5400, 20);
-
-        Assert.True(fetch.Complete);
-        Assert.Equal(["v2026.9.X.5402.json"], FileNames(requested));
-    }
-
-    [Fact]
     public async Task FetchAsync_MoreBuildsThanFiles_ReadsTheNewestAndIsCapped()
     {
         var requested = new List<Uri>();

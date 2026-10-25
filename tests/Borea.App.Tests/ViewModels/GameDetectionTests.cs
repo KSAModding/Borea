@@ -187,6 +187,8 @@ public sealed class GameDetectionTests
                 loader = PlaceStarMap(h);
             });
         var viewModel = harness.ViewModel;
+        // the loader update check reads StarMapConfig.json, and Windows cannot replace a file that is open
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
 
         await viewModel.UseFoundGameCommand.ExecuteAsync(null);
 
@@ -225,6 +227,8 @@ public sealed class GameDetectionTests
             services => services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation("StarMap", new LoaderInstallation(loader, version: null, rawVersion: null, isAdopted: true))),
             candidates: h => loader = PlaceStarMap(h));
         var viewModel = harness.ViewModel;
+        // the loader update check reads StarMapConfig.json, and Windows cannot replace a file that is open
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
         var game = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
         viewModel.GameDirectoryInput = game;
 
