@@ -320,7 +320,7 @@ public sealed partial class StewardReviewDocument
     public string? License => _draft?.License is { Length: > 0 } license ? license : null;
 
     public string? GameVersionText => _draft is { GameMin.Length: > 0 } draft
-        ? draft.GameMax is null ? $">= {draft.GameMin}" : $"{draft.GameMin} - {draft.GameMax}"
+        ? MainViewModel.GameBoundsText(draft.GameMin, draft.GameMax)
         : null;
 
     public string? VersionText => Document.Kind == StewardQueueKind.Pack && Document.Document?.GetString("version") is { Length: > 0 } version

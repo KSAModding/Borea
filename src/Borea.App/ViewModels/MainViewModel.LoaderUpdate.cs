@@ -124,9 +124,7 @@ public partial class MainViewModel
     /// <summary>Runs in the background after the index or the game changed. A later check stops the earlier one.</summary>
     private void StartLoaderUpdateCheck()
     {
-        var previous = _loaderUpdateCheck;
-        var check = RefreshLoaderUpdatesAsync(++_loaderUpdateCheckGeneration);
-        _loaderUpdateCheck = previous.IsCompleted ? check : Task.WhenAll(previous, check);
+        _loaderUpdateCheck = Chain(_loaderUpdateCheck, RefreshLoaderUpdatesAsync(++_loaderUpdateCheckGeneration));
     }
 
     /// <summary>Completes when the loader update checks have finished.</summary>

@@ -321,9 +321,7 @@ public partial class MainViewModel
     /// </summary>
     private void StartContentUpdateCheck()
     {
-        var previous = _contentUpdateCheck;
-        var check = RefreshContentUpdatesAsync(++_contentUpdateCheckGeneration);
-        _contentUpdateCheck = previous.IsCompleted ? check : Task.WhenAll(previous, check);
+        _contentUpdateCheck = Chain(_contentUpdateCheck, RefreshContentUpdatesAsync(++_contentUpdateCheckGeneration));
     }
 
     /// <summary>Completes when the update checks have finished.</summary>

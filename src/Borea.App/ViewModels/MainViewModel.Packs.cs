@@ -891,7 +891,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public string? NewerReleasesText => HasNewerReleases ? _owner.Localization.FormatPackNewerReleases(NewerMembers.Count, ModCount) : null;
 
-    public string GameVersionText => GameVersion(Metadata);
+    public string GameVersionText => MainViewModel.GameBoundsText(Metadata.GameMin, Metadata.GameMax);
 
     /// <summary>How long ago this pack version came out.</summary>
     public string ReleasedText => _owner.ShortAgeText(Metadata.ReleasedAt);
@@ -1050,9 +1050,6 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         Compatibility = Borea.Core.Game.Compatibility.Evaluate(Metadata, pinned, installed, releases);
         OnPropertyChanged(nameof(UnfitPinTexts));
     }
-
-    internal static string GameVersion(ModPackMetadata pack)
-        => pack.GameMax is null ? $">= {pack.GameMin}" : $"{pack.GameMin} - {pack.GameMax}";
 
     internal bool Matches(string query)
         => Name.Contains(query, StringComparison.CurrentCultureIgnoreCase)
@@ -1563,7 +1560,7 @@ public sealed partial class PackVersionItem : ObservableObject
 
     public string Version => Metadata.Version.ToString();
 
-    public string GameVersionText => PackItem.GameVersion(Metadata);
+    public string GameVersionText => MainViewModel.GameBoundsText(Metadata.GameMin, Metadata.GameMax);
 
     /// <summary>How long ago this version came out.</summary>
     public string PublishedText => _owner.ShortAgeText(Metadata.ReleasedAt);

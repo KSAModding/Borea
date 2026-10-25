@@ -541,6 +541,9 @@ public partial class MainViewModel : ViewModelBase
 
     internal static string DateTimeText(DateTimeOffset at) => at.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 
+    /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
+    internal static string GameBoundsText(string? gameMin, string? gameMax) => gameMax is null ? $">= {gameMin}" : $"{gameMin} - {gameMax}";
+
     /// <summary>Brings the rows into the given order in place, so a row that stays keeps its view and what the view shows.</summary>
     internal static void Arrange<T>(ObservableCollection<T> rows, IReadOnlyList<T> order)
     {
