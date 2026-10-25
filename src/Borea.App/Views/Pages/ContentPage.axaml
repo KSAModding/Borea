@@ -475,6 +475,7 @@
                         <Border.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.Or}">
                                 <Binding Path="HasContentLinks" />
+                                <Binding Path="ContentShareHostText" Converter="{x:Static ObjectConverters.IsNotNull}" />
                                 <Binding Path="ContentShareUrl" Converter="{x:Static ObjectConverters.IsNotNull}" />
                             </MultiBinding>
                         </Border.IsVisible>
@@ -483,10 +484,12 @@
                         <StackPanel.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.Or}">
                                 <Binding Path="HasContentLinks" />
+                                <Binding Path="ContentShareHostText" Converter="{x:Static ObjectConverters.IsNotNull}" />
                                 <Binding Path="ContentShareUrl" Converter="{x:Static ObjectConverters.IsNotNull}" />
                             </MultiBinding>
                         </StackPanel.IsVisible>
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ContentLinks}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ContentShareHostText}" TextWrapping="Wrap" IsVisible="{Binding ContentShareHostText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <ItemsControl ItemsSource="{Binding ContentLinks}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>

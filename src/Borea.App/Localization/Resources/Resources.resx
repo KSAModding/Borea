@@ -2664,6 +2664,9 @@
   <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
     <value>Leave this empty when every release of the repository is a mod release. With a prefix, the index takes only the GitHub releases whose tag starts with it, with the same letter case, and reads the version from the rest of the tag. For example, with mymod- the tag mymod-v1.2.0 is version 1.2.0.</value>
   </data>
+  <data name="ListingReleasesShareHostFormat" xml:space="preserve">
+    <value>Shared on {0} as {1}. Only the share host changes this.</value>
+  </data>
   <data name="ListingReleasesHint" xml:space="preserve">
     <value>New releases are listed from here on their own.</value>
   </data>
@@ -3698,6 +3701,9 @@
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
+  </data>
+  <data name="ContentSharedOnFormat" xml:space="preserve">
+    <value>Shared on {0}</value>
   </data>
   <data name="ContentCopyLink" xml:space="preserve">
     <value>Copy link</value>

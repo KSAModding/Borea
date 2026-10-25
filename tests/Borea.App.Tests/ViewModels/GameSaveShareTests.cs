@@ -224,6 +224,27 @@ public sealed class GameSaveShareTests
         Assert.Empty(editor.Errors);
     }
 
+    [Fact]
+    public async Task ListedVehicleOnAShareHost_KeepsTheHostWhenItIsChanged()
+    {
+        const string listed = "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Maxi\"]\nabstract = \"A rover.\"\nlicense = \"CC-BY-4.0\"\n\n[releases]\ngithub = \"maxi/ksa-shares\"\nksamods = \"ExampleRover\"\nauthority = \"ksamods\"\n";
+        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
+            request.RequestUri?.AbsoluteUri == "https://raw.githubusercontent.com/KSAModding/content-index/main/vehicles/ExampleRover.toml"
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(listed) }
+                : Ungated(request));
+        await harness.ViewModel.OpenListingAsync();
+        var editor = harness.ViewModel.ListingEditor;
+        editor.SelectedListed = new ListedListing("ExampleRover", "Example Rover", string.Empty, IsOwn: false, Type: "vehicle");
+        await editor.LoadListedCommand.ExecuteAsync(null);
+
+        editor.Abstract = "A six-wheel rover.";
+
+        Assert.Equal(harness.Localization.FormatListingReleasesShareHost("ksamods", "ExampleRover"), editor.ShareHostText);
+        Assert.True(editor.NeedsAuthority);
+        Assert.Equal(["github", "spacedock", "ksamods"], editor.AuthorityChoices);
+        Assert.EndsWith("[releases]\ngithub = \"maxi/ksa-shares\"\nauthority = \"ksamods\"\nksamods = \"ExampleRover\"\n", editor.DocumentText, StringComparison.Ordinal);
+    }
+
     /// <summary>An instance with a vehicle that names a part of ExamplePartsMod, which Borea installed at 1.4.0, and a part no mod defines.</summary>
     internal static async Task<Guid> CreateInstanceAsync(ViewModelHarness harness, string vehicleName)
     {

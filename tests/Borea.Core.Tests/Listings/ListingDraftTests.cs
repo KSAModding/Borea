@@ -127,6 +127,55 @@ public sealed class ListingDraftTests
     }
 
     [Fact]
+    public void FromDocument_ShareHostAlone_IsReadAndWrittenBack()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Remove("github");
+        document.GetTable("releases")!.Set("ksamods", "ExampleRover");
+
+        var draft = ListingDraft.FromDocument(document);
+
+        Assert.Equal(new ListingReleases(null, null, Share: new ListingShareHost("ksamods", "ExampleRover")), draft.Releases);
+        Assert.Equal("ExampleRover", draft.ToDocument().GetTable("releases")!.GetString("ksamods"));
+    }
+
+    [Fact]
+    public void FromDocument_ShareHostNamedByTheAuthority_KeepsEveryKey()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("ksamods", "ExampleRover");
+        document.GetTable("releases")!.Set("authority", "ksamods");
+
+        var written = ListingDraft.FromDocument(document).ToDocument().GetTable("releases")!;
+
+        Assert.Equal(["github", "ksamods", "authority"], written.Entries.Select(entry => entry.Key));
+        Assert.Equal(("StarMapLoader/StarMap", "ExampleRover", "ksamods"), (written.GetString("github"), written.GetString("ksamods"), written.GetString("authority")));
+    }
+
+    [Fact]
+    public void FromDocument_IdShapedKeyNextToGitHubWithoutAuthority_IsNoShareHost()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("until", "2.0");
+
+        var draft = ListingDraft.FromDocument(document);
+
+        Assert.Null(draft.Releases!.Share);
+        Assert.Equal("2.0", draft.ToDocument().GetTable("releases")!.GetString("until"));
+    }
+
+    [Fact]
+    public void FromDocument_AuthorityNamesTheSecondShareKey_ReadsThatKey()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("until", "2.0");
+        document.GetTable("releases")!.Set("ksamods", "ExampleRover");
+        document.GetTable("releases")!.Set("authority", "ksamods");
+
+        Assert.Equal(new ListingShareHost("ksamods", "ExampleRover"), ListingDraft.FromDocument(document).Releases!.Share);
+    }
+
+    [Fact]
     public void FromDocument_DependencyWithAlternatives_IsWrittenBackUnchanged()
     {
         var alternatives = new AuthoredTable();

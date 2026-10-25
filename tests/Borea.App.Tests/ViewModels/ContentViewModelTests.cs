@@ -31,6 +31,27 @@ public sealed class ContentViewModelTests
         Assert.Contains(viewModel.ContentLinks, link => link.Label == harness.Localization.LinkRepository);
         Assert.Contains(viewModel.ContentLinks, link => link.Label == "SpaceDock");
         Assert.True(viewModel.HasContentLinks);
+        Assert.Null(viewModel.ContentShareHostText);
+    }
+
+    [Fact]
+    public async Task Open_ListingOnAShareHost_NamesTheHost()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+        {
+            var root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+            var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "AdvancedFlightComputer")!;
+            var releases = listing["authored"]!["releases"]!.AsObject();
+            releases["ksamods"] = "AdvancedFlightComputer";
+            releases["authority"] = "ksamods";
+            return root.ToJsonString();
+        });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatContentSharedOn("ksamods"), viewModel.ContentShareHostText);
     }
 
     [Fact]
