@@ -1,13 +1,10 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Borea.Core.Index;
+﻿namespace Borea.Core.Index;
 
 /// <summary>
 /// The "index_status.state" property of a listing in index.json
 /// </summary>
 public enum IndexStatusState
 {
-    /// <summary>Unknown state, default</summary>
     Unknown = 0,
     /// <summary>The listing was taken down, now a tombstone</summary>
     Delisted = 1,

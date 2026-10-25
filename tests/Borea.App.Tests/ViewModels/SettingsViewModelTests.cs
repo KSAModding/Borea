@@ -112,8 +112,9 @@ public sealed class SettingsViewModelTests
 
         await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
 
-        Assert.Null(viewModel.InstalledLoaderText);
-        Assert.Equal(harness.Localization.SetupInstallLoader, viewModel.LoaderInstallActionText);
+        Assert.Empty(viewModel.LoaderVersionItems);
+        Assert.True(viewModel.HasNoLoaderVersions);
+        Assert.Equal("0.4.6", viewModel.SelectedLoaderInstallRelease?.VersionText);
         Assert.True(viewModel.CanInstallLoader);
     }
 
@@ -129,8 +130,8 @@ public sealed class SettingsViewModelTests
 
         await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion(recorded), viewModel.InstalledLoaderText);
-        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), viewModel.LoaderInstallActionText);
+        Assert.Equal("StarMap " + recorded, Assert.Single(viewModel.LoaderVersionItems).Title);
+        Assert.Equal(canUpdate ? "0.4.6" : null, viewModel.SelectedLoaderInstallRelease?.VersionText);
         Assert.Equal(canUpdate, viewModel.CanInstallLoader);
     }
 
@@ -144,9 +145,9 @@ public sealed class SettingsViewModelTests
 
         await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion("0.5.0-dev.1"), viewModel.InstalledLoaderText);
-        // the disabled button names the installed release, so it reads as up to date
-        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.5.0-dev.1"), viewModel.LoaderInstallActionText);
+        Assert.Equal("StarMap 0.5.0-dev.1", Assert.Single(viewModel.LoaderVersionItems).Title);
+        // the older release stays a choice, but nothing chooses it for the player
+        Assert.Null(viewModel.SelectedLoaderInstallRelease);
         Assert.False(viewModel.CanInstallLoader);
     }
 
@@ -184,7 +185,7 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
-    public async Task UseExistingLoader_WithoutAVersion_OffersReinstall()
+    public async Task UseExistingLoader_WithoutAVersion_ListsTheFolderWithAnUnknownVersion()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -194,8 +195,10 @@ public sealed class SettingsViewModelTests
         viewModel.LoaderDirectoryInput = loader;
         await viewModel.AdoptLoaderCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.SetupLoaderInstalledUnknownVersion, viewModel.InstalledLoaderText);
-        Assert.Equal(harness.Localization.SetupReinstallLoader, viewModel.LoaderInstallActionText);
+        var row = Assert.Single(viewModel.LoaderVersionItems);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderYourFolder("StarMap"), row.Title);
+        Assert.Equal(harness.Localization.SetupLoaderInstalledUnknownVersion, row.CompatibilityText);
+        Assert.Equal(harness.Localization.SettingsLoaderForget, row.RemoveText);
         Assert.True(viewModel.CanInstallLoader);
     }
 

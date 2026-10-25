@@ -25,7 +25,6 @@ public sealed class LoggingIndexStatusEditor : IIndexStatusEditor
 
     public async Task<IndexStatusPullRequest> OpenAsync(IndexStatusChange change, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(change);
         try
         {
             var pullRequest = await Inner.OpenAsync(change, cancellationToken).ConfigureAwait(false);

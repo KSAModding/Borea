@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Listings;
 
@@ -74,7 +75,7 @@ public sealed partial class ListingSourceReader : IListingSourceReader
         }
         finally
         {
-            TryDeleteFile(archivePath);
+            LeftoverCleanup.TryDeleteFile(archivePath);
         }
     }
 
@@ -101,21 +102,6 @@ public sealed partial class ListingSourceReader : IListingSourceReader
             download: new DownloadInfo(latest.DownloadUrl!, sha256: null, latest.SizeBytes, "application/zip"),
             installSizeBytes: null,
             dependencies: []);
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
     }
 
     [GeneratedRegex("[^A-Za-z0-9._-]+")]

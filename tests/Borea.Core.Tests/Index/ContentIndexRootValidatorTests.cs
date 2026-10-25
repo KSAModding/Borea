@@ -65,6 +65,18 @@ public sealed class ContentIndexRootValidatorTests
         Assert.Contains("game_versions", exception.Message);
     }
 
+    [Fact]
+    public void ValidateIndexRoot_BytesOverload_InvalidShape_KeepsTheReasonAsMessageAndTheCauseAsInner()
+    {
+        var badShape = """{ "snapshot_version": 1, "listings": [], "packs": [] }""";
+
+        var exception = Assert.Throws<HttpRequestException>(() =>
+            ContentIndexRootValidator.ValidateIndexRoot(Bytes(badShape), JsonResponse(badShape)));
+
+        var cause = Assert.IsType<InvalidOperationException>(exception.InnerException);
+        Assert.Equal(cause.Message, exception.Message);
+    }
+
     #endregion
 
     #region string + path overload

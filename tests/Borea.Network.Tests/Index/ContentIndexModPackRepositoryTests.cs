@@ -260,5 +260,6 @@ public sealed class ContentIndexModPackRepositoryTests
         public string GetInstanceMetadataPath(Guid instanceId) => throw new NotSupportedException();
         public string? GetGameDirectoryPath() => throw new NotSupportedException();
         public string? GetLoaderDirectoryPath(string loaderId) => throw new NotSupportedException();
+        public string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version) => throw new NotSupportedException();
     }
 }

@@ -1,5 +1,4 @@
 using Borea.Core.Instances;
-using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
 namespace Borea.Core.Launch;

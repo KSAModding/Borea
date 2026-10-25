@@ -156,22 +156,7 @@ public partial class MainViewModel
         ModVersionMetadata? exact = null;
         Func<string>? note = null;
         if (requested is { } version)
-        {
-            var text = version.ToString();
-            exact = await services.ContentIndex.GetReleaseAsync(row.ModId, version);
-            if (exact is null)
-                note = () => Localization.FormatLinkVersionMissing(text);
-            else if (exact.Yanked)
-            {
-                exact = null;
-                note = () => Localization.FormatLinkVersionYanked(text);
-            }
-            else if (!exact.IsOffered)
-            {
-                exact = null;
-                note = () => Localization.FormatLinkVersionGone(text);
-            }
-        }
+            (exact, note) = await RequestedReleaseAsync(services, row.ModId, version);
 
         if (instance.InstalledVersionOf(row.ModId) is { } installed && (exact is null || exact.Version == installed))
         {
@@ -192,6 +177,22 @@ public partial class MainViewModel
             Toasts.ShowMessage(ToastKind.Error, note);
     }
 
+    private async Task<(ModVersionMetadata? Release, Func<string>? Note)> RequestedReleaseAsync(BoreaServices services, string modId, ModVersion version)
+    {
+        var text = version.ToString();
+        var release = await services.ContentIndex.GetReleaseAsync(modId, version);
+        if (release is null)
+            return (null, () => Localization.FormatLinkVersionMissing(text));
+
+        if (release.Yanked)
+            return (null, () => Localization.FormatLinkVersionYanked(text));
+
+        if (!release.IsOffered)
+            return (null, () => Localization.FormatLinkVersionGone(text));
+
+        return (release, null);
+    }
+
     private async Task PrepareLinkPackInstallAsync(BoreaServices services, PackItem pack, ModVersion? requested)
     {
         if (ActiveInstance is not { } instance)
@@ -203,18 +204,7 @@ public partial class MainViewModel
         ModPackMetadata? exact = null;
         Func<string>? note = null;
         if (requested is { } version)
-        {
-            var text = version.ToString();
-            exact = (await services.ModPacks.GetAvailableVersionsAsync(pack.PackId))
-                .Select(result => result.Metadata)
-                .OfType<ModPackMetadata>()
-                .FirstOrDefault(metadata => metadata.Version == version);
-            if (exact is null)
-            {
-                var retracted = (await services.ModPacks.GetVersionAsync(pack.PackId, version))?.Metadata is not null;
-                note = retracted ? () => Localization.FormatLinkVersionYanked(text) : () => Localization.FormatLinkVersionMissing(text);
-            }
-        }
+            (exact, note) = await RequestedPackVersionAsync(services, pack.PackId, version);
 
         var target = exact ?? pack.Metadata;
         if (target.Mods.All(pin => instance.Mods.Any(mod => ModIds.Equals(mod.ModId, pin.ContentId) && mod.Version == pin.Version)))
@@ -229,6 +219,20 @@ public partial class MainViewModel
             pack.ShowLinkRequest(() => WithNote(note, Localization.FormatLinkInstall($"{pack.Name} {target.Version}", instance.Name)));
         else if (note is not null)
             Toasts.ShowMessage(ToastKind.Error, note);
+    }
+
+    private async Task<(ModPackMetadata? Metadata, Func<string>? Note)> RequestedPackVersionAsync(BoreaServices services, string packId, ModVersion version)
+    {
+        var text = version.ToString();
+        var available = (await services.ModPacks.GetAvailableVersionsAsync(packId))
+            .Select(result => result.Metadata)
+            .OfType<ModPackMetadata>()
+            .FirstOrDefault(metadata => metadata.Version == version);
+        if (available is not null)
+            return (available, null);
+
+        var retracted = (await services.ModPacks.GetVersionAsync(packId, version))?.Metadata is not null;
+        return (null, retracted ? () => Localization.FormatLinkVersionYanked(text) : () => Localization.FormatLinkVersionMissing(text));
     }
 
     private static string WithNote(Func<string>? note, string text) => note is null ? text : $"{note()} {text}";

@@ -1,8 +1,5 @@
 ﻿namespace Borea.Storage.Mods;
 
-/// <summary>
-/// TOML-serializable representation of a ReleaseSource.
-/// </summary>
 public sealed class ReleaseSourceDto
 {
     public List<ReleaseHostDto> Hosts { get; set; } = new();

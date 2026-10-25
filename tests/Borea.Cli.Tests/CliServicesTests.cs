@@ -115,6 +115,7 @@ public sealed class CliServicesTests : IDisposable
             LoaderAdopter = graph.LoaderAdopter,
             LoaderConfiguration = graph.LoaderConfiguration,
             LoaderUninstaller = graph.LoaderUninstaller,
+            LoaderVersions = graph.LoaderVersions,
             Launcher = graph.Launcher,
             ModPacks = graph.ModPacks,
             ReadOnlyModPacks = graph.ReadOnlyModPacks,

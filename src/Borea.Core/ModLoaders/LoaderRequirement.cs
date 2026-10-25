@@ -40,9 +40,6 @@ public sealed class LoaderRequirement
         Source = source;
     }
 
-    /// <summary>
-    /// Whether the given loader version lies within the inclusive bounds.
-    /// </summary>
     public bool BoundsContain(ModVersion version)
     {
         if (version.CompareTo(MinVersion) < 0)

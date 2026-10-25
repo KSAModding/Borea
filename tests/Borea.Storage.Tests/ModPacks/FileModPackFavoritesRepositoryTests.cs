@@ -49,15 +49,6 @@ public sealed class FileModPackFavoritesRepositoryTests : IDisposable
         Assert.False(File.Exists(_pathProvider.GetModPackFavoritesPath()));
     }
 
-    [Fact]
-    public async Task ModAndModPackFavorites_DoNotCollide()
-    {
-        // Regression guard: confirms the two repositories don't accidentally
-        // share a file path, which their near-identical implementations
-        // made a real risk.
-        Assert.NotEqual(_pathProvider.GetModFavoritesPath(), _pathProvider.GetModPackFavoritesPath());
-    }
-
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))

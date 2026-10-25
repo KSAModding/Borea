@@ -55,9 +55,6 @@ public static class SmoothScroll
 
     public static void SetIsEnabled(ScrollViewer viewer, bool value) => viewer.SetValue(IsEnabledProperty, value);
 
-    public static void ScrollTo(ScrollViewer viewer, Vector offset) =>
-        RunOf(viewer).GoTo(Clamp(viewer, offset));
-
     private static void Follow(ScrollViewer viewer, bool enabled)
     {
         viewer.RemoveHandler(InputElement.PointerWheelChangedEvent, OnWheel);
@@ -154,8 +151,6 @@ public static class SmoothScroll
 
         private bool _running;
 
-        public Vector Target => _target;
-
         public bool Nudge(Vector step)
         {
             var wasRunning = _running;
@@ -174,7 +169,7 @@ public static class SmoothScroll
 
         public void GoTo(Vector target)
         {
-            if (_viewer.IsEffectivelyVisible == false || TopLevel.GetTopLevel(_viewer) is not { } topLevel)
+            if (!_viewer.IsEffectivelyVisible || TopLevel.GetTopLevel(_viewer) is not { } topLevel)
                 return;
 
             _target = target;

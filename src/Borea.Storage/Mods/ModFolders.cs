@@ -69,11 +69,7 @@ internal static class ModFolders
 
                 ownedFolder = directory;
             }
-            catch (IOException)
-            {
-                return null;
-            }
-            catch (UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 return null;
             }

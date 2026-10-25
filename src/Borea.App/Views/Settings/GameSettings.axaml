@@ -4,7 +4,7 @@
              xmlns:core="using:Borea.Core.Game"
              x:Class="Borea.App.Views.Settings.GameSettings"
              x:DataType="vm:MainViewModel">
-    <!-- Game: where KSA is, and which loader starts it -->
+    <!-- Game: where KSA is, and the installed mod loader versions -->
     <ScrollViewer>
         <StackPanel Margin="32,32,44,24" Spacing="6" IsEnabled="{Binding !IsSetupBusy}">
             <TextBlock Classes="heading-md" Text="{Binding Localization.SetupGameDirectory}" />
@@ -45,28 +45,65 @@
 
             <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
 
-            <TextBlock Classes="heading-md" Text="{Binding Localization.SetupLoader}" />
-            <ComboBox ItemsSource="{Binding Loaders}" SelectedItem="{Binding SelectedLoader}" AutomationProperties.Name="{Binding Localization.SetupLoader}" Width="340" Margin="0,6,0,0">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:DiscoverItem">
-                        <TextBlock Text="{Binding Name}" />
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsLoadersTitle}" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsLoadersHint}" TextWrapping="Wrap" />
+            <TextBlock Classes="body-md muted" Text="{Binding Localization.InstanceLoaderNotInstalled}" Margin="0,12,0,0" IsVisible="{Binding HasNoLoaderVersions}" />
+            <ItemsControl ItemsSource="{Binding LoaderVersionItems}" Margin="0,12,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LoaderVersionItem">
+                        <Grid ColumnDefinitions="*,16,Auto" Margin="0,0,0,10">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <WrapPanel ItemSpacing="8" LineSpacing="4">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Title}" VerticalAlignment="Center" />
+                                    <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Ellipse />
+                                            <TextBlock Text="{Binding CompatibilityText}" />
+                                        </StackPanel>
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding UsedByText}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding UsedByToolTip}" IsVisible="{Binding UsedByText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <TextBlock Classes="body-sm muted" Text="{Binding Version.DirectoryPath}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Version.DirectoryPath}" IsVisible="{Binding IsAdopted}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.SettingsLoaderRemoveConfirm}" VerticalAlignment="Center" IsVisible="{Binding IsConfirmingRemove}" />
+                                <Button Classes="text danger" Content="{Binding RemoveText}" Command="{Binding RemoveCommand}" IsEnabled="{Binding CanRemove}" ToolTip.Tip="{Binding RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding RemoveToolTip}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" IsVisible="{Binding IsConfirmingRemove}" />
+                            </StackPanel>
+                        </Grid>
                     </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <Border Classes="chip" Classes.positive="{Binding !IsInstalledLoaderIncompatible}" Classes.incompatible="{Binding IsInstalledLoaderIncompatible}" HorizontalAlignment="Left" Margin="0,6,0,0" IsVisible="{Binding InstalledLoaderText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <TextBlock Text="{Binding InstalledLoaderText}" />
-            </Border>
-            <TextBlock Classes="heading-sm" Text="{Binding Localization.SetupLoaderDirectory}" Margin="0,16,0,0" />
-            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupLoaderDirectoryHint}" />
-            <Grid ColumnDefinitions="*,8,Auto" Margin="0,6,0,0">
-                <TextBox Classes="field" Text="{Binding LoaderDirectoryInput}" AutomationProperties.Name="{Binding Localization.SetupLoaderDirectory}" />
-                <Button Grid.Column="2" Classes="text" Content="{Binding Localization.SetupBrowse}" Click="BrowseLoaderDirectory" />
-            </Grid>
-            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupFoundLoader}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding IsLoaderDirectorySuggested}" />
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                <Button Classes="text primary" Content="{Binding LoaderInstallActionText}" Command="{Binding InstallLoaderCommand}" IsVisible="{Binding CanInstallLoader}" />
-                <Button Classes="text" Content="{Binding Localization.SetupUseExisting}" Command="{Binding AdoptLoaderCommand}" />
-            </StackPanel>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Classes="heading-sm" Text="{Binding Localization.SettingsLoaderInstallAnother}" Margin="0,12,0,0" />
+            <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,6,0,0">
+                <ComboBox ItemsSource="{Binding Loaders}" SelectedItem="{Binding SelectedLoader}" AutomationProperties.Name="{Binding Localization.SetupLoader}" Width="200" IsVisible="{Binding ShowLoaderChoice}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DiscoverItem">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ComboBox ItemsSource="{Binding LoaderInstallReleases}" SelectedItem="{Binding SelectedLoaderInstallRelease}" MinWidth="240" MaxDropDownHeight="300" AutomationProperties.Name="{Binding Localization.SettingsLoaderInstallAnother}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LoaderReleaseChoice">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding VersionText}" VerticalAlignment="Center" />
+                                <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasStatus}">
+                                    <TextBlock Text="{Binding StatusText}" />
+                                </Border>
+                                <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Ellipse />
+                                        <TextBlock Text="{Binding CompatibilityText}" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Classes="text primary" Content="{Binding Localization.SetupInstallLoader}" Command="{Binding InstallLoaderCommand}" IsEnabled="{Binding CanInstallLoader}" VerticalAlignment="Center" />
+            </WrapPanel>
             <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0" IsVisible="{Binding IsSetupBusy}">
                 <ProgressBar Height="6" VerticalAlignment="Center" Value="{Binding SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0" IsVisible="{Binding LoaderInstallRun, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -78,6 +115,15 @@
                 <TextBlock Classes="body-sm secondary" Text="{Binding SetupProgressStatus}" VerticalAlignment="Center" />
                 <TextBlock Classes="label-md" Text="{Binding SetupProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SetupProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
+
+            <TextBlock Classes="heading-sm" Text="{Binding Localization.SetupLoaderDirectory}" Margin="0,16,0,0" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupLoaderDirectoryHint}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,6,0,0">
+                <TextBox Classes="field" Text="{Binding LoaderDirectoryInput}" AutomationProperties.Name="{Binding Localization.SetupLoaderDirectory}" />
+                <Button Grid.Column="2" Classes="text" Content="{Binding Localization.SetupBrowse}" Click="BrowseLoaderDirectory" />
+                <Button Grid.Column="4" Classes="text" Content="{Binding Localization.SetupUseExisting}" Command="{Binding AdoptLoaderCommand}" />
+            </Grid>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupFoundLoader}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding IsLoaderDirectorySuggested}" />
             <TextBlock Classes="body-md secondary" Text="{Binding SetupMessage}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
 

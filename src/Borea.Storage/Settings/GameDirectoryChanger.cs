@@ -10,15 +10,18 @@ public sealed class GameDirectoryChanger : IGameDirectoryChanger
     private readonly IBoreaSettingsRepository _settings;
     private readonly IModRepository _mods;
     private readonly ILoaderConfigurator _configurator;
+    private readonly ILoaderVersionStore _versions;
 
     public GameDirectoryChanger(
         IBoreaSettingsRepository settings,
         IModRepository mods,
-        ILoaderConfigurator configurator)
+        ILoaderConfigurator configurator,
+        ILoaderVersionStore versions)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _mods = mods ?? throw new ArgumentNullException(nameof(mods));
         _configurator = configurator ?? throw new ArgumentNullException(nameof(configurator));
+        _versions = versions ?? throw new ArgumentNullException(nameof(versions));
     }
 
     public async Task ChangeAsync(string gameDirectory, CancellationToken cancellationToken = default)
@@ -34,14 +37,16 @@ public sealed class GameDirectoryChanger : IGameDirectoryChanger
             ?? new BoreaSettings(gameDirectoryPath: null);
         var changedSettings = previousSettings.WithGameDirectory(fullGameDirectory);
 
-        if (previousSettings.LoaderInstallations.Count == 0)
+        // The store lists the recorded folder of each loader, so a player without a loader still skips the listings here.
+        var versions = await _versions.ListAsync(cancellationToken).ConfigureAwait(false);
+        if (versions.Count == 0)
         {
             await _settings.SaveAsync(changedSettings, cancellationToken).ConfigureAwait(false);
             return;
         }
 
         var listings = await _mods.GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
-        var changes = FindChanges(previousSettings, listings);
+        var changes = FindChanges(versions, listings);
         if (changes.Count > 0)
             _ = _configurator.GamePathValue(fullGameDirectory);
 
@@ -83,28 +88,34 @@ public sealed class GameDirectoryChanger : IGameDirectoryChanger
         }
     }
 
+    /// <summary>
+    /// One change per configuration file. Every version folder keeps its own game path, so Borea writes each version the store
+    /// lists, which is the recorded folder of each loader, adopted or not, and every version folder Borea made below Loaders.
+    /// </summary>
     private static IReadOnlyList<ConfigurationChange> FindChanges(
-        BoreaSettings settings,
+        IReadOnlyList<InstalledLoaderVersion> versions,
         IReadOnlyList<ModMetadata> listings)
     {
         var changes = new List<ConfigurationChange>();
-        foreach (var (loaderId, installation) in settings.LoaderInstallations)
+        var seen = new HashSet<string>(PathComparer);
+        foreach (var version in versions)
         {
             var loader = listings.FirstOrDefault(candidate =>
                 candidate.Type == ContentType.ModLoader &&
-                ModIds.Equals(candidate.ModId, loaderId));
+                ModIds.Equals(candidate.ModId, version.LoaderId));
             var configure = loader?.Provides?.Configure;
             if (configure?.GamePath is null)
                 continue;
 
-            if (!Path.IsPathFullyQualified(installation.DirectoryPath))
-                throw new InvalidOperationException($"The saved directory for loader '{loaderId}' is not absolute.");
+            if (!Path.IsPathFullyQualified(version.DirectoryPath))
+                throw new InvalidOperationException($"The saved directory for loader '{version.LoaderId}' is not absolute.");
 
-            var loaderDirectory = Path.GetFullPath(installation.DirectoryPath);
+            var loaderDirectory = Path.GetFullPath(version.DirectoryPath);
             var configurationPath = Path.GetFullPath(Path.Combine(
                 loaderDirectory,
                 configure.File.Replace('/', Path.DirectorySeparatorChar)));
-            changes.Add(new ConfigurationChange(loader!, loaderDirectory, configurationPath));
+            if (seen.Add(configurationPath))
+                changes.Add(new ConfigurationChange(loader!, loaderDirectory, configurationPath));
         }
 
         return changes;

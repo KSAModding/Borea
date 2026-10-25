@@ -17,9 +17,6 @@ public sealed class ProvidesDto
     [JsonPropertyName("content-path")]
     public string? ContentPath { get; set; }
 
-    /// <summary>
-    /// Info needed to configure the mod-loader
-    /// </summary>
     [JsonPropertyName("configure")]
     public ConfigureDto? Configure { get; set; }
 

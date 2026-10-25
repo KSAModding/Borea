@@ -29,8 +29,7 @@ public sealed class GoneReleaseAmendmentTests
 
         var amended = amendment.Apply(Path, marked, amender);
 
-        Assert.NotNull(amended);
-        Assert.Equal(marked[..^3] + ",\n  \"yanked\": true\n}\n", amended.Text);
+        Assert.Equal(marked[..^3] + ",\n  \"yanked\": true\n}\n", amended!.Text);
         Assert.Equal(Mark, (string?)JsonNode.Parse(amended.Text)!["download"]!["unavailable_since"]);
         Assert.False(amended.Widens);
     }
@@ -42,8 +41,7 @@ public sealed class GoneReleaseAmendmentTests
 
         var amended = amendment.Apply(Path, Published, ReleaseAmender.Steward);
 
-        Assert.NotNull(amended);
-        Assert.Equal(Published[..^3] + ",\n  \"yanked\": true\n}\n", amended.Text);
+        Assert.Equal(Published[..^3] + ",\n  \"yanked\": true\n}\n", amended!.Text);
         Assert.False(JsonNode.Parse(amended.Text)!["download"]!.AsObject().ContainsKey("unavailable_since"));
     }
 

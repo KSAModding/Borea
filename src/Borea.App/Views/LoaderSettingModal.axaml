@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:core="using:Borea.Core.Mods"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.LoaderSettingModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: the mod loader setting of an instance, Automatic or one exact version -->
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.InstanceLoaderTitle}" VerticalAlignment="Center" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CancelLoaderSettingModalCommand}" IsEnabled="{Binding !IsSetupBusy}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,24,24,32" Spacing="16">
+                    <TextBlock Classes="body-md secondary" Text="{Binding LoaderSettingHint}" TextWrapping="Wrap" />
+
+                    <!-- the loader is a choice only once the index lists more than one loader that can start an instance -->
+                    <ComboBox ItemsSource="{Binding LoaderSettingLoaders}" SelectedItem="{Binding LoaderSettingLoader}" IsVisible="{Binding ShowLoaderSettingLoaders}" IsEnabled="{Binding !IsSetupBusy}" MinWidth="240" AutomationProperties.Name="{Binding Localization.InstanceLoaderTitle}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="core:ModMetadata">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <StackPanel Spacing="8" IsEnabled="{Binding !IsSetupBusy}">
+                        <RadioButton GroupName="LoaderSetting" IsChecked="{Binding IsLoaderSettingAutomatic}">
+                            <TextBlock Classes="body-md" Text="{Binding Localization.InstanceLoaderAutomatic}" />
+                        </RadioButton>
+                        <TextBlock Classes="body-sm secondary" Text="{Binding LoaderSettingAutomaticText}" TextWrapping="Wrap" Margin="28,0,0,0" IsVisible="{Binding LoaderSettingAutomaticText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <RadioButton GroupName="LoaderSetting" IsChecked="{Binding IsLoaderSettingPinned}" Margin="0,8,0,0">
+                            <TextBlock Classes="body-md" Text="{Binding Localization.InstanceLoaderPinChoice}" />
+                        </RadioButton>
+                        <ComboBox ItemsSource="{Binding LoaderSettingReleases}" SelectedItem="{Binding SelectedLoaderSettingRelease}" IsEnabled="{Binding IsLoaderSettingPinned}" Margin="28,0,0,0" MinWidth="240" MaxDropDownHeight="300" AutomationProperties.Name="{Binding Localization.InstanceLoaderPinChoice}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LoaderReleaseChoice">
+                                    <StackPanel Spacing="4">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding VersionText}" VerticalAlignment="Center" />
+                                            <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}">
+                                                <TextBlock Text="{Binding InstalledText}" />
+                                            </Border>
+                                            <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasStatus}">
+                                                <TextBlock Text="{Binding StatusText}" />
+                                            </Border>
+                                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Ellipse />
+                                                    <TextBlock Text="{Binding CompatibilityText}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                        <!-- the mark wraps on its own line, so a long one keeps the list close to the width of the box -->
+                                        <Border Classes="mark" HorizontalAlignment="Left" MaxWidth="320" IsVisible="{Binding HasMark}">
+                                            <TextBlock Classes="body-sm danger" Text="{Binding Mark}" TextWrapping="Wrap" />
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                            <!-- the closed box shows no mark, the line under it shows the mark of the chosen version -->
+                            <ComboBox.SelectionBoxItemTemplate>
+                                <DataTemplate x:DataType="vm:LoaderReleaseChoice">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding VersionText}" VerticalAlignment="Center" />
+                                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}">
+                                            <TextBlock Text="{Binding InstalledText}" />
+                                        </Border>
+                                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasStatus}">
+                                            <TextBlock Text="{Binding StatusText}" />
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.SelectionBoxItemTemplate>
+                        </ComboBox>
+                        <TextBlock Classes="body-sm danger" Text="{Binding SelectedLoaderSettingRelease.Mark, FallbackValue={x:Null}}" TextWrapping="Wrap" Margin="28,0,0,0" IsVisible="{Binding SelectedLoaderSettingRelease.HasMark, FallbackValue={x:False}}" />
+                    </StackPanel>
+
+                    <!-- the install of a missing version, as in the loader prompt -->
+                    <StackPanel Spacing="4" IsVisible="{Binding IsSetupBusy}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ProgressBar Height="6" Value="{Binding SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0" IsVisible="{Binding LoaderInstallRun, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <Button Classes="text" Content="{Binding LoaderInstallRun.PauseText}" Command="{Binding LoaderInstallRun.TogglePauseCommand}" />
+                                <Button Classes="text" Content="{Binding LoaderInstallRun.StopText}" Command="{Binding LoaderInstallRun.StopCommand}" />
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding SetupProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="body-sm secondary" Text="{Binding SetupProgressStatus}" VerticalAlignment="Center" />
+                            <TextBlock Classes="label-md" Text="{Binding SetupProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SetupProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="text tall" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelLoaderSettingModalCommand}" IsEnabled="{Binding !IsSetupBusy}" VerticalAlignment="Center" />
+                        <Button Classes="cta" Command="{Binding SaveLoaderSettingCommand}" IsEnabled="{Binding !IsSetupBusy}">
+                            <TextBlock Classes="action-lg" Text="{Binding LoaderSettingActionText}" VerticalAlignment="Center" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

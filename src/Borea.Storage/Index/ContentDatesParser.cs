@@ -44,7 +44,17 @@ internal static class ContentDatesParser
             return null;
         }
 
-        var text = property.GetString()!;
+        string text;
+        try
+        {
+            text = IndexJsonHelpers.ReadText(property);
+        }
+        catch (FormatException ex)
+        {
+            errors.Add(new RejectedIndexEntry(id, $"The {propertyName} value is unreadable. {ex.Message}"));
+            return null;
+        }
+
         if (!text.Contains('T', StringComparison.Ordinal)
             || !text.EndsWith('Z')
             || !DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))

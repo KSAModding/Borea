@@ -25,9 +25,7 @@ public partial class MainViewModel
     private void StartInstanceSizeLoad(Guid instanceId)
     {
         OnPropertyChanged(nameof(InstanceSizeText));
-        var previous = _instanceSizeLoad;
-        var load = LoadInstanceSizesAsync(instanceId);
-        _instanceSizeLoad = previous.IsCompleted ? load : Task.WhenAll(previous, load);
+        _instanceSizeLoad = Chain(_instanceSizeLoad, LoadInstanceSizesAsync(instanceId));
     }
 
     private async Task LoadInstanceSizesAsync(Guid instanceId)

@@ -152,12 +152,18 @@
             </Border>
         </DataTemplate>
 
-        <!-- the mod loader the mods need, above the mods, in the shape of the other tables -->
+        <!-- the mod loader that starts the instance and the loaders the mods need, above the mods, in the shape of the other tables -->
         <DataTemplate x:Key="InstanceLoaderTable" x:DataType="vm:InstanceLoaderSection">
             <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,0,0,16">
                 <StackPanel>
                     <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                        <TextBlock Classes="body-md secondary" Text="{Binding Title}" VerticalAlignment="Center" />
+                        <Grid ColumnDefinitions="*,16,Auto,4,Auto">
+                            <TextBlock Classes="body-md secondary" Text="{Binding Title}" VerticalAlignment="Center" />
+                            <Button Grid.Column="2" Classes="link" Command="{Binding ChangeCommand}" VerticalAlignment="Center">
+                                <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceLoaderChange}" />
+                            </Button>
+                            <views:InfoButton Grid.Column="4" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceLoaderInfo}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.MoreInformation}" />
+                        </Grid>
                     </Border>
                     <TextBlock Classes="body-md secondary" Text="{Binding NoneText}" TextWrapping="Wrap" Margin="16,12" IsVisible="{Binding NoneText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding DifferentText}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding DifferentText, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -191,8 +197,15 @@
                                                 <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                             </Button>
                                             <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}" />
-                                            <TextBlock Classes="body-sm secondary" Text="{Binding RangeText}" TextWrapping="Wrap" />
+                                            <!-- how the instance chooses the version, with the pin of a pinned instance -->
+                                            <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding ModeText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.PushPin}" VerticalAlignment="Center" IsVisible="{Binding IsPinned}" />
+                                                <TextBlock Classes="body-sm" Text="{Binding ModeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding RangeText}" TextWrapping="Wrap" IsVisible="{Binding RangeText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                             <TextBlock Classes="body-sm secondary" Text="{Binding NeededByText}" TextWrapping="Wrap" IsVisible="{Binding NeededByText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding NoneText}" TextWrapping="Wrap" IsVisible="{Binding NoneText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                            <ProgressBar Height="6" Margin="0,6,0,0" Value="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" IsVisible="{Binding IsInstalling}" />
                                         </StackPanel>
                                         <Border Grid.Column="3" Classes="chip" Classes.compatible="{Binding IsInstalled}" Classes.untested="{Binding IsWarning}" Classes.incompatible="{Binding IsDanger}" Margin="16,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" ToolTip.Tip="{Binding StatusToolTip}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -200,8 +213,8 @@
                                                 <TextBlock Text="{Binding StatusText}" />
                                             </StackPanel>
                                         </Border>
-                                        <Button Grid.Column="4" Classes="link" Margin="12,0,0,0" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLoaderSettingsCommand}" IsVisible="{Binding CanFix}" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceLoaderOpenSettings}" />
+                                        <Button Grid.Column="4" Classes="link" Margin="12,0,0,0" Command="{Binding InstallMissingCommand}" IsVisible="{Binding CanInstall}" IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsSetupBusy}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Classes="action-md" Text="{Binding InstallText}" />
                                         </Button>
                                         <Button Grid.Column="4" Classes="link" Margin="12,0,0,0" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsSetupBusy}" HorizontalAlignment="Left" VerticalAlignment="Center">
                                             <TextBlock Classes="action-md" Text="{Binding UpdateText}" />

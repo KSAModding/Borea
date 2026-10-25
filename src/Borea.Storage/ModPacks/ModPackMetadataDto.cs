@@ -1,8 +1,5 @@
 ﻿namespace Borea.Storage.ModPacks;
 
-/// <summary>
-/// TOML-serializable representation of one ModPackMetadata version.
-/// </summary>
 public sealed class ModPackMetadataDto
 {
     public int SpecVersion { get; set; }

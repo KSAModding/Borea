@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.Game;

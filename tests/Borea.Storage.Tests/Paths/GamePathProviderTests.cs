@@ -1,4 +1,5 @@
 using Borea.Core.Game;
+using Borea.Core.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Tests.Launch;
 
@@ -310,5 +311,16 @@ public sealed class GamePathProviderTests
         Assert.Equal("Loaders", Path.GetFileName(loaders));
         Assert.Equal(Path.GetDirectoryName(provider.GetInstancesRoot()), Path.GetDirectoryName(loaders));
         Assert.DoesNotContain(provider.GetInstancesRoot(), loaders);
+    }
+
+    [Fact]
+    public void GetLoaderVersionDirectoryPath_IsOneFolderPerVersionBelowTheFolderOfTheLoader()
+    {
+        var provider = new GamePathProvider(null, boreaRoot: Path.Combine(Path.GetTempPath(), "Borea"));
+
+        var directory = provider.GetLoaderVersionDirectoryPath("StarMap", ModVersion.Parse("0.4.7-beta.1+build.5"));
+
+        Assert.Equal(Path.Combine(provider.GetLoadersRoot(), "StarMap", "0.4.7-beta.1"), directory);
+        Assert.Throws<ArgumentException>(() => provider.GetLoaderVersionDirectoryPath("not a valid id", ModVersion.Parse("0.4.7")));
     }
 }

@@ -1,3 +1,5 @@
+using Borea.Core.Files;
+
 namespace Borea.Storage.Files;
 
 /// <summary>
@@ -24,7 +26,7 @@ internal static class AtomicFile
         try
         {
             await File.WriteAllTextAsync(tempPath, text, cancellationToken).ConfigureAwait(false);
-            File.Move(tempPath, path, overwrite: true);
+            await FileReplace.MoveOverAsync(tempPath, path, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -42,7 +44,7 @@ internal static class AtomicFile
         try
         {
             await File.WriteAllBytesAsync(tempPath, content, cancellationToken).ConfigureAwait(false);
-            File.Move(tempPath, path, overwrite: true);
+            await FileReplace.MoveOverAsync(tempPath, path, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -60,7 +62,7 @@ internal static class AtomicFile
         try
         {
             File.WriteAllBytes(tempPath, content);
-            File.Move(tempPath, path, overwrite: true);
+            FileReplace.MoveOver(tempPath, path);
         }
         finally
         {

@@ -23,9 +23,6 @@ public enum InstallPhase
 /// <summary>
 /// Where one install stands, for a progress display.
 /// </summary>
-/// <param name="ModId">The content being installed.</param>
-/// <param name="Version">The release being installed.</param>
-/// <param name="Phase">The step the install is in.</param>
 /// <param name="Download">The bytes so far while <see cref="InstallPhase.Downloading"/>, otherwise null.</param>
 /// <param name="Step">Which operation of a plan this is, counting from 1. 1 outside a plan.</param>
 /// <param name="StepCount">How many operations the plan runs. 1 outside a plan.</param>

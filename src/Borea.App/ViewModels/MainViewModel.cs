@@ -813,6 +813,9 @@ public partial class MainViewModel : ViewModelBase
 
     private Task _preferenceSaves = Task.CompletedTask;
 
+    // The preferences with every change whose save failed, so the next save of any preference writes them too.
+    private AppPreferences? _unsavedPreferences;
+
     /// <summary>
     /// Saves from a property change, which cannot await. The saves run one at a
     /// time behind <see cref="_preferenceSaveLock"/>.
@@ -831,21 +834,25 @@ public partial class MainViewModel : ViewModelBase
             return;
 
         await _preferenceSaveLock.WaitAsync();
+        AppPreferences? updatedPreferences = null;
         try
         {
-            var updatedPreferences = update(_appPreferences);
+            updatedPreferences = update(_unsavedPreferences ?? _appPreferences);
             if (SamePreferences(_appPreferences, updatedPreferences))
             {
+                _unsavedPreferences = null;
                 PreferenceSaveError = null;
                 return;
             }
 
             await _appPreferencesRepository.SaveAsync(updatedPreferences, BundledThemeNames);
             _appPreferences = updatedPreferences;
+            _unsavedPreferences = null;
             PreferenceSaveError = null;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
+            _unsavedPreferences = updatedPreferences ?? _unsavedPreferences;
             PreferenceSaveError = Localization.FormatPreferenceSaveError(exception.Message);
         }
         finally
@@ -920,6 +927,10 @@ public partial class MainViewModel : ViewModelBase
         // the service raises an empty name when the culture changes, so every
         // translated string on this model needs a refresh too.
         RefreshRowText();
+        if (SelectedContent is { } content)
+            FillLinks(ContentLinks, content.Links);
+        if (SelectedPack is { } pack)
+            FillLinks(PackLinks, pack.Links);
         // a row now carries its tag names in the new language and the search reads them,
         // so the rows that Discover and the pack list show are selected again
         ApplyDiscoverFilters();
@@ -935,6 +946,7 @@ public partial class MainViewModel : ViewModelBase
             category.RefreshText();
         RefreshContentGroups();
         RefreshInstanceLoader();
+        RefreshLoaderSettingText();
         RefreshModListText();
         foreach (var item in ManualInstallItems)
             item.RefreshText();
@@ -1153,6 +1165,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void BeginEditLaunchArguments() => _owner.BeginEditLaunchArguments(this);
+
+    [RelayCommand]
+    private Task BeginEditLoaderSettingAsync() => _owner.BeginEditLoaderSettingAsync(this);
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenInstanceFolder(InstanceId);

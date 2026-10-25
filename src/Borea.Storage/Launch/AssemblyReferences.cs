@@ -25,7 +25,6 @@ internal static class AssemblyReferences
     /// </summary>
     public static bool Referencing(string folder, IReadOnlyCollection<string> names, bool recurse = true)
     {
-        ArgumentNullException.ThrowIfNull(names);
         if (names.Count == 0)
             return false;
 
@@ -39,10 +38,6 @@ internal static class AssemblyReferences
     /// </summary>
     public static IReadOnlyList<InstalledMod> Mods(Instance instance, string modsFolder, IReadOnlyList<LoadOrderMod> loadOrder, Func<string, bool> missing)
     {
-        ArgumentNullException.ThrowIfNull(instance);
-        ArgumentNullException.ThrowIfNull(loadOrder);
-        ArgumentNullException.ThrowIfNull(missing);
-
         return loadOrder
             .Where(entry => entry.IsCodeMod)
             .Select(entry => instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, entry.ModId)))

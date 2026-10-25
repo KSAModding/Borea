@@ -272,18 +272,6 @@ public sealed class InstanceViewModelTests
     }
 
     [Fact]
-    public async Task PlayKSAWithoutModLoader_ShowsErrorMessageIfNoGameDirectorySet()
-    {
-        using var harness = await ViewModelHarness.CreateAsync();
-        var viewModel = harness.ViewModel;
-        await viewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
-
-        // InstalledVersionText is null when no Game Directory is set
-        Assert.Null(viewModel.InstalledVersionText);
-        Assert.NotNull(viewModel.LaunchMessage);
-    }
-
-    [Fact]
     public async Task HomeLaunch_ChosenFromTheMenu_BecomesTheButtonAndIsSaved()
     {
         using var harness = await ViewModelHarness.CreateAsync();

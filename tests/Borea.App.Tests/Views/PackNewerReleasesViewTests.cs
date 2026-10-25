@@ -553,24 +553,7 @@ public sealed class PackNewerReleasesViewTests
 
     /// <summary>Renders the page next to a navigation rail, as the main window does.</summary>
     private static Task<List<string>> RenderAsync(ViewModelHarness harness, Func<Control> createPage, double windowWidth, Func<Control, List<string>> read) =>
-        HeadlessApp.RunAsync(harness, () =>
-        {
-            var page = createPage();
-            page.DataContext = harness.ViewModel;
-            Grid.SetColumn(page, 1);
-            var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{PageBodyPanel.NavigationRailWidth},*"), Children = { page } };
-            var window = new Window { Width = windowWidth, Height = 832, Content = body, DataContext = harness.ViewModel };
-            window.Show();
-            window.UpdateLayout();
-            try
-            {
-                return Task.FromResult(read(page));
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        RenderAsync(harness, createPage, [windowWidth], read);
 
     /// <summary>Renders the page in one window that takes each width of <paramref name="widths"/> in turn, and reads it at the last one.</summary>
     private static Task<List<string>> RenderAsync(ViewModelHarness harness, Func<Control> createPage, IReadOnlyList<double> widths, Func<Control, List<string>> read) =>

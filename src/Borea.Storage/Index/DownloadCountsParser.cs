@@ -96,7 +96,7 @@ internal static class DownloadCountsParser
 
         return new ReleaseDownloadCountsDto
         {
-            Version = version.GetString()!,
+            Version = IndexJsonHelpers.ReadText(version),
             Total = ReadCount(release, "total", location),
             Hosts = ReadHosts(release, location),
         };

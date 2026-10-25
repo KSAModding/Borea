@@ -164,6 +164,17 @@ public sealed class LoggingDecoratorsTests
     }
 
     [Fact]
+    public void Launch_GivenLoaderFolder_PassesItOn()
+    {
+        var inner = new DirectoryRecorder();
+        ILauncher launcher = new LoggingLauncher(inner, _log);
+
+        launcher.Launch(new Instance("Main", InstanceSource.Custom.Value), loader: null, "D:/Loaders/StarMap/0.4.7", arguments: null);
+
+        Assert.Equal(["D:/Loaders/StarMap/0.4.7"], inner.Directories);
+    }
+
+    [Fact]
     public void Launch_RefusedWithoutAPlan_WritesTheSavedAndGivenArguments()
     {
         var instance = new Instance("Main", InstanceSource.Custom.Value);
@@ -601,6 +612,27 @@ public sealed class LoggingDecoratorsTests
         public Task<ContentIndexFetchResult> FetchAsync(string destinationPath, CancellationToken ct = default) => throw new OperationCanceledException();
 
         public Task UninstallAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default) => throw new OperationCanceledException();
+    }
+
+    /// <summary>Records the loader folder of each launch, the way only a launcher that implements the overload sees it.</summary>
+    private sealed class DirectoryRecorder : ILauncher
+    {
+        public List<string?> Directories { get; } = [];
+
+        public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
+            Launch(instance, loader, loaderDirectory: null, arguments);
+
+        public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments)
+        {
+            Directories.Add(loaderDirectory);
+            return LaunchResult.Failed(LaunchOutcome.NoLaunchTarget, "Not started.");
+        }
+
+        public Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default) => Task.FromResult(started);
+
+        public Task<GameExit> WatchExitAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default) => Task.FromResult(GameExit.Unknown);
+
+        public bool IsRunning(Guid instanceId) => false;
     }
 
     private sealed class FixedLauncher(LaunchResult result) : ILauncher

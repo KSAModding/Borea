@@ -24,7 +24,10 @@ public sealed class LoggingListingPublisher : IListingPublisher
         {
             var pullRequest = await Inner.PublishAsync(submission, progress, cancellationToken).ConfigureAwait(false);
             if (pullRequest.Outcome != ListingPublishOutcome.Unchanged)
-                _log.Write($"{(pullRequest.Outcome == ListingPublishOutcome.Opened ? "Opened" : "Updated")} listing pull request {pullRequest.Url.AbsoluteUri}");
+            {
+                var action = pullRequest.Outcome == ListingPublishOutcome.Opened ? "Opened" : "Updated";
+                _log.Write($"{action} listing pull request {pullRequest.Url.AbsoluteUri}");
+            }
 
             return pullRequest;
         }

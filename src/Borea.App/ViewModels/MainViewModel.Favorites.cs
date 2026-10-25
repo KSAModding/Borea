@@ -71,7 +71,7 @@ public partial class MainViewModel
                 row.IsFavorite = isFavorite;
         }
 
-        return SaveFavoriteAsync(item.Name, !item.IsFavorite, Mark, favorite => favorite
+        return SaveFavoriteAsync(item.Name, !item.IsFavorite, Mark, isFavorite => isFavorite
             ? services.ModFavorites.AddFavoriteAsync(item.ModId)
             : services.ModFavorites.RemoveFavoriteAsync(item.ModId));
     }
@@ -88,7 +88,7 @@ public partial class MainViewModel
                 row.IsFavorite = isFavorite;
         }
 
-        return SaveFavoriteAsync(pack.Name, !pack.IsFavorite, Mark, favorite => favorite
+        return SaveFavoriteAsync(pack.Name, !pack.IsFavorite, Mark, isFavorite => isFavorite
             ? services.ModPackFavorites.AddFavoriteAsync(pack.PackId)
             : services.ModPackFavorites.RemoveFavoriteAsync(pack.PackId));
     }
@@ -113,24 +113,24 @@ public partial class MainViewModel
     /// Marks the row at once and saves behind <see cref="_favoriteSaveLock"/>,
     /// because every save rewrites the whole file. A failed save takes the mark back.
     /// </summary>
-    private Task SaveFavoriteAsync(string name, bool favorite, Action<bool> mark, Func<bool, Task> save)
+    private Task SaveFavoriteAsync(string name, bool isFavorite, Action<bool> mark, Func<bool, Task> save)
     {
-        ShowFavorite(mark, favorite);
-        var saving = RunFavoriteSaveAsync(name, favorite, mark, save);
+        ShowFavorite(mark, isFavorite);
+        var saving = RunFavoriteSaveAsync(name, isFavorite, mark, save);
         _favoriteSaves = Task.WhenAll(_favoriteSaves, saving);
         return saving;
     }
 
-    private async Task RunFavoriteSaveAsync(string name, bool favorite, Action<bool> mark, Func<bool, Task> save)
+    private async Task RunFavoriteSaveAsync(string name, bool isFavorite, Action<bool> mark, Func<bool, Task> save)
     {
         await _favoriteSaveLock.WaitAsync();
         try
         {
-            await save(favorite);
+            await save(isFavorite);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            ShowFavorite(mark, !favorite);
+            ShowFavorite(mark, !isFavorite);
             ShowErrorToast(() => Localization.FormatToastFavoriteFailed(name), exception.Message);
         }
         finally
@@ -139,9 +139,9 @@ public partial class MainViewModel
         }
     }
 
-    private void ShowFavorite(Action<bool> mark, bool favorite)
+    private void ShowFavorite(Action<bool> mark, bool isFavorite)
     {
-        mark(favorite);
+        mark(isFavorite);
         OnPropertyChanged(nameof(HasFavorites));
         // the filter goes away with the last favorite, so it cannot stay on with nothing to show
         if (!HasFavorites)

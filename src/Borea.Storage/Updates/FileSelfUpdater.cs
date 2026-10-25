@@ -455,7 +455,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
             using var file = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose);
             return true;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        catch (Exception exception) when (IsFileFailure(exception))
         {
             return false;
         }
@@ -479,7 +479,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
             var mode = File.GetUnixFileMode(programPath);
             File.SetUnixFileMode(programPath, mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        catch (Exception exception) when (IsFileFailure(exception))
         {
         }
     }

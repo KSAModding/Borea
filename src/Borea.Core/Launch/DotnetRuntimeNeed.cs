@@ -62,13 +62,7 @@ public sealed class DotnetRuntimeNeed
                 return null;
 
             // a setting on the framework reference wins over the one for the whole program, as in the host
-            var rollForward = (Text(runtime, "rollForward") ?? Text(options, "rollForward"))?.ToUpperInvariant() switch
-            {
-                "LATESTPATCH" => RollForward.LatestPatch,
-                "MAJOR" or "LATESTMAJOR" => RollForward.Major,
-                "DISABLE" => RollForward.Disable,
-                _ => RollForward.Minor,
-            };
+            var rollForward = ParseRollForward(Text(runtime, "rollForward") ?? Text(options, "rollForward"));
             return new DotnetRuntimeNeed(version, rollForward);
         }
         catch (JsonException)
@@ -110,6 +104,14 @@ public sealed class DotnetRuntimeNeed
 
     private static string? Text(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    private static RollForward ParseRollForward(string? value) => value?.ToUpperInvariant() switch
+    {
+        "LATESTPATCH" => RollForward.LatestPatch,
+        "MAJOR" or "LATESTMAJOR" => RollForward.Major,
+        "DISABLE" => RollForward.Disable,
+        _ => RollForward.Minor,
+    };
 
     /// <summary>
     /// Which versions the rollForward value of runtimeconfig.json lets the host

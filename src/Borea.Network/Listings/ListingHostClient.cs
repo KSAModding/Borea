@@ -42,7 +42,7 @@ public sealed class ListingHostClient : IListingHostClient
         var releases = await GetGitHubAsync<List<GitHubReleaseDto>>($"{GitHubApi}/repos/{repository.FullName}/releases?per_page=100", cancellationToken).ConfigureAwait(false) ?? [];
 
         var links = new List<ListingLink>();
-        if (Https(repository.Homepage) is { } homepage)
+        if (HttpUrl(repository.Homepage) is { } homepage)
             links.Add(new ListingLink(IsForums(homepage) ? "forums" : "homepage", homepage));
         links.Add(new ListingLink("repository", repository.HtmlUrl));
         if (repository.HasIssues)
@@ -73,15 +73,7 @@ public sealed class ListingHostClient : IListingHostClient
         if (archives.Count == 0)
             archives = uploaded.Where(asset => asset.ContentType is "application/zip" or "application/x-zip-compressed").ToList();
 
-        var chosen = archives.Count <= 1 ? archives.FirstOrDefault() : null;
-        if (archives.Count > 1)
-        {
-            var id = listingId.ToLowerInvariant();
-            var tag = release.TagName.TrimStart('v', 'V').ToLowerInvariant();
-            chosen = new[] { $"{id}.zip", $"{id}-{tag}.zip", $"{id}_{tag}.zip" }
-                .Select(wanted => archives.FirstOrDefault(asset => asset.Name.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
-                .FirstOrDefault(asset => asset is not null);
-        }
+        var chosen = archives.Count <= 1 ? archives.FirstOrDefault() : ArchiveNamedAfter(listingId, release.TagName, archives);
 
         return new ListingHostRelease(
             release.TagName,
@@ -89,6 +81,16 @@ public sealed class ListingHostClient : IListingHostClient
             chosen?.BrowserDownloadUrl,
             chosen?.Size,
             chosen is null ? archives.Select(asset => asset.Name).ToList() : []);
+    }
+
+    /// <summary>The archive named id.zip, id-tag.zip or id_tag.zip, in that order, where the tag has no leading v, or null.</summary>
+    private static GitHubAssetDto? ArchiveNamedAfter(string listingId, string tagName, List<GitHubAssetDto> archives)
+    {
+        var id = listingId.ToLowerInvariant();
+        var tag = tagName.TrimStart('v', 'V').ToLowerInvariant();
+        return new[] { $"{id}.zip", $"{id}-{tag}.zip", $"{id}_{tag}.zip" }
+            .Select(wanted => archives.FirstOrDefault(asset => asset.Name.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+            .FirstOrDefault(asset => asset is not null);
     }
 
     private async Task<ListingHostFacts> ReadSpaceDockAsync(ListingSourceReference.SpaceDock source, CancellationToken cancellationToken)
@@ -110,9 +112,9 @@ public sealed class ListingHostClient : IListingHostClient
 
         var page = SpaceDockUrl(mod.Url) ?? $"{SpaceDockModRepository.BaseUrl}/mod/{mod.Id}";
         var links = new List<ListingLink>();
-        if (Https(mod.Website) is { } website)
+        if (HttpUrl(mod.Website) is { } website)
             links.Add(new ListingLink(IsForums(website) ? "forums" : "homepage", website));
-        if (Https(mod.SourceCode) is { } sourceCode)
+        if (HttpUrl(mod.SourceCode) is { } sourceCode)
             links.Add(new ListingLink("repository", sourceCode));
         links.Add(new ListingLink("spacedock", page));
 
@@ -151,23 +153,14 @@ public sealed class ListingHostClient : IListingHostClient
     private static string? Version(string? tag) =>
         ModVersion.TryParseAuthored(tag?.Trim(), out var version) ? version.ToString() : null;
 
-    private static string? Https(string? url) =>
+    private static string? HttpUrl(string? url) =>
         Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" ? uri.AbsoluteUri : null;
 
     /// <summary>A path of the SpaceDock API as an address on SpaceDock itself, or null when it would lead anywhere else.</summary>
-    private static string? SpaceDockUrl(string? path)
-    {
-        var host = new Uri(SpaceDockModRepository.BaseUrl);
-        return !string.IsNullOrWhiteSpace(path)
-            && path.StartsWith('/')
-            && Uri.TryCreate(host, path, out var uri)
-            && uri.Scheme == Uri.UriSchemeHttps
-            && uri.IsDefaultPort
-            && uri.UserInfo.Length == 0
-            && string.Equals(uri.Host, host.Host, StringComparison.OrdinalIgnoreCase)
-                ? uri.AbsoluteUri
-                : null;
-    }
+    private static string? SpaceDockUrl(string? path) =>
+        SpaceDockModRepository.IsSpaceDockPath(path)
+            ? new Uri(new Uri(SpaceDockModRepository.BaseUrl), path).AbsoluteUri
+            : null;
 
     private static bool IsForums(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) && string.Equals(uri.Host, ForumsHost, StringComparison.OrdinalIgnoreCase);

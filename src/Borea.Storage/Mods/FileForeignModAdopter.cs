@@ -32,25 +32,7 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
         CancellationToken cancellationToken = default)
     {
         _ = await GetInstanceAsync(instanceId).ConfigureAwait(false);
-        var modsFolder = _pathProvider.GetInstanceModsFolder(instanceId);
-        var foreignMods = new List<ForeignMod>();
-
-        if (Directory.Exists(modsFolder))
-        {
-            foreach (var directory in Directory.EnumerateDirectories(modsFolder)
-                .OrderBy(path => Path.GetFileName(path), ModIds.Comparer)
-                .ThenBy(path => Path.GetFileName(path), StringComparer.Ordinal))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var definitionPath = Path.Combine(directory, ModFolders.DefinitionFileName);
-                if (!File.Exists(definitionPath))
-                    continue;
-
-                var folderName = Path.GetFileName(directory);
-                foreignMods.Add(await ReadForeignModAsync(folderName, definitionPath, cancellationToken).ConfigureAwait(false));
-            }
-        }
+        var foreignMods = await ReadModsFolderAsync(_pathProvider.GetInstanceModsFolder(instanceId), cancellationToken).ConfigureAwait(false);
 
         return await _instances.UpdateAsync(
             instanceId,
@@ -63,6 +45,29 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
                 return instance.ForeignMods;
             },
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<List<ForeignMod>> ReadModsFolderAsync(string modsFolder, CancellationToken cancellationToken)
+    {
+        var foreignMods = new List<ForeignMod>();
+        if (!Directory.Exists(modsFolder))
+            return foreignMods;
+
+        foreach (var directory in Directory.EnumerateDirectories(modsFolder)
+            .OrderBy(path => Path.GetFileName(path), ModIds.Comparer)
+            .ThenBy(path => Path.GetFileName(path), StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var definitionPath = Path.Combine(directory, ModFolders.DefinitionFileName);
+            if (!File.Exists(definitionPath))
+                continue;
+
+            var folderName = Path.GetFileName(directory);
+            foreignMods.Add(await ReadForeignModAsync(folderName, definitionPath, cancellationToken).ConfigureAwait(false));
+        }
+
+        return foreignMods;
     }
 
     public async Task<ForeignModAdoptionResult> AdoptArchiveAsync(
@@ -208,7 +213,8 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
             throw;
         }
 
-        TryDeleteDirectory(recoveryFolder);
+        // A foreign folder can be a link of the player's own, and then only the link goes.
+        LeftoverCleanup.TryDeleteTree(recoveryFolder);
     }
 
     private async Task RestoreFolderAsync(Guid instanceId, string folder, string recoveryFolder, ForeignMod? record)
@@ -270,17 +276,6 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
     {
         if (!Directory.Exists(folder) || !File.Exists(Path.Combine(folder, ModFolders.DefinitionFileName)))
             throw new InvalidOperationException($"The instance no longer has the foreign mod folder '{folderName}'.");
-    }
-
-    /// <summary>A foreign folder can be a link of the player's own, and then only the link goes.</summary>
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
     }
 
     private static async Task<ForeignMod> ReadForeignModAsync(

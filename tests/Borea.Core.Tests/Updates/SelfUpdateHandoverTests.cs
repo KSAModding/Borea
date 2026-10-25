@@ -6,28 +6,18 @@ public sealed class SelfUpdateHandoverTests
 {
     private const string Program = "/opt/Borea-0.1.0-linux-x64/borea";
 
-    [Fact]
-    public void ToArguments_AndTake_AreTheTwoSidesOfOneHandover()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ToArguments_AndTake_AreTheTwoSidesOfOneHandover(bool fromCommandLine)
     {
-        var handover = new SelfUpdateHandover(Program, 4242, "A1B2C3");
+        var handover = new SelfUpdateHandover(Program, 4242, "A1B2C3", fromCommandLine);
         var arguments = handover.ToArguments().ToArray();
 
         var taken = SelfUpdateHandover.Take(ref arguments);
 
         Assert.Equal(handover, taken);
         Assert.Empty(arguments);
-    }
-
-    [Fact]
-    public void ToArguments_AndTake_CarryTheWayTheOldBuildRan()
-    {
-        var handover = new SelfUpdateHandover(Program, 4242, "A1B2C3", FromCommandLine: true);
-        var arguments = handover.ToArguments().ToArray();
-
-        var taken = SelfUpdateHandover.Take(ref arguments);
-
-        Assert.Equal(handover, taken);
-        Assert.True(taken!.FromCommandLine);
     }
 
     [Fact]

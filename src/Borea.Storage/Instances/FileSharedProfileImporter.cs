@@ -117,18 +117,7 @@ public sealed class FileSharedProfileImporter : ISharedProfileImporter
         var imported = new List<SharedProfileImportedMod>();
         foreach (var mod in mods)
         {
-            InstalledMod? release = null;
-            string? matchError = null;
-            try
-            {
-                var result = await _matcher.AdoptMatchingReleaseAsync(instanceId, mod.FolderName, cancellationToken).ConfigureAwait(false);
-                release = result?.InstalledMod;
-            }
-            catch (Exception exception) when (IsMatchFailure(exception, cancellationToken))
-            {
-                matchError = exception.Message;
-            }
-
+            var (release, matchError) = await MatchReleaseAsync(instanceId, mod.FolderName, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             imported.Add(new SharedProfileImportedMod(mod.FolderName, mod.Enabled, hasEntry[mod.FolderName], release, matchError));
         }
@@ -136,6 +125,19 @@ public sealed class FileSharedProfileImporter : ISharedProfileImporter
         var instance = await _instances.GetByIdAsync(instanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
         return new SharedProfileImportResult(instance, imported, activated);
+    }
+
+    private async Task<(InstalledMod? Release, string? MatchError)> MatchReleaseAsync(Guid instanceId, string folderName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _matcher.AdoptMatchingReleaseAsync(instanceId, folderName, cancellationToken).ConfigureAwait(false);
+            return (result?.InstalledMod, null);
+        }
+        catch (Exception exception) when (IsMatchFailure(exception, cancellationToken))
+        {
+            return (null, exception.Message);
+        }
     }
 
     private static bool IsMatchFailure(Exception exception, CancellationToken cancellationToken)

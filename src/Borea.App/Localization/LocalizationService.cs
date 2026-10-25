@@ -12,7 +12,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
     private static readonly SupportedCulture English = new("en", "English");
     private static readonly SupportedCulture German = new("de", "Deutsch");
     private static readonly SupportedCulture Pirate = new("en-QP", "Pirate speak");
-    private static readonly IReadOnlyList<SupportedCulture> BuiltCultures = [English, German, Pirate];
+    private static readonly SupportedCulture SimplifiedChinese = new("zh-Hans", "\u7B80\u4F53\u4E2D\u6587");
+    private static readonly IReadOnlyList<SupportedCulture> BuiltCultures = [English, German, Pirate, SimplifiedChinese];
+
+    /// <summary>The languages packaged with the App, without local translation previews.</summary>
+    internal static IReadOnlyList<SupportedCulture> BuiltInCultures => BuiltCultures;
 
     private readonly IReadOnlyList<SupportedCulture> _cultures;
 
@@ -254,6 +258,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastLaunchArgumentsFailed(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastLaunchArgumentsFailedFormat, instanceName);
+
+    public string FormatToastInstanceLoaderFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstanceLoaderFailedFormat, instanceName);
 
     public string FormatToastEnableFailed(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastEnableFailedFormat, content);
@@ -1245,6 +1252,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateActionFormat, loader, offer);
 
     public string LoaderUpdateGameRunning => Resources.LoaderUpdateGameRunning;
+
+    public string FormatLoaderPinnedMissing(string loader, string version, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderPinnedMissingFormat, loader, version, instance);
+
+    public string FormatLoaderPinnedIncompatible(string loader, string version, string instance, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderPinnedIncompatibleFormat, loader, version, instance, game);
+
+    public string FormatLoaderInstallAction(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderInstallActionFormat, loader, version);
+
+    public string LoaderChangeAction => Resources.LoaderChangeAction;
 
     public string GameBuildDownload => Resources.GameBuildDownload;
 
@@ -2291,6 +2309,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutCredits => Resources.AboutCredits;
 
+    public string AboutTranslators => Resources.AboutTranslators;
+
+    public string AboutTranslatorNotListed => Resources.AboutTranslatorNotListed;
+
+    public string AboutOriginalRepository => Resources.AboutOriginalRepository;
+
     public string AboutCreditsHint => Resources.AboutCreditsHint;
 
     public string AboutOpenNotices => Resources.AboutOpenNotices;
@@ -2448,8 +2472,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceLoaderConflict => Resources.InstanceLoaderConflict;
 
-    public string InstanceLoaderOpenSettings => Resources.InstanceLoaderOpenSettings;
-
     public string InstanceLoaderConflictShort => Resources.InstanceLoaderConflictShort;
 
     public string InstanceLoaderNotInIndex => Resources.InstanceLoaderNotInIndex;
@@ -2483,6 +2505,39 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatInstanceLoaderIncompatible(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderIncompatibleFormat, version);
+
+    public string InstanceLoaderChange => Resources.InstanceLoaderChange;
+
+    public string InstanceLoaderInfo => Resources.InstanceLoaderInfo;
+
+    public string InstanceLoaderAutomatic => Resources.InstanceLoaderAutomatic;
+
+    public string InstanceLoaderPinChoice => Resources.InstanceLoaderPinChoice;
+
+    public string InstanceLoaderSaveAndInstall => Resources.InstanceLoaderSaveAndInstall;
+
+    public string InstanceLoaderMenu => Resources.InstanceLoaderMenu;
+
+    public string FormatInstanceLoaderAutomatic(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticFormat, version);
+
+    public string FormatInstanceLoaderPinned(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderPinnedFormat, version);
+
+    public string FormatInstanceLoaderInstall(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstallFormat, version);
+
+    public string FormatInstanceLoaderModalHint(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderModalHintFormat, instanceName);
+
+    public string FormatInstanceLoaderAutomaticTarget(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetFormat, loader, version);
+
+    public string FormatInstanceLoaderAutomaticNotInstalled(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticNotInstalledFormat, loader, version);
+
+    public string FormatInstanceLoaderAutomaticNone(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticNoneFormat, loader);
 
     public string ContentShowVersions => Resources.ContentShowVersions;
 
@@ -2720,7 +2775,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupNoLoaderSelected => Resources.SetupNoLoaderSelected;
 
-    public string SetupReinstallLoader => Resources.SetupReinstallLoader;
+    public string SettingsLoadersTitle => Resources.SettingsLoadersTitle;
+
+    public string SettingsLoadersHint => Resources.SettingsLoadersHint;
+
+    public string SettingsLoaderUnused => Resources.SettingsLoaderUnused;
+
+    public string SettingsLoaderForget => Resources.SettingsLoaderForget;
+
+    public string SettingsLoaderInstallAnother => Resources.SettingsLoaderInstallAnother;
+
+    public string SettingsLoaderRemoveConfirm => Resources.SettingsLoaderRemoveConfirm;
 
     public string SetupLoaderInstalledUnknownVersion => Resources.SetupLoaderInstalledUnknownVersion;
 
@@ -2816,6 +2881,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LaunchPlayAnyway => Resources.LaunchPlayAnyway;
 
+    public string FormatLaunchPinnedLoaderNotInstallable(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchPinnedLoaderNotInstallableFormat, loader, version);
+
+    public string LaunchUseAutomaticLoader => Resources.LaunchUseAutomaticLoader;
+
     public string FormatLaunchSetUpGameFirst(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchSetUpGameFirstFormat, loader);
 
@@ -2889,11 +2959,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatSetupLoaderInstalled(string loaderName, string version, string directory)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledFormat, loaderName, version, directory);
 
-    public string FormatSetupLoaderInstalledVersion(string version)
-        => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledVersionFormat, version);
+    public string FormatSettingsLoaderUsedBy(string instances)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderUsedByFormat, instances);
 
-    public string FormatSetupLoaderIncompatible(string version, string game)
-        => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderIncompatibleFormat, version, game);
+    public string FormatSettingsLoaderInUse(string instances)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderInUseFormat, instances);
+
+    public string FormatSettingsLoaderYourFolder(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderYourFolderFormat, loader);
+
+    public string FormatSettingsLoaderRemoved(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRemovedFormat, loader, version);
 
     public string FormatSetupUpdateLoader(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupUpdateLoaderFormat, version);
