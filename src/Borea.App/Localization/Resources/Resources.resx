@@ -249,6 +249,12 @@
   <data name="StewardQueueKindPack" xml:space="preserve">
     <value>Pack</value>
   </data>
+  <data name="StewardQueueKindVehicle" xml:space="preserve">
+    <value>Vehicle</value>
+  </data>
+  <data name="StewardQueueKindSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
   <data name="StewardQueueKindRelease" xml:space="preserve">
     <value>Release</value>
   </data>
@@ -350,6 +356,21 @@
   </data>
   <data name="StewardReviewParseErrorFormat" xml:space="preserve">
     <value>The document does not parse: {0}</value>
+  </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Newest release</value>
+  </data>
+  <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
+    <value>The newest release {0} installs into the folder "{1}".</value>
+  </data>
+  <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
+    <value>The newest release {0} names no install folder.</value>
+  </data>
+  <data name="StewardReviewNoRelease" xml:space="preserve">
+    <value>No release is stamped yet. The checks read the folder from the archive.</value>
+  </data>
+  <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
+    <value>The newest release could not be read from KSAModding/content-index-releases: {0}</value>
   </data>
   <data name="StewardReviewOwnership" xml:space="preserve">
     <value>Ownership proof</value>

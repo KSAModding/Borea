@@ -41,6 +41,18 @@ public sealed class StewardQueueViewModelTests
     }
 
     [Fact]
+    public async Task VehicleAndSavePullRequests_ShowAsContentWithTheirKind()
+    {
+        _queue.Items.Add(FakeStewardQueue.Item(30) with { Kinds = [StewardQueueKind.Vehicle] });
+        _queue.Items.Add(FakeStewardQueue.Item(31) with { Kinds = [StewardQueueKind.Save] });
+        using var harness = await CreateAsync();
+        var page = await OpenAsync(harness.ViewModel);
+
+        Assert.Equal(StewardQueueScope.Content, page.Queue.Scope);
+        Assert.Equal([["Vehicle"], ["Save"]], page.Queue.Items.Select(item => item.KindTexts));
+    }
+
+    [Fact]
     public async Task Scope_ShowsContentChangesFirst_AndCodeOrEverythingOnChoice_WithoutAnotherRead()
     {
         _queue.Items.Add(FakeStewardQueue.Item(5));
@@ -200,7 +212,7 @@ public sealed class StewardQueueViewModelTests
         var viewModel = new MainViewModel(new Borea.App.Localization.LocalizationService());
 
         Assert.Equal(
-            ["Listing", "Pack", "Release", "Amendment", "Owner record", "Index status", "Tag vocabulary"],
+            ["Listing", "Pack", "Vehicle", "Save", "Release", "Amendment", "Owner record", "Index status", "Tag vocabulary"],
             Enum.GetValues<StewardQueueKind>().Select(viewModel.StewardQueueKindText));
     }
 

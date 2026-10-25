@@ -19,7 +19,7 @@ public interface IListingOwnershipCheck
     /// The same for the listing at <paramref name="path"/> of content-index, as <paramref name="headCommit"/> submits it
     /// and the tip of <paramref name="baseBranch"/> lists it, which is how the checks read a pull request.
     /// </summary>
-    /// <param name="path">A listing document, such as listings/MyMod.toml.</param>
+    /// <param name="path">A listing document in one of <see cref="ListingFolders.All"/>, such as listings/MyMod.toml or vehicles/ExampleRover.toml.</param>
     /// <exception cref="ListingPublishException">Signed out, or GitHub refused the token.</exception>
     Task<ListingOwnership> CheckPullRequestAsync(GitHubAccount author, string path, string baseBranch, string headCommit, CancellationToken cancellationToken = default);
 

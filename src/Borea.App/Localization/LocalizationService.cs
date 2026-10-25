@@ -435,6 +435,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardQueueKindPack => Resources.StewardQueueKindPack;
 
+    public string StewardQueueKindVehicle => Resources.StewardQueueKindVehicle;
+
+    public string StewardQueueKindSave => Resources.StewardQueueKindSave;
+
     public string StewardQueueKindRelease => Resources.StewardQueueKindRelease;
 
     public string StewardQueueKindAmendment => Resources.StewardQueueKindAmendment;
@@ -508,6 +512,19 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatStewardReviewParseError(string error)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewParseErrorFormat, error);
+
+    public string StewardReviewNewestRelease => Resources.StewardReviewNewestRelease;
+
+    public string FormatStewardReviewNewestRelease(string version, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewNewestReleaseFormat, version, folder);
+
+    public string FormatStewardReviewNewestReleaseNoFolder(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewNewestReleaseNoFolderFormat, version);
+
+    public string StewardReviewNoRelease => Resources.StewardReviewNoRelease;
+
+    public string FormatStewardReviewReleaseUnreadable(string error)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewReleaseUnreadableFormat, error);
 
     public string StewardReviewOwnership => Resources.StewardReviewOwnership;
 
