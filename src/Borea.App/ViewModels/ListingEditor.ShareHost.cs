@@ -239,15 +239,15 @@ public sealed partial class ListingEditor
         }
     }
 
-    /// <summary>Publishes the upload. A new listing sends the file of the editor, which then has to pass the checks.</summary>
+    /// <summary>Publishes the upload. A new listing sends the draft of the editor, which then has to pass the checks.</summary>
     [RelayCommand]
     private async Task PublishToShareHostAsync()
     {
         if (_shareUpload is not { } shared || _owner.Services is not { } services || !CanPublishToShareHost)
             return;
 
-        var listingText = shared.ListingId is null ? DocumentText : null;
-        if (listingText is not null && !CanOpenPullRequest)
+        var listing = shared.ListingId is null ? Draft : null;
+        if (listing is not null && !CanOpenPullRequest)
         {
             ShareHostError = Localization.ListingFixErrors;
             return;
@@ -259,7 +259,7 @@ public sealed partial class ListingEditor
         ShareHostProgress = Localization.ListingShareHostPublishing;
         try
         {
-            var published = await services.ShareHostClient.PublishAsync(shared.Host, shared.Upload.Id, ShareHostVersion.Trim(), ShareHostStatus, listingText, cancel.Token);
+            var published = await services.ShareHostClient.PublishAsync(shared.Host, shared.Upload.Id, ShareHostVersion.Trim(), ShareHostStatus, listing, cancel.Token);
             if (_shareHostRun != cancel)
                 return;
 

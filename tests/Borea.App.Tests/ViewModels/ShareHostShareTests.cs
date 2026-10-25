@@ -54,7 +54,10 @@ public sealed class ShareHostShareTests
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
         var publish = Assert.Single(host.Publishes);
-        Assert.Equal(("u42", "1.0.0", "testing", editor.DocumentText), (publish.UploadId, publish.Version, publish.Status, publish.ListingText));
+        Assert.Equal(("u42", "1.0.0", "testing"), (publish.UploadId, publish.Version, publish.Status));
+        var listing = Assert.IsType<ListingDraft>(publish.Listing);
+        Assert.Equal(("ExampleRover", "Example Rover", "A six-wheel rover for the Moon.", "CC-BY-4.0"), (listing.Id, listing.Name, listing.Abstract, listing.License));
+        Assert.Equal(["Maxi"], listing.Authors);
         Assert.Equal(new Uri("https://github.com/KSAModding/content-index/pull/250"), editor.SharePullRequest);
         Assert.Equal(harness.Localization.FormatListingShareHostPublished("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
         Assert.Null(editor.ShareHostError);
@@ -117,7 +120,7 @@ public sealed class ShareHostShareTests
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
         Assert.Equal("ExampleRover", Assert.Single(host.Uploads).ListingId);
-        Assert.Null(Assert.Single(host.Publishes).ListingText);
+        Assert.Null(Assert.Single(host.Publishes).Listing);
         Assert.Equal(harness.Localization.FormatListingShareHostReleased("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
         Assert.Null(editor.SharePullRequest);
         Assert.Null(editor.ShareHostError);
@@ -168,7 +171,7 @@ public sealed class ShareHostShareTests
 
     private sealed record Upload(string FileName, long Size, IReadOnlyList<ListingDependency> Dependencies, string? ListingId);
 
-    private sealed record Publish(string UploadId, string Version, string Status, string? ListingText);
+    private sealed record Publish(string UploadId, string Version, string Status, ListingDraft? Listing);
 
     private sealed class FakeHost : IShareHostClient
     {
@@ -204,9 +207,9 @@ public sealed class ShareHostShareTests
             return UploadFailure is { } failure ? Task.FromException<ShareUpload>(failure) : Task.FromResult(Upload);
         }
 
-        public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, string? listingText, CancellationToken cancellationToken = default)
+        public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
         {
-            Publishes.Enqueue(new Publish(uploadId, version, status, listingText));
+            Publishes.Enqueue(new Publish(uploadId, version, status, listing));
             return Task.FromResult(new SharePublished("ExampleRover", version, PullRequest));
         }
     }

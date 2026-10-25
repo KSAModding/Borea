@@ -153,13 +153,23 @@ public sealed class ShareHostClient : IShareHostClient
         return new ShareUpload(id, checks, upload.Version, upload.Listing);
     }
 
-    public async Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, string? listingText, CancellationToken cancellationToken = default)
+    public async Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentException.ThrowIfNullOrEmpty(uploadId);
         var body = new JsonObject { [ShareHostJson.Version] = version, [ShareHostJson.Status] = status };
-        if (listingText is not null)
-            body[ShareHostJson.Listing] = listingText;
+        if (listing is not null)
+        {
+            body[ShareHostJson.Id] = listing.Id;
+            body[ShareHostJson.Name] = listing.Name;
+            body[ShareHostJson.Authors] = new JsonArray([.. listing.Authors.Select(author => JsonValue.Create(author))]);
+            body[ShareHostJson.Abstract] = listing.Abstract;
+            body[ShareHostJson.License] = listing.License;
+            if (!string.IsNullOrEmpty(listing.Description))
+                body[ShareHostJson.Description] = listing.Description;
+            if (listing.Tags.Count > 0)
+                body[ShareHostJson.Tags] = new JsonArray([.. listing.Tags.Select(tag => JsonValue.Create(tag))]);
+        }
 
         using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
         var reply = await SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, cancellationToken).ConfigureAwait(false);

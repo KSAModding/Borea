@@ -25,10 +25,11 @@ public interface IShareHostClient
     /// <exception cref="ShareHostException">The host refused the upload, or it could not be reached.</exception>
     Task<ShareUpload> UploadAsync(ShareHost host, Stream archive, string fileName, IReadOnlyList<ListingDependency> dependencies, string? listingId, CancellationToken cancellationToken = default);
 
-    /// <summary>Publishes an upload as a release, and for a new listing sends <paramref name="listingText"/> for its pull request.</summary>
+    /// <summary>Publishes an upload as a release, and for a new listing sends the fields of <paramref name="listing"/> for its pull request.</summary>
     /// <param name="status">stable, testing or dev.</param>
+    /// <param name="listing">The new listing, or null for a new version of a listing on the host.</param>
     /// <exception cref="ShareHostException">The host refused it, or it could not be reached.</exception>
-    Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, string? listingText, CancellationToken cancellationToken = default);
+    Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default);
 }
 
 /// <param name="Id">The upload id, which the publish names.</param>

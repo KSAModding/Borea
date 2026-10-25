@@ -187,17 +187,45 @@ public sealed class ShareHostClientTests
     }
 
     [Fact]
-    public async Task PublishAsync_SendsVersionStatusAndListing_AndReadsThePullRequest()
+    public async Task PublishAsync_NewListing_SendsVersionStatusAndTheListingFields_AndReadsThePullRequest()
     {
         _apiAnswer = _ => Json(PublishedJson);
         var client = await SignedInAsync();
+        var listing = new ListingDraft
+        {
+            Id = "ExampleRover",
+            Type = "vehicle",
+            Name = "Example Rover",
+            Authors = ["Maxi", "Renan"],
+            Abstract = "A six-wheel rover for the Moon.",
+            Description = "Six wheels.",
+            License = "CC-BY-4.0",
+            Tags = ["rover"],
+            Dependencies = [new ListingDependency("ExamplePartsMod", "required")],
+        };
 
-        var published = await client.PublishAsync(Host, "u/42", "1.0.0", "testing", "id = \"ExampleRover\"\n");
+        var published = await client.PublishAsync(Host, "u/42", "1.0.0", "testing", listing);
 
         Assert.Equal(new SharePublished("ExampleRover", "1.0.0", new Uri("https://github.com/KSAModding/content-index/pull/250")), published);
         var request = _sent.Last();
         Assert.Equal(Api + "uploads/u%2F42/publish", request.Url);
-        Assert.Equal(JsonNode.Parse("""{"version":"1.0.0","status":"testing","listing":"id = \"ExampleRover\"\n"}""")!.ToJsonString(), JsonNode.Parse(request.Body!)!.ToJsonString());
+        Assert.Equal(
+            JsonNode.Parse("""{"version":"1.0.0","status":"testing","id":"ExampleRover","name":"Example Rover","authors":["Maxi","Renan"],"abstract":"A six-wheel rover for the Moon.","license":"CC-BY-4.0","description":"Six wheels.","tags":["rover"]}""")!.ToJsonString(),
+            JsonNode.Parse(request.Body!)!.ToJsonString());
+    }
+
+    [Fact]
+    public async Task PublishAsync_NewListingWithoutDescriptionOrTags_LeavesThemOut()
+    {
+        _apiAnswer = _ => Json(PublishedJson);
+        var client = await SignedInAsync();
+        var listing = new ListingDraft { Id = "ExampleRover", Name = "Example Rover", Authors = ["Maxi"], Abstract = "A rover.", License = "CC0-1.0", Description = string.Empty };
+
+        await client.PublishAsync(Host, "u42", "1.0.0", "stable", listing);
+
+        Assert.Equal(
+            JsonNode.Parse("""{"version":"1.0.0","status":"stable","id":"ExampleRover","name":"Example Rover","authors":["Maxi"],"abstract":"A rover.","license":"CC0-1.0"}""")!.ToJsonString(),
+            JsonNode.Parse(_sent.Last().Body!)!.ToJsonString());
     }
 
     [Theory]
@@ -224,6 +252,7 @@ public sealed class ShareHostClientTests
         var published = await client.PublishAsync(Host, "u42", "1.1.0", "stable", null);
 
         Assert.Equal(new SharePublished("ExampleRover", "1.1.0", null), published);
+        Assert.Equal("""{"version":"1.1.0","status":"stable"}""", JsonNode.Parse(_sent.Last().Body!)!.ToJsonString());
     }
 
     [Theory]

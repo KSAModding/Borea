@@ -37,6 +37,20 @@ internal static class ShareHostJson
 
     public const string Status = "status";
 
+    public const string Id = "id";
+
+    public const string Name = "name";
+
+    public const string Authors = "authors";
+
+    public const string Abstract = "abstract";
+
+    public const string License = "license";
+
+    public const string Description = "description";
+
+    public const string Tags = "tags";
+
     public sealed class DeviceCode
     {
         [JsonPropertyName("device_code")]
