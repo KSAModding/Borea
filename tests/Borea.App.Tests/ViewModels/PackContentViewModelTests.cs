@@ -1,22 +1,17 @@
-using System.IO.Compression;
-using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Text;
 using Borea.App.ViewModels;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using static Borea.App.Tests.ViewModels.PackViewModelTests;
+using static Borea.App.Tests.ViewModels.UserContentFixtures;
 
 namespace Borea.App.Tests.ViewModels;
 
 /// <summary>The pinned vehicles and saves of a pack on the pack page and in a pack install or update (RFC 0085).</summary>
 public sealed class PackContentViewModelTests
 {
-    private const string RoverUrl = "https://example.test/rover.zip";
-    private const string SaveUrl = "https://example.test/campaign.zip";
     private const string MeasureToolsUrl = "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.10/MeasureTools.zip";
     private const string MeasureToolsSha256 = "8718558358629EFC3753ACFF9052851EFEB142A9343A1794485C177651265F15";
 
@@ -274,49 +269,4 @@ public sealed class PackContentViewModelTests
     private static string PackWithContent(string id, string name, string version, string mod, IReadOnlyList<string> vehicles) =>
         Pack(id, name, Version(version, mod))
             .Replace("\"mods\": [", $"\"vehicles\": [{string.Join(", ", vehicles)}], \"mods\": [", StringComparison.Ordinal);
-
-    private static Dictionary<string, string> TypeFiles(ContentIndexTypeFile file, string entries) =>
-        new() { [file.FileName] = $$"""{ "snapshot_version": 1, "{{file.ArrayKey}}": [{{entries}}] }""" };
-
-    private static string Entry(string id, string type, string folder, string url, byte[] archive, params string[] versions) =>
-        $$"""{ "id": "{{id}}", "authored": {{Authored(id, type, folder)}}, "releases": [{{string.Join(", ", versions.Select(version => Release(id, type, folder, url, archive, version)))}}] }""";
-
-    private static string SaveEntry(params (string Version, byte[] Archive)[] releases) =>
-        $$"""{ "id": "CampaignSave", "authored": {{Authored("CampaignSave", "save", "Campaign")}}, "releases": [{{string.Join(", ", releases.Select(release => Release("CampaignSave", "save", "Campaign", SaveUrl, release.Archive, release.Version)))}}] }""";
-
-    private static string Authored(string id, string type, string folder) =>
-        $$"""{ "spec_version": 1, "id": "{{id}}", "type": "{{type}}", "name": "{{folder}}", "authors": ["Kitten"], "abstract": "A {{type}}.", "license": "CC0-1.0" }""";
-
-    private static string Release(string id, string type, string folder, string url, byte[] archive, string version) => $$"""
-        { "spec_version": 1, "id": "{{id}}", "type": "{{type}}", "version": "{{version}}", "version_scheme": "semver", "release_status": "stable",
-          "release_date": "2026-10-20T12:00:00Z", "game_min": "2026.8.19.5261", "game_min_revision": 5261,
-          "download": { "url": "{{url}}", "sha256": "{{Convert.ToHexString(SHA256.HashData(archive))}}", "size": {{archive.Length}}, "content_type": "application/zip" },
-          "install": { "derived": true, "folder": "{{folder}}" }, "install_size": 2048, "dependencies": [],
-          "listing": { "name": "{{folder}}", "authors": ["Kitten"], "abstract": "A {{type}}.", "license": "CC0-1.0", "tags": [], "links": {} } }
-        """;
-
-    private static byte[] SaveArchive(string universe) =>
-        Archive(("Campaign/meta.toml", "name = \"Campaign\"\n"), ("Campaign/universe.xml", universe));
-
-    private static byte[] Archive(params (string Path, string Content)[] entries)
-    {
-        using var stream = new MemoryStream();
-        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
-        {
-            foreach (var (path, content) in entries)
-            {
-                using var writer = new StreamWriter(zip.CreateEntry(path).Open(), new UTF8Encoding(false));
-                writer.Write(content);
-            }
-        }
-
-        return stream.ToArray();
-    }
-
-    private static HttpResponseMessage ArchiveResponse(byte[] archive)
-    {
-        var content = new ByteArrayContent(archive);
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
-        return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
-    }
 }

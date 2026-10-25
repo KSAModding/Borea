@@ -106,10 +106,12 @@ internal static class ModInstallCommands
                 throw new InvalidOperationException($"Borea does not own the files of '{installed.ModId}'. Run 'borea instance take-ownership' to let Borea install the recorded release over its folder.");
 
             var active = await cli.ModState.IsActiveAsync(target.InstanceId, installed.ModId, ct).ConfigureAwait(false);
-            var check = new ModDependencyResolver().CheckUninstall(target, installed.ModId, installed.Version, active);
+            var (content, inactive) = await UserContentCommands.RecordedStateAsync(cli, target, ct).ConfigureAwait(false);
+            var check = new ModDependencyResolver().CheckUninstall(target, installed.ModId, installed.Version, active, content, inactive);
             if (check.DependentModIds.Count > 0)
                 throw new InvalidOperationException($"'{installed.ModId}' is required by {string.Join(", ", check.DependentModIds)}.");
 
+            UserContentCommands.WriteNeeding(error, installed.ModId, check.DependentContent);
             output.WriteLine($"Remove {installed.ModId} {installed.Version} from '{target.Name}'.");
             if (!parse.GetValue(dryRun))
                 await cli.Uninstaller.UninstallAsync(target.InstanceId, installed.ModId, ct).ConfigureAwait(false);

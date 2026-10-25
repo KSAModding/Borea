@@ -1429,6 +1429,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveOlderBuild => Resources.GameSaveOlderBuild;
 
+    public string GameSaveChangedSinceInstall => Resources.GameSaveChangedSinceInstall;
+
     public string GameSaveBackUp => Resources.GameSaveBackUp;
 
     public string GameSaveShare => Resources.GameSaveShare;
@@ -1529,6 +1531,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentRemove => Resources.ContentRemove;
 
     public string ContentRemoveConfirm => Resources.ContentRemoveConfirm;
+
+    public string FormatContentRemoveChanged(string name, string files)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveChangedFormat, name, files);
+
+    public string FormatGameSaveDeleteChanged(string name, string files)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveDeleteChangedFormat, name, files);
+
+    public string ContentGoneFromInstance => Resources.ContentGoneFromInstance;
 
     public string ContentRemoveSteps => Resources.ContentRemoveSteps;
 
@@ -2320,6 +2330,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentTabDependencies => Resources.ContentTabDependencies;
 
+    public string ContentTabNeedsMods => Resources.ContentTabNeedsMods;
+
     public string ContentTabVersions => Resources.ContentTabVersions;
 
     public string FormatContentDependenciesOf(string version)
@@ -2336,9 +2348,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDependencyRequiredHint => Resources.ContentDependencyRequiredHint;
 
+    public string ContentDependencyRequiredItemHint => Resources.ContentDependencyRequiredItemHint;
+
     public string ContentDependencyAnyOf => Resources.ContentDependencyAnyOf;
 
     public string ContentDependencyAnyOfHint => Resources.ContentDependencyAnyOfHint;
+
+    public string ContentDependencyAnyOfItemHint => Resources.ContentDependencyAnyOfItemHint;
 
     public string ContentDependencyConflicts => Resources.ContentDependencyConflicts;
 
@@ -2348,6 +2364,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDependencyRecommendedHint => Resources.ContentDependencyRecommendedHint;
 
+    public string ContentDependencyRecommendedItemHint => Resources.ContentDependencyRecommendedItemHint;
+
     public string ContentDependencySuggested => Resources.ContentDependencySuggested;
 
     public string ContentDependencySuggestedHint => Resources.ContentDependencySuggestedHint;
@@ -2355,6 +2373,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentDependencyOptional => Resources.ContentDependencyOptional;
 
     public string ContentDependencyOptionalHint => Resources.ContentDependencyOptionalHint;
+
+    public string ContentDependencyOptionalItemHint => Resources.ContentDependencyOptionalItemHint;
 
     public string ContentDependencyOther => Resources.ContentDependencyOther;
 
@@ -2374,11 +2394,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentDependencyInstalled(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyInstalledFormat, version);
 
+    public string FormatContentDependencyDisabled(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyDisabledFormat, version);
+
     public string ContentDependencyNotInstalled => Resources.ContentDependencyNotInstalled;
 
     public string ContentDependencyNotInIndex => Resources.ContentDependencyNotInIndex;
 
     public string ContentCompatibility => Resources.ContentCompatibility;
+
+    public string FormatContentFileBuild(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentFileBuildFormat, build);
 
     public string CompatibilityCompatible => Resources.CompatibilityCompatible;
 
@@ -2903,6 +2929,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatDiscoverPackCount(int count)
         => FormatCount(count, Resources.DiscoverCountPackOne, Resources.DiscoverCountPacksFormat);
 
+    public string FormatDiscoverVehicleCount(int count)
+        => FormatCount(count, Resources.DiscoverCountVehicleOne, Resources.DiscoverCountVehiclesFormat);
+
+    public string FormatDiscoverSaveCount(int count)
+        => FormatCount(count, Resources.DiscoverCountSaveOne, Resources.DiscoverCountSavesFormat);
+
     /// <summary>"5 of 12 mods", where <paramref name="total"/> is the count as the unfiltered list names it.</summary>
     public string FormatDiscoverCountShown(int shown, string total)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverCountShownFormat, shown, total);
@@ -3321,6 +3353,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatPackContentNameTaken(string name, string folder, string kindFolder)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenFormat, name, folder, kindFolder);
 
+    public string FormatContentNameTaken(string folder, string kindFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNameTakenFormat, folder, kindFolder);
+
     public string FormatPackContentNameTakenShort(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenShortFormat, folder);
 
@@ -3618,6 +3653,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatContentRemoveRequired(string modId, string dependents)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveRequiredFormat, modId, dependents);
+
+    public string FormatContentNeededByVehicle(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNeededByVehicleFormat, folder);
+
+    public string FormatContentNeededBySave(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNeededBySaveFormat, folder);
+
+    public string ContentDisableConfirm => Resources.ContentDisableConfirm;
+
+    public string ContentDisable => Resources.ContentDisable;
 
     public string FormatContentManageConfirm(string name, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageConfirmFormat, name, version);

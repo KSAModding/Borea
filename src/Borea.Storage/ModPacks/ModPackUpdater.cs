@@ -204,7 +204,11 @@ public sealed class ModPackUpdater : IModPackUpdater
                 {
                     draft = ModPackUpdates.Draft(instance, changes);
                     plan = await _planner.PlanAsync(
-                        new InstallPlanningRequest(draft, requested, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives),
+                        new InstallPlanningRequest(draft, requested, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives)
+                        {
+                            Current = instance,
+                            ReplacedContent = ModPackUserContent.Replaced(content),
+                        },
                         planning.Token).ConfigureAwait(false);
                     var next = ModPackUpdates.KeepNeeded(instance, changes, plan.Selections.Select(selection => selection.Release));
                     if (next.SequenceEqual(changes))
