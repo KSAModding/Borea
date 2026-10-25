@@ -184,6 +184,23 @@ public sealed class ModListCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Duplicate_KeepsThePinnedLoaderOfTheSource()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        var alpha = await InstanceNamedAsync("Alpha");
+        await new FileInstanceRepository(_host.Paths).UpdateAsync(alpha.InstanceId, saved =>
+        {
+            saved.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+            return true;
+        });
+
+        var run = await _host.RunAsync("instance", "duplicate", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")), (await InstanceNamedAsync("Alpha (copy)")).Loader);
+    }
+
+    [Fact]
     public async Task Duplicate_InstallFails_RemovesTheNewInstance()
     {
         await SeedAlphaAsync();

@@ -29,6 +29,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetInstancesRoot() => Path.Combine(_root, "Instances");
     public string GetStaticModFilesRoot() => Path.Combine(_root, "Static Mod Files");
     public string GetLoadersRoot() => Path.Combine(_root, "Loaders");
+    public string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version) => Path.Combine(GetLoadersRoot(), loaderId, version.ToString());
     public string GetPresetsRoot() => Path.Combine(_root, "Presets");
     public string GetGameSettingsPresetsRoot() => Path.Combine(GetPresetsRoot(), "GameSettings");
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());

@@ -157,19 +157,10 @@ public sealed class ListingHostClient : IListingHostClient
         Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" ? uri.AbsoluteUri : null;
 
     /// <summary>A path of the SpaceDock API as an address on SpaceDock itself, or null when it would lead anywhere else.</summary>
-    private static string? SpaceDockUrl(string? path)
-    {
-        var host = new Uri(SpaceDockModRepository.BaseUrl);
-        return !string.IsNullOrWhiteSpace(path)
-            && path.StartsWith('/')
-            && Uri.TryCreate(host, path, out var uri)
-            && uri.Scheme == Uri.UriSchemeHttps
-            && uri.IsDefaultPort
-            && uri.UserInfo.Length == 0
-            && string.Equals(uri.Host, host.Host, StringComparison.OrdinalIgnoreCase)
-                ? uri.AbsoluteUri
-                : null;
-    }
+    private static string? SpaceDockUrl(string? path) =>
+        SpaceDockModRepository.IsSpaceDockPath(path)
+            ? new Uri(new Uri(SpaceDockModRepository.BaseUrl), path).AbsoluteUri
+            : null;
 
     private static bool IsForums(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) && string.Equals(uri.Host, ForumsHost, StringComparison.OrdinalIgnoreCase);

@@ -14,13 +14,17 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
 {
     private readonly IBoreaSettingsRepository _settings;
     private readonly ILoaderConfigurationReader _configuration;
+    private readonly string? _loadersRoot;
 
+    /// <param name="loadersRoot">Borea's own Loaders root. A loader adopted below it is recorded as Borea-owned.</param>
     public FileLoaderAdopter(
         IBoreaSettingsRepository settings,
-        ILoaderConfigurationReader configuration)
+        ILoaderConfigurationReader configuration,
+        string? loadersRoot = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _loadersRoot = loadersRoot;
     }
 
     public async Task<LoaderAdoptionResult> AdoptAsync(
@@ -75,9 +79,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
                 $"{loader.Name} is already recorded at '{recorded.DirectoryPath}'. Remove that record or adopt that directory instead.");
         }
 
-        // Outside Windows FileVersionInfo reads only assembly metadata, so a Windows app host shows no version there.
-        var rawVersion = ReadFileVersion(executable)
-            ?? (DotnetHost.AssemblyBeside(executable) is { } assembly ? ReadFileVersion(assembly) : null);
+        var rawVersion = ReadRawVersion(executable);
         var version = MatchVersion(loader, releases, rawVersion);
         string? configuredGameDirectory = null;
         string? configurationWarning = null;
@@ -111,7 +113,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             loaderDirectory,
             version,
             rawVersion,
-            isAdopted: recorded?.IsAdopted ?? true);
+            isAdopted: (_loadersRoot is null || !LoaderLayoutMigration.IsBelowLoadersRoot(_loadersRoot, loaderDirectory)) && (recorded?.IsAdopted ?? true));
 
         var result = new LoaderAdoptionResult(
             loader.ModId,
@@ -173,7 +175,12 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         return warnings;
     }
 
-    private static string? ReadFileVersion(string executable)
+    /// <summary>The file version of the launch file, or of the assembly beside an app host that carries none.</summary>
+    internal static string? ReadRawVersion(string executable) =>
+        // Outside Windows FileVersionInfo reads only assembly metadata, so a Windows app host shows no version there.
+        ReadFileVersion(executable) ?? (DotnetHost.AssemblyBeside(executable) is { } assembly ? ReadFileVersion(assembly) : null);
+
+    internal static string? ReadFileVersion(string executable)
     {
         try
         {
@@ -191,7 +198,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         }
     }
 
-    private static bool TryParseFileVersion(string? rawVersion, out ModVersion version)
+    internal static bool TryParseFileVersion(string? rawVersion, out ModVersion version)
     {
         if (ModVersion.TryParse(rawVersion, out version))
             return true;

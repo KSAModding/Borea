@@ -1308,6 +1308,18 @@
   <data name="LoaderUpdateGameRunning" xml:space="preserve">
     <value>Close KSA first. Borea cannot update the mod loader while the game runs.</value>
   </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>The instance {2} is pinned to {0} {1}, and that version is not installed.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>The instance {2} is pinned to {0} {1}, which does not support KSA {3}.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>Install {0} {1}</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Change mod loader</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Download</value>
   </data>
@@ -1721,6 +1733,9 @@
   </data>
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Could not save the launch arguments of {0}</value>
+  </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Could not save the mod loader of {0}</value>
   </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>Could not enable {0}</value>
@@ -3696,9 +3711,6 @@
   <data name="InstanceLoaderConflict" xml:space="preserve">
     <value>The mods need versions that do not overlap</value>
   </data>
-  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
-    <value>Game settings</value>
-  </data>
   <data name="InstanceLoaderConflictShort" xml:space="preserve">
     <value>No version fits</value>
   </data>
@@ -3734,6 +3746,45 @@
   </data>
   <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0}, not for this KSA build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>The mod loader starts the game with the mods of this instance. Automatic starts the newest installed version that fits the game and the mods. A pinned version stays until you change it, also when a newer version fits.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatic: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Pinned at {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>Install {0}</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Choose which version of the mod loader starts {0}. Other instances keep their own setting.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatic (recommended)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Starts {0} {1}, the newest installed version that fits the game and the mods.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} fits the game and the mods, but it is not installed. Borea installs it when you save.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>No release of {0} fits this game build and the mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Always use this version</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Install and save</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod loader</value>
   </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
@@ -3982,7 +4033,7 @@
     <value>Loader directory</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>Leave empty to let Borea pick a folder when installing.</value>
+    <value>A folder that already holds the mod loader. Use existing makes Borea start it from there.</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>Install</value>
@@ -4005,23 +4056,44 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>Installed {0} {1} to {2}.</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>Installed {0}</value>
-  </data>
-  <data name="SetupLoaderIncompatibleFormat" xml:space="preserve">
-    <value>Installed {0}, does not support KSA {1}</value>
-  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Installed, version unknown</value>
   </data>
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>Update to {0}</value>
   </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>Reinstall</value>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>Mod loaders</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea keeps each installed version in its own folder. Every instance starts the version that the Mod loader row of its page names, so one instance can stay on an older version.</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>Used by {0}</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>Not used</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>Used by {0}. Set these instances to another version first.</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}, your folder</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>Forget</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>Install another version</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>Delete this version from the disk?</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>Removed {0} {1}.</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>Mod loaders are set up from the Game settings.</value>
+    <value>Each instance chooses its mod loader version in the Mod loader row of its page. The settings list the installed versions.</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Forum</value>
@@ -4336,10 +4408,10 @@
     <value>This instance no longer exists.</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The mod loader {0} is not installed. Mod loaders are set up from the Game settings.</value>
+    <value>The mod loader {0} is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The mods in this instance need the mod loader {0}, and it is not installed. Mod loaders are set up from the Game settings.</value>
+    <value>The mods in this instance need the mod loader {0}, and it is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>This instance needs {0}. Install it now?</value>
@@ -4355,6 +4427,12 @@
   </data>
   <data name="LaunchPlayAnyway" xml:space="preserve">
     <value>Play anyway</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>This instance is pinned to {0} {1}. That version is not installed, and the index no longer offers it. Use Automatic to start the newest version that fits?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Use Automatic</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This instance needs {0}. Set up the game folder first.</value>
@@ -4405,7 +4483,7 @@
     <value>{0} stopped while it loaded mods (exit code {1}). A mod of this instance is the likely cause. The details show what it wrote.</value>
   </data>
   <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
-    <value>{0} was made for another KSA build than the installed {1} and cannot load the game. When a {0} release for {1} is out, install it under Settings &gt; Game &gt; Mod loader. If {1} is older than the build that {0} was made for, update KSA instead.</value>
+    <value>{0} was made for another KSA build than the installed {1} and cannot load the game. When a {0} release for {1} is out, install it in the Mod loader row of the instance page. If {1} is older than the build that {0} was made for, update KSA instead.</value>
   </data>
   <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
     <value>{0} releases</value>

@@ -46,12 +46,15 @@ public sealed record ListingLeftOutMod(string Id, string? Version, ListingLeftOu
 /// </summary>
 public sealed record ListingPackFromInstance(IReadOnlyList<ListingPackMember> Members, IReadOnlyList<ListingLeftOutMod> LeftOut)
 {
-    /// <param name="loaderInstallations">The loaders Borea set up, by id, which give the version of a needed loader.</param>
+    /// <param name="loaderStart">
+    /// The loader version that starts the instance, which gives the version of that loader. Another loader that the mods
+    /// need is named without a version, because the instance does not start it. Null when Borea could not choose one.
+    /// </param>
     public static ListingPackFromInstance Of(
         ContentIndexSnapshot snapshot,
         Instance instance,
         IReadOnlyList<ModManifestEntry> manifest,
-        IReadOnlyDictionary<string, LoaderInstallation>? loaderInstallations = null)
+        InstalledLoaderVersion? loaderStart = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(instance);
@@ -83,8 +86,8 @@ public sealed record ListingPackFromInstance(IReadOnlyList<ListingPackMember> Me
             if (leftOut.Any(mod => ModIds.Equals(mod.Id, loader.LoaderId)) || members.Any(member => ModIds.Equals(member.Id, loader.LoaderId)))
                 continue;
 
-            var installation = loaderInstallations?.FirstOrDefault(entry => ModIds.Equals(entry.Key, loader.LoaderId)).Value;
-            leftOut.Add(new ListingLeftOutMod(loader.LoaderId, installation?.Version?.ToString() ?? installation?.RawVersion, ListingLeftOutReason.ModLoader));
+            var start = loaderStart is not null && ModIds.Equals(loaderStart.LoaderId, loader.LoaderId) ? loaderStart : null;
+            leftOut.Add(new ListingLeftOutMod(loader.LoaderId, start?.Version?.ToString() ?? start?.RawVersion, ListingLeftOutReason.ModLoader));
         }
 
         leftOut.AddRange(instance.ForeignMods.Select(mod => new ListingLeftOutMod(mod.FolderName, null, ListingLeftOutReason.NotInstalledByBorea)));

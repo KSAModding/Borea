@@ -16,9 +16,10 @@ using CommunityToolkit.Mvvm.Input;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// Rates each recorded mod loader against the installed game and offers a newer
-/// release on Home, before Play, on the instance page and in the settings. Borea
-/// never updates a loader on its own, because one loader starts every instance.
+/// Rates the loader version that starts the active instance against its game and offers a newer
+/// release on Home, before Play, on the instance page and in the settings. Each recorded loader is
+/// rated too, for the instance page and the settings. Borea never updates a loader on its own, and
+/// an update goes beside the installed versions, so it changes no other instance.
 /// </summary>
 public partial class MainViewModel
 {
@@ -32,32 +33,44 @@ public partial class MainViewModel
 
     private string? _dismissedLoaderUpdate;
 
+    /// <summary>The pinned version of the active instance that is missing or does not support the game, or null.</summary>
+    private PinnedLoaderProblem? _pinnedLoaderProblem;
+
+    /// <summary>The active instance and its loader setting when the last check started, so a change rates again.</summary>
+    private (Guid? InstanceId, LoaderSetting? Setting) _loaderUpdateRated;
+
     /// <summary>
-    /// The update the Home banner shows: the first loader by id whose installed release
-    /// does not support the game, else the first offer that every instance accepts.
-    /// Null shows no banner.
+    /// The update the Home banner shows for an active instance that chooses its version automatically: the version
+    /// that starts it when it does not support the game, else an offer that its mods accept. Null shows no such banner.
     /// </summary>
     [ObservableProperty]
     private LoaderUpdate? _loaderUpdate;
 
     /// <summary>The banners hide while a setup task runs, because the task already shows its progress.</summary>
-    public bool ShowUrgentLoaderUpdateBanner => !IsSetupBusy && IsBroken(LoaderUpdate);
+    public bool ShowUrgentLoaderUpdateBanner => !IsSetupBusy && (_pinnedLoaderProblem is not null || IsBroken(LoaderUpdate));
 
     public bool ShowLoaderUpdateBanner => !IsSetupBusy
+        && _pinnedLoaderProblem is null
         && !IsBroken(LoaderUpdate)
         && LoaderUpdate is { InstalledVersion: not null, Offer: not null } update
         && !string.Equals(DismissKey(update), _dismissedLoaderUpdate ?? _appPreferences.DismissedLoaderUpdate, StringComparison.Ordinal);
 
-    public string? LoaderUpdateBannerText => LoaderUpdate switch
+    public string? LoaderUpdateBannerText => (_pinnedLoaderProblem, LoaderUpdate) switch
     {
-        { } update when IsBroken(update) => LoaderIncompatibleText(_loaderUpdateName, update),
-        { InstalledVersion: not null, Offer: { } offer } => Localization.FormatLoaderUpdateAvailable(_loaderUpdateName, offer.Version.ToString()),
+        ({ IsIncompatible: true } pin, _) => Localization.FormatLoaderPinnedIncompatible(_loaderUpdateName, pin.Version.ToString(), pin.InstanceName, InstalledVersionText ?? string.Empty),
+        ({ } pin, _) => Localization.FormatLoaderPinnedMissing(_loaderUpdateName, pin.Version.ToString(), pin.InstanceName),
+        (null, { } update) when IsBroken(update) => LoaderIncompatibleText(_loaderUpdateName, update),
+        (null, { InstalledVersion: not null, Offer: { } offer }) => Localization.FormatLoaderUpdateAvailable(_loaderUpdateName, offer.Version.ToString()),
         _ => null,
     };
 
-    public string? LoaderUpdateActionText => LoaderUpdate?.Offer is { } release
-        ? Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
-        : null;
+    public string? LoaderUpdateActionText => _pinnedLoaderProblem is { } pinned
+        ? pinned.Install is { } install
+            ? Localization.FormatLoaderInstallAction(_loaderUpdateName, install.Version.ToString())
+            : Localization.LoaderChangeAction
+        : LoaderUpdate?.Offer is { } release
+            ? Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
+            : null;
 
     partial void OnLoaderUpdateChanged(LoaderUpdate? value) => RefreshLoaderUpdateText();
 
@@ -102,8 +115,8 @@ public partial class MainViewModel
 
     private static string DismissKey(LoaderUpdate update) => $"{update.LoaderId} {update.Offer?.Version}";
 
-    /// <summary>What a launch skips the update prompt for after "Play anyway", until the installed or the offered release changes.</summary>
-    private static string PlayAnywayKey(LoaderUpdate update) => $"{update.LoaderId} {update.InstalledVersion} {update.Offer?.Version}";
+    /// <summary>What a launch of one instance skips the prompt for after "Play anyway", until the installed or the offered release changes.</summary>
+    private static string PlayAnywayKey(Guid instanceId, LoaderUpdate update) => $"{instanceId} {update.LoaderId} {update.InstalledVersion} {update.Offer?.Version}";
 
     /// <summary>The last check's answer for one loader, or null before a check answered.</summary>
     internal LoaderUpdate? LoaderUpdateFor(string loaderId) => _loaderUpdates.GetValueOrDefault(loaderId);
@@ -124,25 +137,29 @@ public partial class MainViewModel
         if (_services is not { } services)
             return;
 
+        // also a check that fails counts, so a reload without the index does not start the next one
+        _loaderUpdateRated = (_activeInstanceEntity?.InstanceId, _activeInstanceEntity?.Loader);
         var found = new Dictionary<string, LoaderUpdate>(ModIds.Comparer);
         LoaderUpdate? shown = null;
+        PinnedLoaderProblem? pinned = null;
         var name = string.Empty;
         try
         {
             foreach (var (loaderId, installation) in services.Settings.LoaderInstallations.OrderBy(entry => entry.Key, ModIds.Comparer))
                 found[loaderId] = await FindLoaderUpdateAsync(services, loaderId, installation);
 
-            shown = found.Values.FirstOrDefault(IsBroken);
-            if (shown is null && found.Values.Any(update => update is { InstalledVersion: not null, Offer: not null }))
-            {
-                // one loader starts every instance, so a plain update shows only when no instance rejects it
-                var instances = await services.Instances.GetAllAsync();
-                shown = found.Values.FirstOrDefault(update => update is { InstalledVersion: not null, Offer: { } offer }
-                    && instances.All(instance => AcceptsLoader(instance, update.LoaderId, offer.Version)));
-            }
+            // Home's Play starts the active instance, so the banners rate it. Without one they rate an instance
+            // with no mods and the Automatic setting, which every new instance starts with.
+            var active = await services.Instances.GetActiveInstanceIdAsync() is { } activeId ? await services.Instances.GetByIdAsync(activeId) : null;
+            var instance = active ?? new Instance(nameof(Instance), InstanceSource.Custom.Value);
+            var resolution = await ResolveLaunchLoaderAsync(services, instance);
+            if (resolution.Version is { IsPinned: true } pin)
+                pinned = PinnedLoaderProblemOf(instance, pin, resolution.Start);
+            else if (resolution.Start is { } start)
+                shown = await RateLoaderStartAsync(services, instance, start, found);
 
-            if (shown is not null)
-                name = (await services.Mods.GetListingAsync(shown.LoaderId))?.Name ?? shown.LoaderId;
+            if ((pinned?.LoaderId ?? shown?.LoaderId) is { } shownId)
+                name = (await services.Mods.GetListingAsync(shownId))?.Name ?? shownId;
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
@@ -154,9 +171,53 @@ public partial class MainViewModel
 
         _loaderUpdates = found;
         _loaderUpdateName = name;
+        _pinnedLoaderProblem = pinned;
         LoaderUpdate = shown;
         RefreshLoaderUpdateText();
         RefreshInstanceLoader();
+    }
+
+    /// <summary>The banners follow the active instance, so another active instance or a new loader setting rates again.</summary>
+    partial void OnActiveInstanceChanged(InstanceItem? value)
+    {
+        // the first check waits until the start has refreshed the index
+        if (_loaderUpdateCheckGeneration > 0 && _loaderUpdateRated != (_activeInstanceEntity?.InstanceId, _activeInstanceEntity?.Loader))
+            StartLoaderUpdateCheck();
+    }
+
+    /// <summary>The Error banner for a pinned version that is missing or that the index rates incompatible with the game, else null.</summary>
+    private static PinnedLoaderProblem? PinnedLoaderProblemOf(Instance instance, LoaderVersionResolution version, InstalledLoaderVersion? start)
+    {
+        if (instance.Loader.Version is not { } pin)
+            return null;
+
+        if (start is null)
+            return new PinnedLoaderProblem(instance.InstanceId, instance.Name, version.LoaderId, pin, version.Missing, IsIncompatible: false);
+
+        return version.StartCompatibility == GameCompatibility.Incompatible
+            ? new PinnedLoaderProblem(instance.InstanceId, instance.Name, version.LoaderId, pin, Install: null, IsIncompatible: true)
+            : null;
+    }
+
+    /// <summary>
+    /// The update for the version that starts an Automatic instance, rated the way the update check rates a recorded
+    /// loader, with an offer that the mods of the instance accept. Null when there is nothing to show.
+    /// </summary>
+    private static async Task<LoaderUpdate?> RateLoaderStartAsync(BoreaServices services, Instance instance, InstalledLoaderVersion start, IReadOnlyDictionary<string, LoaderUpdate> recorded)
+    {
+        var loaderId = start.LoaderId;
+
+        // the check of the recorded folder reads a version that the settings do not know from its files
+        var version = start.Version ?? (start.IsRecorded ? recorded.GetValueOrDefault(loaderId)?.InstalledVersion : null);
+        var need = LoaderNeed.For(instance).Loaders.FirstOrDefault(loader => ModIds.Equals(loader.LoaderId, loaderId));
+        var update = await LoaderUpdate.FindAsync(
+            services.Mods,
+            services.Settings.ReleaseChannel,
+            loaderId,
+            new LoaderInstallation(start.DirectoryPath, version, start.RawVersion, start.IsAdopted),
+            services.InstanceGames.Resolve(instance).Version?.Version,
+            need: need);
+        return IsBroken(update) || update is { InstalledVersion: not null, Offer: not null } ? update : null;
     }
 
     /// <summary>
@@ -189,10 +250,21 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>The action of the banner: install a missing pin, change a pin that does not fit, or update the version that starts.</summary>
     [RelayCommand]
-    private Task UpdateLoaderAsync() => LoaderUpdate is { Offer: { } offer } update
-        ? UpdateLoaderToAsync(update.LoaderId, offer)
-        : Task.CompletedTask;
+    private Task UpdateLoaderAsync()
+    {
+        if (_pinnedLoaderProblem is { } pinned)
+        {
+            return pinned.Install is { } install
+                ? UpdateLoaderToAsync(pinned.LoaderId, install)
+                : ChangeLoaderOfAsync(pinned.InstanceId);
+        }
+
+        return LoaderUpdate is { Offer: { } offer } update
+            ? UpdateLoaderToAsync(update.LoaderId, offer, update.InstalledVersion)
+            : Task.CompletedTask;
+    }
 
     [RelayCommand]
     private void DismissLoaderUpdateBanner()
@@ -206,10 +278,14 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Installs <paramref name="release"/> over the recorded loader, as the usual
-    /// loader install task. False when it did not install.
+    /// Installs <paramref name="release"/> beside the installed versions of the loader,
+    /// as the usual loader install task. False when it did not install.
     /// </summary>
-    internal async Task<bool> UpdateLoaderToAsync(string loaderId, ModVersionMetadata release)
+    /// <param name="replaced">
+    /// The version that the update replaces, or null for an install. Borea removes it after the install when Borea
+    /// created it and no instance starts it any more, so a player who only updates keeps one folder, as before.
+    /// </param>
+    internal async Task<bool> UpdateLoaderToAsync(string loaderId, ModVersionMetadata release, ModVersion? replaced = null)
     {
         if (_services is not { } services || IsSetupBusy)
             return false;
@@ -218,15 +294,65 @@ public partial class MainViewModel
         {
             SetupError = Localization.LoaderUpdateGameRunning;
 
-            // the open prompt shows the error itself
-            if (!IsLoaderPromptOpen)
+            // an open modal shows the error itself
+            if (!IsLoaderPromptOpen && !IsLoaderSettingModalOpen)
                 ShowErrorToast(() => Localization.LoaderUpdateGameRunning);
             return false;
         }
 
-        await RunSetupAsync(current => InstallLoaderReleaseAsync(current, loaderId, release, directory: string.Empty));
+        await RunSetupAsync(async current =>
+        {
+            var message = await InstallLoaderReleaseAsync(current, loaderId, release);
+
+            // the removal runs inside the task, so the services that the task builds again already see it
+            if (replaced is { } old && old != release.Version)
+                await RemoveReplacedLoaderVersionAsync(current, loaderId, old, release.Version);
+            return message;
+        });
+
+        // the version goes beside the others, and the record moves to it only by the record rule, so the store says whether it is there
         return SetupError is null
-            && _services?.Settings.LoaderInstallations.FirstOrDefault(entry => ModIds.Equals(entry.Key, loaderId)).Value?.Version == release.Version;
+            && _services is { } installed
+            && InstalledLoaderVersion.Find(await installed.LoaderVersions.ListAsync(), loaderId, release.Version) is not null;
+    }
+
+    /// <summary>
+    /// Removes the version that an update replaced, when the new version is in place, Borea created the old folder,
+    /// no instance starts it, and no game runs. Any failure keeps the folder, and the settings can remove it later.
+    /// </summary>
+    private async Task RemoveReplacedLoaderVersionAsync(BoreaServices services, string loaderId, ModVersion replaced, ModVersion updated)
+    {
+        try
+        {
+            var installed = await services.LoaderVersions.ListAsync();
+            if (InstalledLoaderVersion.Find(installed, loaderId, updated) is null
+                || InstalledLoaderVersion.Find(installed, loaderId, replaced) is not { IsAdopted: false } old
+                || IsGameRunning(services))
+            {
+                return;
+            }
+
+            // the same rule as the launch decides which version each instance starts
+            var uses = await LoaderVersionUse.UsedByAsync(
+                await services.Instances.GetAllAsync(),
+                installed,
+                services.OfflineContentIndex,
+                services.ContentIndex,
+                await HeldLoaderReleasesAsync(services),
+                services.Settings.ReleaseChannel,
+                instance => services.InstanceGames.Resolve(instance).Version?.Version);
+            if (uses.Any(use => ReferenceEquals(use.Version, old) && use.IsUsed))
+                return;
+
+            var result = await services.LoaderUninstaller.UninstallVersionAsync(loaderId, replaced);
+            services.Log.Write(result.DirectoryRemoved
+                ? $"Removed {loaderId} {replaced} after the update to {updated}, because no instance starts it."
+                : $"Kept {loaderId} {replaced} after the update to {updated}: {result.Failure}.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or HttpRequestException or TaskCanceledException)
+        {
+            services.Log.Write($"Kept {loaderId} {replaced} after the update to {updated}, because it could not be removed.", exception);
+        }
     }
 
     /// <summary>
@@ -237,7 +363,18 @@ public partial class MainViewModel
     {
         ++_loaderUpdateCheckGeneration;
         _loaderUpdates = _loaderUpdates.Where(entry => !ModIds.Equals(entry.Key, loaderId)).ToDictionary(entry => entry.Key, entry => entry.Value, ModIds.Comparer);
+        if (_pinnedLoaderProblem is { } pinned && ModIds.Equals(pinned.LoaderId, loaderId))
+        {
+            _pinnedLoaderProblem = null;
+            RefreshLoaderUpdateText();
+        }
+
         if (LoaderUpdate is { } shown && ModIds.Equals(shown.LoaderId, loaderId))
             LoaderUpdate = null;
     }
+
+    /// <summary>A pinned version of the active instance that the Home banner names.</summary>
+    /// <param name="Install">The release that the banner installs, or null when Borea cannot install the pin or it is installed.</param>
+    /// <param name="IsIncompatible">True when the pin is installed and the index rates it incompatible with the game.</param>
+    private sealed record PinnedLoaderProblem(Guid InstanceId, string InstanceName, string LoaderId, ModVersion Version, ModVersionMetadata? Install, bool IsIncompatible);
 }

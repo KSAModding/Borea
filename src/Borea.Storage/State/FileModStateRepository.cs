@@ -77,11 +77,39 @@ public sealed class FileModStateRepository : IModStateRepository
         return ModEntryAddResult.Added;
     }
 
-    public Task<bool> SetActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
-        => SetEnabledAsync(instanceId, modId, enabled: true, cancellationToken);
+    public async Task<bool> SetActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
+    {
+        RequireLookupId(modId);
 
-    public Task<bool> SetInactiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
-        => SetEnabledAsync(instanceId, modId, enabled: false, cancellationToken);
+        var manifest = await ReadManifestAsync(instanceId, cancellationToken).ConfigureAwait(false);
+        var matches = Matches(manifest, modId).ToList();
+        if (matches.Count == 0 || matches.Any(m => m.Enabled))
+            return false;
+
+        // SerializedCollection.Register drops the second mod of equal
+        // KeyHash, so enabling both would switch on a deliberate off.
+        matches[0].Enabled = true;
+
+        await WriteManifestAsync(instanceId, manifest, cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
+    public async Task<bool> SetInactiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
+    {
+        RequireLookupId(modId);
+
+        var manifest = await ReadManifestAsync(instanceId, cancellationToken).ConfigureAwait(false);
+        var enabledMatches = Matches(manifest, modId).Where(m => m.Enabled).ToList();
+        if (enabledMatches.Count == 0)
+            return false;
+
+        // All of them, because any enabled entry loads the mod.
+        foreach (var match in enabledMatches)
+            match.Enabled = false;
+
+        await WriteManifestAsync(instanceId, manifest, cancellationToken).ConfigureAwait(false);
+        return true;
+    }
 
     public async Task<bool> ReorderAsync(Guid instanceId, IReadOnlyList<string> modIds, CancellationToken cancellationToken = default)
     {
@@ -174,38 +202,6 @@ public sealed class FileModStateRepository : IModStateRepository
             return false;
 
         manifest.Mods = ordered;
-        await WriteManifestAsync(instanceId, manifest, cancellationToken).ConfigureAwait(false);
-        return true;
-    }
-
-    private async Task<bool> SetEnabledAsync(Guid instanceId, string modId, bool enabled, CancellationToken cancellationToken)
-    {
-        RequireLookupId(modId);
-
-        var manifest = await ReadManifestAsync(instanceId, cancellationToken).ConfigureAwait(false);
-        var matches = Matches(manifest, modId).ToList();
-
-        var enabledMatches = matches.Where(m => m.Enabled).ToList();
-
-        if (enabled)
-        {
-            if (matches.Count == 0 || enabledMatches.Count > 0)
-                return false;
-
-            // SerializedCollection.Register drops the second mod of equal
-            // KeyHash, so enabling both would switch on a deliberate off.
-            matches[0].Enabled = true;
-        }
-        else
-        {
-            if (enabledMatches.Count == 0)
-                return false;
-
-            // All of them, because any enabled entry loads the mod.
-            foreach (var match in enabledMatches)
-                match.Enabled = false;
-        }
-
         await WriteManifestAsync(instanceId, manifest, cancellationToken).ConfigureAwait(false);
         return true;
     }

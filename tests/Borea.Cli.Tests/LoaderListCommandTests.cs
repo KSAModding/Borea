@@ -86,6 +86,25 @@ public sealed class LoaderListCommandTests : IDisposable
         Assert.Contains("error: Catalogue is unavailable.", run.Error);
     }
 
+    [Fact]
+    public async Task ListInstalled_Json_NamesTheInstancesThatStartEachVersion()
+    {
+        var folder = LoaderCommandTests.CreateVersionFolder(_host, "0.4.7");
+        LoaderCommandTests.CreateVersionFolder(_host, "0.4.8");
+        await LoaderCommandTests.SavePinnedInstanceAsync(_host, "Flight Test", "0.4.7");
+
+        var run = await _host.RunAsync("loader", "list", "--installed", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        var versions = run.Json.EnumerateArray().ToList();
+        Assert.Equal(["0.4.8", "0.4.7"], versions.Select(v => v.GetProperty("version").GetString()));
+        Assert.Empty(versions[0].GetProperty("usedBy").EnumerateArray());
+        Assert.Equal(folder, versions[1].GetProperty("directory").GetString());
+        var user = Assert.Single(versions[1].GetProperty("usedBy").EnumerateArray());
+        Assert.Equal("Flight Test", user.GetProperty("name").GetString());
+        Assert.Equal("pinned", user.GetProperty("mode").GetString());
+    }
+
     public void Dispose() => _host.Dispose();
 
     private static ModMetadata ModListing(string id) => new(

@@ -189,6 +189,9 @@ public sealed class BoreaServices : IDisposable
 
     public required ILoaderUninstaller LoaderUninstaller { get; init; }
 
+    /// <summary>The loader versions on disk, read again on each call.</summary>
+    public required ILoaderVersionStore LoaderVersions { get; init; }
+
     public required ILauncher Launcher { get; init; }
 
     public required ISharedProfileLauncher SharedProfileLauncher { get; init; }
@@ -205,6 +208,9 @@ public sealed class BoreaServices : IDisposable
     public required IAnnouncementFeed Announcements { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
+
+    /// <summary>The game folder and the installed version of one instance.</summary>
+    public required IInstanceGameResolver InstanceGames { get; init; }
 
     /// <summary>The platform whose code the game build runs, which the planner checks releases against.</summary>
     public required IGamePlatform GamePlatform { get; init; }
@@ -428,7 +434,21 @@ public sealed class BoreaServices : IDisposable
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
         var bootstrapPaths = new GamePathProvider(gameDirectory: null, boreaRoot: boreaRoot);
-        var saved = await new FileBoreaSettingsRepository(bootstrapPaths).GetAsync(cancellationToken).ConfigureAwait(false);
+        var bootstrapSettings = new FileBoreaSettingsRepository(bootstrapPaths);
+
+        // A loader move that a crash interrupted is repaired before the paths are fixed, because the provider below keeps the
+        // loader folders it reads now. A repair that fails is logged and never stops the start.
+        Exception? loaderRecovery = null;
+        try
+        {
+            await new LoaderLayoutMigration(bootstrapSettings, bootstrapPaths).RecoverAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            loaderRecovery = exception;
+        }
+
+        var saved = await bootstrapSettings.GetAsync(cancellationToken).ConfigureAwait(false);
         var settings = saved ?? new BoreaSettings(gameDirectoryPath: null);
 
         // every other service resolves its paths through the provider
@@ -439,6 +459,8 @@ public sealed class BoreaServices : IDisposable
             ModIds.Comparer);
         var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot, sharedProfileRoot, settings.LibraryFolderPath);
         var log = new FileBoreaLog(paths, logSource);
+        if (loaderRecovery is not null)
+            log.Write("Borea could not repair the loader folders.", loaderRecovery);
 
         // Network. Every service that talks to a remote host is built here on the
         // one client, except the image source, which needs a handler of its own,
@@ -478,9 +500,10 @@ public sealed class BoreaServices : IDisposable
         var modStore = new ModStore(paths, new DirectoryLinker(), settings.SharedModStore);
         var fileInstances = new FileInstanceRepository(paths, modStore);
         var instances = new LoggingInstanceRepository(fileInstances, paths, log);
-        var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration);
+        var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration, paths.GetLoadersRoot());
         installCandidates ??= HostInstallCandidates();
 
+        var loaderVersions = new FileLoaderVersionStore(settingsRepository, paths);
         var installedVersion = new InstalledGameVersionProvider(paths);
         var gameShape = new GameShapeCheck(paths, installedVersion);
 
@@ -516,7 +539,7 @@ public sealed class BoreaServices : IDisposable
             Paths = paths,
             Log = log,
             SettingsRepository = settingsRepository,
-            GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
+            GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration, loaderVersions),
             LibraryFolderChanger = new LoggingLibraryFolderChanger(new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, fileInstances, isGameProcessRunning, isOtherBoreaRunning), log),
             IsGameProcessRunning = isGameProcessRunning,
             AppPreferences = new FileAppPreferencesRepository(paths),
@@ -557,10 +580,11 @@ public sealed class BoreaServices : IDisposable
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck),
             SpaceCheck = spaceCheck,
-            LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
+            LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration, isGameProcessRunning),
             LoaderAdopter = loaderAdopter,
             LoaderConfiguration = loaderConfigurator ?? loaderConfiguration,
-            LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
+            LoaderUninstaller = new FileLoaderUninstaller(settingsRepository, paths, loaderVersions, isGameProcessRunning),
+            LoaderVersions = loaderVersions,
             Launcher = launcher,
             SharedProfileLauncher = new LoggingSharedProfileLauncher(sharedProfileLauncher ?? new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter(), launches), log),
             LatestVersion = new LatestVersionPing(http),
@@ -568,6 +592,7 @@ public sealed class BoreaServices : IDisposable
             SelfUpdater = selfUpdater ?? BuildSelfUpdater(new BoreaReleaseFiles(http), log, fromCommandLine: logSource == BoreaLogSource.Cli),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
+            InstanceGames = new InstanceGameResolver(paths, installedVersion),
             GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
             GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),

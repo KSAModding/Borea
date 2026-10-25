@@ -110,19 +110,24 @@ public sealed class FileForeignModReleaseMatcher : IForeignModReleaseMatcher
         return await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
     }
 
+    // each delete has its own try, so an archive that cannot be deleted does not leave the unpacked folder behind
     private static void TryDelete(string archivePath, string unpackedFolder)
     {
         try
         {
             if (File.Exists(archivePath))
                 File.Delete(archivePath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+        }
+
+        try
+        {
             if (Directory.Exists(unpackedFolder))
                 Directory.Delete(unpackedFolder, recursive: true);
         }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
         }
     }

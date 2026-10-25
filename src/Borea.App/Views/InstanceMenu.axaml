@@ -9,6 +9,7 @@
             <MenuFlyout Placement="BottomEdgeAlignedRight">
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryLaunchArguments}" Command="{Binding BeginEditLaunchArgumentsCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceLoaderMenu}" Command="{Binding BeginEditLoaderSettingCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceSaveSettingsPreset}" Command="{Binding SaveSettingsPresetCommand}" />

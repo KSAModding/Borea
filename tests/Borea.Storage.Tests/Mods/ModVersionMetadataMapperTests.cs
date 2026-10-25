@@ -255,13 +255,17 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
     }
 
     [Fact]
-    public void FromDto_AbsentVersionScheme_DefaultsToSemver()
+    public async Task FromDto_AbsentVersionScheme_DefaultsToSemver()
     {
-        var dto = ModVersionMetadataMapper.ToDto(MetadataFixtures.MinimalRelease());
-        dto.VersionScheme = "semver";
+        var path = Path.Combine(_tempRoot, "release.toml");
+        await TomlFileStore.WriteAsync(path, ModVersionMetadataMapper.ToDto(MetadataFixtures.MinimalRelease()));
+        var lines = await File.ReadAllLinesAsync(path);
+        var schemeLine = Assert.Single(lines, line => line.StartsWith("VersionScheme ", StringComparison.Ordinal));
+        await File.WriteAllLinesAsync(path, lines.Where(line => line != schemeLine));
 
-        Assert.Equal("semver", ModVersionMetadataMapper.FromDto(dto).VersionScheme);
-        Assert.Equal("semver", new ModVersionMetadataDto().VersionScheme);
+        var reloaded = await TomlFileStore.ReadAsync<ModVersionMetadataDto>(path);
+
+        Assert.Equal("semver", ModVersionMetadataMapper.FromDto(reloaded!).VersionScheme);
     }
 
     [Fact]
