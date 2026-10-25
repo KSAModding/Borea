@@ -914,6 +914,10 @@ public partial class MainViewModel : ViewModelBase
         // the service raises an empty name when the culture changes, so every
         // translated string on this model needs a refresh too.
         RefreshRowText();
+        if (SelectedContent is { } content)
+            FillLinks(ContentLinks, content.Links);
+        if (SelectedPack is { } pack)
+            FillLinks(PackLinks, pack.Links);
         // a row now carries its tag names in the new language and the search reads them,
         // so the rows that Discover and the pack list show are selected again
         ApplyDiscoverFilters();
