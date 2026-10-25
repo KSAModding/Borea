@@ -1578,6 +1578,9 @@
   <data name="TaskBackupDeleteFormat" xml:space="preserve">
     <value>Delete backup {0}</value>
   </data>
+  <data name="TaskKeepGameBuildFormat" xml:space="preserve">
+    <value>Keep KSA {0}</value>
+  </data>
   <data name="TaskWaiting" xml:space="preserve">
     <value>Waiting</value>
   </data>
@@ -1641,11 +1644,17 @@
   <data name="ToastBackupDeletedFormat" xml:space="preserve">
     <value>Backup {0} deleted</value>
   </data>
+  <data name="ToastGameBuildKeptFormat" xml:space="preserve">
+    <value>KSA {0} kept for {1}</value>
+  </data>
   <data name="ToastInstallStoppedFormat" xml:space="preserve">
     <value>Install of {0} stopped</value>
   </data>
   <data name="ToastLibraryFolderStopped" xml:space="preserve">
     <value>Library move stopped</value>
+  </data>
+  <data name="ToastGameBuildKeepStoppedFormat" xml:space="preserve">
+    <value>Copy of KSA {0} stopped</value>
   </data>
   <data name="ToastUpdateStoppedFormat" xml:space="preserve">
     <value>Update of {0} stopped</value>
@@ -1700,6 +1709,9 @@
   </data>
   <data name="ToastBackupDeleteFailedFormat" xml:space="preserve">
     <value>Could not delete backup {0}</value>
+  </data>
+  <data name="ToastGameBuildKeepFailedFormat" xml:space="preserve">
+    <value>Could not keep KSA {0}</value>
   </data>
   <data name="ToastActivateFailedFormat" xml:space="preserve">
     <value>Could not activate {0}</value>
@@ -3465,6 +3477,45 @@
   <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
     <value>Delete {0}, its folder and its backups? You cannot undo this.</value>
   </data>
+  <data name="ModalKeepGameBuildTitle" xml:space="preserve">
+    <value>Keep this game build</value>
+  </data>
+  <data name="ModalKeepGameBuildTextFormat" xml:space="preserve">
+    <value>Borea copies KSA {0} ({1}) to {2} once. The instance {3} then always starts on this build. Do this before the game client updates, because an update changes the game folder to the new build.</value>
+  </data>
+  <data name="ModalKeepGameBuildSharedFormat" xml:space="preserve">
+    <value>KSA {0} is already kept in {1}. The instance {2} uses that copy, so Borea copies nothing.</value>
+  </data>
+  <data name="ModalKeepGameBuildFreeSpaceFormat" xml:space="preserve">
+    <value>Free space on the drive: {0}</value>
+  </data>
+  <data name="ModalKeepGameBuildPopupNote" xml:space="preserve">
+    <value>When a newer build is out, the game shows its update popup on each start with an internet connection. Select Cancel there, because GET closes the game.</value>
+  </data>
+  <data name="ModalKeepGameBuildConfirm" xml:space="preserve">
+    <value>Keep build</value>
+  </data>
+  <data name="KeepGameBuildAlreadyKeptFormat" xml:space="preserve">
+    <value>This instance already keeps KSA {0}.</value>
+  </data>
+  <data name="KeepGameBuildNoGame" xml:space="preserve">
+    <value>Borea cannot read the game build in the game folder. Set the game folder in the settings first.</value>
+  </data>
+  <data name="KeepGameBuildWineWrapper" xml:space="preserve">
+    <value>The game is in a Wine wrapper app, which cannot start a copy outside the wrapper. Borea does not keep this build.</value>
+  </data>
+  <data name="KeepGameBuildFolderTakenFormat" xml:space="preserve">
+    <value>{0} already holds another build or no build. Borea does not change that folder.</value>
+  </data>
+  <data name="KeepGameBuildLibraryInsideGame" xml:space="preserve">
+    <value>The library folder is inside the game folder, so a copy of the game would hold the library. Move the library folder first.</value>
+  </data>
+  <data name="KeepGameBuildNotEnoughSpaceFormat" xml:space="preserve">
+    <value>The copy needs {0}, and the drive has {1} free.</value>
+  </data>
+  <data name="KeepGameBuildBuildChangedFormat" xml:space="preserve">
+    <value>The game folder changed to KSA {0} before the copy started, so Borea copied nothing. To keep KSA {0}, select "Keep this game build" again.</value>
+  </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instances are packages of mods and game content that Borea manages on top of your existing game install. You can create multiple instances and activate one at a time for different play experiences.</value>
   </data>
@@ -4529,6 +4580,15 @@
   </data>
   <data name="InstanceSaveSettingsPreset" xml:space="preserve">
     <value>Save settings as preset</value>
+  </data>
+  <data name="InstanceKeepGameBuild" xml:space="preserve">
+    <value>Keep this game build</value>
+  </data>
+  <data name="InstanceGameBuildFormat" xml:space="preserve">
+    <value>KSA {0}</value>
+  </data>
+  <data name="InstanceGameBuildToolTipFormat" xml:space="preserve">
+    <value>This instance keeps KSA {0} and always starts on that copy.</value>
   </data>
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Game settings presets</value>

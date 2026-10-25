@@ -963,6 +963,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(NameModalConfirmText));
         OnPropertyChanged(nameof(NameModalPlaceholder));
         OnPropertyChanged(nameof(DeleteModalText));
+        RefreshKeepGameBuildText();
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
         OnPropertyChanged(nameof(DiscoverSortText));
         OnPropertyChanged(nameof(SelectedAuthorText));
@@ -1064,6 +1065,13 @@ public sealed partial class InstanceItem : ObservableObject
 
     public string ModCountToolTip => _owner.Localization.FormatLibraryModCount(ModCount);
 
+    /// <summary>The game build the instance keeps, or null when it runs on the game folder of the settings.</summary>
+    public string? GameBuildText => Instance.GameBuild is { } build ? _owner.Localization.FormatInstanceGameBuild(build.ToString()) : null;
+
+    public string? GameBuildToolTip => Instance.GameBuild is { } build
+        ? $"{_owner.Localization.FormatInstanceGameBuildToolTip(build.ToString())} {_owner.Localization.ModalKeepGameBuildPopupNote}"
+        : null;
+
     private bool _isOpening;
 
     public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null)
@@ -1089,6 +1097,8 @@ public sealed partial class InstanceItem : ObservableObject
         OnPropertyChanged(nameof(LastPlayedText));
         OnPropertyChanged(nameof(LastPlayedToolTip));
         OnPropertyChanged(nameof(ModCountToolTip));
+        OnPropertyChanged(nameof(GameBuildText));
+        OnPropertyChanged(nameof(GameBuildToolTip));
     }
 
     internal ModVersion? InstalledVersionOf(string modId)
@@ -1156,6 +1166,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(Instance);
+
+    [RelayCommand]
+    private Task BeginKeepGameBuildAsync() => _owner.BeginKeepGameBuildAsync(this);
 
     [RelayCommand]
     private void BeginDelete() => _owner.BeginDeleteInstance(this);
