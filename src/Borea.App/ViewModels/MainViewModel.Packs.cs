@@ -537,14 +537,14 @@ public partial class MainViewModel
             if (selected?.Metadata is not { } metadata)
                 throw new InvalidOperationException(Localization.DiscoverNoRelease);
 
-            var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
+            var instance = instanceId is { } existing
+                ? await services.Instances.GetByIdAsync(existing) ?? throw new InvalidOperationException(Localization.InstallInstanceMissing)
+                : NewPackInstance(newInstanceName!, metadata);
+            var installed = PlanningGameVersion(services, instance);
             var pinned = await PinnedReleasesAsync(services.Mods, metadata);
             var compatibility = Borea.Core.Game.Compatibility.Evaluate(metadata, installed, _gameReleases);
             ThrowIfIncompatible(metadata, compatibility, pinned, installed);
 
-            var instance = instanceId is { } existing
-                ? await services.Instances.GetByIdAsync(existing) ?? throw new InvalidOperationException(Localization.InstallInstanceMissing)
-                : NewPackInstance(newInstanceName!, metadata);
             var reasons = PackWarnings(selected, metadata, compatibility);
             var yanked = new HashSet<string>(ModIds.Comparer);
             var requested = new List<RequestedMod>();

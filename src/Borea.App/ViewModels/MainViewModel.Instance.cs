@@ -424,7 +424,7 @@ public partial class MainViewModel
     /// without a word. Only then, when <paramref name="findHeld"/> is set and the newest release needs another
     /// version of a pinned mod, the newest release is planned once more on its own to find the pin that holds it back.
     /// </summary>
-    private static async Task<UpdateCheck> FindUpdateAsync(BoreaServices services, Instance instance, InstalledMod installed, bool findHeld)
+    private async Task<UpdateCheck> FindUpdateAsync(BoreaServices services, Instance instance, InstalledMod installed, bool findHeld)
     {
         try
         {
@@ -701,15 +701,16 @@ public partial class MainViewModel
             if (!shape.AllowsWrites)
                 services.Log.Write($"Instance {instance.InstanceId}: the load order was left as it is. {shape.BrokenText}");
 
+            // the content comes from the same installation the shape check read, so a kept build with a problem gives none
             if (shape.AllowsWrites
-                && services.Settings.GameDirectoryPath is { } gameDirectory
+                && services.InstanceGames.Resolve(instance).GameDirectory is { } gameDirectory
                 && await services.ModState.PutGameContentFirstAsync(instance.InstanceId, gameDirectory))
             {
                 services.Log.Write($"Instance {instance.InstanceId}: the game's own content now loads before the mods.");
             }
 
             // an older Borea wrote the host path of the game, which a loader in a Wine prefix cannot open
-            if (services.Paths.GetGameDirectoryPath() is { } game
+            if (services.InstanceGames.Resolve(instance).GameDirectory is { } game
                 && services.Paths.GetLoaderDirectoryPath(loader.ModId) is { } loaderDirectory
                 && await services.LoaderConfiguration.RefreshForWineAsync(loader, loaderDirectory, game) is { } refreshed)
             {
@@ -1194,13 +1195,17 @@ public partial class MainViewModel
                 ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
             var recorded = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId) && mod.Ownership == ModInstallOwnership.Foreign)
                 ?? throw new InvalidOperationException(Localization.ManualInstallsInstanceChanged);
-            item.ManageDependencies = await HandoverDependencies.Check(instance, recorded).PlanAsync(
-                services.InstallPlanner,
-                instance,
-                recorded,
-                services.Mods,
-                services.InstalledVersion.GetInstalledVersion()?.Version,
-                services.GamePlatform.Current);
+            // only a missing dependency needs a plan, so a handover without one does not ask for the build of the instance
+            var dependencies = HandoverDependencies.Check(instance, recorded);
+            item.ManageDependencies = dependencies.Missing.Count == 0
+                ? dependencies
+                : await dependencies.PlanAsync(
+                    services.InstallPlanner,
+                    instance,
+                    recorded,
+                    services.Mods,
+                    PlanningGameVersion(services, instance),
+                    services.GamePlatform.Current);
             item.InstallManageDependencies = true;
             item.IsConfirmingManage = true;
         }

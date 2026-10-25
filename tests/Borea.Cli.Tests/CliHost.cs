@@ -147,7 +147,7 @@ internal sealed class CliHost : IDisposable
             installedVersion: InstalledVersion,
             gamePlatform: GamePlatform,
             // the graph resolves the real shared profile, so the check gets a provider that points at the test one
-            gameShape: new GameShapeCheck(new GamePathProvider(graph.Settings.GameDirectoryPath, boreaRoot: Root, sharedProfileRoot: SharedProfile), graph.InstalledVersion),
+            gameShape: new GameShapeCheck(new GamePathProvider(graph.Settings.GameDirectoryPath, boreaRoot: Root, sharedProfileRoot: SharedProfile), graph.InstalledVersion, graph.Instances, graph.InstanceGames),
             indexFetcher: IndexFetcher,
             indexReader: IndexReader,
             indexSnapshots: IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader),

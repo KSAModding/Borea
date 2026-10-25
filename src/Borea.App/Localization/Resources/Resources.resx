@@ -3450,6 +3450,9 @@
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>The active instance no longer exists.</value>
   </data>
+  <data name="InstallKeptBuildUnavailableFormat" xml:space="preserve">
+    <value>This instance runs on the kept KSA build {0}, and the folder {1} is gone or does not hold that build. Borea installs and updates nothing in this instance until the folder holds that build again.</value>
+  </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Create instance</value>
   </data>

@@ -47,7 +47,7 @@ public sealed class ModListViewModelTests
     }
 
     [Fact]
-    public async Task Duplicate_KeepsTheGameBuild()
+    public async Task Duplicate_KeptBuildIsGone_RefusesAndNamesTheBuild()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
         await KeepGameBuildAsync(harness, await SeedMainAsync(harness));
@@ -55,10 +55,13 @@ public sealed class ModListViewModelTests
         await viewModel.LoadAsync();
 
         await viewModel.Instances.Single().DuplicateCommand.ExecuteAsync(null);
-        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
 
-        var copy = (await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Main (copy)");
-        Assert.Equal(GameVersion.Parse("2026.10.13.5602"), copy.GameBuild);
+        var gone = GameVersion.Parse("2026.10.13.5602");
+        Assert.Null(viewModel.ModListImport);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.FormatToastDuplicateFailed("Main"), toast.Message);
+        Assert.Equal(harness.Localization.FormatInstallKeptBuildUnavailable(gone.ToString(), harness.Services.Paths.GetGameBuildFolder(gone)), toast.Detail);
+        Assert.Single(await harness.Services.Instances.GetAllAsync());
     }
 
     [Fact]

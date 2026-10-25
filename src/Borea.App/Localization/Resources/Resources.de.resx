@@ -3450,6 +3450,9 @@
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>Die aktive Instanz existiert nicht mehr.</value>
   </data>
+  <data name="InstallKeptBuildUnavailableFormat" xml:space="preserve">
+    <value>Diese Instanz läuft auf dem behaltenen KSA-Build {0}, und der Ordner {1} fehlt oder enthält diesen Build nicht. Borea installiert und aktualisiert nichts in dieser Instanz, bis der Ordner diesen Build wieder enthält.</value>
+  </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Instanz erstellen</value>
   </data>

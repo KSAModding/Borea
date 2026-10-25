@@ -248,7 +248,7 @@ public partial class MainViewModel
             LoadCategoryOptions(listings, packs);
             LoadGameVersionOptions(snapshot.GameVersions);
 
-            await RefreshCompatibilityAsync(services.InstalledVersion.GetInstalledVersion()?.Version);
+            await RefreshCompatibilityAsync(GameVersionOf(services, _activeInstanceEntity));
 
             DiscoverError = null;
         }
@@ -448,11 +448,11 @@ public partial class MainViewModel
     partial void OnInstalledInOtherInstancesChanged(bool value) => ApplyDiscoverFilters();
 
     /// <summary>
-    /// Evaluates every listing against the game the settings point at, for
-    /// example after the game directory changed.
+    /// Evaluates every listing against the build of the active instance, which is where Add installs, or against the
+    /// game the settings point at when no instance is active, for example after the game directory changed.
     /// </summary>
     internal Task RefreshCompatibilityAsync()
-        => _services is null ? Task.CompletedTask : RefreshCompatibilityAsync(_services.InstalledVersion.GetInstalledVersion()?.Version);
+        => _services is null ? Task.CompletedTask : RefreshCompatibilityAsync(GameVersionOf(_services, _activeInstanceEntity));
 
     /// <summary>
     /// Evaluates the newest release of every index listing and every row of
