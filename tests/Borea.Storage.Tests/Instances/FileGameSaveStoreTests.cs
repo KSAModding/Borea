@@ -616,6 +616,74 @@ public sealed class FileGameSaveStoreTests : IDisposable
     }
 
     /// <summary>A folder the way the game writes it, with a meta.toml in the shape of SaveMetaData.</summary>
+    [Fact]
+    public async Task WriteShareArchiveAsync_Vehicle_HoldsTheFolderUnderItsNameAndGivesTheHashOfTheBytes()
+    {
+        var vehicles = _paths.GetInstanceVehiclesFolder(_instanceId);
+        WriteItem(vehicles, "Example Rover", "Example Rover", "2026-10-01T10:00:00", "v2026.10.19.5638", 40, "vehicle.xml");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        var before = Snapshot(entry.Path);
+        using var destination = new MemoryStream();
+
+        var archive = await _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination);
+
+        var bytes = destination.ToArray();
+        Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)), archive.Sha256);
+        Assert.Equal(bytes.Length, archive.Size);
+        using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+        Assert.Equal(["Example Rover/meta.toml", "Example Rover/vehicle.xml"], zip.Entries.Select(item => item.FullName).Order(StringComparer.Ordinal));
+        Assert.Equal(before, Snapshot(entry.Path));
+    }
+
+    [Fact]
+    public async Task WriteShareArchiveAsync_FolderOfAnotherName_UsesTheNameOfMetaToml()
+    {
+        var saves = _paths.GetInstanceSavesFolder(_instanceId);
+        WriteItem(saves, "ExampleRover_old", "Example Rover", "2026-10-01T10:00:00", "v2026.10.19.5638", 10);
+        Directory.CreateDirectory(Path.Combine(saves, "ExampleRover_old", "empty"));
+        File.WriteAllText(Path.Combine(saves, "ExampleRover_old", "unscience.json"), "{}");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Save));
+        using var destination = new MemoryStream();
+
+        await _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination);
+
+        using var zip = new ZipArchive(new MemoryStream(destination.ToArray()), ZipArchiveMode.Read);
+        Assert.Equal(
+            ["Example Rover/empty/", "Example Rover/meta.toml", "Example Rover/universe.xml", "Example Rover/unscience.json"],
+            zip.Entries.Select(item => item.FullName).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task WriteShareArchiveAsync_FileTimeBefore1980_IsWritten()
+    {
+        var vehicles = _paths.GetInstanceVehiclesFolder(_instanceId);
+        WriteItem(vehicles, "Example Rover", "Example Rover", "2026-10-01T10:00:00", "v2026.10.19.5638", 10, "vehicle.xml");
+        File.SetLastWriteTime(Path.Combine(vehicles, "Example Rover", "meta.toml"), new DateTime(1970, 1, 1));
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        using var destination = new MemoryStream();
+
+        await _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination);
+
+        using var zip = new ZipArchive(new MemoryStream(destination.ToArray()), ZipArchiveMode.Read);
+        Assert.Equal(1980, zip.GetEntry("Example Rover/meta.toml")!.LastWriteTime.Year);
+    }
+
+    [Fact]
+    public async Task WriteShareArchiveAsync_NameChangedSinceTheCheck_IsRefused()
+    {
+        WriteItem(_paths.GetInstanceVehiclesFolder(_instanceId), "Example Rover", "Example Rover 2", "2026-10-01T10:00:00", "v2026.10.19.5638", 10, "vehicle.xml");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        using var destination = new MemoryStream();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination));
+        Assert.Equal(0, destination.Length);
+    }
+
+    private static List<(string Path, DateTime Written, string Hash)> Snapshot(string folder) =>
+        Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal)
+            .Select(path => (path, File.GetLastWriteTimeUtc(path), Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)))))
+            .ToList();
+
     private static void WriteItem(string kindFolder, string folderName, string name, string updated, string version, int dataBytes, string dataFile = "universe.xml")
     {
         var folder = Directory.CreateDirectory(Path.Combine(kindFolder, folderName)).FullName;

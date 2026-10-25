@@ -280,6 +280,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastBackUpFailed(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackUpFailedFormat, name);
 
+    public string FormatToastShareFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastShareFailedFormat, name);
+
+    public string FormatShareFolderFileMissing(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderFileMissingFormat, file);
+
+    public string FormatShareFolderNotToml(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderNotTomlFormat, file);
+
+    public string FormatShareFolderNoName(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderNoNameFormat, file);
+
+    public string FormatShareFolderNotXml(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderNotXmlFormat, file);
+
     public string ToastBackUpAllFailed => Resources.ToastBackUpAllFailed;
 
     public string FormatToastCopyFailed(string name)
@@ -1416,6 +1431,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveBackUp => Resources.GameSaveBackUp;
 
+    public string GameSaveShare => Resources.GameSaveShare;
+
     public string GameSaveCopyToInstance => Resources.GameSaveCopyToInstance;
 
     public string GameSaveCopy => Resources.GameSaveCopy;
@@ -1731,6 +1748,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingPackTitle => Resources.ListingPackTitle;
 
+    public string ListingShareVehicleTitle => Resources.ListingShareVehicleTitle;
+
+    public string ListingShareSaveTitle => Resources.ListingShareSaveTitle;
+
     public string ListingPackHint => Resources.ListingPackHint;
 
     public string ListingStartPack => Resources.ListingStartPack;
@@ -1801,6 +1822,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingForumsHint => Resources.ListingForumsHint;
 
+    public string ListingForumsOptionalHint => Resources.ListingForumsOptionalHint;
+
     public string ListingReleasesGitHub => Resources.ListingReleasesGitHub;
 
     public string ListingReleasesSpaceDock => Resources.ListingReleasesSpaceDock;
@@ -1824,6 +1847,42 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingGameMaxHint => Resources.ListingGameMaxHint;
 
     public string ListingGameHint => Resources.ListingGameHint;
+
+    public string ListingGameMinFromArchiveHint => Resources.ListingGameMinFromArchiveHint;
+
+    public string ListingShareHeading => Resources.ListingShareHeading;
+
+    public string ListingShareIntro => Resources.ListingShareIntro;
+
+    public string ListingShareIdHint => Resources.ListingShareIdHint;
+
+    public string ListingShareDependenciesHint => Resources.ListingShareDependenciesHint;
+
+    public string ListingShareGameMaxHint => Resources.ListingShareGameMaxHint;
+
+    public string ListingShareDependencyRequired => Resources.ListingShareDependencyRequired;
+
+    public string ListingShareDependencyOptional => Resources.ListingShareDependencyOptional;
+
+    public string ListingShareDependencyConflict => Resources.ListingShareDependencyConflict;
+
+    public string ListingShareHint => Resources.ListingShareHint;
+
+    public string ListingShareExtraFiles => Resources.ListingShareExtraFiles;
+
+    public string ListingShareSaveArchive => Resources.ListingShareSaveArchive;
+
+    public string ListingShareArchiveFileType => Resources.ListingShareArchiveFileType;
+
+    public string ListingShareKindPart => Resources.ListingShareKindPart;
+
+    public string ListingShareKindSubstance => Resources.ListingShareKindSubstance;
+
+    public string ListingShareKindCharacter => Resources.ListingShareKindCharacter;
+
+    public string ListingShareKindBody => Resources.ListingShareKindBody;
+
+    public string ListingShareKindSystem => Resources.ListingShareKindSystem;
 
     public string ListingUseGameMin => Resources.ListingUseGameMin;
 
@@ -2420,6 +2479,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentTypeModPack => Resources.ContentTypeModPack;
 
+    public string ContentTypeVehicle => Resources.ContentTypeVehicle;
+
+    public string ContentTypeSave => Resources.ContentTypeSave;
+
     public string PackMods => Resources.PackMods;
 
     public string PackNewInstance => Resources.PackNewInstance;
@@ -2999,6 +3062,27 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingSaved(string fileName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingSavedFormat, fileName);
 
+    public string FormatListingShareArchiveSaved(string fileName, string sha256, long size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareArchiveSavedFormat, fileName, sha256, size);
+
+    public string FormatListingShareContentId(string kind, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareContentIdFormat, kind, id);
+
+    public string FormatListingShareNotProvided(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareNotProvidedFormat, id);
+
+    public string FormatListingShareDisabledProvider(string mod, string ids)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareDisabledProviderFormat, mod, ids);
+
+    public string FormatListingShareInvalidFolder(string folder, string ids)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareInvalidFolderFormat, folder, ids);
+
+    public string FormatListingShareSharedId(string id, string mods)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareSharedIdFormat, id, mods);
+
+    public string FormatListingShareUnreadableFile(string path)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareUnreadableFileFormat, path);
+
     public string FormatListingOpenFailed(string reason)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingOpenFailedFormat, reason);
 
@@ -3435,6 +3519,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatGameSaveNameInvalid(string suggestion)
         => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveNameInvalidFormat, suggestion);
+
+    public string FormatGameSaveShareRename(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveShareRenameFormat, name);
 
     public string FormatGameSavesCopiedFromProfile(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.GameSavesCopiedFromProfileFormat, count);

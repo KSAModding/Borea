@@ -16,6 +16,7 @@ using Borea.Core.Paths;
 using Borea.Core.Planning;
 using Borea.Core.Preferences;
 using Borea.Core.Settings;
+using Borea.Core.Sharing;
 using Borea.Core.State;
 using Borea.Core.Stewardship;
 using Borea.Core.Updates;
@@ -118,6 +119,12 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>The vehicles and saves Borea installed. One instance, so one store writes each file.</summary>
     public required IInstalledContentRecords InstalledContent { get; init; }
+
+    /// <summary>The ids a vehicle or a save names, for sharing it.</summary>
+    public required IContentIdReader ContentIds { get; init; }
+
+    /// <summary>Which mod of an instance defines which ids, for sharing a vehicle or a save.</summary>
+    public required IContentProviderMap ContentProviders { get; init; }
 
     public required IGameLogReader GameLog { get; init; }
 
@@ -530,6 +537,8 @@ public sealed class BoreaServices : IDisposable
             GameSaves = new FileGameSaveStore(paths, records: installedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
             InstalledContent = installedContent,
+            ContentIds = new XmlContentIdReader(),
+            ContentProviders = new FileContentProviderMap(paths),
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),

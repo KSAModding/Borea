@@ -1755,6 +1755,21 @@
   <data name="ToastBackUpFailedFormat" xml:space="preserve">
     <value>Could not back up {0}</value>
   </data>
+  <data name="ToastShareFailedFormat" xml:space="preserve">
+    <value>Could not share {0}</value>
+  </data>
+  <data name="ShareFolderFileMissingFormat" xml:space="preserve">
+    <value>The folder has no {0}.</value>
+  </data>
+  <data name="ShareFolderNotTomlFormat" xml:space="preserve">
+    <value>{0} is not TOML.</value>
+  </data>
+  <data name="ShareFolderNoNameFormat" xml:space="preserve">
+    <value>{0} has no name.</value>
+  </data>
+  <data name="ShareFolderNotXmlFormat" xml:space="preserve">
+    <value>{0} is not well-formed XML.</value>
+  </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Could not back up the saves</value>
   </data>
@@ -1874,6 +1889,12 @@
   </data>
   <data name="GameSaveBackUp" xml:space="preserve">
     <value>Back up</value>
+  </data>
+  <data name="GameSaveShare" xml:space="preserve">
+    <value>Share</value>
+  </data>
+  <data name="GameSaveShareRenameFormat" xml:space="preserve">
+    <value>The game no longer accepts the name "{0}", and the index checks names the same way. Rename the item to a name that follows the rules below, then share it.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>Backed up {0} to {1}.</value>
@@ -2484,6 +2505,12 @@
   <data name="ListingPackTitle" xml:space="preserve">
     <value>New mod pack</value>
   </data>
+  <data name="ListingShareVehicleTitle" xml:space="preserve">
+    <value>Share a vehicle</value>
+  </data>
+  <data name="ListingShareSaveTitle" xml:space="preserve">
+    <value>Share a save</value>
+  </data>
   <data name="ListingPackHint" xml:space="preserve">
     <value>A pack pins listed mods to exact releases, so players install the set that you tested. Borea writes one version of the pack.</value>
   </data>
@@ -2491,10 +2518,10 @@
     <value>Start a mod pack</value>
   </data>
   <data name="ListingChangeTitle" xml:space="preserve">
-    <value>Change a listed mod or pack</value>
+    <value>Change listed content</value>
   </data>
   <data name="ListingChangeHint" xml:space="preserve">
-    <value>Load a listing of the content index, for example to add an icon, or a pack to make its next version.</value>
+    <value>Load a listing of the content index, for example to add an icon to a mod, a vehicle or a save, or a pack to make its next version.</value>
   </data>
   <data name="ListingSearchListed" xml:space="preserve">
     <value>Search by name, id or author</value>
@@ -2613,6 +2640,9 @@
   <data name="ListingForumsHint" xml:space="preserve">
     <value>Required: the thread of your mod on forums.ahwoo.com.</value>
   </data>
+  <data name="ListingForumsOptionalHint" xml:space="preserve">
+    <value>Optional: a thread about it on forums.ahwoo.com.</value>
+  </data>
   <data name="ListingReleasesGitHub" xml:space="preserve">
     <value>GitHub repository</value>
   </data>
@@ -2648,6 +2678,9 @@
   </data>
   <data name="ListingGameHint" xml:space="preserve">
     <value>As the game shows it, such as 2026.9.10.5438, or a month such as 2026.9.</value>
+  </data>
+  <data name="ListingGameMinFromArchiveHint" xml:space="preserve">
+    <value>Optional. When this is empty, the index takes the build that wrote the file from meta.toml in the archive. Set an older version only when you know that it loads the file.</value>
   </data>
   <data name="ListingGameMinProposalFormat" xml:space="preserve">
     <value>The pinned releases need game {0} or newer, so Borea proposes {0} as the oldest game version.</value>
@@ -3098,6 +3131,78 @@
   </data>
   <data name="ListingSaveFailed" xml:space="preserve">
     <value>The listing file could not be saved.</value>
+  </data>
+  <data name="ListingShareHeading" xml:space="preserve">
+    <value>What you share</value>
+  </data>
+  <data name="ListingShareIntro" xml:space="preserve">
+    <value>Borea writes the file that lists your vehicle or save in the content index, and checks it before you open the pull request.</value>
+  </data>
+  <data name="ListingShareIdHint" xml:space="preserve">
+    <value>It cannot change later. A vehicle or save installs under the name in its meta.toml, not under this id.</value>
+  </data>
+  <data name="ListingShareDependenciesHint" xml:space="preserve">
+    <value>The archive has no mod.toml, so a client knows only this list. Name every mod that the file needs.</value>
+  </data>
+  <data name="ListingShareGameMaxHint" xml:space="preserve">
+    <value>Leave this empty unless newer game builds no longer load the file. Players on a newer build then cannot install it. Every release stamped while this is set keeps the limit, because a release can only get stricter later.</value>
+  </data>
+  <data name="ListingShareDependencyRequired" xml:space="preserve">
+    <value>Your vehicle or save does not load without it, so a client always installs it too.</value>
+  </data>
+  <data name="ListingShareDependencyOptional" xml:space="preserve">
+    <value>Your vehicle or save uses it when it is there. A client does not install it by itself.</value>
+  </data>
+  <data name="ListingShareDependencyConflict" xml:space="preserve">
+    <value>Your vehicle or save must not be installed together with it. Give the versions that conflict as the oldest and the newest version, or leave both empty when every version conflicts.</value>
+  </data>
+  <data name="ListingShareHint" xml:space="preserve">
+    <value>Borea read the file and proposed one required dependency for each mod of this instance that defines a part, substance, character or body that the file names. Check the list: remove what the file does not need, and add a mod that only changes how parts behave as recommends. Then save the archive and attach it to a release.</value>
+  </data>
+  <data name="ListingShareExtraFiles" xml:space="preserve">
+    <value>The game does not write these files, so a mod did. Add the mod that writes them as a dependency:</value>
+  </data>
+  <data name="ListingShareSaveArchive" xml:space="preserve">
+    <value>Save archive</value>
+  </data>
+  <data name="ListingShareArchiveFileType" xml:space="preserve">
+    <value>Zip archive</value>
+  </data>
+  <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
+    <value>Saved {0}. SHA-256 {1}, {2} bytes.</value>
+  </data>
+  <data name="ListingShareContentIdFormat" xml:space="preserve">
+    <value>{0} {1}</value>
+  </data>
+  <data name="ListingShareKindPart" xml:space="preserve">
+    <value>part</value>
+  </data>
+  <data name="ListingShareKindSubstance" xml:space="preserve">
+    <value>substance</value>
+  </data>
+  <data name="ListingShareKindCharacter" xml:space="preserve">
+    <value>character</value>
+  </data>
+  <data name="ListingShareKindBody" xml:space="preserve">
+    <value>body</value>
+  </data>
+  <data name="ListingShareKindSystem" xml:space="preserve">
+    <value>star system</value>
+  </data>
+  <data name="ListingShareNotProvidedFormat" xml:space="preserve">
+    <value>No mod of this instance defines {0}.</value>
+  </data>
+  <data name="ListingShareDisabledProviderFormat" xml:space="preserve">
+    <value>{0} defines {1}, but this instance does not load it, so Borea added no entry.</value>
+  </data>
+  <data name="ListingShareInvalidFolderFormat" xml:space="preserve">
+    <value>The folder {0} defines {1}, but its name is not a listing id, so Borea added no entry.</value>
+  </data>
+  <data name="ListingShareSharedIdFormat" xml:space="preserve">
+    <value>{1} all define {0}. The game takes the first of them, so keep only the entry that the file needs.</value>
+  </data>
+  <data name="ListingShareUnreadableFileFormat" xml:space="preserve">
+    <value>Borea could not read {0}, so it does not know what that file defines.</value>
   </data>
   <data name="ListingOpenedWithText" xml:space="preserve">
     <value>GitHub opened with the file filled in.</value>
@@ -3767,6 +3872,12 @@
   </data>
   <data name="ContentTypeModPack" xml:space="preserve">
     <value>Modpack</value>
+  </data>
+  <data name="ContentTypeVehicle" xml:space="preserve">
+    <value>Vehicle</value>
+  </data>
+  <data name="ContentTypeSave" xml:space="preserve">
+    <value>Save</value>
   </data>
   <data name="PackMods" xml:space="preserve">
     <value>Mods</value>
