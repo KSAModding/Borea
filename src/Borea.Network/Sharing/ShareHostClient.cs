@@ -12,8 +12,8 @@ using Borea.Core.Sharing;
 namespace Borea.Network.Sharing;
 
 /// <summary>
-/// IShareHostClient over the upload API of RFC 0094. The RFC names the steps but no paths, client id or field names,
-/// so they all sit in <see cref="ShareHostApi"/> and <see cref="ShareHostJson"/>.
+/// IShareHostClient over the upload API of RFC 0094. Its paths, client id and field names come from rules 15 and 16 of
+/// spec/share-host.md and sit in <see cref="ShareHostApi"/> and <see cref="ShareHostJson"/>.
 /// </summary>
 public sealed class ShareHostClient : IShareHostClient
 {

@@ -3,8 +3,7 @@ using System.Text.Json.Serialization;
 namespace Borea.Network.Sharing;
 
 /// <summary>
-/// The paths and the client id of the upload API below the api of a share host. RFC 0094 names the device authorization
-/// grant of RFC 8628 at api and the two upload steps, but neither the paths of the grant nor a client id.
+/// The paths and the client id of the upload API below the api of a share host, as rule 15 of spec/share-host.md names them.
 /// </summary>
 internal static class ShareHostApi
 {
@@ -24,7 +23,7 @@ internal static class ShareHostApi
     public const string AccessPrefix = "access:";
 }
 
-/// <summary>Every JSON and form name of the upload API. RFC 0094 lists what each step returns, but no names.</summary>
+/// <summary>Every JSON and form name of the upload API, from rules 15 and 16 of spec/share-host.md.</summary>
 internal static class ShareHostJson
 {
     public const string Archive = "archive";
