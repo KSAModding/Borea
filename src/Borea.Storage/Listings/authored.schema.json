@@ -142,8 +142,11 @@
           "minimum": 1
         },
         "authority": {
-          "description": "Which host defines which releases exist. Required when more than one host is named.",
-          "enum": ["github", "spacedock"]
+          "description": "Which host defines which releases exist. Required when more than one host is named. It is github, spacedock or the key of a share host the section names.",
+          "anyOf": [
+            { "enum": ["github", "spacedock"] },
+            { "$ref": "#/$defs/hostKey" }
+          ]
         },
         "since": {
           "description": "The oldest version the watcher stamps, per RFC 0079. Every release of the authority at or above it is stamped with the listing facts that stand at stamp time. Absent means the watcher starts at the newest release of a new listing. It is not a host.",
@@ -156,10 +159,20 @@
           "pattern": "^[!-~]+(?![\\s\\S])"
         }
       },
+      "patternProperties": {
+        "^(?!(?:github|spacedock|authority|since)(?![\\s\\S]))[a-z][a-z0-9-]{1,31}(?![\\s\\S])": {
+          "description": "A share host of RFC 0094, named by its table in hosts.toml, with the id of the listing as the value. The schema cannot read hosts.toml, so it takes any key of the host key form ($defs/hostKey), and tools/check_hosts.py refuses one that hosts.toml does not register or whose host does not take the type.",
+          "$ref": "#/$defs/contentId"
+        }
+      },
       "dependentRequired": { "tag_prefix": ["github"] },
       "anyOf": [
         { "required": ["github"] },
-        { "required": ["spacedock"] }
+        { "required": ["spacedock"] },
+        {
+          "$comment": "Holds only when the section has a key besides these, which additionalProperties lets through only as a share host key.",
+          "not": { "propertyNames": { "enum": ["github", "spacedock", "authority", "since", "tag_prefix"] } }
+        }
       ],
       "allOf": [
         {
@@ -343,12 +356,12 @@
       "items": { "$ref": "#/$defs/packEntry" }
     },
     "vehicles": {
-      "description": "Pinned vehicles. Defined now even though the vehicle type is not, because the entry shape is shared.",
+      "description": "Pinned vehicles. Each id names a listed vehicle (RFC 0085), and the mods it requires are pinned under mods.",
       "type": "array",
       "items": { "$ref": "#/$defs/packEntry" }
     },
     "saves": {
-      "description": "Pinned saves. Defined now even though the save type is not, because the entry shape is shared.",
+      "description": "Pinned saves. Each id names a listed save (RFC 0085), and the mods it requires are pinned under mods.",
       "type": "array",
       "items": { "$ref": "#/$defs/packEntry" }
     }
@@ -492,6 +505,7 @@
                 "items": {
                   "not": {
                     "title": "the game's own manifest, which no descriptor may claim",
+                    "type": "string",
                     "$comment": "Trailing dots and spaces are matched too: Windows strips them, so 'manifest.toml ' opens the same file.",
                     "pattern": "^[Mm][Aa][Nn][Ii][Ff][Ee][Ss][Tt][.][Tt][Oo][Mm][Ll][ .]*(?![\\s\\S])"
                   }
@@ -505,6 +519,12 @@
   ],
 
   "$defs": {
+    "hostKey": {
+      "$comment": "The table name of a share host in hosts.toml (RFC 0094). The pattern is the one of the patternProperties of releases and of schemas/hosts.schema.json, and tools/test_check_hosts.py keeps the copies equal.",
+      "title": "a host key of 2 to 32 lowercase ASCII letters, digits or '-', starting with a letter, and not github, spacedock, authority or since",
+      "type": "string",
+      "pattern": "^(?!(?:github|spacedock|authority|since)(?![\\s\\S]))[a-z][a-z0-9-]{1,31}(?![\\s\\S])"
+    },
     "contentId": {
       "$comment": "The trailing lookahead is a true end-of-input anchor. A bare $ would also match before a trailing newline, which would let an id carry one into a folder name.",
       "title": "1 to 64 ASCII letters, digits, '.', '_' or '-', starting and ending with a letter or digit",
@@ -512,6 +532,7 @@
       "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?(?![\\s\\S])",
       "not": {
         "title": "a reserved name, compared up to the first dot",
+        "type": "string",
         "$comment": "Case-insensitive, because Windows treats CON.mod as a device too. Core is the game's own (Content/Core, exempted in ModLibrary.PrepareManifest).",
         "pattern": "^(?:[Cc][Oo][Rr][Ee]|[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:[.]|(?![\\s\\S]))"
       }
@@ -547,12 +568,14 @@
         {
           "not": {
             "title": "a path that leaves its anchor",
+            "type": "string",
             "pattern": "(?:^|/)[.]{1,2}(?:/|(?![\\s\\S]))"
           }
         },
         {
           "not": {
             "title": "a path through a reserved Windows device name",
+            "type": "string",
             "$comment": "A segment naming a device swallows every write on Windows, so a manager would report success and change nothing. Everything after the first dot is ignored when Windows resolves the device, and trailing dots and spaces are stripped, so all of those spellings are matched. Core is absent here: it is reserved as an id, not as a path.",
             "pattern": "(?:^|/)(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:[.][^/]*)?[ .]*(?:/|(?![\\s\\S]))"
           }
