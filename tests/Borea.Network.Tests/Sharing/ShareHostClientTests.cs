@@ -26,6 +26,7 @@ public sealed class ShareHostClientTests
     private readonly MemorySecretStore _secrets = new();
     private readonly WrittenFormat _format = new();
     private string _deviceJson = DeviceJson;
+    private HttpStatusCode _deviceStatus = HttpStatusCode.OK;
     private Func<HttpRequestMessage, HttpResponseMessage>? _apiAnswer;
 
     [Fact]
@@ -128,6 +129,18 @@ public sealed class ShareHostClientTests
 
         Assert.Equal((ShareHostFailure.SignInRefused, error), (exception.Failure, exception.Error));
         Assert.False(client.IsSignedIn(Host));
+    }
+
+    [Fact]
+    public async Task SignInAsync_StartRefusedWithAnOAuthError_ShowsTheDescriptionOfTheHost()
+    {
+        _deviceJson = """{"error":"invalid_request","error_description":"Too many sign-in requests. Try again in a minute."}""";
+        _deviceStatus = HttpStatusCode.TooManyRequests;
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => Client().SignInAsync(Host));
+
+        Assert.Equal((ShareHostFailure.Host, "invalid_request", "Too many sign-in requests. Try again in a minute."), (exception.Failure, exception.Error, exception.Message));
+        Assert.Single(_sent);
     }
 
     [Theory]
@@ -328,7 +341,7 @@ public sealed class ShareHostClientTests
         _sent.Enqueue(new Sent(request.RequestUri!.AbsoluteUri, body, request.Headers.Authorization?.ToString(), parts));
         return request.RequestUri.AbsoluteUri switch
         {
-            Api + "oauth/device_authorization" => Json(_deviceJson),
+            Api + "oauth/device_authorization" => Json(_deviceJson, _deviceStatus),
             Api + "oauth/token" => _tokenAnswers.Dequeue(),
             _ => _apiAnswer?.Invoke(request) ?? new HttpResponseMessage(HttpStatusCode.NotFound),
         };

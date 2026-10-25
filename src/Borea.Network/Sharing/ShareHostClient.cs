@@ -72,6 +72,9 @@ public sealed class ShareHostClient : IShareHostClient
 
         var device = await PostFormAsync(host, ShareHostApi.DeviceAuthorizationPath, [new("client_id", ShareHostApi.ClientId)], cancellationToken).ConfigureAwait(false)
             ?? throw Network();
+        if (device.Status != HttpStatusCode.OK && Parse<ShareHostJson.Token>(device.Body) is { Error: { } refused } oauth)
+            throw SignInError(host, refused, oauth.ErrorDescription);
+
         var code = Parse<ShareHostJson.DeviceCode>(device.Body);
         if (device.Status != HttpStatusCode.OK || code?.DeviceCodeValue is not { Length: > 0 } deviceCode || ToDeviceCode(host, code) is not { } shown)
             throw Unexpected(host, device);
@@ -115,7 +118,7 @@ public sealed class ShareHostClient : IShareHostClient
                 case "access_denied" or "expired_token":
                     throw new ShareHostException(ShareHostFailure.SignInRefused, $"The sign-in on {host.Name} ended with {error}.", error);
                 default:
-                    throw new ShareHostException(ShareHostFailure.Host, answer.ErrorDescription ?? $"{host.Name} refused the sign-in with {error}.", error);
+                    throw SignInError(host, error, answer.ErrorDescription);
             }
         }
     }
@@ -355,6 +358,9 @@ public sealed class ShareHostClient : IShareHostClient
         Parse<ShareHostJson.Error>(reply.Body) is { Message.Length: > 0 } error
             ? new ShareHostException(ShareHostFailure.Host, error.Message, error.Code)
             : Unexpected(host, reply);
+
+    private static ShareHostException SignInError(ShareHost host, string error, string? description) =>
+        new(ShareHostFailure.Host, description ?? $"{host.Name} refused the sign-in with {error}.", error);
 
     private static ShareHostException Unexpected(ShareHost host, Reply reply) =>
         new(ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.");
