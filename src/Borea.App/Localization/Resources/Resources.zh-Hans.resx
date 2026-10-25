@@ -4107,6 +4107,15 @@
   <data name="AboutCredits" xml:space="preserve">
     <value>采用的技术</value>
   </data>
+  <data name="AboutTranslators" xml:space="preserve">
+    <value>译者</value>
+  </data>
+  <data name="AboutTranslatorNotListed" xml:space="preserve">
+    <value>尚未署名</value>
+  </data>
+  <data name="AboutOriginalRepository" xml:space="preserve">
+    <value>Borea 仓库</value>
+  </data>
   <data name="AboutCommunity" xml:space="preserve">
     <value>GitHub 上的 KSA 模组社区</value>
   </data>
