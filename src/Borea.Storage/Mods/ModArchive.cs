@@ -20,12 +20,18 @@ internal static class ModArchive
     /// a mod.toml at the top level included, derives to the archive root, which
     /// is null.
     /// </summary>
-    public static string? DeriveRoot(string archivePath)
+    public static string? DeriveRoot(string archivePath) => DeriveRoot(archivePath, [ModFolders.DefinitionFileName]);
+
+    /// <summary>
+    /// The same rule for content whose root holds several files: the archive root when every marker is
+    /// at the top level, else the one top-level directory that holds every marker, else the archive root.
+    /// </summary>
+    public static string? DeriveRoot(string archivePath, IReadOnlyList<string> markers)
     {
         using var archive = ZipFile.OpenRead(archivePath);
         var names = archive.Entries.Select(entry => Normalize(entry.FullName)).ToList();
 
-        if (names.Contains(ModFolders.DefinitionFileName, StringComparer.Ordinal))
+        if (markers.All(marker => names.Contains(marker, StringComparer.Ordinal)))
             return null;
 
         string? single = null;
@@ -45,7 +51,7 @@ internal static class ModArchive
         if (single is null)
             return null;
 
-        return names.Contains($"{single}/{ModFolders.DefinitionFileName}", StringComparer.Ordinal) ? single : null;
+        return markers.All(marker => names.Contains($"{single}/{marker}", StringComparer.Ordinal)) ? single : null;
     }
 
     /// <summary>

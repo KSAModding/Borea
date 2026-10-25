@@ -2532,6 +2532,12 @@
   <data name="ListingNoListedMatch" xml:space="preserve">
     <value>No listed mod matches.</value>
   </data>
+  <data name="ListingNoListedVehicleMatch" xml:space="preserve">
+    <value>No listed vehicle matches.</value>
+  </data>
+  <data name="ListingNoListedSaveMatch" xml:space="preserve">
+    <value>No listed save matches.</value>
+  </data>
   <data name="ListingNoListedOrPackMatch" xml:space="preserve">
     <value>No listed mod or pack matches.</value>
   </data>
@@ -2731,19 +2737,19 @@
     <value>Members</value>
   </data>
   <data name="ListingMembersHint" xml:space="preserve">
-    <value>Pick listed mods. Each one is pinned to one release, and the newest release comes first.</value>
+    <value>Pick listed mods, vehicles and saves. Each one is pinned to one release, and the newest release comes first.</value>
   </data>
   <data name="ListingLeftOutFormat" xml:space="preserve">
-    <value>Borea left these mods of the instance {0} out:</value>
+    <value>Borea left this out of the instance {0}:</value>
   </data>
   <data name="ListingLeftOutNotInstalledByBoreaFormat" xml:space="preserve">
     <value>{0} was installed without Borea, so Borea does not know its release.</value>
   </data>
   <data name="ListingLeftOutModLoaderFormat" xml:space="preserve">
-    <value>{0} {1} is a mod loader, and a pack pins only mods.</value>
+    <value>{0} {1} is a mod loader, and a pack pins no mod loader.</value>
   </data>
   <data name="ListingLeftOutModLoaderUnknownVersionFormat" xml:space="preserve">
-    <value>{0} is a mod loader, and a pack pins only mods.</value>
+    <value>{0} is a mod loader, and a pack pins no mod loader.</value>
   </data>
   <data name="ListingLeftOutDisabledFormat" xml:space="preserve">
     <value>{0} {1} is disabled in the instance.</value>
@@ -2760,8 +2766,35 @@
   <data name="ListingLeftOutReleaseNotListedFormat" xml:space="preserve">
     <value>The index has no release {1} of {0}.</value>
   </data>
+  <data name="ListingLeftOutChangedFormat" xml:space="preserve">
+    <value>You changed {0} {1} since Borea installed it, so a pin of {1} would not install what you tested.</value>
+  </data>
+  <data name="ListingMemberTypeMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="ListingMemberTypeVehicles" xml:space="preserve">
+    <value>Vehicles</value>
+  </data>
+  <data name="ListingMemberTypeSaves" xml:space="preserve">
+    <value>Saves</value>
+  </data>
+  <data name="ListingMemberVehicle" xml:space="preserve">
+    <value>Vehicle</value>
+  </data>
+  <data name="ListingMemberSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
   <data name="ListingSearchMembers" xml:space="preserve">
     <value>Search listed mods by name, id or author</value>
+  </data>
+  <data name="ListingSearchVehicles" xml:space="preserve">
+    <value>Search listed vehicles by name, id or author</value>
+  </data>
+  <data name="ListingSearchSaves" xml:space="preserve">
+    <value>Search listed saves by name, id or author</value>
+  </data>
+  <data name="ListingMemberTypeAdd" xml:space="preserve">
+    <value>Add from:</value>
   </data>
   <data name="ListingAddMember" xml:space="preserve">
     <value>Add</value>
@@ -2812,7 +2845,7 @@
     <value>Use {0}</value>
   </data>
   <data name="ListingCopyForumList" xml:space="preserve">
-    <value>Copy the member list for your forum thread</value>
+    <value>Copy the mod list for your forum thread</value>
   </data>
   <data name="ListingNextVersionFormat" xml:space="preserve">
     <value>The next version of the pack {0} after version {1}. It is a new file, and the id cannot change.</value>
@@ -3540,6 +3573,12 @@
   <data name="InstallMessageUnlistedPin" xml:space="preserve">
     <value>The pinned release is not listed, so Borea cannot install it.</value>
   </data>
+  <data name="InstallMessageMissingForVehicleFormat" xml:space="preserve">
+    <value>Borea cannot install or enable {0}, so the game refuses this vehicle.</value>
+  </data>
+  <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
+    <value>Borea cannot install or enable {0}, so the game leaves out every vehicle of this save that needs it, and saving again loses those vehicles.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
   </data>
@@ -4035,6 +4074,9 @@
   <data name="PackResultNotAttempted" xml:space="preserve">
     <value>Not attempted</value>
   </data>
+  <data name="PackResultSkipped" xml:space="preserve">
+    <value>Skipped</value>
+  </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>stable</value>
   </data>
@@ -4313,6 +4355,51 @@
   </data>
   <data name="PackNewerReleasesFormat" xml:space="preserve">
     <value>{0} of {1} mods have newer releases</value>
+  </data>
+  <data name="PackNewerItemsOneFormat" xml:space="preserve">
+    <value>1 of {0} mods, vehicles and saves has a newer release</value>
+  </data>
+  <data name="PackNewerItemsFormat" xml:space="preserve">
+    <value>{0} of {1} mods, vehicles and saves have newer releases</value>
+  </data>
+  <data name="PackContentNameTakenFormat" xml:space="preserve">
+    <value>The {2} folder already has an item named '{1}', which is in the way of {0}. Choose another name, or go on without {0}.</value>
+  </data>
+  <data name="PackContentChangedFormat" xml:space="preserve">
+    <value>You changed {0} since Borea installed it: {1}. Going on replaces it, and the old folder stays in the backups.</value>
+  </data>
+  <data name="PackContentNameTitleFormat" xml:space="preserve">
+    <value>New name for {0}</value>
+  </data>
+  <data name="PackContentNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} was not installed: {2}</value>
+  </data>
+  <data name="PackContentNameTakenShortFormat" xml:space="preserve">
+    <value>An item named '{0}' is in the way.</value>
+  </data>
+  <data name="PackContentChangedShort" xml:space="preserve">
+    <value>You changed it since Borea installed it.</value>
+  </data>
+  <data name="PackContentNotReached" xml:space="preserve">
+    <value>Borea did not get to it.</value>
+  </data>
+  <data name="PackContentFailed" xml:space="preserve">
+    <value>Borea could not install it.</value>
+  </data>
+  <data name="PackContentSkippedFormat" xml:space="preserve">
+    <value>{0} {1} was skipped: {2}</value>
+  </data>
+  <data name="PackContentSkipFormat" xml:space="preserve">
+    <value>Go on without {0}</value>
+  </data>
+  <data name="PackContentNameConfirm" xml:space="preserve">
+    <value>Use name</value>
+  </data>
+  <data name="PackContentChooseName" xml:space="preserve">
+    <value>Choose a name</value>
+  </data>
+  <data name="PackContentEnablesFormat" xml:space="preserve">
+    <value>Borea enables {0} for {1}.</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack needs game {0} or newer.</value>

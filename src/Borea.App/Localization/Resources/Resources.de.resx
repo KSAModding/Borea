@@ -2532,6 +2532,12 @@
   <data name="ListingNoListedMatch" xml:space="preserve">
     <value>Keine eingetragene Mod passt.</value>
   </data>
+  <data name="ListingNoListedVehicleMatch" xml:space="preserve">
+    <value>Kein eingetragenes Fahrzeug passt.</value>
+  </data>
+  <data name="ListingNoListedSaveMatch" xml:space="preserve">
+    <value>Kein eingetragener Spielstand passt.</value>
+  </data>
   <data name="ListingNoListedOrPackMatch" xml:space="preserve">
     <value>Keine eingetragene Mod und kein Pack passt.</value>
   </data>
@@ -2728,22 +2734,22 @@
     <value>Ein Link oder ein kurzer Text zu dieser Version. Optional.</value>
   </data>
   <data name="ListingMembers" xml:space="preserve">
-    <value>Mods im Pack</value>
+    <value>Inhalt des Packs</value>
   </data>
   <data name="ListingMembersHint" xml:space="preserve">
-    <value>Wähle eingetragene Mods. Jede wird auf ein Release festgelegt, und das neueste Release steht zuerst.</value>
+    <value>Wähle eingetragene Mods, Fahrzeuge und Spielstände. Jeder Eintrag wird auf ein Release festgelegt, und das neueste Release steht zuerst.</value>
   </data>
   <data name="ListingLeftOutFormat" xml:space="preserve">
-    <value>Diese Mods der Instanz {0} hat Borea weggelassen:</value>
+    <value>Das hat Borea aus der Instanz {0} weggelassen:</value>
   </data>
   <data name="ListingLeftOutNotInstalledByBoreaFormat" xml:space="preserve">
-    <value>{0} wurde ohne Borea installiert, deshalb kennt Borea ihr Release nicht.</value>
+    <value>{0} wurde ohne Borea installiert, deshalb kennt Borea das Release nicht.</value>
   </data>
   <data name="ListingLeftOutModLoaderFormat" xml:space="preserve">
-    <value>{0} {1} ist ein Mod-Loader, und ein Pack legt nur Mods fest.</value>
+    <value>{0} {1} ist ein Mod-Loader, und ein Pack legt keinen Mod-Loader fest.</value>
   </data>
   <data name="ListingLeftOutModLoaderUnknownVersionFormat" xml:space="preserve">
-    <value>{0} ist ein Mod-Loader, und ein Pack legt nur Mods fest.</value>
+    <value>{0} ist ein Mod-Loader, und ein Pack legt keinen Mod-Loader fest.</value>
   </data>
   <data name="ListingLeftOutDisabledFormat" xml:space="preserve">
     <value>{0} {1} ist in der Instanz deaktiviert.</value>
@@ -2760,8 +2766,35 @@
   <data name="ListingLeftOutReleaseNotListedFormat" xml:space="preserve">
     <value>Der Index führt kein Release {1} von {0}.</value>
   </data>
+  <data name="ListingLeftOutChangedFormat" xml:space="preserve">
+    <value>Du hast {0} {1} geändert, seit Borea es installiert hat, deshalb würde eine Festlegung auf {1} nicht das installieren, was du getestet hast.</value>
+  </data>
+  <data name="ListingMemberTypeMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="ListingMemberTypeVehicles" xml:space="preserve">
+    <value>Fahrzeuge</value>
+  </data>
+  <data name="ListingMemberTypeSaves" xml:space="preserve">
+    <value>Spielstände</value>
+  </data>
+  <data name="ListingMemberVehicle" xml:space="preserve">
+    <value>Fahrzeug</value>
+  </data>
+  <data name="ListingMemberSave" xml:space="preserve">
+    <value>Spielstand</value>
+  </data>
   <data name="ListingSearchMembers" xml:space="preserve">
     <value>Eingetragene Mods nach Name, ID oder Autor suchen</value>
+  </data>
+  <data name="ListingSearchVehicles" xml:space="preserve">
+    <value>Eingetragene Fahrzeuge nach Name, ID oder Autor suchen</value>
+  </data>
+  <data name="ListingSearchSaves" xml:space="preserve">
+    <value>Eingetragene Spielstände nach Name, ID oder Autor suchen</value>
+  </data>
+  <data name="ListingMemberTypeAdd" xml:space="preserve">
+    <value>Hinzufügen aus:</value>
   </data>
   <data name="ListingAddMember" xml:space="preserve">
     <value>Hinzufügen</value>
@@ -2812,7 +2845,7 @@
     <value>{0} verwenden</value>
   </data>
   <data name="ListingCopyForumList" xml:space="preserve">
-    <value>Mitgliederliste für deinen Forenthread kopieren</value>
+    <value>Mod-Liste für deinen Forenthread kopieren</value>
   </data>
   <data name="ListingNextVersionFormat" xml:space="preserve">
     <value>Die nächste Version des Packs {0} nach Version {1}. Sie ist eine neue Datei, und die ID kann sich nicht ändern.</value>
@@ -3540,6 +3573,12 @@
   <data name="InstallMessageUnlistedPin" xml:space="preserve">
     <value>Die festgelegte Version ist nicht gelistet, deshalb kann Borea sie nicht installieren.</value>
   </data>
+  <data name="InstallMessageMissingForVehicleFormat" xml:space="preserve">
+    <value>Borea kann {0} nicht installieren oder aktivieren, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
+  </data>
+  <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
+    <value>Borea kann {0} nicht installieren oder aktivieren, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} oder {1}</value>
   </data>
@@ -4035,6 +4074,9 @@
   <data name="PackResultNotAttempted" xml:space="preserve">
     <value>Nicht versucht</value>
   </data>
+  <data name="PackResultSkipped" xml:space="preserve">
+    <value>Übersprungen</value>
+  </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>stabil</value>
   </data>
@@ -4313,6 +4355,51 @@
   </data>
   <data name="PackNewerReleasesFormat" xml:space="preserve">
     <value>{0} von {1} Mods haben neuere Versionen</value>
+  </data>
+  <data name="PackNewerItemsOneFormat" xml:space="preserve">
+    <value>1 von {0} Mods, Fahrzeugen und Spielständen hat eine neuere Version</value>
+  </data>
+  <data name="PackNewerItemsFormat" xml:space="preserve">
+    <value>{0} von {1} Mods, Fahrzeugen und Spielständen haben neuere Versionen</value>
+  </data>
+  <data name="PackContentNameTakenFormat" xml:space="preserve">
+    <value>Im Ordner {2} gibt es schon einen Eintrag namens '{1}', der {0} im Weg steht. Wähle einen anderen Namen oder mache ohne {0} weiter.</value>
+  </data>
+  <data name="PackContentChangedFormat" xml:space="preserve">
+    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Weitermachen ersetzt es, und der alte Ordner bleibt in den Sicherungen.</value>
+  </data>
+  <data name="PackContentNameTitleFormat" xml:space="preserve">
+    <value>Neuer Name für {0}</value>
+  </data>
+  <data name="PackContentNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} wurde nicht installiert: {2}</value>
+  </data>
+  <data name="PackContentNameTakenShortFormat" xml:space="preserve">
+    <value>Ein Eintrag namens '{0}' steht im Weg.</value>
+  </data>
+  <data name="PackContentChangedShort" xml:space="preserve">
+    <value>Du hast es geändert, seit Borea es installiert hat.</value>
+  </data>
+  <data name="PackContentNotReached" xml:space="preserve">
+    <value>Borea ist nicht dazu gekommen.</value>
+  </data>
+  <data name="PackContentFailed" xml:space="preserve">
+    <value>Borea konnte es nicht installieren.</value>
+  </data>
+  <data name="PackContentSkippedFormat" xml:space="preserve">
+    <value>{0} {1} wurde übersprungen: {2}</value>
+  </data>
+  <data name="PackContentSkipFormat" xml:space="preserve">
+    <value>Ohne {0} weitermachen</value>
+  </data>
+  <data name="PackContentNameConfirm" xml:space="preserve">
+    <value>Namen verwenden</value>
+  </data>
+  <data name="PackContentChooseName" xml:space="preserve">
+    <value>Namen wählen</value>
+  </data>
+  <data name="PackContentEnablesFormat" xml:space="preserve">
+    <value>Borea aktiviert {0} für {1}.</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>Dieses Modpack braucht die Spielversion {0} oder neuer.</value>

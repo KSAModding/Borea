@@ -58,7 +58,7 @@ public sealed class PackMemberRulesTests
         var snapshot = Snapshot(vector["snapshot"]!.AsObject());
         var draft = ListingDraft.FromDocument(_format.Read((string)vector["pack"]!));
 
-        var fix = ListingPackDependencies.Missing(snapshot, draft.Mods);
+        var fix = ListingPackDependencies.Missing(snapshot, draft.Pins);
 
         var adds = vector["adds"]?.AsArray().Select(pin => ((string)pin!["id"]!, (string)pin["version"]!)).ToList() ?? [];
         Assert.Equal(adds, fix.Pins.Select(pin => (pin.Id, pin.Version)));
@@ -67,6 +67,27 @@ public sealed class PackMemberRulesTests
             var fixedPack = (draft with { Mods = [.. draft.Mods, .. fix.Pins] }).ToDocument();
             Assert.DoesNotContain(PackMemberRules.Check(fixedPack, snapshot), issue => issue.Severity == ListingIssueSeverity.Error);
         }
+    }
+
+    [Fact]
+    public void Check_SaveListingUnderVehicles_IsRefusedWithBothTypes()
+    {
+        var snapshot = Snapshot(JsonNode.Parse("""
+            { "listings": [], "saves": [ { "id": "MoonBase", "type": "save", "releases": [ { "version": "1.0.0", "release_status": "stable" } ] } ] }
+            """)!.AsObject());
+        var pack = _format.Read("""
+            spec_version = 1
+            id = "ExamplePack"
+            type = "modpack"
+
+            [[vehicles]]
+            id = "MoonBase"
+            version = "1.0.0"
+            """);
+
+        var issue = Assert.Single(PackMemberRules.Check(pack, snapshot));
+
+        Assert.Equal(("vehicles[0]", "'MoonBase' is listed as a save, and [[vehicles]] pins only vehicles"), (issue.Location, issue.Message));
     }
 
     [Fact]
@@ -164,8 +185,14 @@ public sealed class PackMemberRulesTests
     {
         var delisted = Ids(node["delisted"]);
         var disputed = Ids(node["disputed"]);
+        return new ContentIndexSnapshot(1, Listings(node["listings"], delisted, disputed), [], null, [], vehicles: Listings(node["vehicles"], delisted, disputed), saves: Listings(node["saves"], delisted, disputed));
+    }
+
+    /// <summary>The listings of one key of the mini snapshot, which holds the mods, the vehicles or the saves of the case.</summary>
+    private static List<ContentIndexListing> Listings(JsonNode? entries, HashSet<string> delisted, HashSet<string> disputed)
+    {
         var listings = new List<ContentIndexListing>();
-        foreach (var entry in node["listings"]!.AsArray())
+        foreach (var entry in entries?.AsArray() ?? [])
         {
             var id = (string)entry!["id"]!;
             if (delisted.Contains(id))
@@ -181,7 +208,7 @@ public sealed class PackMemberRulesTests
             listings.Add(new ContentIndexListing(id, authored, releases, disputed.Contains(id) ? new IndexStatus(IndexStatusState.Disputed, "disputed") : null));
         }
 
-        return new ContentIndexSnapshot(1, listings, [], null, []);
+        return listings;
     }
 
     private static ModVersionMetadata Release(string id, ContentType type, JsonObject release)
@@ -191,7 +218,8 @@ public sealed class PackMemberRulesTests
             unavailableSince: since is null ? null : DateTimeOffset.Parse(since, System.Globalization.CultureInfo.InvariantCulture));
         var dependencies = release["dependencies"]?.AsArray().Select(dependency => Dependency(dependency!.AsObject())).ToList() ?? [];
         return new ModVersionMetadata(1, id, ModVersion.Parse((string)release["version"]!), MetadataEnumMapper.ParseReleaseStatus((string)release["release_status"]!),
-            DateTimeOffset.UnixEpoch, "2026.9.10.5438", 5438, download, 1, dependencies, type, yanked: (bool?)release["yanked"] ?? false, yankedReason: (string?)release["yanked_reason"]);
+            DateTimeOffset.UnixEpoch, "2026.9.10.5438", 5438, download, 1, dependencies, type, install: type.IsVehicleOrSave() ? new InstallInfo(null, derived: true, folder: id) : null,
+            yanked: (bool?)release["yanked"] ?? false, yankedReason: (string?)release["yanked_reason"]);
     }
 
     private static ModDependency Dependency(JsonObject dependency)

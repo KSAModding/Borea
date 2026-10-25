@@ -54,6 +54,8 @@ internal static class PlanningText
             PlanningMessageKind.SearchLimit => Fill(Resources.InstallMessageSearchLimitFormat, message.Limit ?? 0),
             PlanningMessageKind.RetractedPack => WithReason(Resources.InstallMessageRetractedPack, message.Value),
             PlanningMessageKind.UnlistedPin => Resources.InstallMessageUnlistedPin,
+            PlanningMessageKind.MissingForVehicle => Fill(Resources.InstallMessageMissingForVehicleFormat, dependency),
+            PlanningMessageKind.MissingForSave => Fill(Resources.InstallMessageMissingForSaveFormat, dependency),
             _ => message.Message,
         };
     }

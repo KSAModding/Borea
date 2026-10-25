@@ -273,16 +273,658 @@
       "notes": []
     },
     {
-      "name": "a vehicle cannot be pinned until its content type exists",
+      "name": "a vehicle that is not listed is refused",
       "snapshot": {
         "listings": []
       },
       "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[vehicles]]\nid = \"Craft\"\nversion = \"1.0.0\"\n",
       "accepted": false,
       "errors": [
-        "vehicles[0]: 'Craft' cannot be pinned, because no content type for vehicles is defined yet"
+        "vehicles[0]: 'Craft' is not a listed vehicle, and [[vehicles]] pins only listed vehicles"
       ],
       "notes": []
+    },
+    {
+      "name": "a vehicle pinned with the mod it needs passes",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.4.0\"\n\n[[vehicles]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a vehicle pinned without the mod it needs is refused, and the mod is added",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[vehicles]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "vehicles[0]: 'ExampleRover' 1.0.0 requires 'ExamplePartsMod' 1.4.0 or newer, and the pack does not pin it"
+      ],
+      "notes": [],
+      "adds": [
+        {
+          "id": "ExamplePartsMod",
+          "version": "1.4.0"
+        }
+      ]
+    },
+    {
+      "name": "a vehicle pinned with its mod below the bounds is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.3.0\"\n\n[[vehicles]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "vehicles[0]: 'ExampleRover' 1.0.0 requires 'ExamplePartsMod' 1.4.0 or newer, and the pack pins 'ExamplePartsMod' 1.3.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a mod in [[vehicles]] is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[vehicles]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "vehicles[0]: 'Alpha' is listed as a mod, and [[vehicles]] pins only vehicles"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a vehicle in [[mods]] is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'ExampleRover' is listed as a vehicle, and a pack pins only mods"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a vehicle in [[saves]] is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.4.0\"\n\n[[saves]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "saves[0]: 'ExampleRover' is listed as a vehicle, and [[saves]] pins only saves"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a delisted vehicle is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "delisted": [
+          "ExampleRover"
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.4.0\"\n\n[[vehicles]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "vehicles[0]: 'ExampleRover' is delisted, and [[vehicles]] pins only listed vehicles"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a vehicle version with no stamped release is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.4.0\"\n\n[[vehicles]]\nid = \"ExampleRover\"\nversion = \"2.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "vehicles[0]: 'ExampleRover' has no stamped release 2.0.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a yanked vehicle release is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "yanked": true,
+                "yanked_reason": "It falls through the ground.",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.4.0\"\n\n[[vehicles]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "vehicles[0]: 'ExampleRover' 1.0.0 is yanked"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a disputed vehicle passes with a warning",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "disputed": [
+          "ExampleRover"
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.4.0\"\n\n[[vehicles]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": [
+        "vehicles[0]: 'ExampleRover' is disputed, and a client warns about it"
+      ]
+    },
+    {
+      "name": "a vehicle that conflicts with a pinned mod is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          },
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "ExampleRover",
+            "type": "vehicle",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "min": "1.4.0",
+                    "source": "authored"
+                  },
+                  {
+                    "id": "Alpha",
+                    "kind": "conflict",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.4.0\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[vehicles]]\nid = \"ExampleRover\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "vehicles[0]: 'ExampleRover' 1.0.0 conflicts with 'Alpha', and the pack pins 'Alpha' 1.0.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a save pinned with the mod it needs passes",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "saves": [
+          {
+            "id": "MoonBase",
+            "type": "save",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.3.0\"\n\n[[saves]]\nid = \"MoonBase\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a save pinned without the mod it needs is refused, and the mod is added",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ExamplePartsMod",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.4.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.3.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ],
+        "saves": [
+          {
+            "id": "MoonBase",
+            "type": "save",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "ExamplePartsMod",
+                    "kind": "required",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[saves]]\nid = \"MoonBase\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "saves[0]: 'MoonBase' 1.0.0 requires 'ExamplePartsMod', and the pack does not pin it"
+      ],
+      "notes": [],
+      "adds": [
+        {
+          "id": "ExamplePartsMod",
+          "version": "1.4.0"
+        }
+      ]
     },
     {
       "name": "a disputed mod passes with a warning",

@@ -6,14 +6,14 @@ using Borea.Storage.Mods;
 namespace Borea.Storage.Listings;
 
 /// <summary>
-/// The member rules of RFC 0080 against the snapshot, in the words of check_members and member_notes in tools/check_index.py of
-/// content-index. schemas/pack-vectors.json of content-index holds the cases, and the tests run a copy of it.
+/// The member rules of RFC 0080 and RFC 0085 against the snapshot, in the words of check_members and member_notes in
+/// tools/check_index.py of content-index. schemas/pack-vectors.json of content-index holds the cases, and the tests run a copy of it.
 /// </summary>
 internal static class PackMemberRules
 {
     private const string MemberSection = "mods";
 
-    private static readonly string[] PinnedSections = [MemberSection, "vehicles", "saves"];
+    private static readonly (string Section, ContentType Type)[] PinnedSections = [(MemberSection, ContentType.Mod), ("vehicles", ContentType.Vehicle), ("saves", ContentType.Save)];
 
     public static IEnumerable<ListingIssue> Check(AuthoredTable document, ContentIndexSnapshot snapshot)
     {
@@ -32,13 +32,14 @@ internal static class PackMemberRules
                 stamped.Add((where, pin, release));
         }
 
+        // A pinned vehicle or save needs its mods under [[mods]], so only those pins meet a dependency.
         var pinned = ListingPackDependencies.Pinned(pins.Where(entry => entry.Section == MemberSection).Select(entry => entry.Pin));
         foreach (var (where, pin, release) in stamped)
             issues.AddRange(ListingPackDependencies.Incomplete(pin, release, pinned).Select(problem => Error(where, problem)));
 
         foreach (var (section, where, pin) in pins)
         {
-            if (section == MemberSection && Listing(snapshot, pin.Id) is { Authored.Type: ContentType.Mod, IndexStatus.State: IndexStatusState.Disputed })
+            if (Target(snapshot, pin.Id) is { IndexStatus.State: IndexStatusState.Disputed } target && target.Authored?.Type == pin.Type)
                 issues.Add(new ListingIssue(ListingIssueSeverity.Note, where, $"'{pin.Id}' is disputed, and a client warns about it"));
         }
 
@@ -48,13 +49,13 @@ internal static class PackMemberRules
     /// <summary>The pins that name an id and a version, each with its section and place.</summary>
     private static IEnumerable<(string Section, string Where, ListingPackMember Pin)> Pins(AuthoredTable document)
     {
-        foreach (var section in PinnedSections)
+        foreach (var (section, type) in PinnedSections)
         {
             var entries = document.GetList(section) ?? [];
             for (var index = 0; index < entries.Count; index++)
             {
                 if (entries[index] is AuthoredTable entry && entry.GetString("id") is { } id && entry.GetString("version") is { } version)
-                    yield return (section, $"{section}[{index}]", new ListingPackMember(id, version));
+                    yield return (section, $"{section}[{index}]", new ListingPackMember(id, version) { Type = type });
             }
         }
     }
@@ -63,20 +64,19 @@ internal static class PackMemberRules
     private static (string? Problem, ModVersionMetadata? Release) Member(string section, ListingPackMember pin, ContentIndexSnapshot snapshot)
     {
         var (id, version) = (pin.Id, pin.Version);
-        if (section != MemberSection)
-            return ($"'{id}' cannot be pinned, because no content type for {section} is defined yet", null);
-
-        var listing = Listing(snapshot, id);
+        var wanted = MetadataEnumMapper.ToDto(pin.Type);
+        var pinner = section == MemberSection ? "a pack" : $"[[{section}]]";
+        var listing = Target(snapshot, id);
         if (listing is null)
         {
             // The checks report a pin of a pack as a reference that does not nest.
-            return snapshot.Packs.Any(pack => ModIds.Equals(pack.Id, id)) ? (null, null) : ($"'{id}' is not a listed mod, and a pack pins only listed mods", null);
+            return snapshot.Packs.Any(pack => ModIds.Equals(pack.Id, id)) ? (null, null) : ($"'{id}' is not a listed {wanted}, and {pinner} pins only listed {wanted}s", null);
         }
 
         if (listing.IndexStatus?.State == IndexStatusState.Delisted)
-            return ($"'{id}' is delisted, and a pack pins only listed mods", null);
-        if (listing.Authored?.Type is { } type and not ContentType.Mod)
-            return ($"'{id}' is listed as a {MetadataEnumMapper.ToDto(type)}, and a pack pins only mods", null);
+            return ($"'{id}' is delisted, and {pinner} pins only listed {wanted}s", null);
+        if (listing.Authored?.Type is { } type && type != pin.Type)
+            return ($"'{id}' is listed as a {MetadataEnumMapper.ToDto(type)}, and {pinner} pins only {wanted}s", null);
 
         // The schema reports a version that is not SemVer.
         if (!ModVersion.TryParse(version, out _))
@@ -88,9 +88,9 @@ internal static class PackMemberRules
         return release.Yanked ? ($"'{id}' {version} is yanked", null) : (null, release);
     }
 
-    /// <summary>The listing an id names, delisted ones included, as the checks find it.</summary>
-    private static ContentIndexListing? Listing(ContentIndexSnapshot snapshot, string id) =>
-        snapshot.Listings.FirstOrDefault(listing => ModIds.Equals(listing.Id, id));
+    /// <summary>The listing an id names in any of the lists of the snapshot, delisted ones included, as the checks find it.</summary>
+    private static ContentIndexListing? Target(ContentIndexSnapshot snapshot, string id) =>
+        snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves).FirstOrDefault(listing => ModIds.Equals(listing.Id, id));
 
     private static ListingIssue Error(string location, string message) => new(ListingIssueSeverity.Error, location, message);
 }

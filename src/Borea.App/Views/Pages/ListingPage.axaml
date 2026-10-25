@@ -3,6 +3,7 @@
              xmlns:vm="using:Borea.App.ViewModels"
              xmlns:views="using:Borea.App.Views"
              xmlns:listings="using:Borea.Core.Listings"
+             xmlns:mods="using:Borea.Core.Mods"
              x:Class="Borea.App.Views.Pages.ListingPage"
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
@@ -377,6 +378,10 @@
                                                         <StackPanel Spacing="2" VerticalAlignment="Center">
                                                             <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                                                            <!-- a vehicle or save pin names its section as a chip, a mod pin does not -->
+                                                            <Border Classes="chip" HorizontalAlignment="Left" Margin="0,2,0,0" IsVisible="{Binding TypeText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                                <TextBlock Text="{Binding TypeText}" />
+                                                            </Border>
                                                         </StackPanel>
                                                         <ComboBox Grid.Column="2" MinWidth="180" VerticalAlignment="Center" ItemsSource="{Binding Releases}" SelectedItem="{Binding Selected}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMemberRelease}">
                                                             <ComboBox.ItemTemplate>
@@ -461,15 +466,22 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </StackPanel>
-                                <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0">
-                                    <TextBox Classes="field search" Text="{Binding ListingEditor.MemberQuery}" PlaceholderText="{Binding Localization.ListingSearchMembers}" AutomationProperties.Name="{Binding Localization.ListingSearchMembers}">
+                                <!-- the type of the next pin, which decides its section, [[mods]], [[vehicles]] or [[saves]]. The list above keeps every type -->
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingMemberTypeAdd}" VerticalAlignment="Center" />
+                                    <Button Classes="tab" Classes.active="{Binding ListingEditor.IsMemberTypeMods}" Content="{Binding Localization.ListingMemberTypeMods}" Command="{Binding ListingEditor.ShowMemberTypeCommand}" CommandParameter="{x:Static mods:ContentType.Mod}" />
+                                    <Button Classes="tab" Classes.active="{Binding ListingEditor.IsMemberTypeVehicles}" Content="{Binding Localization.ListingMemberTypeVehicles}" Command="{Binding ListingEditor.ShowMemberTypeCommand}" CommandParameter="{x:Static mods:ContentType.Vehicle}" />
+                                    <Button Classes="tab" Classes.active="{Binding ListingEditor.IsMemberTypeSaves}" Content="{Binding Localization.ListingMemberTypeSaves}" Command="{Binding ListingEditor.ShowMemberTypeCommand}" CommandParameter="{x:Static mods:ContentType.Save}" />
+                                </StackPanel>
+                                <Grid ColumnDefinitions="*,8,Auto">
+                                    <TextBox Classes="field search" Text="{Binding ListingEditor.MemberQuery}" PlaceholderText="{Binding ListingEditor.MemberSearchText}" AutomationProperties.Name="{Binding ListingEditor.MemberSearchText}">
                                         <TextBox.InnerLeftContent>
                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />
                                         </TextBox.InnerLeftContent>
                                     </TextBox>
                                     <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingAddMember}" Command="{Binding ListingEditor.AddMemberCommand}" />
                                 </Grid>
-                                <ListBox ItemsSource="{Binding ListingEditor.MemberMatches}" SelectedItem="{Binding ListingEditor.SelectedMemberMatch}" MaxHeight="240" AutomationProperties.Name="{Binding Localization.ListingSearchMembers}" IsVisible="{Binding !!ListingEditor.MemberMatches.Count}">
+                                <ListBox ItemsSource="{Binding ListingEditor.MemberMatches}" SelectedItem="{Binding ListingEditor.SelectedMemberMatch}" MaxHeight="240" AutomationProperties.Name="{Binding ListingEditor.MemberSearchText}" IsVisible="{Binding !!ListingEditor.MemberMatches.Count}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ListedListing">
                                             <Grid ColumnDefinitions="*,16,Auto">
@@ -482,7 +494,7 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedMatch}" IsVisible="{Binding ListingEditor.HasNoMemberMatch}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.MemberNoMatchText}" IsVisible="{Binding ListingEditor.HasNoMemberMatch}" />
                                 <Button Classes="link" Command="{Binding ListingEditor.CopyForumListCommand}" HorizontalAlignment="Left" IsVisible="{Binding !!ListingEditor.Members.Count}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Copy}" />

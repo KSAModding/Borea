@@ -314,7 +314,7 @@ public sealed partial class ListingEditor : ObservableObject
 
         SetListedMods(_snapshot);
         FillCuratedTags(Draft.Tags);
-        FillMembers(Draft.Mods);
+        FillMembers(Draft.Pins);
         FindDependencies();
         FillDeclared();
         RefreshDependencyHelp();
@@ -669,7 +669,7 @@ public sealed partial class ListingEditor : ObservableObject
             PackVersion = draft.Version;
             ReleasedAt = draft.ReleasedAt ?? string.Empty;
             Changelog = draft.Changelog ?? string.Empty;
-            FillMembers(draft.Mods);
+            FillMembers(draft.Pins);
             FillCuratedTags(draft.Tags);
             _curatedFromFreeTags.Clear();
             var curated = CuratedTags.Select(chip => chip.Tag).ToHashSet(StringComparer.Ordinal);
@@ -812,9 +812,11 @@ public sealed partial class ListingEditor : ObservableObject
         RefreshShare();
         // the proposal keeps its value, so its setter does not raise the text again
         OnPropertyChanged(nameof(GameMinProposalText));
+        OnPropertyChanged(nameof(MemberSearchText));
+        OnPropertyChanged(nameof(MemberNoMatchText));
         RefreshPullRequestText();
         FindListed();
-        FillMembers(Draft.Mods);
+        FillMembers(Draft.Pins);
         FindDependencies();
         FillDeclared();
         RefreshDependencyHelp();
@@ -860,11 +862,12 @@ public sealed partial class ListingEditor : ObservableObject
         FreeTagsStoredText = free.Count > 0 ? Localization.FormatListingMoreTagsStored(string.Join(", ", free)) : null;
         var tags = CuratedTags.Where(chip => chip.IsSelected).Select(chip => chip.Tag).Concat(free).ToList();
 
-        var mods = Members.Select(row => row.ToMember()).ToList();
+        var pins = Members.Select(row => row.ToMember()).ToList();
+        var mods = pins.Where(pin => pin.Type == ContentType.Mod).ToList();
         var dependencies = IsPack ? new List<ListingDependency>() : Dependencies.Select(row => row.ToDependency()).ToList();
         if (IsPack)
         {
-            pageIssues.AddRange(PackIssues(mods));
+            pageIssues.AddRange(PackIssues(pins));
         }
         else
         {
@@ -897,6 +900,8 @@ public sealed partial class ListingEditor : ObservableObject
             ReleasedAt = Empty(ReleasedAt),
             Changelog = Changelog.Trim().Length == 0 ? null : Changelog.Replace("\r\n", "\n", StringComparison.Ordinal).Trim(),
             Mods = mods,
+            Vehicles = pins.Where(pin => pin.Type == ContentType.Vehicle).ToList(),
+            Saves = pins.Where(pin => pin.Type == ContentType.Save).ToList(),
         };
     }
 

@@ -712,7 +712,7 @@ public sealed class FileGameSaveStoreTests : IDisposable
 
         public Task AddAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.AddAsync(instanceId, record, cancellationToken);
 
-        public Task ReplaceAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.ReplaceAsync(instanceId, record, cancellationToken);
+        public Task ReplaceAsync(Guid instanceId, string oldFolderName, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.ReplaceAsync(instanceId, oldFolderName, record, cancellationToken);
 
         public Task<bool> RemoveAsync(Guid instanceId, ContentType type, string folderName, CancellationToken cancellationToken = default) => inner.RemoveAsync(instanceId, type, folderName, cancellationToken);
 

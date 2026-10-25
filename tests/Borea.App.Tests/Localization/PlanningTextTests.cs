@@ -56,6 +56,16 @@ public sealed class PlanningTextTests : IDisposable
     }
 
     [Fact]
+    public void MissingModOfVehicleOrSave_SaysWhatTheGameDoes()
+    {
+        var vehicle = new PlanningMessage("rover", PlanningMessageKind.MissingForVehicle) { Dependency = Library, Value = "unsatisfied-dependency" };
+        var save = new PlanningMessage("campaign", PlanningMessageKind.MissingForSave) { Dependency = Library, Value = "unsatisfied-dependency" };
+
+        Assert.Equal("Borea cannot install or enable library >= 1.0.0, so the game refuses this vehicle.", Format("en", vehicle));
+        Assert.Equal("Borea cannot install or enable library >= 1.0.0, so the game leaves out every vehicle of this save that needs it, and saving again loses those vehicles.", Format("en", save));
+    }
+
+    [Fact]
     public void AboveGameMax_NamesTheNewestGameTheReleaseSupports()
     {
         var message = new PlanningMessage("flight-tools", PlanningMessageKind.AboveGameMax) { Value = "2026.8.22.5348" };

@@ -1769,6 +1769,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingNoListedMatch => Resources.ListingNoListedMatch;
 
+    public string ListingNoListedVehicleMatch => Resources.ListingNoListedVehicleMatch;
+
+    public string ListingNoListedSaveMatch => Resources.ListingNoListedSaveMatch;
+
     public string ListingNoListedOrPackMatch => Resources.ListingNoListedOrPackMatch;
 
     public string ListingLoad => Resources.ListingLoad;
@@ -1919,7 +1923,23 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingSearchMembers => Resources.ListingSearchMembers;
 
+    public string ListingSearchVehicles => Resources.ListingSearchVehicles;
+
+    public string ListingSearchSaves => Resources.ListingSearchSaves;
+
+    public string ListingMemberTypeAdd => Resources.ListingMemberTypeAdd;
+
     public string ListingAddMember => Resources.ListingAddMember;
+
+    public string ListingMemberTypeMods => Resources.ListingMemberTypeMods;
+
+    public string ListingMemberTypeVehicles => Resources.ListingMemberTypeVehicles;
+
+    public string ListingMemberTypeSaves => Resources.ListingMemberTypeSaves;
+
+    public string ListingMemberVehicle => Resources.ListingMemberVehicle;
+
+    public string ListingMemberSave => Resources.ListingMemberSave;
 
     public string ListingMemberRelease => Resources.ListingMemberRelease;
 
@@ -2618,6 +2638,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PackResultNotAttempted => Resources.PackResultNotAttempted;
 
+    public string PackResultSkipped => Resources.PackResultSkipped;
+
     public string PackInstanceChanged => Resources.PackInstanceChanged;
 
     public string PackNothingInstalled => Resources.PackNothingInstalled;
@@ -3031,6 +3053,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingLeftOutReleaseNotListed(string id, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingLeftOutReleaseNotListedFormat, id, version);
 
+    public string FormatListingLeftOutChanged(string id, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingLeftOutChangedFormat, id, version);
+
     public string FormatListingNextVersion(string id, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingNextVersionFormat, id, version);
 
@@ -3285,6 +3310,47 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => newer == 1
             ? string.Format(CultureInfo.CurrentCulture, Resources.PackNewerReleasesOneFormat, total)
             : string.Format(CultureInfo.CurrentCulture, Resources.PackNewerReleasesFormat, newer, total);
+
+    /// <summary>The count of a pack that pins vehicles or saves besides its mods.</summary>
+    public string FormatPackNewerItems(int newer, int total)
+        => newer == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.PackNewerItemsOneFormat, total)
+            : string.Format(CultureInfo.CurrentCulture, Resources.PackNewerItemsFormat, newer, total);
+
+    /// <param name="kindFolder">The shown name of the folder of all vehicles or all saves.</param>
+    public string FormatPackContentNameTaken(string name, string folder, string kindFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenFormat, name, folder, kindFolder);
+
+    public string FormatPackContentNameTakenShort(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenShortFormat, folder);
+
+    public string PackContentChangedShort => Resources.PackContentChangedShort;
+
+    public string PackContentNotReached => Resources.PackContentNotReached;
+
+    public string PackContentFailed => Resources.PackContentFailed;
+
+    public string FormatPackContentSkipped(string name, string version, string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentSkippedFormat, name, version, reason);
+
+    public string FormatPackContentSkip(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentSkipFormat, name);
+
+    public string PackContentNameConfirm => Resources.PackContentNameConfirm;
+
+    public string PackContentChooseName => Resources.PackContentChooseName;
+
+    public string FormatPackContentEnables(string mods, string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentEnablesFormat, mods, name);
+
+    public string FormatPackContentChanged(string name, string files)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentChangedFormat, name, files);
+
+    public string FormatPackContentNameTitle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTitleFormat, name);
+
+    public string FormatPackContentNotInstalled(string name, string version, string? reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNotInstalledFormat, name, version, reason);
 
     public string FormatPackIncompatible(string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompatibleFormat, gameMin);
