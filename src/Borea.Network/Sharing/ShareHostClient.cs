@@ -30,14 +30,17 @@ public sealed class ShareHostClient : IShareHostClient
     private static readonly TimeSpan SlowDownStep = TimeSpan.FromSeconds(5);
 
     private readonly HttpClient _http;
+    private readonly IListingFormat _format;
     private readonly TimeProvider _time;
     private readonly ISecretStore? _secrets;
     private readonly Dictionary<string, string> _tokens = new(StringComparer.Ordinal);
 
+    /// <param name="format">Writes the dependency list in the TOML of a listing, as the upload API takes it.</param>
     /// <param name="secrets">Keeps a token between starts. Null keeps every token in memory only.</param>
-    public ShareHostClient(HttpClient http, TimeProvider? time = null, ISecretStore? secrets = null)
+    public ShareHostClient(HttpClient http, IListingFormat format, TimeProvider? time = null, ISecretStore? secrets = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
+        _format = format ?? throw new ArgumentNullException(nameof(format));
         _time = time ?? TimeProvider.System;
         _secrets = secrets;
     }
@@ -134,7 +137,10 @@ public sealed class ShareHostClient : IShareHostClient
         var file = new StreamContent(archive);
         file.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
         content.Add(file, ShareHostJson.Archive, fileName);
-        content.Add(new StringContent(new JsonArray([.. dependencies.Select(DependencyJson)]).ToJsonString(), Encoding.UTF8, "application/json"), ShareHostJson.Dependencies);
+        var list = new AuthoredTable();
+        if (dependencies.Count > 0)
+            list.Set("dependencies", dependencies.Select(ListingDraft.WriteDependency).Cast<object>().ToList());
+        content.Add(new StringContent(_format.Write(list), Encoding.UTF8), ShareHostJson.Dependencies);
         if (listingId is not null)
             content.Add(new StringContent(listingId, Encoding.UTF8), ShareHostJson.Listing);
 
@@ -334,31 +340,6 @@ public sealed class ShareHostClient : IShareHostClient
         && string.Equals(page.Host, host.Api.Host, StringComparison.OrdinalIgnoreCase)
             ? new GitHubDeviceCode(code.UserCode, page.AbsoluteUri)
             : null;
-
-    private static JsonObject DependencyJson(ListingDependency dependency)
-    {
-        if (dependency.Preserved is { } preserved)
-            return (JsonObject)ToJson(preserved)!;
-
-        var entry = new JsonObject { ["id"] = dependency.Id, ["kind"] = dependency.Kind };
-        if (!string.IsNullOrEmpty(dependency.Min))
-            entry["min"] = dependency.Min;
-        if (!string.IsNullOrEmpty(dependency.Max))
-            entry["max"] = dependency.Max;
-        return entry;
-    }
-
-    private static JsonNode? ToJson(object? value) => value switch
-    {
-        AuthoredTable table => new JsonObject(table.Entries.Select(entry => KeyValuePair.Create(entry.Key, ToJson(entry.Value)))),
-        IReadOnlyList<object> list => new JsonArray([.. list.Select(ToJson)]),
-        string text => JsonValue.Create(text),
-        long number => JsonValue.Create(number),
-        double number => JsonValue.Create(number),
-        bool flag => JsonValue.Create(flag),
-        null => null,
-        _ => JsonValue.Create(value.ToString()),
-    };
 
     private static ShareHostException Refused(ShareHost host, Reply reply) =>
         Parse<ShareHostJson.Error>(reply.Body) is { Message.Length: > 0 } error

@@ -336,6 +336,7 @@ public sealed class BoreaServices : IDisposable
     /// </summary>
     private static readonly Lazy<ShareHostClient> ProcessShareHosts = new(() => new ShareHostClient(
         BuildShareHostHttpClient(),
+        new TomlListingFormat(),
         secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null))));
 
     private BoreaServices(HttpClient http)
@@ -637,7 +638,7 @@ public sealed class BoreaServices : IDisposable
             ListingFormat = listingFormat,
             ListingValidator = new ListingValidator(new ListingSchemaStore(listedDocuments, paths)),
             ShareHosts = new ShareHostStore(listedDocuments, paths),
-            ShareHostClient = shareHostClient ?? new ShareHostClient(http),
+            ShareHostClient = shareHostClient ?? new ShareHostClient(http, listingFormat),
             ListingPublisher = new LoggingListingPublisher(listingPublisher ?? new ListingPublisher(gitHubSession, http, listingFormat), log),
             ListingOwnership = listingOwnership,
             StewardRole = stewardRole,

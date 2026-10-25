@@ -24,6 +24,7 @@ public sealed class ShareHostClientTests
     private readonly ConcurrentQueue<Sent> _sent = new();
     private readonly Queue<HttpResponseMessage> _tokenAnswers = new();
     private readonly MemorySecretStore _secrets = new();
+    private readonly WrittenFormat _format = new();
     private string _deviceJson = DeviceJson;
     private Func<HttpRequestMessage, HttpResponseMessage>? _apiAnswer;
 
@@ -165,8 +166,24 @@ public sealed class ShareHostClientTests
         Assert.Equal("Bearer at1", request.Authorization);
         Assert.Equal(["archive", "dependencies", "listing"], request.Parts.Select(part => part.Name));
         Assert.Equal("Example Rover.zip", request.Parts[0].FileName);
-        Assert.Equal("""[{"id":"ExamplePartsMod","kind":"required","min":"1.4.0"},{"kind":"required","any_of":["A","B"]}]""", request.Parts[1].Text);
+        Assert.Equal((WrittenFormat.Text, "text/plain"), (request.Parts[1].Text, request.Parts[1].MediaType));
         Assert.Equal("ExampleRover", request.Parts[2].Text);
+        var document = Assert.Single(_format.Written);
+        var tables = Assert.IsType<List<object>>(Assert.Single(document.Entries, entry => entry.Key == "dependencies").Value).Cast<AuthoredTable>().ToList();
+        Assert.Equal([KeyValuePair.Create<string, object>("id", "ExamplePartsMod"), new("kind", "required"), new("min", "1.4.0")], tables[0].Entries);
+        Assert.Equal(["kind", "any_of"], tables[1].Entries.Select(entry => entry.Key));
+    }
+
+    [Fact]
+    public async Task UploadAsync_NoDependencies_SendsAnEmptyList()
+    {
+        _apiAnswer = _ => Json(UploadJson);
+        var client = await SignedInAsync();
+
+        await client.UploadAsync(Host, new MemoryStream([1]), "a.zip", [], null);
+
+        Assert.Equal(["archive", "dependencies"], _sent.Last().Parts.Select(part => part.Name));
+        Assert.Empty(Assert.Single(_format.Written).Entries);
     }
 
     [Fact]
@@ -263,7 +280,7 @@ public sealed class ShareHostClientTests
         return client;
     }
 
-    private ShareHostClient Client() => new(FakeHttpMessageHandler.BuildClient(Answer, out _), _time, _secrets);
+    private ShareHostClient Client() => new(FakeHttpMessageHandler.BuildClient(Answer, out _), _format, _time, _secrets);
 
     private async Task<HttpResponseMessage> Answer(HttpRequestMessage request)
     {
@@ -272,7 +289,7 @@ public sealed class ShareHostClientTests
         if (request.Content is MultipartFormDataContent multipart)
         {
             foreach (var part in multipart)
-                parts.Add(new Part(part.Headers.ContentDisposition?.Name?.Trim('"') ?? string.Empty, part.Headers.ContentDisposition?.FileName?.Trim('"'), await part.ReadAsStringAsync()));
+                parts.Add(new Part(part.Headers.ContentDisposition?.Name?.Trim('"') ?? string.Empty, part.Headers.ContentDisposition?.FileName?.Trim('"'), part.Headers.ContentType?.MediaType, await part.ReadAsStringAsync()));
         }
         else if (request.Content is not null)
         {
@@ -291,7 +308,7 @@ public sealed class ShareHostClientTests
     private static HttpResponseMessage Json(string json, HttpStatusCode status = HttpStatusCode.OK) =>
         new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
-    private sealed record Part(string Name, string? FileName, string Text);
+    private sealed record Part(string Name, string? FileName, string? MediaType, string Text);
 
     private sealed record Sent(string Url, string? Body, string? Authorization, IReadOnlyList<Part> Parts);
 
@@ -314,6 +331,22 @@ public sealed class ShareHostClientTests
             Calls.Enqueue("delete");
             _secrets.TryRemove(name, out _);
         }
+    }
+
+    /// <summary>Keeps every document it writes and gives a marker text, because Borea.Storage writes the real TOML.</summary>
+    private sealed class WrittenFormat : IListingFormat
+    {
+        public const string Text = "[[dependencies]]\n";
+
+        public ConcurrentQueue<AuthoredTable> Written { get; } = new();
+
+        public string Write(AuthoredTable document, string? original = null)
+        {
+            Written.Enqueue(document);
+            return Text;
+        }
+
+        public AuthoredTable Read(string text) => throw new NotSupportedException();
     }
 
     private sealed class ListProgress<T>(List<T> reports) : IProgress<T>
