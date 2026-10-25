@@ -154,10 +154,28 @@ public sealed class SpaceDockModRepository : IModRepository
     /// </summary>
     private static bool IsKsaMod(SpaceDockModDto dto) => dto.GameId is null or KsaGameId;
 
+    /// <summary>
+    /// True when a path of the SpaceDock API, put after <see cref="BaseUrl"/>, still leads to SpaceDock itself.
+    /// A path such as "@example.com/a.zip" would make spacedock.info the user info of another host.
+    /// </summary>
+    internal static bool IsSpaceDockPath([NotNullWhen(true)] string? path)
+    {
+        var host = new Uri(BaseUrl);
+        return !string.IsNullOrWhiteSpace(path)
+            && path.StartsWith('/')
+            && Uri.TryCreate(host, path, out var uri)
+            && uri.Scheme == Uri.UriSchemeHttps
+            && uri.IsDefaultPort
+            && uri.UserInfo.Length == 0
+            && string.Equals(uri.Host, host.Host, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ModIdOf(SpaceDockModDto dto) => dto.Id.ToString(CultureInfo.InvariantCulture);
+
     private static ModMetadata MapToListing(SpaceDockModDto dto)
     {
-        var modId = dto.Id.ToString(CultureInfo.InvariantCulture);
-        var pageUrl = !string.IsNullOrWhiteSpace(dto.Url) ? $"{BaseUrl}{dto.Url}" : $"{BaseUrl}/mod/{dto.Id}";
+        var modId = ModIdOf(dto);
+        var pageUrl = IsSpaceDockPath(dto.Url) ? $"{BaseUrl}{dto.Url}" : $"{BaseUrl}/mod/{dto.Id}";
         var website = string.IsNullOrWhiteSpace(dto.Website) ? null : dto.Website;
 
         var links = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -238,7 +256,7 @@ public sealed class SpaceDockModRepository : IModRepository
         if (version.Created is not { } releaseDate)
             return false;
 
-        if (string.IsNullOrWhiteSpace(version.DownloadPath))
+        if (!IsSpaceDockPath(version.DownloadPath))
             return false;
 
         // No checksum and no sizes: the API does not expose them.
@@ -250,7 +268,7 @@ public sealed class SpaceDockModRepository : IModRepository
 
         release = new ModVersionMetadata(
             specVersion: SpecVersions.Highest,
-            modId: dto.Id.ToString(CultureInfo.InvariantCulture),
+            modId: ModIdOf(dto),
             version: modVersion,
             releaseStatus: modVersion.PreRelease is null ? ReleaseStatus.Stable : ReleaseStatus.Testing,
             releaseDate: releaseDate,
