@@ -360,7 +360,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Classes="card" Padding="24" Tag="links">
+                        <Border Classes="card" Padding="24" Tag="links" IsVisible="{Binding ListingEditor.ShowsIndexOnlyCards}">
                             <StackPanel Spacing="6">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingLinks}" Margin="0,0,0,6" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.LinkForum}" />
@@ -379,7 +379,13 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Classes="card" Padding="24" Tag="releases" IsVisible="{Binding !ListingEditor.IsPack}">
+                        <Border Classes="card" Padding="24" Tag="releases">
+                            <Border.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="!ListingEditor.IsPack" />
+                                    <Binding Path="ListingEditor.ShowsIndexOnlyCards" />
+                                </MultiBinding>
+                            </Border.IsVisible>
                             <StackPanel Spacing="6">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingReleases}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingReleasesHint}" TextWrapping="Wrap" Margin="0,0,0,6" />
@@ -580,7 +586,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Classes="card" Padding="24" Tag="compatibility">
+                        <Border Classes="card" Padding="24" Tag="compatibility" IsVisible="{Binding ListingEditor.ShowsIndexOnlyCards}">
                             <StackPanel Spacing="6">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingCompatibility}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.GameHint}" TextWrapping="Wrap" Margin="0,0,0,6" />
@@ -758,7 +764,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Classes="card" Padding="24" Tag="images">
+                        <Border Classes="card" Padding="24" Tag="images" IsVisible="{Binding ListingEditor.ShowsIndexOnlyCards}">
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingImages}" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingIcon}" Margin="0,6,0,0" />

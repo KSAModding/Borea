@@ -64,17 +64,44 @@ public sealed class ShareHostShareTests
     }
 
     [Fact]
+    public async Task ShareOnTheHost_HidesTheCardsThatTheHostDoesNotTake()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: new FakeHost());
+        Assert.True(harness.ViewModel.ListingEditor.ShowsIndexOnlyCards);
+
+        var editor = await ShareAsync(harness);
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        Assert.True(editor.ShowsIndexOnlyCards);
+        var changed = new List<string?>();
+        editor.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.False(editor.ShowsIndexOnlyCards);
+        Assert.Contains(nameof(ListingEditor.ShowsIndexOnlyCards), changed);
+
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.False(editor.ShowsIndexOnlyCards);
+    }
+
+    [Fact]
     public async Task HostError_ShowsItsMessage()
     {
         var host = new FakeHost { UploadFailure = new ShareHostException(ShareHostFailure.Host, "ExampleRover belongs to another account.", "id_taken") };
         using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.Homepage = "https://example.test/rover";
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
         Assert.Equal(harness.Localization.FormatListingShareHostSaid("ksamods.gg", "ExampleRover belongs to another account."), editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
         Assert.Null(editor.ShareHostProgress);
+        Assert.True(editor.ShowsIndexOnlyCards);
+        Assert.Equal("https://example.test/rover", editor.Homepage);
     }
 
     [Fact]

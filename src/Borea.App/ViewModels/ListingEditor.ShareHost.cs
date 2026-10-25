@@ -60,7 +60,7 @@ public sealed partial class ListingEditor
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing))]
+    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing), nameof(ShowsIndexOnlyCards))]
     private string? _shareHostProgress;
 
     [ObservableProperty]
@@ -78,6 +78,7 @@ public sealed partial class ListingEditor
     private string _shareHostStatus = "stable";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsIndexOnlyCards))]
     private string? _shareHostOutcome;
 
     [ObservableProperty]
@@ -93,6 +94,12 @@ public sealed partial class ListingEditor
     public bool IsSharing => ShareHostProgress is not null;
 
     public bool CanUploadToShareHost => !IsSharing;
+
+    /// <summary>
+    /// False from the upload to a share host on, because the host takes no links, releases, compatibility or images. The cards
+    /// of them hide and keep their values, for the pull request path.
+    /// </summary>
+    public bool ShowsIndexOnlyCards => !IsSharing && !HasShareUpload && ShareHostOutcome is null;
 
     /// <summary>A check that failed means the host refuses to publish, so the player shares again after a fix.</summary>
     public bool CanPublishToShareHost => _shareUpload is { } upload && upload.Upload.Checks.All(check => check.Passed) && ShareHostVersion.Trim().Length > 0 && !IsSharing;
@@ -142,6 +149,7 @@ public sealed partial class ListingEditor
         SharePullRequest = null;
         ShareHostChecks.Clear();
         OnPropertyChanged(nameof(HasShareUpload));
+        OnPropertyChanged(nameof(ShowsIndexOnlyCards));
         OnPropertyChanged(nameof(CanPublishToShareHost));
         OnPropertyChanged(nameof(ShareHostCodeText));
         OnPropertyChanged(nameof(ShareHostUserCode));
@@ -212,6 +220,7 @@ public sealed partial class ListingEditor
             if (upload.Checks.Any(check => !check.Passed))
                 ShareHostError = Localization.ListingShareHostChecksFailed;
             OnPropertyChanged(nameof(HasShareUpload));
+            OnPropertyChanged(nameof(ShowsIndexOnlyCards));
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
@@ -265,6 +274,7 @@ public sealed partial class ListingEditor
 
             _shareUpload = null;
             OnPropertyChanged(nameof(HasShareUpload));
+            OnPropertyChanged(nameof(ShowsIndexOnlyCards));
             SharePullRequest = published.PullRequest;
             ShareHostOutcome = published.PullRequest is null
                 ? Localization.FormatListingShareHostReleased(published.Id, published.Version)
