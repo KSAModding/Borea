@@ -605,34 +605,24 @@ public sealed class SnapshotParserTests
         Assert.All(parsed.RejectedVersions, rejected => Assert.Equal("1.0.0", rejected.Version));
     }
 
-    [Fact]
-    public void Parse_AmbiguousDependencyBesideValidRelease_KeepsValidSibling()
+    [Theory]
+    [InlineData("\"dependencies\": [{ \"id\": \"mod-a\", \"kind\": \"required\", \"any_of\": [{ \"id\": \"mod-b\" }] }]", "both id and any_of")]
+    [InlineData("\"dependencies\": [null]", "null element")]
+    [InlineData("\"dependencies\": [], \"listing\": { \"name\": \"Frozen name\", \"authors\": 42 }", "authors")]
+    public void Parse_ReleaseThatDoesNotMapBesideValidRelease_KeepsValidSibling(string dependencies, string reason)
     {
         var invalidRelease = ValidReleaseJson
             .Replace("\"version\": \"1.0.0\"", "\"version\": \"2.0.0\"")
-            .Replace("\"dependencies\": []", "\"dependencies\": [{ \"id\": \"mod-a\", \"kind\": \"required\", \"any_of\": [{ \"id\": \"mod-b\" }] }]");
+            .Replace("\"dependencies\": []", dependencies);
         var listing = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "releases": [{{invalidRelease}}, {{ValidReleaseJson}}] }""";
 
         var result = SnapshotParser.Parse(Snapshot(listing, ""));
 
         var parsed = Assert.Single(result.ValidListings);
         Assert.Single(parsed.ValidReleases);
-        Assert.Contains("both id and any_of", Assert.Single(parsed.RejectedReleases).Reason);
-    }
-
-    [Fact]
-    public void Parse_NullDependencyBesideValidRelease_KeepsValidSibling()
-    {
-        var invalidRelease = ValidReleaseJson
-            .Replace("\"version\": \"1.0.0\"", "\"version\": \"2.0.0\"")
-            .Replace("\"dependencies\": []", "\"dependencies\": [null]");
-        var listing = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "releases": [{{invalidRelease}}, {{ValidReleaseJson}}] }""";
-
-        var result = SnapshotParser.Parse(Snapshot(listing, ""));
-
-        var parsed = Assert.Single(result.ValidListings);
-        Assert.Single(parsed.ValidReleases);
-        Assert.Contains("null element", Assert.Single(parsed.RejectedReleases).Reason);
+        var rejected = Assert.Single(parsed.RejectedReleases);
+        Assert.Equal("2.0.0", rejected.Version);
+        Assert.Contains(reason, rejected.Reason);
     }
 
     [Fact]
@@ -673,7 +663,6 @@ public sealed class SnapshotParserTests
         var result = SnapshotParser.Parse(Snapshot(loader, ""));
 
         var instance = Assert.Single(result.ValidListings).Authored!.Provides!.Instance;
-        Assert.NotNull(instance);
         Assert.Equal("-InstancePath", instance!.Flag);
         Assert.Equal("STARMAP_INSTANCE_PATH", instance.Variable);
     }
@@ -804,23 +793,6 @@ public sealed class SnapshotParserTests
         var rejected = Assert.Single(result.MalformedListings);
         Assert.Equal("test-loader", rejected.Id);
         Assert.Contains(reason, rejected.Reason);
-    }
-
-    [Fact]
-    public void Parse_MalformedFrozenFieldBesideValidRelease_KeepsValidSibling()
-    {
-        var invalidRelease = ValidReleaseJson
-            .Replace("\"version\": \"1.0.0\"", "\"version\": \"2.0.0\"")
-            .Replace("\"dependencies\": []", "\"dependencies\": [], \"listing\": { \"name\": \"Frozen name\", \"authors\": 42 }");
-        var listing = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "releases": [{{invalidRelease}}, {{ValidReleaseJson}}] }""";
-
-        var result = SnapshotParser.Parse(Snapshot(listing, ""));
-
-        var parsed = Assert.Single(result.ValidListings);
-        Assert.Single(parsed.ValidReleases);
-        var rejected = Assert.Single(parsed.RejectedReleases);
-        Assert.Equal("2.0.0", rejected.Version);
-        Assert.Contains("authors", rejected.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

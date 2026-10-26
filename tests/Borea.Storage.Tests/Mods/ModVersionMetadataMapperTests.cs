@@ -49,19 +49,16 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Equal(original.Download.ContentType, reloaded.Download.ContentType);
         Assert.Equal(original.Download.Mirrors, reloaded.Download.Mirrors);
 
-        Assert.NotNull(reloaded.Install);
         Assert.Equal(original.Install!.Root, reloaded.Install!.Root);
         Assert.True(reloaded.Install.Derived);
         Assert.Equal(original.Manages, reloaded.Manages);
 
-        Assert.NotNull(reloaded.Loader);
         Assert.Equal(MetadataSource.Authored, reloaded.Loader!.Source);
 
         Assert.Equal(2, reloaded.Dependencies.Count);
         Assert.Equal(MetadataSource.Authored, reloaded.Dependencies[0].Source);
         Assert.Equal(MetadataSource.Derived, reloaded.Dependencies[1].Source);
 
-        Assert.NotNull(reloaded.Listing);
         Assert.Equal(original.Listing!.Name, reloaded.Listing!.Name);
         Assert.Equal(original.Listing.Description, reloaded.Listing.Description);
         Assert.Equal(original.Listing.Links["forums"], reloaded.Listing.Links["forums"]);

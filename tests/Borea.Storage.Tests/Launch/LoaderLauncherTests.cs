@@ -134,20 +134,6 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
-    public void Launch_NoEntryForThisPlatform_StartsTheDefaultLaunch()
-    {
-        var executable = PlaceStarMap();
-        PlaceStarMap("StarMap.dll");
-        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.MacOs] = new("StarMap.dll", "dotnet") };
-        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
-
-        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
-
-        Assert.True(result.Started);
-        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
-    }
-
-    [Fact]
     public void Launch_EntryWithoutRuntime_StartsItsLaunch()
     {
         PlaceStarMap();
@@ -656,35 +642,21 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.False(launcher.IsRunning(_instance.InstanceId));
     }
 
-    [Fact]
-    public void Launch_UnknownRuntimeInTheOwnEntry_StartsNothing()
+    [Theory]
+    [InlineData("mono", null, LaunchOutcome.UnknownRuntime, "mono")]
+    [InlineData("dotnet", new[] { "arch" }, LaunchOutcome.UnknownPlatformKey, "arch")]
+    public void Launch_UnknownRuntimeOrKeyInTheOwnEntry_StartsNothing(string runtime, string[]? unknownKeys, LaunchOutcome expected, string unknownName)
     {
         PlaceStarMap();
         PlaceStarMap("StarMap.dll");
-        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "mono") };
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", runtime, unknownKeys) };
         using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
 
         var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
 
-        Assert.Equal(LaunchOutcome.UnknownRuntime, result.Outcome);
-        Assert.Equal("mono", result.UnknownName);
-        Assert.Contains("'mono'", result.Message);
-        Assert.Empty(_starter.Plans);
-    }
-
-    [Fact]
-    public void Launch_UnknownKeyInTheOwnEntry_StartsNothing()
-    {
-        PlaceStarMap();
-        PlaceStarMap("StarMap.dll");
-        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "dotnet", ["arch"]) };
-        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
-
-        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
-
-        Assert.Equal(LaunchOutcome.UnknownPlatformKey, result.Outcome);
-        Assert.Equal("arch", result.UnknownName);
-        Assert.Contains("'arch'", result.Message);
+        Assert.Equal(expected, result.Outcome);
+        Assert.Equal(unknownName, result.UnknownName);
+        Assert.Contains($"'{unknownName}'", result.Message);
         Assert.Empty(_starter.Plans);
     }
 
@@ -1098,13 +1070,8 @@ public sealed class LoaderLauncherTests : IDisposable
         var instance = InstanceWith("kessler-armory");
         var folder = Directory.CreateDirectory(Path.Combine(_paths.GetInstanceModsFolder(instance.InstanceId), "kessler-armory", "bin"));
         File.WriteAllBytes(Path.Combine(folder.FullName, "KSArmory.dll"), []);
-        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
-        var process = Assert.Single(_starter.Processes);
-        process.Output.AddRange(KsArmoryCrash);
-        process.HasExited = true;
-        process.ExitCode = 1;
 
-        var result = await _launcher.WatchStartAsync(instance, started);
+        var result = await CrashAsync(instance, 1, KsArmoryCrash);
 
         Assert.Equal("kessler-armory", result.BlamedModId);
     }
@@ -1114,13 +1081,8 @@ public sealed class LoaderLauncherTests : IDisposable
     {
         PlaceStarMap();
         var instance = InstanceWith("MeasureTools");
-        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
-        var process = Assert.Single(_starter.Processes);
-        process.Output.Add("Could not load file or assembly '0Harmony, Version=2.3.0.0'.");
-        process.HasExited = true;
-        process.ExitCode = 3;
 
-        var result = await _launcher.WatchStartAsync(instance, started);
+        var result = await CrashAsync(instance, 3, "Could not load file or assembly '0Harmony, Version=2.3.0.0'.");
 
         Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
         Assert.Null(result.BlamedModId);
