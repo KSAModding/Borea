@@ -134,6 +134,22 @@ The `Borea-Cli-` archive unpacks with `tar -xzf` into `Borea-Cli`, and its `bore
 On macOS, a build from before the app bundle cannot update to a bundle release, so download the App archive once by hand, drag `Borea.app` into Applications and delete the old `Borea` folder.
 If Borea does not start after an update, rename `borea.exe.old` (`borea.old` on Linux, `Borea.app.old` on macOS) back to its old name to get the build you had back.
 
+### Removing Borea
+
+1. In **Settings**, **General**, turn off **Open borea:// links with this Borea**, so that Borea removes its link registration.
+2. Close Borea and delete the folder that you unpacked it into, or `Borea.app` on macOS.
+3. Delete Borea's own folder. It holds the settings, caches, logs and mod loaders, and also the instances and backups unless you moved the library:
+   - Windows: `%LocalAppData%\Borea`
+   - Linux: `~/.local/share/Borea`, or `$XDG_DATA_HOME/Borea` when that variable is set
+   - macOS: `~/Library/Application Support/Borea`
+4. If you moved the library to another folder in **Settings**, **General**, delete that folder too.
+5. On Linux, delete the menu entries `borea-app.desktop` and `borea.desktop` in `~/.local/share/applications` and the icon `~/.local/share/icons/hicolor/256x256/apps/borea.png`.
+
+When you skipped step 1, the link registration stays behind.
+On Windows it is the key `HKEY_CURRENT_USER\Software\Classes\borea`, and on Linux it is the `borea.desktop` entry of step 5.
+The .NET runtime in Borea unpacks some of its files into a folder of its own, `%TEMP%\.net\borea` on Windows and `~/.net/borea` on Linux and macOS, which you can delete as well.
+The game and its own profile in `Documents/My Games/Kitten Space Agency` are not part of Borea, so these steps leave them as they are.
+
 ### Checksums and provenance
 
 `SHA256SUMS.txt` in each release lists the checksum of every archive and every software bill of materials.
