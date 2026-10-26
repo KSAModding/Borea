@@ -40,7 +40,7 @@ Kitten Space Agency 是 RocketWerkz 的游戏及商标。
 - 通过模组加载器以正确的实例启动游戏；启动失败时查看原因、导致问题的模组，并可通过按钮将其禁用。
 - 将手动安装的模组导入实例。
 - 记录每个实例的游玩时长和上次游玩时间，在应用中查看游戏日志，并在任务页面查看 Borea 执行过的操作。
-- 提供英语、德语和海盗口吻语言选项，以及深色和浅色主题。
+- 提供英语、德语、海盗口吻和简体中文语言选项，以及深色和浅色主题。
 
 Borea 获取的所有模组信息都来自内容索引，其规范由 [content-manager-design](https://github.com/KSAModding/content-manager-design) 中的 RFC 定义。
 该索引包含两个仓库：[content-index](https://github.com/KSAModding/content-index) 保存模组作者编写的条目，[content-index-releases](https://github.com/KSAModding/content-index-releases) 保存为每次新发布生成的发布文件。
@@ -105,6 +105,8 @@ Borea 不需要管理员权限。
 
 如果只使用 CLI，在 Debian 和 Ubuntu 上只需安装 `libssl3` 和 `libicu` 软件包；在 Fedora 上只需安装 `libicu openssl-libs`。
 
+使用桌面应用的简体中文界面时，系统还需要包含中文字形的字体，例如 Noto Sans CJK SC 或文泉驿微米黑。在 Debian 和 Ubuntu 上，可安装 `fonts-noto-cjk` 或体积更小的 `fonts-wqy-microhei` 软件包。内置的 IBM Plex 字体不包含中文字形，Borea 依靠系统字体回退来显示中文。缺少合适字体时，中文可能显示为空方框。CLI 不需要此字体。
+
 构建需要 glibc，因此不支持 Alpine 等基于 musl 的发行版。
 
 ### macOS
@@ -167,7 +169,7 @@ gh attestation verify <archive> --repo KSAModding/Borea \
 
 | 命令 | 作用 |
 | --- | --- |
-| `borea settings show` | 输出游戏、模组加载器和内容库的位置、发布通道，以及共享模组存储是否启用。 |
+| `borea settings show` | 输出游戏、模组加载器和内容库的位置、所有已安装的模组加载器版本、发布通道，以及共享模组存储是否启用。 |
 | `borea settings set game <directory>` | 指定游戏安装目录。 |
 | `borea settings set loader <loader-id> <directory>` | 指定已安装的模组加载器目录。 |
 | `borea settings set channel <channel>` | 选择安装和更新时提供哪些发布状态的版本：`stable`（默认）、`testing` 或 `dev`。 |
@@ -177,7 +179,7 @@ gh attestation verify <archive> --repo KSAModding/Borea \
 | `borea game version` | 输出已安装的构建版本，以及主服务器报告的当前公开构建版本。 |
 | `borea game check` | 检查游戏安装是否符合 Borea 对其结构和状态的预期。不符合时以退出码 1 退出。 |
 | `borea instance list` | 输出所有实例，并标记当前活动实例。 |
-| `borea instance show <instance>` | 输出某个实例、其模组所需的加载器、启动参数、上次游玩时间和游玩时长。 |
+| `borea instance show <instance>` | 输出某个实例、其模组所需的加载器及启动时使用的加载器版本、启动参数、上次游玩时间和游玩时长。 |
 | `borea instance create <name>` | 创建空实例。 |
 | `borea instance duplicate <instance> [--name <name>]` | 创建具有相同模组、版本和启用标记的实例。 |
 | `borea instance export <instance> [file]` | 将实例中的模组及其版本和启用标记写入模组列表。 |
@@ -186,6 +188,7 @@ gh attestation verify <archive> --repo KSAModding/Borea \
 | `borea instance arguments <instance>` | 输出每次启动该实例时传给模组加载器和游戏的启动参数。 |
 | `borea instance set-arguments <instance> -- <arguments>` | 将 `--` 后的参数保存为该实例的启动参数，替换已保存的参数。 |
 | `borea instance clear-arguments <instance>` | 移除实例的启动参数。 |
+| `borea instance set-loader <instance> <loader-id\|auto> [--version <version>\|auto]` | 设置实例启动时使用的模组加载器。`--version` 会固定使用指定的发布版本，即使游戏版本发生变化也不改变。`auto` 让 Borea 选择与游戏和模组兼容的最新发布版本，这是默认行为。 |
 | `borea instance delete <instance>` | 删除实例、其文件夹，以及其存档和载具的备份。 |
 | `borea instance activate <instance>` | 将实例设为活动实例。 |
 | `borea instance deactivate` | 取消当前活动实例，使所有实例均处于非活动状态。 |
