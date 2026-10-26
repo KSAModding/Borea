@@ -511,12 +511,14 @@ public sealed class ModInstallCommandTests : IDisposable
         Assert.False((await new FileInstanceRepository(_host.Paths).GetAllAsync()).Single().Mods.Single().IsPinned);
     }
 
-    [Fact]
-    public async Task Update_ForeignOwnedRecord_FailsBeforePlanning()
+    [Theory]
+    [InlineData("install")]
+    [InlineData("update")]
+    public async Task ForeignOwnedRecord_FailsBeforePlanning(string command)
     {
         await SaveInstalledAsync(ContentCommandFixtures.Release(), ownership: ModInstallOwnership.Foreign);
 
-        var run = await _host.RunAsync("update", "flight-tools", "--instance", "Alpha", "--dry-run");
+        var run = await _host.RunAsync(command, "flight-tools", "--instance", "Alpha", "--dry-run");
 
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("does not own", run.Error);
@@ -670,17 +672,6 @@ public sealed class ModInstallCommandTests : IDisposable
 
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("Requires game 2026.1.1.9000", run.Output);
-    }
-
-    [Fact]
-    public async Task Install_ForeignOwnedRecord_FailsBeforePlanning()
-    {
-        await SaveInstalledAsync(ContentCommandFixtures.Release(), ownership: ModInstallOwnership.Foreign);
-
-        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run");
-
-        Assert.Equal(1, run.ExitCode);
-        Assert.Contains("does not own", run.Error);
     }
 
     [Fact]

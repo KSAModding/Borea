@@ -32,9 +32,7 @@ public sealed class LoaderCommandTests : IDisposable
     [Fact]
     public async Task Install_WithoutVersion_FollowsTheSavedChannel()
     {
-        var installer = new FakeLoaderInstaller();
-        _host.LoaderInstaller = installer;
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var installer = UseFakeInstallerForStarMap();
         _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.6"));
         _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.5.0-dev.1", releaseStatus: ReleaseStatus.Dev));
 
@@ -50,9 +48,7 @@ public sealed class LoaderCommandTests : IDisposable
     [Fact]
     public async Task Install_WithoutVersion_DoesNotDowngradeAnInstalledReleaseOutsideTheChannel()
     {
-        var installer = new FakeLoaderInstaller();
-        _host.LoaderInstaller = installer;
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var installer = UseFakeInstallerForStarMap();
         _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.6"));
         _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.5.0-dev.1", releaseStatus: ReleaseStatus.Dev));
         Directory.CreateDirectory(_host.Root);
@@ -131,9 +127,7 @@ public sealed class LoaderCommandTests : IDisposable
     [Fact]
     public async Task Install_WithoutVersion_NoReleaseInTheChannel_FailsNamingTheChannel()
     {
-        var installer = new FakeLoaderInstaller();
-        _host.LoaderInstaller = installer;
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var installer = UseFakeInstallerForStarMap();
         _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.5.0-dev.1", releaseStatus: ReleaseStatus.Dev));
 
         var run = await _host.RunAsync("loader", "install", "StarMap");
@@ -182,9 +176,7 @@ public sealed class LoaderCommandTests : IDisposable
     [Fact]
     public async Task Install_ExplicitYankedRelease_FailsBeforeTheInstallerRuns()
     {
-        var installer = new FakeLoaderInstaller();
-        _host.LoaderInstaller = installer;
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var installer = UseFakeInstallerForStarMap();
         _host.Mods.Releases.Add(LoaderFixtures.Release(yanked: true));
 
         var run = await _host.RunAsync("loader", "install", "StarMap", "--version", "0.4.6");
@@ -243,9 +235,7 @@ public sealed class LoaderCommandTests : IDisposable
     [Fact]
     public async Task Install_ExactReleaseWhoseDownloadIsGone_WarnsWithTheDate()
     {
-        var installer = new FakeLoaderInstaller();
-        _host.LoaderInstaller = installer;
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var installer = UseFakeInstallerForStarMap();
         _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.6", unavailableSince: new DateTimeOffset(2026, 9, 23, 10, 24, 0, TimeSpan.Zero)));
 
         var run = await _host.RunAsync("loader", "install", "StarMap", "--version", "0.4.6");
@@ -502,6 +492,14 @@ public sealed class LoaderCommandTests : IDisposable
             }
             """);
         return directory;
+    }
+
+    private FakeLoaderInstaller UseFakeInstallerForStarMap()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        return installer;
     }
 
     public void Dispose() => _host.Dispose();
