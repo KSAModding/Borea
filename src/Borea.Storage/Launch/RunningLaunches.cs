@@ -33,9 +33,10 @@ public sealed class RunningLaunches
     /// <summary>
     /// The game path that the last launch per instance wrote for its kept
     /// build, with the loader that reads it, until the next launch of the
-    /// instance, so the exit watch can write the game folder of the settings back.
+    /// instance, so the exit watch can write the game folder of the settings
+    /// back, or the game path that the player set in an adopted folder.
     /// </summary>
-    internal Dictionary<Guid, (int ProcessId, ModMetadata Loader, string LoaderDirectory, string GamePath)> KeptBuilds { get; } = new();
+    internal Dictionary<Guid, (int ProcessId, ModMetadata Loader, string LoaderDirectory, string GamePath, string? PlayerGamePath)> KeptBuilds { get; } = new();
 
     /// <summary>
     /// Whether a launch that still runs went through the wrapper app at

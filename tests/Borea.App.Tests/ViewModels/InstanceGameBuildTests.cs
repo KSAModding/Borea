@@ -85,6 +85,68 @@ public sealed class InstanceGameBuildTests
     }
 
     [Fact]
+    public async Task Play_WhileAKeptBuildRunsFromTheSameFolder_IsRefusedAndTheFileStays()
+    {
+        var starter = new GameSavesViewModelTests.RunningGameStarter();
+        using var harness = await CreateWithKeptBuildAsync(starter);
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        var current = await CreateInstanceAsync(harness, "Current", null);
+        var file = await LoaderFileAsync(harness);
+        await harness.ViewModel.LoadAsync();
+        // both instances start the one StarMap folder, so the start of the kept build leaves its folder in the file
+        starter.GameLogPath = harness.Services.Paths.GetInstanceGameLogPath(kept.InstanceId);
+        await harness.ViewModel.ActivateInstanceAsync(kept.InstanceId);
+        await harness.ViewModel.LaunchActiveInstanceAsync();
+        Assert.True(harness.Services.Launcher.IsRunning(kept.InstanceId));
+        harness.IsGameProcessRunning = () => true;
+        var before = await File.ReadAllBytesAsync(file);
+        await harness.ViewModel.ActivateInstanceAsync(current.InstanceId);
+
+        await harness.ViewModel.LaunchActiveInstanceAsync();
+
+        Assert.Equal(harness.Localization.FormatLaunchOtherBuildRunning("StarMap"), harness.ViewModel.LaunchMessage);
+        Assert.Equal(before, await File.ReadAllBytesAsync(file));
+        Assert.False(harness.Services.Launcher.IsRunning(current.InstanceId));
+    }
+
+    [Fact]
+    public async Task Play_LoaderFileThatCannotBeRead_SaysSoAndTheFileStays()
+    {
+        using var harness = await CreateWithKeptBuildAsync(new GameSavesViewModelTests.RunningGameStarter());
+        var current = await CreateInstanceAsync(harness, "Current", null);
+        var file = await LoaderFileAsync(harness);
+        await harness.ViewModel.LoadAsync();
+        await File.WriteAllTextAsync(file, "{");
+        await harness.ViewModel.ActivateInstanceAsync(current.InstanceId);
+
+        await harness.ViewModel.LaunchActiveInstanceAsync();
+
+        Assert.Equal(harness.Localization.FormatLaunchLoaderConfigurationUnreadable(file, "StarMap"), harness.ViewModel.LaunchMessage);
+        Assert.Equal("{", await File.ReadAllTextAsync(file));
+        Assert.False(harness.Services.Launcher.IsRunning(current.InstanceId));
+    }
+
+    [Fact]
+    public async Task Play_OnAKeptBuildThatIsGone_SaysSoAndRatesNoLoader()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var gone = await CreateInstanceAsync(harness, "Gone", GameVersion.Parse("2026.10.13.5602"));
+        // a pin that is not installed would open the loader prompt
+        await harness.Services.Instances.UpdateAsync(gone.InstanceId, record =>
+        {
+            record.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.9")));
+            return true;
+        });
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.ActivateInstanceAsync(gone.InstanceId);
+
+        await harness.ViewModel.LaunchActiveInstanceAsync();
+
+        Assert.False(harness.ViewModel.IsLoaderPromptOpen);
+        Assert.Equal(harness.Localization.LaunchGameBuildMissing, harness.ViewModel.LaunchMessage);
+    }
+
+    [Fact]
     public async Task InstancePage_OfAKeptBuild_NotesTheUpdatePopup()
     {
         using var harness = await CreateWithKeptBuildAsync();
@@ -159,6 +221,13 @@ public sealed class InstanceGameBuildTests
             return true;
         });
         return instance;
+    }
+
+    /// <summary>The configuration file of the recorded StarMap folder, which holds its game path.</summary>
+    private static async Task<string> LoaderFileAsync(ViewModelHarness harness)
+    {
+        var listing = (await harness.Services.Mods.GetListingAsync("StarMap"))!;
+        return Path.GetFullPath(Path.Combine(harness.Services.Paths.GetLoaderDirectoryPath("StarMap")!, listing.Provides!.Configure!.File));
     }
 
     /// <summary>

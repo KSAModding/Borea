@@ -2811,6 +2811,9 @@
   <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
     <value>{0} were rigged fer another KSA build than yer {1} an' can't haul the game aboard. When a {0} release fer {1} makes port, haul it aboard in the Loader row o' the sea's page. If yer {1} be older than the build {0} were rigged fer, refit KSA instead.</value>
   </data>
+  <data name="LaunchLoaderTooOldForKeptBuildFormat" xml:space="preserve">
+    <value>{0} were rigged fer another KSA build than {1}, which this sea keeps in the hold, an' can't haul the game aboard. Haul aboard a {0} release fer {1} in the Loader row o' the sea's page. A KSA refit don't change a build in the hold.</value>
+  </data>
   <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
     <value>{0} releases o' the seven seas</value>
   </data>

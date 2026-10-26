@@ -3550,6 +3550,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchLoaderTooOld(string loader, string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldFormat, loader, build);
 
+    public string FormatLaunchLoaderTooOldForKeptBuild(string loader, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldForKeptBuildFormat, loader, build);
+
     public string FormatLaunchLoaderReleases(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderReleasesFormat, loader);
 

@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Borea.Core.Game;
 using Borea.Core.Instances;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Storage.Files;
@@ -138,6 +139,7 @@ public sealed class GameBuildKeeperTests : IDisposable
             _paths,
             _instances,
             Loaders(),
+            new FixedVersions(),
             () => refusal == GameBuildKeepRefusal.GameRunning && !startedByBorea,
             id => startedByBorea && id == running.InstanceId,
             wine,
@@ -229,6 +231,24 @@ public sealed class GameBuildKeeperTests : IDisposable
         Assert.Equal(GameBuildChangeRefusal.None, result);
         Assert.Equal(SettingsGame, json["GameLocation"]!.GetValue<string>());
         Assert.True(json["Keep"]!.GetValue<bool>());
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task RemoveAsync_OtherVersionFolderOnTheBuild_GetsTheGameFolderOfTheSettings()
+    {
+        var folder = await KeepUnusedBuildAsync();
+        var original = WriteLoaderConfig(Path.Combine(_tempRoot, "Other Game"));
+        var version = Path.Combine(_tempRoot, "Borea", "Loaders", "StarMap", "0.4.7");
+        Directory.CreateDirectory(version);
+        File.WriteAllText(Path.Combine(version, "StarMapConfig.json"), new JsonObject { ["GameLocation"] = folder }.ToJsonString());
+        var versions = new FixedVersions(new InstalledLoaderVersion("StarMap", ModVersion.Parse("0.4.7"), RawVersion: null, version, IsAdopted: false, IsRecorded: false));
+
+        var result = await Keeper(versions: versions).RemoveAsync(FixtureVersion, CancellationToken.None);
+
+        Assert.Equal(GameBuildChangeRefusal.None, result);
+        Assert.Equal(SettingsGame, JsonNode.Parse(File.ReadAllText(Path.Combine(version, "StarMapConfig.json")))!["GameLocation"]!.GetValue<string>());
+        Assert.Equal(original, File.ReadAllText(LoaderConfig));
         Assert.False(Directory.Exists(folder));
     }
 
@@ -395,7 +415,7 @@ public sealed class GameBuildKeeperTests : IDisposable
         File.WriteAllText(Path.Combine(folder, "KSA.exe"), "app host");
     }
 
-    private GameBuildKeeper Keeper(GamePathProvider? paths = null, bool gameRunning = false, IModRepository? listings = null, OsPlatform host = OsPlatform.Windows) => new(paths ?? _paths, _instances, listings ?? Loaders(), () => gameRunning, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace(), host);
+    private GameBuildKeeper Keeper(GamePathProvider? paths = null, bool gameRunning = false, IModRepository? listings = null, OsPlatform host = OsPlatform.Windows, ILoaderVersionStore? versions = null) => new(paths ?? _paths, _instances, listings ?? Loaders(), versions ?? new FixedVersions(), () => gameRunning, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace(), host);
 
     private static ModPackInstallerTests.FakeModRepository Loaders() => new([], [LoaderLauncherTests.LoaderListing(provides: LoaderLauncherTests.StarMapProvides())]);
 
@@ -423,6 +443,11 @@ public sealed class GameBuildKeeperTests : IDisposable
     }
 
     public void Dispose() => DirectoryLinks.DeleteTreeWithoutFollowingLinks(_tempRoot);
+
+    private sealed class FixedVersions(params InstalledLoaderVersion[] versions) : ILoaderVersionStore
+    {
+        public Task<IReadOnlyList<InstalledLoaderVersion>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<InstalledLoaderVersion>>(versions);
+    }
 
     private sealed class UnknownFreeSpace : IFreeSpaceProbe
     {

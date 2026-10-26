@@ -107,8 +107,6 @@ internal sealed class CliServices : IDisposable
 
     public required ILoaderAdopter LoaderAdopter { get; init; }
 
-    public required ILoaderConfigurator LoaderConfiguration { get; init; }
-
     public required ILoaderUninstaller LoaderUninstaller { get; init; }
 
     public required ILoaderVersionStore LoaderVersions { get; init; }
@@ -185,8 +183,7 @@ internal sealed class CliServices : IDisposable
         IBoreaReleaseCheck? releaseCheck = null,
         ISelfUpdater? selfUpdater = null,
         Func<bool>? isGameProcessRunning = null,
-        ISharedModStore? sharedModStore = null,
-        ILoaderConfigurator? loaderConfiguration = null)
+        ISharedModStore? sharedModStore = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -231,7 +228,6 @@ internal sealed class CliServices : IDisposable
             SharedProfileImporter = sharedProfileImporter ?? services.SharedProfileImporter,
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
-            LoaderConfiguration = loaderConfiguration ?? services.LoaderConfiguration,
             // The uninstaller refuses on its own while a game runs, so it uses the same game check as the commands.
             LoaderUninstaller = loaderUninstaller ?? (isGameProcessRunning is null
                 ? services.LoaderUninstaller

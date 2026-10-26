@@ -1,4 +1,5 @@
 using Borea.Core.Game;
+using Borea.Core.Instances;
 
 namespace Borea.Core.Launch;
 
@@ -117,5 +118,15 @@ public sealed class LaunchResult
             throw new ArgumentException("A started launch is a success, not a failure.", nameof(outcome));
 
         return new LaunchResult(outcome, message, plan, processId: null) { UnknownName = unknownName, Wine = wine, UnmappedPath = unmappedPath, MissingRuntime = missingRuntime, ConfigurationFile = configurationFile };
+    }
+
+    /// <summary>The refusal of an instance whose kept build has a problem, also for a caller that stops before the launch.</summary>
+    /// <param name="buildFolder">The folder of the kept build.</param>
+    public static LaunchResult GameBuildMissing(Instance instance, string buildFolder)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        return Failed(
+            LaunchOutcome.GameBuildMissing,
+            $"Instance '{instance.Name}' runs on KSA {instance.GameBuild}, and '{buildFolder}' is gone or holds another build. Borea starts nothing, so the instance does not start on another build. To use the game folder of the settings instead, select \"Use the current game build\" in the instance menu of the desktop App, or remove GameBuild from the instance.toml of the instance.");
     }
 }

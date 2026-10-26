@@ -4569,6 +4569,9 @@
   <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
     <value>{0} wurde für einen anderen KSA-Build als den installierten {1} gebaut und kann das Spiel nicht laden. Sobald ein Release von {0} für {1} erscheint, installiere es in der Zeile Mod-Loader auf der Seite der Instanz. Ist {1} älter als der Build, für den {0} gebaut wurde, aktualisiere stattdessen KSA.</value>
   </data>
+  <data name="LaunchLoaderTooOldForKeptBuildFormat" xml:space="preserve">
+    <value>{0} wurde für einen anderen KSA-Build als {1} gebaut, den diese Instanz behält, und kann das Spiel nicht laden. Installiere ein Release von {0} für {1} in der Zeile Mod-Loader auf der Seite der Instanz. Ein KSA-Update ändert einen behaltenen Build nicht.</value>
+  </data>
   <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
     <value>Releases von {0}</value>
   </data>

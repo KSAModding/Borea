@@ -88,7 +88,8 @@ public partial class MainViewModel
             LoaderUpdateFor(loaderId),
             id => names.TryGetValue(id, out var name) ? name : id,
             version,
-            instance.Loader);
+            instance.Loader,
+            KeptBuildTextOf(instance));
     }
 
     /// <summary>"0.4.5 to 0.8.0" or "0.4.5 or newer", the versions one mod accepts.</summary>
@@ -184,6 +185,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     private readonly LoaderUpdate? _update;
     private readonly LoaderVersionResolution? _resolution;
     private readonly LoaderSetting? _setting;
+    private readonly string? _keptBuild;
 
     /// <summary>A row for a loader the mods need, rated from the recorded installation as the update check rates it.</summary>
     /// <param name="update">The last loader update check's answer for this loader, or null before it answered.</param>
@@ -198,7 +200,8 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     /// <param name="nameOf">The display name of a mod id, as its row on the page shows it.</param>
     /// <param name="resolution">The version that starts the instance, or null for a loader that this launch does not start.</param>
     /// <param name="setting">The loader setting of the instance, which names a pinned version also when it is not installed.</param>
-    public InstanceLoaderRow(MainViewModel owner, string loaderId, NeededLoader? loader, DiscoverItem? listing, LoaderInstallation? installation, LoaderUpdate? update, Func<string, string> nameOf, LoaderVersionResolution? resolution, LoaderSetting? setting)
+    /// <param name="keptBuild">The kept build that <paramref name="resolution"/> was rated against, or null on the build of the settings.</param>
+    public InstanceLoaderRow(MainViewModel owner, string loaderId, NeededLoader? loader, DiscoverItem? listing, LoaderInstallation? installation, LoaderUpdate? update, Func<string, string> nameOf, LoaderVersionResolution? resolution, LoaderSetting? setting, string? keptBuild = null)
     {
         _owner = owner;
         _loaderId = loaderId;
@@ -207,6 +210,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
         _nameOf = nameOf;
         _resolution = resolution;
         _setting = setting;
+        _keptBuild = keptBuild;
         Name = listing?.Name ?? loaderId;
         Icon = listing?.Icon;
 
@@ -218,8 +222,8 @@ public sealed partial class InstanceLoaderRow : ObservableObject
             _version = start is null ? null : start.Version ?? (start.IsRecorded ? update?.InstalledVersion : null);
             State = StateOf(loader, start is not null, _version, resolution.StartCompatibility);
 
-            // the update check rated the recorded version, so its answer explains only that one
-            _update = start is { IsRecorded: true } && update is not null
+            // the update check rated the recorded version against the build of the settings, so its answer explains only that one there
+            _update = start is { IsRecorded: true } && update is not null && keptBuild is null
                 ? update
                 : new LoaderUpdate(loaderId, _version, resolution.StartCompatibility, resolution.Offer);
             if (!IsConflict)
@@ -322,7 +326,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     public string? StatusToolTip => State switch
     {
         InstanceLoaderState.Conflict => _owner.Localization.InstanceLoaderConflict,
-        InstanceLoaderState.GameIncompatible when _update is not null => _owner.LoaderIncompatibleText(Name, _update),
+        InstanceLoaderState.GameIncompatible when _update is not null => _owner.LoaderIncompatibleText(Name, _update, _keptBuild),
         _ => null,
     };
 
@@ -335,7 +339,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     /// <summary>A conflict or a release that does not support the game shows as a danger.</summary>
     public bool IsDanger => State is InstanceLoaderState.Conflict or InstanceLoaderState.GameIncompatible;
 
-    /// <summary>"Update to 0.4.8" when a newer release that fits the game and the mods is offered, else null.</summary>
+    /// <summary>"Update to 0.4.8" when a release that fits the game and the mods is offered, newer or for a kept build also older, else null.</summary>
     public string? UpdateText => _offer is { } offer ? _owner.Localization.FormatSetupUpdateLoader(offer.Version.ToString()) : null;
 
     public bool CanUpdate => _offer is not null;

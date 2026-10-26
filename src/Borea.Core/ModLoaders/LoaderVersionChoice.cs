@@ -33,7 +33,7 @@ public enum LoaderVersionProblem
 /// <param name="Start">The installed version that starts the instance, or null when none does.</param>
 /// <param name="IsPinned">True when the setting of the instance names an exact version.</param>
 /// <param name="Missing">The release to install before the instance can start, or null.</param>
-/// <param name="Offer">A newer release that fits the game and the mods and is not installed. A pinned instance never gets one.</param>
+/// <param name="Offer">A release that fits the game and the mods and is not installed. It is newer than <paramref name="Start"/>, or older when the game is a kept build that no installed version fits. A pinned instance never gets one.</param>
 /// <param name="StartCompatibility">What the index says about <paramref name="Start"/> and the game.</param>
 public sealed record LoaderVersionResolution(
     string LoaderId,
@@ -44,7 +44,7 @@ public sealed record LoaderVersionResolution(
     GameCompatibility StartCompatibility,
     LoaderVersionProblem Problem)
 {
-    /// <summary>True when the version that starts does not support the game and a newer release does, the urgent case of the update banner.</summary>
+    /// <summary>True when the version that starts does not support the game and another release does, the urgent case of the update banner.</summary>
     public bool IsUrgent => StartCompatibility == GameCompatibility.Incompatible && Offer is not null;
 }
 
@@ -60,6 +60,7 @@ public static class LoaderVersionChoice
     /// <param name="listings">The listings the loader was chosen from. Releases are read only when they list the loader.</param>
     /// <param name="mods">The releases of the index, or null when Borea is offline. Then every rating is unknown and nothing is offered.</param>
     /// <param name="game">The game build of the instance, or null when it is unknown.</param>
+    /// <param name="gameIsKept">True when <paramref name="game"/> is a build that the instance keeps, which no KSA update changes.</param>
     public static async Task<LoaderVersionResolution> ResolveAsync(
         LoaderSetting setting,
         string loaderId,
@@ -69,6 +70,7 @@ public static class LoaderVersionChoice
         IModRepository? mods,
         ReleaseChannel channel,
         GameVersion? game,
+        bool gameIsKept,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(setting);
@@ -117,6 +119,14 @@ public static class LoaderVersionChoice
             var update = await FindAsync(new LoaderInstallation(start.Version.DirectoryPath, start.Version.Version, start.Version.RawVersion, start.Version.IsAdopted)).ConfigureAwait(false);
             if (update.Offer is { } release && InstalledLoaderVersion.Find(versions, loaderId, release.Version) is null)
                 offer = release;
+
+            // a KSA update does not reach a kept build, so the newest release that fits it is offered, also an older one
+            if (offer is null && gameIsKept && start.Compatibility == GameCompatibility.Incompatible
+                && (await FindAsync(installation: null).ConfigureAwait(false)).Offer is { } fitting
+                && InstalledLoaderVersion.Find(versions, loaderId, fitting.Version) is null)
+            {
+                offer = fitting;
+            }
         }
 
         return new LoaderVersionResolution(loaderId, start.Version, IsPinned: false, Missing: null, offer, start.Compatibility, ProblemOf(start.Version, start.Compatibility));

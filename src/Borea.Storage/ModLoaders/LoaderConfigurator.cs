@@ -32,8 +32,6 @@ public sealed class LoaderConfigurator : ILoaderConfigurator, ILoaderConfigurati
 
     private static readonly UTF8Encoding Utf8WithoutBom = new(encoderShouldEmitUTF8Identifier: false);
 
-    private static readonly StringComparer PathComparer = OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
-
     private const string GameAssemblyFileName = "KSA.dll";
 
     private readonly IWinePrefixProbe _wine;
@@ -154,103 +152,12 @@ public sealed class LoaderConfigurator : ILoaderConfigurator, ILoaderConfigurati
             : SetToml(text, keys, value, file, loader);
     }
 
-    public async Task<string?> RefreshForWineAsync(
-        ModMetadata loader,
-        string loaderDirectory,
-        string gameDirectory,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(loader);
-
-        if (loader.Type != ContentType.ModLoader)
-            throw new ArgumentException("Only a mod loader has a configuration file to write.", nameof(loader));
-
-        var configure = loader.Provides?.Configure;
-        if (configure?.GamePath is null
-            || configure.Format is not (ConfigureFormat.Json or ConfigureFormat.Toml)
-            || string.IsNullOrWhiteSpace(loaderDirectory) || !Path.IsPathFullyQualified(loaderDirectory)
-            || string.IsNullOrWhiteSpace(gameDirectory) || !Path.IsPathFullyQualified(gameDirectory))
-        {
-            return null;
-        }
-
-        var directory = Path.GetFullPath(loaderDirectory);
-        var game = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameDirectory));
-
-        // the host starts a loader that reads the host path, so nothing is stale
-        if (string.Equals(GamePathValue(game), game, StringComparison.Ordinal))
-            return null;
-
-        // only the host path of the game, which an older Borea wrote, or no value is replaced, so a value the player set stays
-        string? configured;
-        try
-        {
-            configured = await ReadRawGamePathAsync(loader, configure, directory, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
-        {
-            // the launch refuses a file it cannot read and names it, so there is nothing to replace here
-            return null;
-        }
-
-        if (configured is not null && !string.Equals(Path.TrimEndingDirectorySeparator(configured), game, StringComparison.OrdinalIgnoreCase))
-            return null;
-
-        try
-        {
-            return await ConfigureAsync(loader, directory, game, cancellationToken).ConfigureAwait(false);
-        }
-        catch (UnauthorizedAccessException exception)
-        {
-            throw new InvalidOperationException($"Borea could not write the Windows game path to the configuration of {loader.Name} in '{directory}', so {loader.Name} in the Wine prefix could not find the game. {exception.Message}", exception);
-        }
-    }
-
-    public async Task<string?> PrepareForLaunchAsync(
-        ModMetadata loader,
-        string loaderDirectory,
-        string gameDirectory,
-        bool isAdopted,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(loader);
-
-        if (loader.Type != ContentType.ModLoader)
-            throw new ArgumentException("Only a mod loader has a configuration file to write.", nameof(loader));
-
-        var configure = loader.Provides?.Configure;
-        if (configure?.GamePath is null
-            || configure.Format is not (ConfigureFormat.Json or ConfigureFormat.Toml)
-            || string.IsNullOrWhiteSpace(loaderDirectory) || !Path.IsPathFullyQualified(loaderDirectory)
-            || string.IsNullOrWhiteSpace(gameDirectory) || !Path.IsPathFullyQualified(gameDirectory))
-        {
-            return null;
-        }
-
-        // a write would make the folder again with only the configuration file in it, and the launcher reports the missing folder
-        var directory = Path.GetFullPath(loaderDirectory);
-        if (!Directory.Exists(directory))
-            return null;
-
-        var game = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameDirectory));
-        var configured = await ReadConfiguredGamePathAsync(loader, directory, game, cancellationToken).ConfigureAwait(false);
-        var assembly = GameAssemblyOf(configured, directory);
-
-        var stale = isAdopted
-            ? assembly is null || !File.Exists(assembly)
-            : assembly is null || !PathComparer.Equals(assembly, Path.Combine(game, GameAssemblyFileName));
-        if (!stale)
-            return await RefreshForWineAsync(loader, directory, game, cancellationToken).ConfigureAwait(false);
-
-        try
-        {
-            return await ConfigureAsync(loader, directory, game, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
-        {
-            throw new InvalidOperationException($"Borea could not write the game path to the configuration of {loader.Name} in '{directory}', so {loader.Name} would not find the game. {exception.Message}", exception);
-        }
-    }
+    /// <summary>
+    /// The KSA.dll that the loader in <paramref name="loaderDirectory"/> loads for <paramref name="configured"/>, the value
+    /// its file holds, as a host path. Null when the value is absent, empty or no path.
+    /// </summary>
+    internal string? GameAssemblyFor(string? configured, string loaderDirectory, string? gameDirectory) =>
+        string.IsNullOrEmpty(configured) ? null : GameAssemblyOf(HostGamePath(configured, gameDirectory, loaderDirectory), loaderDirectory);
 
     /// <summary>
     /// The file StarMap loads for a configured value in LoaderConfig.TryLoadConfig, which appends KSA.dll to a folder and

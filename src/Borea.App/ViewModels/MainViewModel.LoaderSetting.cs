@@ -179,7 +179,7 @@ public partial class MainViewModel
         var instance = context.Instance;
         var need = LoaderNeed.For(instance).Loaders.FirstOrDefault(needed => ModIds.Equals(needed.LoaderId, loader.ModId));
         var automatic = await LoaderVersionChoice.ResolveAsync(
-            AutomaticSetting(context, loader.ModId), loader.ModId, need, context.Installed, context.Listings, context.Releases, context.Channel, context.Game);
+            AutomaticSetting(context, loader.ModId), loader.ModId, need, context.Installed, context.Listings, context.Releases, context.Channel, context.Game, instance.GameBuild is not null);
 
         var history = new List<ModVersionMetadata>();
         if (context.Releases is { } releases)

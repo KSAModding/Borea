@@ -19,7 +19,7 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
     public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
         Launch(instance, loader, loaderDirectory: null, arguments);
 
-    public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments)
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments, bool isAdopted = false)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -27,7 +27,7 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         LaunchResult result;
         try
         {
-            result = Inner.Launch(instance, loader, loaderDirectory, arguments);
+            result = Inner.Launch(instance, loader, loaderDirectory, arguments, isAdopted);
         }
         catch (Exception exception)
         {
