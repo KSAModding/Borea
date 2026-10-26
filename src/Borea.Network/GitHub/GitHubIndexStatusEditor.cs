@@ -40,7 +40,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         _ownership = new ListingOwnershipCheck(_api, http, format);
     }
 
-    public Task<IndexStatusOverview> ReadAsync(CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<IndexStatusOverview> ReadAsync(CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         Login();
         var commit = await ReadBaseAsync(cancellationToken).ConfigureAwait(false);
@@ -48,7 +48,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         return new IndexStatusOverview(commit.Document.Entries, open);
     });
 
-    public Task<IndexStatusCheck> CheckAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<IndexStatusCheck> CheckAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         ArgumentNullException.ThrowIfNull(change);
         var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -77,7 +77,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         return new IndexStatusCheck(refusal, open, owners, isOwner);
     });
 
-    public Task<IndexStatusPullRequest> OpenAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<IndexStatusPullRequest> OpenAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         ArgumentNullException.ThrowIfNull(change);
         var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -109,7 +109,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         return PullRequestOf(pull, login);
     });
 
-    public Task<IReadOnlyList<string>> OwnedAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default) => GuardAsync<IReadOnlyList<string>>(async () =>
+    public Task<IReadOnlyList<string>> OwnedAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default) => StewardActions.GuardAsync<IReadOnlyList<string>>(async () =>
     {
         ArgumentNullException.ThrowIfNull(ids);
         var login = Login();
@@ -248,18 +248,6 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         Uri.TryCreate(pull.HtmlUrl, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps && pull.Number > 0
             ? new IndexStatusPullRequest(pull.Number, url, pull.Title, author)
             : throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse);
-
-    private static async Task<T> GuardAsync<T>(Func<Task<T>> call)
-    {
-        try
-        {
-            return await call().ConfigureAwait(false);
-        }
-        catch (GitHubApiException exception)
-        {
-            throw exception.ToStewardException();
-        }
-    }
 
     /// <param name="Head">The commit of the base branch that every read took.</param>
     /// <param name="FileSha">The blob of index-status.toml, which the commit replaces.</param>
