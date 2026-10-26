@@ -7,9 +7,6 @@ using Borea.Storage.Launch;
 
 namespace Borea.Storage.ModLoaders;
 
-/// <summary>
-/// File-backed <see cref="ILoaderAdopter"/>.
-/// </summary>
 public sealed class FileLoaderAdopter : ILoaderAdopter
 {
     private readonly IBoreaSettingsRepository _settings;

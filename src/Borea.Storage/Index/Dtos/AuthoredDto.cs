@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Borea.Storage.Index.Dtos;
 
@@ -44,15 +43,12 @@ public sealed class AuthoredDto
     [JsonPropertyName("links")]
     public required LinksDto Links { get; set; }
 
-    // Fails loudly if releases is declared but can't be parsed
     [JsonPropertyName("releases")]
     public ReleasesInfoDto? Releases { get; set; }
 
-    // Fails loudly if a loader is declared but can't be parsed
     [JsonPropertyName("loader")]
     public LoaderDto? Loader { get; set; }
 
-    // Fails loudly if dependencies are declared but can't be parsed
     [JsonPropertyName("dependencies")]
     public List<DependencyEntryDto>? Dependencies { get; set; }
 
