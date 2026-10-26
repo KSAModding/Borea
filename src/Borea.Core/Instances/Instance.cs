@@ -19,9 +19,6 @@ public sealed class Instance
     /// </summary>
     public Guid InstanceId { get; }
 
-    /// <summary>
-    /// User-facing display name. Mutable.
-    /// </summary>
     public string Name { get; private set; }
 
     public InstanceSource Source { get; private set; }
