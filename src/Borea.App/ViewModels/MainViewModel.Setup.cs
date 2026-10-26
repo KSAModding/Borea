@@ -105,9 +105,6 @@ public partial class MainViewModel
 
     private bool _promptedForGameSetup;
 
-    /// <summary>
-    /// Opens the settings on the Game tab, from the banner.
-    /// </summary>
     [RelayCommand]
     private Task OpenGameSetupAsync()
     {

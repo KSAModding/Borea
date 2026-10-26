@@ -123,7 +123,6 @@ public partial class MainViewModel
             BeginIndexStatusChange(IndexStatusChange.Delist(pack.PackId, string.Empty));
     }
 
-    /// <summary>Retracts the pack version the page shows.</summary>
     [RelayCommand]
     private void RetractPackVersion()
     {
