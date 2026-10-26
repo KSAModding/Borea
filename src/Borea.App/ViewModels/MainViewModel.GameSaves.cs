@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -505,7 +504,7 @@ public sealed partial class GameSaveItem : ObservableObject
 
     public bool IsVehicle => Entry.Kind == GameSaveKind.Vehicle;
 
-    public string UpdatedText => _owner.Localization.FormatGameSaveUpdated(Entry.UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
+    public string UpdatedText => _owner.Localization.FormatGameSaveUpdated(MainViewModel.DateTimeText(Entry.UpdatedAt));
 
     public string? BuildText => _build?.ToString() ?? Entry.GameBuild;
 

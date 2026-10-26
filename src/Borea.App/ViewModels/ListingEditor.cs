@@ -866,7 +866,7 @@ public sealed partial class ListingEditor : ObservableObject
         };
     }
 
-    private static string? Empty(string value) => value.Trim().Length == 0 ? null : value.Trim();
+    internal static string? Empty(string value) => value.Trim().Length == 0 ? null : value.Trim();
 
     private string DescribeArchive(ListingSource source)
     {
