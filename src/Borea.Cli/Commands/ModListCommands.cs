@@ -12,7 +12,7 @@ internal static class ModListCommands
     public static Command BuildDuplicate(Func<CancellationToken, Task<CliServices>> services)
     {
         var instance = ArgumentRules.Text("instance", InstanceCommand.InstanceArgumentDescription);
-        var name = NameOption("The name of the copy. The instance's name with \"(copy)\" when absent.");
+        var name = ArgumentRules.TextOption("--name", "The name of the copy. The instance's name with \"(copy)\" when absent.");
         var skipUnknown = SkipUnknownOption();
         var proceedWithYanked = ProceedWithYankedOption();
         var dryRun = DryRunOption();
@@ -99,7 +99,7 @@ internal static class ModListCommands
     public static Command BuildImport(Func<CancellationToken, Task<CliServices>> services)
     {
         var file = ArgumentRules.Text("file", "The modlist file that 'instance export' wrote.");
-        var name = NameOption("The name of the new instance. The name in the modlist when absent.");
+        var name = ArgumentRules.TextOption("--name", "The name of the new instance. The name in the modlist when absent.");
         var skipUnknown = SkipUnknownOption();
         var proceedWithYanked = ProceedWithYankedOption();
         var dryRun = DryRunOption();
@@ -196,25 +196,13 @@ internal static class ModListCommands
             return await installer.FreeNameAsync(wanted).ConfigureAwait(false);
 
         var trimmed = given.Trim();
-        if (!await cli.Instances.IsNameAvailableAsync(trimmed).ConfigureAwait(false))
-            throw new InvalidOperationException($"Instance name '{trimmed}' is already in use.");
+        await InstanceLookup.RequireFreeNameAsync(cli.Instances, trimmed).ConfigureAwait(false);
         return trimmed;
     }
 
     private static IModRepository Repository(CliServices cli, RunContext context) => context.DryRun ? cli.ReadOnlyMods : cli.Mods;
 
     private static GameVersion? GameVersion(CliServices cli) => cli.InstalledVersion.GetInstalledVersion()?.Version;
-
-    private static Option<string?> NameOption(string description)
-    {
-        var option = new Option<string?>("--name") { Description = description };
-        option.Validators.Add(result =>
-        {
-            if (string.IsNullOrWhiteSpace(result.GetValueOrDefault<string?>()))
-                result.AddError("The --name value cannot be empty.");
-        });
-        return option;
-    }
 
     private static Option<bool> SkipUnknownOption() =>
         new("--skip-unknown") { Description = "Create the instance without the listed releases that no source knows." };
@@ -230,7 +218,7 @@ internal static class ModListCommands
             foreach (var value in result.GetValueOrDefault<string[]>() ?? [])
             {
                 if (!ModIds.IsValid(value))
-                    result.AddError($"'{value}' is not a valid content id.");
+                    result.AddError(ArgumentRules.ContentIdError(value));
             }
         });
         return option;
@@ -269,14 +257,6 @@ internal static class ModListCommands
             planned.Choices));
     }
 
-    private static string ReasonName(InstallReason reason) => reason switch
-    {
-        InstallReason.Manual => "manual",
-        InstallReason.ModPack => "modpack",
-        InstallReason.Dependency => "dependency",
-        _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
-    };
-
     private sealed record RunContext(bool SkipUnknown, IReadOnlySet<string> ProceedWithYanked, bool DryRun, bool Json, TextWriter Output, TextWriter Error)
     {
         public static RunContext From(ParseResult parseResult, Option<bool> skipUnknown, Option<string[]> proceedWithYanked, Option<bool> dryRun, Option<bool> json, TextWriter output, TextWriter error) => new(
@@ -314,7 +294,7 @@ internal static class ModListCommands
             created?.Activated ?? false,
             plan.Items.Select(ItemView.From).ToList(),
             notCopied,
-            plan.Plan.Operations.Select(operation => new OperationView(operation.Release.ModId, operation.Release.Version.ToString(), ReasonName(operation.Reason))).ToList(),
+            plan.Plan.Operations.Select(operation => new OperationView(operation.Release.ModId, operation.Release.Version.ToString(), ContentOutput.Name(operation.Reason))).ToList(),
             plan.Plan.Warnings.Select(MessageView.From).ToList(),
             plan.Plan.UnresolvedChoices.Select(MessageView.From).ToList(),
             plan.Plan.Conflicts.Select(MessageView.From).ToList());

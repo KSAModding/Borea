@@ -34,6 +34,13 @@ internal static class InstanceLookup
         };
     }
 
+    /// <summary>Stops a command before it plans anything when <paramref name="name"/> is taken.</summary>
+    public static async Task RequireFreeNameAsync(IInstanceRepository instances, string name)
+    {
+        if (!await instances.IsNameAvailableAsync(name).ConfigureAwait(false))
+            throw new InvalidOperationException($"Instance name '{name}' is already in use.");
+    }
+
     /// <summary>
     /// The instance a command acts on: the one named, or the active one when
     /// none was named.

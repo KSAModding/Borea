@@ -806,8 +806,7 @@ internal static class InstanceCommand
         if (mods.Count == 0)
             throw new InvalidOperationException("The shared profile has no mods to import.");
 
-        if (!await cli.Instances.IsNameAvailableAsync(instanceName).ConfigureAwait(false))
-            throw new InvalidOperationException($"Instance name '{instanceName}' is already in use.");
+        await InstanceLookup.RequireFreeNameAsync(cli.Instances, instanceName).ConfigureAwait(false);
 
         var snapshot = await ReadIndexOrWarnAsync(cli, error, cancellationToken).ConfigureAwait(false);
         var views = mods.Select(mod => new ProfileModView(mod.FolderName, mod.Enabled, IsListedMod(snapshot, mod.FolderName))).ToList();
