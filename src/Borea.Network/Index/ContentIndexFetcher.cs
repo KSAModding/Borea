@@ -45,9 +45,6 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
             else
             {
                 etagExists = false;
-                // Deletes the ETag file if the file is corrupted or can't be parsed.
-                // The index will be downloaded even if the file was not deleted, but
-                // this prevents the corrupted ETag from being used in future requests.
                 File.Delete(etagPath);
             }
         }
@@ -66,7 +63,6 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
 
         response.EnsureSuccessStatusCode();
 
-        // Read the content as a byte array to then write to disk.
         byte[] body = await response.Content.ReadAsByteArrayAsync(ct);
 
         ContentIndexRootValidator.ValidateIndexRoot(body, response);
@@ -86,7 +82,6 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
             {
                 throw new HttpRequestException("The downloaded content index was not accepted.", ex);
             }
-            // Metadata change that only changes the file's name
             await FileReplace.MoveOverAsync(tempPath, destinationPath, ct).ConfigureAwait(false);
         }
         finally
