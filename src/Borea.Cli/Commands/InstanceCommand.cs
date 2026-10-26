@@ -10,9 +10,6 @@ using Borea.Core.Planning;
 
 namespace Borea.Cli.Commands;
 
-/// <summary>
-/// <c>borea instance</c>: the lifecycle of instances.
-/// </summary>
 internal static class InstanceCommand
 {
     internal const string InstanceArgumentDescription = "The instance's name, or its id when two names differ only in case.";

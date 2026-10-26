@@ -7,9 +7,6 @@ using Borea.Core.Planning;
 
 namespace Borea.Cli.Commands;
 
-/// <summary>
-/// <c>borea instance duplicate</c>, <c>export</c> and <c>import</c>, which create an instance from a modlist through <see cref="ModListInstaller"/>.
-/// </summary>
 internal static class ModListCommands
 {
     public static Command BuildDuplicate(Func<CancellationToken, Task<CliServices>> services)
