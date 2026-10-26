@@ -224,13 +224,7 @@ public sealed class ListingEditorTests
         Assert.True(editor.HasErrors);
         Assert.False(editor.CanOpenPullRequest);
 
-        editor.Id = "MyMod";
-        editor.Name = "My Mod";
-        editor.Authors = "Maxi";
-        editor.Abstract = "Does a thing.";
-        editor.License = "MIT";
-        editor.Forums = "https://forums.ahwoo.com/threads/my-mod.42/";
-        editor.ReleasesGitHub = "owner/MyMod";
+        FillListingFields(editor);
 
         Assert.False(editor.HasErrors, string.Join("\n", editor.Errors));
         Assert.True(editor.CanOpenPullRequest);
@@ -1334,6 +1328,18 @@ public sealed class ListingEditorTests
         Assert.Equal(localization.FormatListingNewPackPullRequestText("packs/my-pack/1.0.0.toml", "packs/my-pack/owner.json"), editor.PullRequestText);
     }
 
+    /// <summary>Fills the fields that a new listing needs, with values that the checks accept.</summary>
+    internal static void FillListingFields(ListingEditor editor)
+    {
+        editor.Id = "MyMod";
+        editor.Name = "My Mod";
+        editor.Authors = "Maxi";
+        editor.Abstract = "Does a thing.";
+        editor.License = "MIT";
+        editor.Forums = "https://forums.ahwoo.com/threads/my-mod.42/";
+        editor.ReleasesGitHub = "owner/MyMod";
+    }
+
     /// <summary>A new pack that the checks accept, with AdvancedFlightComputer 0.7.5 as its one member.</summary>
     internal static void FillPack(ListingEditor editor)
     {
@@ -1808,13 +1814,7 @@ public sealed class ListingEditorTests
         var editor = harness.ViewModel.ListingEditor;
         await harness.ViewModel.OpenListingAsync();
         editor.StartEmptyCommand.Execute(null);
-        editor.Id = "MyMod";
-        editor.Name = "My Mod";
-        editor.Authors = "Maxi";
-        editor.Abstract = "Does a thing.";
-        editor.License = "MIT";
-        editor.Forums = "https://forums.ahwoo.com/threads/my-mod.42/";
-        editor.ReleasesGitHub = "owner/MyMod";
+        FillListingFields(editor);
         return (editor, opened, window);
     }
 
