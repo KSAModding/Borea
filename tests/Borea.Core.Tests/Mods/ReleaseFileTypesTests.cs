@@ -87,13 +87,16 @@ public sealed class ReleaseSourceTests
 
 public sealed class InstallInfoTests
 {
-    [Fact]
-    public void Constructor_RelativeRoot_IsAccepted()
+    [Theory]
+    [InlineData("MyMod", true)]
+    // The one archive layout RFC 0031 needs an authored root for.
+    [InlineData("build/AdvancedFlightComputer", false)]
+    public void Constructor_RelativeRoot_IsAccepted(string root, bool derived)
     {
-        var install = new InstallInfo("MyMod", derived: true);
+        var install = new InstallInfo(root, derived: derived);
 
-        Assert.Equal("MyMod", install.Root);
-        Assert.True(install.Derived);
+        Assert.Equal(root, install.Root);
+        Assert.Equal(derived, install.Derived);
     }
 
     [Fact]
@@ -162,15 +165,6 @@ public sealed class InstallInfoTests
     {
         Assert.Throws<ArgumentException>(() =>
             new InstallInfo("MyMod", derived: false, InstallAnchor.UserData, path));
-    }
-
-    [Fact]
-    public void Constructor_NestedRelativeRoot_IsAccepted()
-    {
-        // The one archive layout RFC 0031 needs an authored root for.
-        var install = new InstallInfo("build/AdvancedFlightComputer", derived: false);
-
-        Assert.Equal("build/AdvancedFlightComputer", install.Root);
     }
 
     [Theory]

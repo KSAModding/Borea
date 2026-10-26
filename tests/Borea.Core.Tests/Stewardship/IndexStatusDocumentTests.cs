@@ -87,15 +87,6 @@ public sealed class IndexStatusDocumentTests
         Assert.Empty(lifted.Entries);
     }
 
-    [Fact]
-    public void Apply_RetractedWithoutAVersion_IsRefused()
-    {
-        var document = IndexStatusDocument.Parse(IndexStatusFixtures.Current);
-
-        Assert.Equal(IndexStatusRefusal.MissingVersion, Refusal(document, IndexStatusChange.Retract("my-pack", null, "Broken.")));
-        Assert.Equal(IndexStatusRefusal.MissingVersion, Refusal(document, IndexStatusChange.Retract("my-pack", " ", "Broken.")));
-    }
-
     [Theory]
     [InlineData("disputed", null, "delisted", null)]
     [InlineData("delisted", null, "disputed", null)]
@@ -124,6 +115,8 @@ public sealed class IndexStatusDocumentTests
     [InlineData("retracted", "MyMod", "1.0.0", IndexStatusRefusal.NotAPack)]
     [InlineData("retracted", "Missing", "1.0.0", IndexStatusRefusal.NotAPack)]
     [InlineData("retracted", "my-pack", "2.0.0", IndexStatusRefusal.UnknownVersion)]
+    [InlineData("retracted", "my-pack", null, IndexStatusRefusal.MissingVersion)]
+    [InlineData("retracted", "my-pack", " ", IndexStatusRefusal.MissingVersion)]
     public void Apply_WhatTheStatusCheckRefuses_IsRefused(string state, string id, string? version, IndexStatusRefusal refusal)
     {
         var document = IndexStatusDocument.Parse(IndexStatusFixtures.Current);
@@ -151,10 +144,10 @@ public sealed class IndexStatusDocumentTests
     [InlineData(null, false)]
     [InlineData("A pasted\treason.", false)]
     [InlineData("First line.\r\nSecond line.", false)]
+    [InlineData("First line.\u2029Second line.", false)]
     public void Change_IsValidReason_TakesOneLineWithoutControlCharacters(string? reason, bool valid)
     {
         Assert.Equal(valid, IndexStatusChange.IsValidReason(reason));
-        Assert.False(IndexStatusChange.IsValidReason("First line." + (char)0x2029 + "Second line."));
     }
 
     [Theory]
