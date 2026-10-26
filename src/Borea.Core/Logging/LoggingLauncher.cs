@@ -16,7 +16,10 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         _log = log ?? throw new ArgumentNullException(nameof(log));
     }
 
-    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null)
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
+        Launch(instance, loader, loaderDirectory: null, arguments);
+
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -24,7 +27,7 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         LaunchResult result;
         try
         {
-            result = Inner.Launch(instance, loader, arguments);
+            result = Inner.Launch(instance, loader, loaderDirectory, arguments);
         }
         catch (Exception exception)
         {

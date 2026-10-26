@@ -36,7 +36,7 @@ public sealed class GameDirectoryChangerTests : IDisposable
 
         var settings = SettingsRepository();
         await settings.SaveAsync(new BoreaSettings(oldGame, Installations(("StarMap", loaderDirectory))));
-        var changer = new GameDirectoryChanger(settings, new FakeModRepository(Loader("StarMap")), new LoaderConfigurator());
+        var changer = Changer(settings, new LoaderConfigurator(), Loader("StarMap"));
 
         await changer.ChangeAsync(newGame);
 
@@ -60,7 +60,7 @@ public sealed class GameDirectoryChangerTests : IDisposable
         var settings = SettingsRepository();
         await settings.SaveAsync(new BoreaSettings(oldGame, Installations(("Other", loaderDirectory))));
         var listing = Loader("Other", new LoaderConfigure("loader.json", ConfigureFormat.Json));
-        var changer = new GameDirectoryChanger(settings, new FakeModRepository(listing), new LoaderConfigurator());
+        var changer = Changer(settings, new LoaderConfigurator(), listing);
 
         await changer.ChangeAsync(newGame);
 
@@ -88,10 +88,7 @@ public sealed class GameDirectoryChangerTests : IDisposable
         await settings.SaveAsync(new BoreaSettings(
             oldGame,
             Installations(("First", firstDirectory), ("Second", secondDirectory))));
-        var changer = new GameDirectoryChanger(
-            settings,
-            new FakeModRepository(Loader("First"), Loader("Second")),
-            new LoaderConfigurator());
+        var changer = Changer(settings, new LoaderConfigurator(), Loader("First"), Loader("Second"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => changer.ChangeAsync(newGame));
 
@@ -113,7 +110,7 @@ public sealed class GameDirectoryChangerTests : IDisposable
 
         var previous = new BoreaSettings(oldGame, Installations(("StarMap", loaderDirectory)));
         var settings = new FailingOnceSettingsRepository(previous);
-        var changer = new GameDirectoryChanger(settings, new FakeModRepository(Loader("StarMap")), new LoaderConfigurator());
+        var changer = Changer(settings, new LoaderConfigurator(), Loader("StarMap"));
 
         await Assert.ThrowsAsync<IOException>(() => changer.ChangeAsync(newGame));
 
@@ -134,7 +131,7 @@ public sealed class GameDirectoryChangerTests : IDisposable
 
         var previous = new BoreaSettings(oldGame, Installations(("StarMap", loaderDirectory)));
         var settings = new FailingSettingsRepository(previous);
-        var changer = new GameDirectoryChanger(settings, new FakeModRepository(Loader("StarMap")), new LoaderConfigurator());
+        var changer = Changer(settings, new LoaderConfigurator(), Loader("StarMap"));
 
         var exception = await Assert.ThrowsAsync<AggregateException>(() => changer.ChangeAsync(newGame));
 
@@ -162,7 +159,7 @@ public sealed class GameDirectoryChangerTests : IDisposable
         await settings.SaveAsync(new BoreaSettings(oldGame, Installations(("StarMap", loaderDirectory))));
         var drives = WineFixtures.Drives(new Dictionary<char, string> { ['c'] = Path.Combine(prefix, "drive_c") });
         var configurator = new LoaderConfigurator(new FakeWineProbe(new WineInstall(prefix, drives, Wrapper: null)));
-        var changer = new GameDirectoryChanger(settings, new FakeModRepository(Loader("StarMap")), configurator);
+        var changer = Changer(settings, configurator, Loader("StarMap"));
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => changer.ChangeAsync(newGame));
 
@@ -172,8 +169,72 @@ public sealed class GameDirectoryChangerTests : IDisposable
         Assert.Equal(oldGame, (await settings.GetAsync())!.GameDirectoryPath);
     }
 
+    [Fact]
+    public async Task ChangeAsync_TwoVersionFolders_RewritesBoth()
+    {
+        var newGame = Path.Combine(_tempRoot, "NewGame");
+        var recorded = VersionFolder("0.4.8", "{ \"GameLocation\": \"old\" }");
+        var older = VersionFolder("0.4.7", "{ \"GameLocation\": \"old\" }");
+        var settings = SettingsRepository();
+        await settings.SaveAsync(new BoreaSettings(Path.Combine(_tempRoot, "OldGame"), Installations(("StarMap", recorded))));
+
+        await Changer(settings, new LoaderConfigurator(), Loader("StarMap")).ChangeAsync(newGame);
+
+        Assert.Equal(newGame, await GameLocationAsync(recorded));
+        Assert.Equal(newGame, await GameLocationAsync(older));
+    }
+
+    [Fact]
+    public async Task ChangeAsync_RecordedVersionFolderFails_RestoresTheOtherFolderAndSettings()
+    {
+        var oldGame = Path.Combine(_tempRoot, "OldGame");
+        // The record names no version, so the store lists it after 0.4.7, and 0.4.7 is written before the record fails.
+        const string recordedOriginal = "[]";
+        const string olderOriginal = "{ \"GameLocation\": \"old\", \"Keep\": 1 }";
+        var recorded = VersionFolder("0.4.8", recordedOriginal);
+        var older = VersionFolder("0.4.7", olderOriginal);
+        var settings = SettingsRepository();
+        await settings.SaveAsync(new BoreaSettings(oldGame, Installations(("StarMap", recorded))));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => Changer(settings, new LoaderConfigurator(), Loader("StarMap")).ChangeAsync(Path.Combine(_tempRoot, "NewGame")));
+
+        Assert.Equal(recordedOriginal, await File.ReadAllTextAsync(Path.Combine(recorded, "loader.json")));
+        Assert.Equal(olderOriginal, await File.ReadAllTextAsync(Path.Combine(older, "loader.json")));
+        Assert.Equal(oldGame, (await settings.GetAsync())!.GameDirectoryPath);
+    }
+
+    [Fact]
+    public async Task ChangeAsync_NoRecordButAVersionFolder_RewritesThatFolder()
+    {
+        var newGame = Path.Combine(_tempRoot, "NewGame");
+        var folder = VersionFolder("0.4.8", "{ \"GameLocation\": \"old\" }");
+        var settings = SettingsRepository();
+        await settings.SaveAsync(new BoreaSettings(Path.Combine(_tempRoot, "OldGame")));
+
+        await Changer(settings, new LoaderConfigurator(), Loader("StarMap")).ChangeAsync(newGame);
+
+        Assert.Equal(newGame, await GameLocationAsync(folder));
+        Assert.Equal(newGame, (await settings.GetAsync())!.GameDirectoryPath);
+    }
+
+    private GameDirectoryChanger Changer(IBoreaSettingsRepository settings, ILoaderConfigurator configurator, params ModMetadata[] listings) =>
+        new(settings, new FakeModRepository(listings), configurator, new FileLoaderVersionStore(settings, Paths()));
+
+    private string VersionFolder(string version, string configuration)
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(Paths().GetLoadersRoot(), "StarMap", version)).FullName;
+        File.WriteAllText(Path.Combine(folder, "loader.json"), configuration);
+        return folder;
+    }
+
+    private static async Task<string?> GameLocationAsync(string folder) =>
+        (string?)JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(folder, "loader.json")))!["GameLocation"];
+
+    private GamePathProvider Paths() => new(gameDirectory: null, boreaRoot: _tempRoot);
+
     private FileBoreaSettingsRepository SettingsRepository() =>
-        new(new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot));
+        new(Paths());
 
     private static IReadOnlyDictionary<string, LoaderInstallation> Installations(
         params (string Id, string Directory)[] loaders) =>

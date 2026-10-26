@@ -1,8 +1,5 @@
 ﻿namespace Borea.Storage.Mods;
 
-/// <summary>
-/// Flat, TOML-serializable representation of a ListingSnapshot.
-/// </summary>
 public sealed class ListingSnapshotDto
 {
     public string Name { get; set; } = string.Empty;

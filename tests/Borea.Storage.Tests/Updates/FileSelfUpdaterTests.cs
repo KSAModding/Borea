@@ -37,8 +37,8 @@ public sealed class FileSelfUpdaterTests : IDisposable
             Directory.Delete(_root, recursive: true);
     }
 
-    private FileSelfUpdater Updater(string platform = "win-x64", BoreaProduct product = BoreaProduct.App, bool fromCommandLine = false)
-        => new(_files, _log, product, _starter, _programPath, platform, isReleaseBuild: true, fromCommandLine);
+    private FileSelfUpdater Updater(string? platform = "win-x64", BoreaProduct product = BoreaProduct.App, bool fromCommandLine = false, string? programPath = null)
+        => new(_files, _log, product, _starter, programPath ?? _programPath, platform, isReleaseBuild: true, fromCommandLine);
 
     private static BoreaRelease Release(params string[] assetNames) =>
         new(ModVersion.Parse("0.2.0"), "v0.2.0", "https://github.com/KSAModding/Borea/releases/tag/v0.2.0")
@@ -213,9 +213,8 @@ public sealed class FileSelfUpdaterTests : IDisposable
 
         Assert.Equal(_programPath, _starter.ProgramPath);
         var arguments = _starter.Arguments.ToArray();
-        var handover = SelfUpdateHandover.Take(ref arguments);
-        Assert.NotNull(handover);
-        Assert.Equal(_replacedPath, handover!.PreviousProgramPath);
+        var handover = SelfUpdateHandover.Take(ref arguments)!;
+        Assert.Equal(_replacedPath, handover.PreviousProgramPath);
         Assert.Equal(Environment.ProcessId, handover.PreviousProcessId);
         Assert.False(handover.FromCommandLine);
         Assert.True(SelfUpdateReceipt.Matches(_folder, handover, _replacedPath));
@@ -370,30 +369,14 @@ public sealed class FileSelfUpdaterTests : IDisposable
         Assert.Empty(Directory.GetDirectories(_folder));
     }
 
-    [Fact]
-    public async Task StageAsync_AnArchiveWithoutTheProgram_Stops()
+    [Theory]
+    [InlineData("something-else", null)]
+    [InlineData("borea.exe", "plugins/extra.txt")]
+    public async Task StageAsync_AnArchiveWithoutTheProgramOrWithAFolder_Stops(string programName, string? extraPath)
     {
-        var archive = ReleaseArchiveBuilder.Zip(ArchiveFolderName, "something-else", "not the program");
-        _files.Add(ArchiveName, archive);
-        _files.Add(BoreaArchive.ChecksumsFileName, ReleaseArchiveBuilder.Checksums((ArchiveName, archive)));
+        var release = ServeWindowsRelease(ReleaseArchiveBuilder.Zip(ArchiveFolderName, programName, "the new build", extraPath));
 
-        var failure = await Assert.ThrowsAsync<SelfUpdateFailedException>(
-            () => Updater().StageAsync(Release(ArchiveName, BoreaArchive.ChecksumsFileName)));
-
-        Assert.Equal(SelfUpdateFailure.Unpack, failure.Reason);
-        Assert.Equal("the running build", File.ReadAllText(_programPath));
-        Assert.Empty(Directory.GetDirectories(_folder));
-    }
-
-    [Fact]
-    public async Task StageAsync_AnArchiveWithAFolderInTheBuild_Stops()
-    {
-        var archive = ReleaseArchiveBuilder.Zip(ArchiveFolderName, "borea.exe", "the new build", extraPath: "plugins/extra.txt");
-        _files.Add(ArchiveName, archive);
-        _files.Add(BoreaArchive.ChecksumsFileName, ReleaseArchiveBuilder.Checksums((ArchiveName, archive)));
-
-        var failure = await Assert.ThrowsAsync<SelfUpdateFailedException>(
-            () => Updater().StageAsync(Release(ArchiveName, BoreaArchive.ChecksumsFileName)));
+        var failure = await Assert.ThrowsAsync<SelfUpdateFailedException>(() => Updater().StageAsync(release));
 
         Assert.Equal(SelfUpdateFailure.Unpack, failure.Reason);
         Assert.Equal("the running build", File.ReadAllText(_programPath));
@@ -404,23 +387,17 @@ public sealed class FileSelfUpdaterTests : IDisposable
     public void GetReadiness_APlainFolderThisUserOwns_AllowsTheUpdate()
         => Assert.Equal(SelfUpdateReadiness.Ready, Updater().GetReadiness());
 
-    [Fact]
-    public void GetReadiness_APackageMarker_NamesTheManagerAndStopsTheUpdate()
+    [Theory]
+    [InlineData("winget\nanything else\n", "winget")]
+    [InlineData("", null)]
+    public void GetReadiness_APackageMarker_StopsTheUpdateWithTheManagerItNames(string marker, string? manager)
     {
-        File.WriteAllText(Path.Combine(_folder, FileSelfUpdater.PackageMarkerFileName), "winget\nanything else\n");
+        File.WriteAllText(Path.Combine(_folder, FileSelfUpdater.PackageMarkerFileName), marker);
 
         var readiness = Updater().GetReadiness();
 
-        Assert.Equal(new SelfUpdateReadiness(SelfUpdateBlock.PackageManaged, "winget"), readiness);
+        Assert.Equal(new SelfUpdateReadiness(SelfUpdateBlock.PackageManaged, manager), readiness);
         Assert.False(readiness.CanUpdate);
-    }
-
-    [Fact]
-    public void GetReadiness_AnEmptyPackageMarker_StopsTheUpdateWithoutAName()
-    {
-        File.WriteAllText(Path.Combine(_folder, FileSelfUpdater.PackageMarkerFileName), string.Empty);
-
-        Assert.Equal(new SelfUpdateReadiness(SelfUpdateBlock.PackageManaged), Updater().GetReadiness());
     }
 
     [Fact]
@@ -447,18 +424,13 @@ public sealed class FileSelfUpdaterTests : IDisposable
     public void GetReadiness_AFolderThatTakesNoFile_StopsTheUpdate()
     {
         var gone = Path.Combine(_root, "not-there", "borea.exe");
-        var updater = new FileSelfUpdater(_files, _log, BoreaProduct.App, _starter, gone, "win-x64", isReleaseBuild: true);
 
-        Assert.Equal(new SelfUpdateReadiness(SelfUpdateBlock.ReadOnlyLocation), updater.GetReadiness());
+        Assert.Equal(new SelfUpdateReadiness(SelfUpdateBlock.ReadOnlyLocation), Updater(programPath: gone).GetReadiness());
     }
 
     [Fact]
     public void GetReadiness_APlatformWithoutRelease_StopsTheUpdate()
-    {
-        var updater = new FileSelfUpdater(_files, _log, BoreaProduct.App, _starter, _programPath, platform: null, isReleaseBuild: true);
-
-        Assert.Equal(new SelfUpdateReadiness(SelfUpdateBlock.UnsupportedPlatform), updater.GetReadiness());
-    }
+        => Assert.Equal(new SelfUpdateReadiness(SelfUpdateBlock.UnsupportedPlatform), Updater(platform: null).GetReadiness());
 
     /// <summary>Reports on the calling thread, so the test reads every step in order.</summary>
     private sealed class SyncProgress(Action<SelfUpdateProgress> report) : IProgress<SelfUpdateProgress>

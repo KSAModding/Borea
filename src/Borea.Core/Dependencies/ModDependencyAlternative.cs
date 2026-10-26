@@ -7,9 +7,6 @@ namespace Borea.Core.Dependencies;
 /// </summary>
 public sealed class ModDependencyAlternative
 {
-    /// <summary>
-    /// The ID of the alternative mod.
-    /// </summary>
     public string ModId { get; }
 
     /// <summary>

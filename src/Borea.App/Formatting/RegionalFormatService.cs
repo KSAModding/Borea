@@ -66,8 +66,7 @@ public sealed class RegionalFormatService : INotifyPropertyChanged
             return false;
         }
 
-        var format = _supportedFormats.FirstOrDefault(candidate =>
-            string.Equals(candidate.CultureName, cultureName, StringComparison.OrdinalIgnoreCase));
+        var format = FindFormat(cultureName);
         SetFormat(format ?? _supportedFormats[0]);
         return format is not null;
     }
@@ -95,9 +94,11 @@ public sealed class RegionalFormatService : INotifyPropertyChanged
     private RegionalFormatOption ResolveFormat(string? cultureName)
         => cultureName is null
             ? _supportedFormats[0]
-            : _supportedFormats.FirstOrDefault(candidate =>
-                string.Equals(candidate.CultureName, cultureName, StringComparison.OrdinalIgnoreCase))
-                ?? _supportedFormats[0];
+            : FindFormat(cultureName) ?? _supportedFormats[0];
+
+    private RegionalFormatOption? FindFormat(string cultureName)
+        => _supportedFormats.FirstOrDefault(candidate =>
+            string.Equals(candidate.CultureName, cultureName, StringComparison.OrdinalIgnoreCase));
 
     private void SetFormat(RegionalFormatOption format)
     {

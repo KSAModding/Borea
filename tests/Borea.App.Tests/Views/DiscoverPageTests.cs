@@ -281,23 +281,7 @@ public sealed class DiscoverPageTests
 
     /// <summary>Renders Discover next to a navigation rail, as the main window does.</summary>
     private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, T> read, double windowHeight = 832) =>
-        HeadlessApp.RunAsync(harness, () =>
-        {
-            var page = new DiscoverPage { DataContext = harness.ViewModel };
-            Grid.SetColumn(page, 1);
-            var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{PageBodyPanel.NavigationRailWidth},*"), Children = { page } };
-            var window = new Window { Width = windowWidth, Height = windowHeight, Content = body, DataContext = harness.ViewModel };
-            window.Show();
-            try
-            {
-                window.UpdateLayout();
-                return Task.FromResult(read(page));
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        RenderAsync(harness, windowWidth, page => Task.FromResult(read(page)), windowHeight);
 
     private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, Task<T>> read, double windowHeight = 832) =>
         HeadlessApp.RunAsync(harness, async () =>

@@ -60,6 +60,14 @@ public sealed class MarkdownSelectionTests
         return text.TranslatePoint(new Point(text.Padding.Left + character.X + 1, text.Padding.Top + character.Center.Y), window)!.Value;
     }
 
+    /// <summary>A point 8 pixels after the end of the text that starts with <paramref name="block"/>, where a press hits no character of it.</summary>
+    private static Point AfterTheEnd(Window window, Visual view, string block)
+    {
+        var text = Find(view, block);
+        var end = text.TextLayout.HitTestTextPosition(Shown(text).Length);
+        return text.TranslatePoint(new Point(end.X + 8, end.Center.Y), window)!.Value;
+    }
+
     private static void Drag(Window window, Point from, params Point[] path)
     {
         window.MouseDown(from, MouseButton.Left);
@@ -109,10 +117,7 @@ public sealed class MarkdownSelectionTests
     {
         var (selected, copied) = await ShowAsync(Mixed, async (window, view) =>
         {
-            var intro = Find(view, "The intro");
-            var end = intro.TextLayout.HitTestTextPosition(Shown(intro).Length);
-            var afterTheEnd = intro.TranslatePoint(new Point(end.X + 8, end.Center.Y), window)!.Value;
-            Drag(window, afterTheEnd, EdgeAt(window, view, "The outro", " text."));
+            Drag(window, AfterTheEnd(window, view, "The intro"), EdgeAt(window, view, "The outro", " text."));
             var selected = Selected(view);
             Press(window, Keys.Copy[0]);
             return (selected, await ClipboardAsync(window));
@@ -127,10 +132,8 @@ public sealed class MarkdownSelectionTests
     {
         var selected = await ShowAsync(Mixed, (window, view) =>
         {
-            var intro = Find(view, "The intro");
-            var end = intro.TextLayout.HitTestTextPosition(Shown(intro).Length);
             var box = window.GetVisualDescendants().OfType<TextBox>().Single();
-            Drag(window, intro.TranslatePoint(new Point(end.X + 8, end.Center.Y), window)!.Value, box.TranslatePoint(new Point(8, 8), window)!.Value);
+            Drag(window, AfterTheEnd(window, view, "The intro"), box.TranslatePoint(new Point(8, 8), window)!.Value);
             return Task.FromResult(Selected(view));
         }, withTextBox: true);
 
@@ -142,9 +145,7 @@ public sealed class MarkdownSelectionTests
     {
         var copied = await ShowAsync(Mixed, async (window, view) =>
         {
-            var intro = Find(view, "The intro");
-            var end = intro.TextLayout.HitTestTextPosition(Shown(intro).Length);
-            Drag(window, intro.TranslatePoint(new Point(end.X + 8, end.Center.Y), window)!.Value, EdgeAt(window, view, "The heading", " heading"));
+            Drag(window, AfterTheEnd(window, view, "The intro"), EdgeAt(window, view, "The heading", " heading"));
             Press(window, Keys.Copy[0]);
             return await ClipboardAsync(window);
         });

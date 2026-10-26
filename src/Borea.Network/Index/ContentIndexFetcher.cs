@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Borea.Core.Files;
 using Borea.Core.Index;
 
 namespace Borea.Network.Index;
@@ -86,7 +87,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
                 throw new HttpRequestException("The downloaded content index was not accepted.", ex);
             }
             // Metadata change that only changes the file's name
-            File.Move(tempPath, destinationPath, overwrite: true);
+            await FileReplace.MoveOverAsync(tempPath, destinationPath, ct).ConfigureAwait(false);
         }
         finally
         {

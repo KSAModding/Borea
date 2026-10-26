@@ -222,15 +222,17 @@ public sealed class ContentImageSourceTests
 
     #region Cache and preference
 
-    [Fact]
-    public async Task GetAsync_CachedImage_MakesNoRequest()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetAsync_CachedImage_ServesItWithoutARequest(bool loadFromAuthorHosts)
     {
         var requested = new List<Uri>();
         var cache = new MemoryImageCache();
         cache.Entries[Icon(IconBytes).Sha256] = IconBytes;
         using var source = Source(_ => Image(IconBytes), requested, cache);
 
-        var result = await source.GetAsync(Icon(IconBytes), loadFromAuthorHosts: true);
+        var result = await source.GetAsync(Icon(IconBytes), loadFromAuthorHosts);
 
         Assert.True(result.IsLoaded, result.Reason);
         Assert.Empty(requested);
@@ -260,20 +262,6 @@ public sealed class ContentImageSourceTests
         var result = await source.GetAsync(Icon(IconBytes), loadFromAuthorHosts: false);
 
         Assert.Equal(ContentImageFailure.DisabledByPreference, result.Failure);
-        Assert.Empty(requested);
-    }
-
-    [Fact]
-    public async Task GetAsync_LoadingFromAuthorHostsOff_ServesACachedImage()
-    {
-        var requested = new List<Uri>();
-        var cache = new MemoryImageCache();
-        cache.Entries[Icon(IconBytes).Sha256] = IconBytes;
-        using var source = Source(_ => Image(IconBytes), requested, cache);
-
-        var result = await source.GetAsync(Icon(IconBytes), loadFromAuthorHosts: false);
-
-        Assert.True(result.IsLoaded, result.Reason);
         Assert.Empty(requested);
     }
 
@@ -351,6 +339,7 @@ public sealed class ContentImageSourceTests
     {
         var running = 0;
         var most = 0;
+        var limitReached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var images = Enumerable.Range(0, ContentImageSource.MaxParallelFetches + 2)
             .Select(index => Png(variant: (byte)index))
@@ -361,6 +350,9 @@ public sealed class ContentImageSourceTests
             lock (images)
                 most = Math.Max(most, now);
 
+            if (now == ContentImageSource.MaxParallelFetches)
+                limitReached.TrySetResult();
+
             await release.Task.WaitAsync(cancellationToken);
             Interlocked.Decrement(ref running);
             return Image(images[int.Parse(request.RequestUri!.Segments[^1])]);
@@ -369,7 +361,9 @@ public sealed class ContentImageSourceTests
         var loads = images
             .Select((bytes, index) => source.GetAsync(Icon(bytes, $"https://images.example/{index}"), loadFromAuthorHosts: true))
             .ToArray();
-        await WaitUntilAsync(() => Volatile.Read(ref running) == ContentImageSource.MaxParallelFetches);
+        await limitReached.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // A fetch above the limit would start in this time, and a fetch that does not start gives no signal to await.
         await Task.Delay(100);
         release.SetResult();
         var results = await Task.WhenAll(loads);
@@ -462,18 +456,6 @@ public sealed class ContentImageSourceTests
         }
 
         return [.. bytes];
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-                throw new TimeoutException("The condition did not become true in time.");
-
-            await Task.Delay(10);
-        }
     }
 
     private sealed class MemoryImageCache : IContentImageCache

@@ -58,30 +58,19 @@ public sealed class DependencyEvaluationTests
     }
 
     [Theory]
-    [InlineData("0.9.0")]
-    [InlineData("2.0.1")]
-    public void InstalledOutsideBounds_CountsAsMissing(string installedVersion)
+    [InlineData("0.9.0", DependencyOutcome.Install, null)]
+    [InlineData("1.0.0", DependencyOutcome.Satisfied, "lib")]
+    [InlineData("2.0.0", DependencyOutcome.Satisfied, "lib")]
+    [InlineData("2.0.1", DependencyOutcome.Install, null)]
+    public void InstalledVersion_CountsOnlyWithinTheInclusiveBounds(string installedVersion, DependencyOutcome expected, string? expectedInstalledModId)
     {
         var instance = NewInstance();
         instance.AddMod(TestFixtures.SampleInstalledMod("lib", installedVersion));
 
         var evaluation = Single(instance, Entry("lib", ModDependencyKind.Required, "1.0.0", "2.0.0"));
 
-        Assert.Equal(DependencyOutcome.Install, evaluation.Outcome);
-        Assert.Null(evaluation.InstalledModId);
-    }
-
-    [Theory]
-    [InlineData("1.0.0")]
-    [InlineData("2.0.0")]
-    public void BoundsAreInclusive(string installedVersion)
-    {
-        var instance = NewInstance();
-        instance.AddMod(TestFixtures.SampleInstalledMod("lib", installedVersion));
-
-        var evaluation = Single(instance, Entry("lib", ModDependencyKind.Required, "1.0.0", "2.0.0"));
-
-        Assert.Equal(DependencyOutcome.Satisfied, evaluation.Outcome);
+        Assert.Equal(expected, evaluation.Outcome);
+        Assert.Equal(expectedInstalledModId, evaluation.InstalledModId);
     }
 
     [Fact]
@@ -108,30 +97,20 @@ public sealed class DependencyEvaluationTests
         Assert.Null(evaluation.InstalledModId);
     }
 
-    [Fact]
-    public void Conflict_InstalledWithinTheConflictingRange_Conflicts()
-    {
-        var instance = NewInstance();
-        instance.AddMod(TestFixtures.SampleInstalledMod("rival", "1.5.0"));
-
-        var evaluation = Single(instance, Entry("rival", ModDependencyKind.Conflict, "1.0.0", "2.0.0"));
-
-        Assert.Equal(DependencyOutcome.Conflict, evaluation.Outcome);
-        Assert.Equal("rival", evaluation.InstalledModId);
-        Assert.Null(evaluation.DeclaredBy);
-    }
-
     [Theory]
-    [InlineData("0.9.0")]
-    [InlineData("2.0.1")]
-    public void Conflict_InstalledOutsideTheConflictingRange_IsSatisfied(string installedVersion)
+    [InlineData("0.9.0", DependencyOutcome.Satisfied, null)]
+    [InlineData("1.5.0", DependencyOutcome.Conflict, "rival")]
+    [InlineData("2.0.1", DependencyOutcome.Satisfied, null)]
+    public void Conflict_InstalledVersion_ConflictsOnlyWithinTheConflictingRange(string installedVersion, DependencyOutcome expected, string? expectedInstalledModId)
     {
         var instance = NewInstance();
         instance.AddMod(TestFixtures.SampleInstalledMod("rival", installedVersion));
 
         var evaluation = Single(instance, Entry("rival", ModDependencyKind.Conflict, "1.0.0", "2.0.0"));
 
-        Assert.Equal(DependencyOutcome.Satisfied, evaluation.Outcome);
+        Assert.Equal(expected, evaluation.Outcome);
+        Assert.Equal(expectedInstalledModId, evaluation.InstalledModId);
+        Assert.Null(evaluation.DeclaredBy);
     }
 
     [Theory]
@@ -284,14 +263,6 @@ public sealed class DependencyEvaluationTests
     #region A kind this build does not know
 
     [Fact]
-    public void UnknownKind_IsReportedAndNothingIsClaimed()
-    {
-        var evaluation = Single(NewInstance(), Entry("mystery", ModDependencyKind.Unknown));
-
-        Assert.Equal(DependencyOutcome.Unknown, evaluation.Outcome);
-    }
-
-    [Fact]
     public void UnknownKind_StaysUnknownEvenWhenItsIdIsInstalled()
     {
         var instance = NewInstance();
@@ -303,33 +274,23 @@ public sealed class DependencyEvaluationTests
         Assert.Null(evaluation.InstalledModId);
     }
 
-    [Fact]
-    public void UnknownKind_DeclaredByAnInstalledMod_IsReportedRatherThanDropped()
+    [Theory]
+    [InlineData("1.0.0")]
+    [InlineData("9.0.0")]
+    public void UnknownKind_DeclaredByAnInstalledMod_IsReportedWhateverItsBoundsSay(string minVersion)
     {
         var instance = NewInstance();
         instance.AddMod(TestFixtures.SampleInstalledMod(
             "incumbent",
-            dependencies: new[] { Entry("candidate", ModDependencyKind.Unknown, "1.0.0") }));
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Unknown, minVersion) }));
         var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
 
+        // Bounds of an unreadable kind say nothing, so they go unread.
         var evaluation = Assert.Single(_resolver.Evaluate(instance, candidate));
 
         Assert.Equal(DependencyOutcome.Unknown, evaluation.Outcome);
         Assert.Equal("incumbent", evaluation.DeclaredBy);
         Assert.Null(evaluation.InstalledModId);
-    }
-
-    [Fact]
-    public void UnknownKind_DeclaredByAnInstalledMod_IsReportedWhateverItsBoundsSay()
-    {
-        var instance = NewInstance();
-        instance.AddMod(TestFixtures.SampleInstalledMod(
-            "incumbent",
-            dependencies: new[] { Entry("candidate", ModDependencyKind.Unknown, "9.0.0") }));
-        var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
-
-        // Bounds of an unreadable kind say nothing, so they go unread.
-        Assert.Equal(DependencyOutcome.Unknown, Assert.Single(_resolver.Evaluate(instance, candidate)).Outcome);
     }
 
     #endregion

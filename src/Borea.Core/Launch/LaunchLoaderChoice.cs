@@ -75,9 +75,11 @@ public sealed class LaunchLoaderChoice
             return new LaunchLoaderChoice(takesInstance, requiredByMods: false, LaunchLoaderFailure.None, [], lacksListing: false);
 
         var notListed = recorded.Where(id => Listing(id) is null).ToList();
-        return notListed.Count > 0
-            ? Failed(LaunchLoaderFailure.LoaderNotListed, notListed, lacksListing: true)
-            : Failed(LaunchLoaderFailure.NoLoaderTakesInstance, [], lacksListing: !listings.Any(listing => listing.Type == ContentType.ModLoader && listing.Provides?.Instance is not null));
+        if (notListed.Count > 0)
+            return Failed(LaunchLoaderFailure.LoaderNotListed, notListed, lacksListing: true);
+
+        var hasListingThatTakesInstance = listings.Any(listing => listing.Type == ContentType.ModLoader && listing.Provides?.Instance is not null);
+        return Failed(LaunchLoaderFailure.NoLoaderTakesInstance, [], lacksListing: !hasListingThatTakesInstance);
 
         LaunchLoaderChoice Installed(string id, bool requiredByMods, LaunchLoaderFailure notInstalled)
         {

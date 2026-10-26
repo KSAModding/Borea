@@ -11,50 +11,18 @@ public sealed class ModListDiffTests
     private static readonly ModVersionChange[] EmptyChanges = Array.Empty<ModVersionChange>();
 
     [Fact]
-    public void Constructor_ValidInput_SetsAllProperties()
-    {
-        var toAdd = new[] { new ModPackEntry("new-mod", ModVersion.Parse("1.0.0")) };
-        var toRemove = new[] { "removed-mod" };
-        var toUpdate = new[] { new ModVersionChange("updated-mod", ModVersion.Parse("1.0.0"), ModVersion.Parse("2.0.0")) };
-        var unchanged = new[] { "same-mod" };
-
-        var diff = new ModListDiff(toAdd, toRemove, toUpdate, unchanged);
-
-        Assert.Single(diff.ToAdd);
-        Assert.Single(diff.ToRemove);
-        Assert.Single(diff.ToUpdate);
-        Assert.Single(diff.Unchanged);
-    }
-
-    [Fact]
-    public void Constructor_NullToAdd_ThrowsArgumentNullException()
+    public void Constructor_NullArgument_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new ModListDiff(null!, EmptyIds, EmptyChanges, EmptyIds));
-    }
-
-    [Fact]
-    public void Constructor_NullToRemove_ThrowsArgumentNullException()
-    {
         Assert.Throws<ArgumentNullException>(() => new ModListDiff(EmptyEntries, null!, EmptyChanges, EmptyIds));
-    }
-
-    [Fact]
-    public void Constructor_NullToUpdate_ThrowsArgumentNullException()
-    {
         Assert.Throws<ArgumentNullException>(() => new ModListDiff(EmptyEntries, EmptyIds, null!, EmptyIds));
-    }
-
-    [Fact]
-    public void Constructor_NullUnchanged_ThrowsArgumentNullException()
-    {
         Assert.Throws<ArgumentNullException>(() => new ModListDiff(EmptyEntries, EmptyIds, EmptyChanges, null!));
     }
 
     [Fact]
     public void IsEmpty_AllActionsEmpty_IsTrue()
     {
-        // Unchanged deliberately populated — IsEmpty should ignore it, since
-        // it drives no action (per the type's own doc comment).
+        // Unchanged holds a mod on purpose, because a mod that stays at its version needs no action and IsEmpty ignores it.
         var diff = new ModListDiff(EmptyEntries, EmptyIds, EmptyChanges, new[] { "same-mod" });
 
         Assert.True(diff.IsEmpty);

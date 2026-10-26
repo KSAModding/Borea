@@ -1,5 +1,6 @@
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
+using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
@@ -125,10 +126,38 @@ public sealed class LoaderUpdateTests
         Assert.Equal(ModVersion.Parse("0.4.8"), update.Offer!.Version);
     }
 
+    [Fact]
+    public async Task NewestReleaseIsAboveTheMaximumOfAMod_OffersTheNewestTheModsAccept()
+    {
+        var mods = new FakeRepository(Release("0.4.7"), Release("0.4.8"), Release("0.4.9"));
+        var need = NeededLoader.From("StarMap", [NeedsStarMap("flight-tools", "0.4.0", "0.4.8")]);
+
+        var update = await LoaderUpdate.FindAsync(mods, ReleaseChannel.Stable, "StarMap", Installed("0.4.7"), Build5638, need: need);
+
+        Assert.Equal(ModVersion.Parse("0.4.8"), update.Offer!.Version);
+    }
+
+    internal static InstalledMod NeedsStarMap(string modId, string min, string? max = null)
+    {
+        var release = new ModVersionMetadata(
+            1,
+            modId,
+            ModVersion.Parse("1.0.0"),
+            ReleaseStatus.Stable,
+            DateTimeOffset.UnixEpoch,
+            "2026.8.3.5117",
+            5117,
+            new DownloadInfo("https://example.com/mod.zip", new string('A', 64), 1, "application/zip"),
+            1,
+            Array.Empty<ModDependency>(),
+            loader: new LoaderRequirement("StarMap", ModVersion.Parse(min), max is null ? null : ModVersion.Parse(max)));
+        return new InstalledMod(modId, release.Version, InstallReason.Manual, DateTimeOffset.UnixEpoch, release);
+    }
+
     private static LoaderInstallation Installed(string version) =>
         new("C:/StarMap", ModVersion.Parse(version), version, isAdopted: false);
 
-    private static ModVersionMetadata Release(string version, string min = "2026.8.3.5117", string? max = null, ReleaseStatus status = ReleaseStatus.Stable, bool yanked = false, bool gone = false) => new(
+    internal static ModVersionMetadata Release(string version, string min = "2026.8.3.5117", string? max = null, ReleaseStatus status = ReleaseStatus.Stable, bool yanked = false, bool gone = false) => new(
         1,
         "StarMap",
         ModVersion.Parse(version),
@@ -145,7 +174,7 @@ public sealed class LoaderUpdateTests
         yanked: yanked);
 
     /// <summary>Lists every release, yanked or not, and reads any release by its exact version.</summary>
-    private sealed class FakeRepository(params ModVersionMetadata[] releases) : IModRepository
+    internal sealed class FakeRepository(params ModVersionMetadata[] releases) : IModRepository
     {
         public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ModMetadata>>([]);

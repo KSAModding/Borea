@@ -10,7 +10,6 @@ namespace Borea.Network.GitHub;
 /// </summary>
 public sealed class GitHubIndexReports : IIndexReports, IReportActions
 {
-    /// <summary>The search terms for a title that holds the tag of a takedown or a dispute.</summary>
     private const string ClosedReportsQuery = "in:title+(Takedown+OR+Dispute)";
 
     private readonly IGitHubSession _session;
@@ -18,7 +17,7 @@ public sealed class GitHubIndexReports : IIndexReports, IReportActions
 
     public GitHubIndexReports(IGitHubSession session, HttpClient http, TimeProvider? time = null)
     {
-        _session = session ?? throw new ArgumentNullException(nameof(session));
+        _session = session;
         _api = new GitHubApi(session, http, time);
     }
 
@@ -84,7 +83,7 @@ public sealed class GitHubIndexReports : IIndexReports, IReportActions
     public Task CommentAsync(IndexReport report, string comment, CancellationToken cancellationToken = default)
     {
         var body = Check(report, comment);
-        return ActAsync(async () =>
+        return StewardActions.ActAsync(async () =>
         {
             await CurrentAsync(report, cancellationToken).ConfigureAwait(false);
             await PostCommentAsync(report, body, cancellationToken).ConfigureAwait(false);
@@ -113,7 +112,7 @@ public sealed class GitHubIndexReports : IIndexReports, IReportActions
     /// and a retry after such a failure finds its comment as the last one and only changes the state.
     /// </summary>
     private Task ChangeStateAsync(IndexReport report, string body, bool closed, Dictionary<string, object> state, CancellationToken cancellationToken) =>
-        ActAsync(async () =>
+        StewardActions.ActAsync(async () =>
         {
             var issue = await CurrentAsync(report, cancellationToken).ConfigureAwait(false);
             if (issue.IsClosed == closed)
@@ -134,18 +133,6 @@ public sealed class GitHubIndexReports : IIndexReports, IReportActions
             throw new ArgumentException("The action needs a comment.", nameof(comment));
 
         return comment.Trim();
-    }
-
-    private static async Task ActAsync(Func<Task> action)
-    {
-        try
-        {
-            await action().ConfigureAwait(false);
-        }
-        catch (GitHubApiException exception)
-        {
-            throw exception.ToStewardException();
-        }
     }
 
     /// <summary>The report as GitHub has it now. A report that was moved to another repository is not found, because a write would follow it there.</summary>
@@ -169,8 +156,7 @@ public sealed class GitHubIndexReports : IIndexReports, IReportActions
         var comments = await _api.GetPublicAsync<List<CommentDto>>(url, cancellationToken).ConfigureAwait(false);
         return comments is [.., var last]
             && string.Equals(last.User?.Login, me, StringComparison.OrdinalIgnoreCase)
-            && last.Body is { } text
-            && string.Equals(text.ReplaceLineEndings("\n").Trim(), body.ReplaceLineEndings("\n"), StringComparison.Ordinal);
+            && StewardActions.SameText(last.Body, body);
     }
 
     private static IndexReportCloseReason? CloseReasonOf(string? stateReason) => stateReason switch

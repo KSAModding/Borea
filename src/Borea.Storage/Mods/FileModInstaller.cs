@@ -8,10 +8,10 @@ using Borea.Storage.Files;
 namespace Borea.Storage.Mods;
 
 /// <summary>
-/// File-backed <see cref="IModInstaller"/>. The archive goes to a temporary
-/// file first, so nothing reaches the instance until the bytes are verified,
-/// and a failed install removes the folder and the record it created. A release
-/// the <see cref="ModStore"/> holds already is only linked.
+/// The archive goes to a temporary file first, so nothing reaches the
+/// instance until the bytes are verified, and a failed install removes the
+/// folder and the record it created. A release the <see cref="ModStore"/>
+/// holds already is only linked.
 /// </summary>
 public sealed class FileModInstaller : IModInstaller
 {
@@ -135,12 +135,12 @@ public sealed class FileModInstaller : IModInstaller
         }
         catch
         {
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
             if (installed is not null)
             {
                 var ownedFolder = ModFolders.FindOwned(modsFolder, installed, _store);
                 if (ownedFolder is not null)
-                    TryDeleteDirectory(ownedFolder);
+                    LeftoverCleanup.TryDeleteTree(ownedFolder);
 
                 await _store.ReleaseAsync(installed).ConfigureAwait(false);
             }
@@ -152,7 +152,7 @@ public sealed class FileModInstaller : IModInstaller
         }
         finally
         {
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
         }
     }
 
@@ -220,25 +220,6 @@ public sealed class FileModInstaller : IModInstaller
                 instance => instance.RemoveMod(modId)).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-        }
-    }
-
-    /// <summary>
-    /// Cleanup that must not replace the outcome: a folder the rollback cannot
-    /// remove stays behind, and the error that caused the rollback still wins.
-    /// A linked folder loses only its link.
-    /// </summary>
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
         {
         }
     }

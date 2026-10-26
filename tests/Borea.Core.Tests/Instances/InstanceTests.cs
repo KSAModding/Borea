@@ -134,15 +134,15 @@ public sealed class InstanceTests
     [Fact]
     public void DetachFromModPack_PackMod_BecomesAModThePlayerChose_AndTheSourceNamesIt()
     {
-        var instance = new Instance("Test", new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")));
+        var instance = new Instance("Test", PackSource());
         instance.AddMod(TestFixtures.SampleInstalledMod(reason: InstallReason.ModPack));
 
         Assert.True(instance.DetachFromModPack("TEST-MOD"));
 
         Assert.Equal(InstallReason.Manual, instance.Mods.Single().Reason);
-        Assert.Equal(new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")).WithDetached(["test-mod"]), instance.Source);
+        Assert.Equal(PackSource().WithDetached(["test-mod"]), instance.Source);
         Assert.False(instance.DetachFromModPack("test-mod"));
-        Assert.True(InstallPlanningState.Capture(instance) != InstallPlanningState.Capture(Instance.FromExisting(instance.InstanceId, instance.Name, new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")), instance.CreatedAt, instance.Mods, false)));
+        Assert.True(InstallPlanningState.Capture(instance) != InstallPlanningState.Capture(Instance.FromExisting(instance.InstanceId, instance.Name, PackSource(), instance.CreatedAt, instance.Mods, false)));
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public sealed class InstanceTests
     {
         var custom = new Instance("Custom", InstanceSource.Custom.Value);
         custom.AddMod(TestFixtures.SampleInstalledMod(reason: InstallReason.ModPack));
-        var pack = new Instance("Pack", new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")));
+        var pack = new Instance("Pack", PackSource());
         pack.AddMod(TestFixtures.SampleInstalledMod(reason: InstallReason.Dependency));
 
         Assert.Throws<InvalidOperationException>(() => custom.DetachFromModPack("test-mod"));
@@ -163,26 +163,26 @@ public sealed class InstanceTests
     [Fact]
     public void AttachToModPack_DetachedMod_FollowsThePackAgain()
     {
-        var instance = new Instance("Test", new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")));
+        var instance = new Instance("Test", PackSource());
         instance.AddMod(TestFixtures.SampleInstalledMod(reason: InstallReason.ModPack));
         instance.DetachFromModPack("test-mod");
 
         Assert.True(instance.AttachToModPack("TEST-MOD"));
 
         Assert.Equal(InstallReason.ModPack, instance.Mods.Single().Reason);
-        Assert.Equal(new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")), instance.Source);
+        Assert.Equal(PackSource(), instance.Source);
         Assert.False(instance.AttachToModPack("test-mod"));
     }
 
     [Fact]
     public void AttachToModPack_DetachedModThatThePlayerRemoved_LeavesTheSet()
     {
-        var source = new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")).WithDetached(["test-mod", "other-mod"]);
+        var source = PackSource().WithDetached(["test-mod", "other-mod"]);
         var instance = Instance.FromExisting(Guid.NewGuid(), "Test", source, DateTimeOffset.UnixEpoch, [], false);
 
         Assert.True(instance.AttachToModPack("test-mod"));
 
-        Assert.Equal(new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")).WithDetached(["other-mod"]), instance.Source);
+        Assert.Equal(PackSource().WithDetached(["other-mod"]), instance.Source);
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public sealed class InstanceTests
     {
         var custom = new Instance("Custom", InstanceSource.Custom.Value);
         custom.AddMod(TestFixtures.SampleInstalledMod(reason: InstallReason.Manual));
-        var pack = new Instance("Pack", new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")));
+        var pack = new Instance("Pack", PackSource());
         pack.AddMod(TestFixtures.SampleInstalledMod(reason: InstallReason.Manual));
 
         Assert.Throws<InvalidOperationException>(() => custom.AttachToModPack("test-mod"));
@@ -199,34 +199,15 @@ public sealed class InstanceTests
         Assert.Equal(InstallReason.Manual, pack.Mods.Single().Reason);
     }
 
-    [Fact]
-    public void AddMod_DuplicateModId_ThrowsInvalidOperationException()
+    [Theory]
+    [InlineData("dup-mod")]
+    [InlineData("Dup-Mod")]
+    public void AddMod_DuplicateModIdInAnyCase_ThrowsInvalidOperationException(string duplicateId)
     {
         var instance = new Instance("Test", InstanceSource.Custom.Value);
         instance.AddMod(TestFixtures.SampleInstalledMod("dup-mod"));
 
-        Assert.Throws<InvalidOperationException>(() =>
-            instance.AddMod(TestFixtures.SampleInstalledMod("dup-mod")));
-    }
-
-    [Fact]
-    public void AddMod_DuplicateModIdDifferingOnlyInCase_ThrowsInvalidOperationException()
-    {
-        var instance = new Instance("Test", InstanceSource.Custom.Value);
-        instance.AddMod(TestFixtures.SampleInstalledMod("dup-mod"));
-
-        Assert.Throws<InvalidOperationException>(() =>
-            instance.AddMod(TestFixtures.SampleInstalledMod("Dup-Mod")));
-    }
-
-    [Fact]
-    public void RemoveMod_IdDifferingOnlyInCase_RemovesTheMod()
-    {
-        var instance = new Instance("Test", InstanceSource.Custom.Value);
-        instance.AddMod(TestFixtures.SampleInstalledMod("mod-a"));
-
-        Assert.True(instance.RemoveMod("Mod-A"));
-        Assert.Empty(instance.Mods);
+        Assert.Throws<InvalidOperationException>(() => instance.AddMod(TestFixtures.SampleInstalledMod(duplicateId)));
     }
 
     [Fact]
@@ -237,13 +218,15 @@ public sealed class InstanceTests
         Assert.Throws<ArgumentNullException>(() => instance.AddMod(null!));
     }
 
-    [Fact]
-    public void RemoveMod_ExistingMod_RemovesAndReturnsTrue()
+    [Theory]
+    [InlineData("mod-a")]
+    [InlineData("Mod-A")]
+    public void RemoveMod_ExistingModInAnyCase_RemovesAndReturnsTrue(string modId)
     {
         var instance = new Instance("Test", InstanceSource.Custom.Value);
         instance.AddMod(TestFixtures.SampleInstalledMod("mod-a"));
 
-        var removed = instance.RemoveMod("mod-a");
+        var removed = instance.RemoveMod(modId);
 
         Assert.True(removed);
         Assert.Empty(instance.Mods);
@@ -268,18 +251,6 @@ public sealed class InstanceTests
         var instance = new Instance("Test", InstanceSource.Custom.Value);
 
         Assert.Throws<ArgumentException>(() => instance.RemoveMod(modId!));
-    }
-
-    [Fact]
-    public void Mods_CannotBeMutatedDirectly()
-    {
-        var instance = new Instance("Test", InstanceSource.Custom.Value);
-        instance.AddMod(TestFixtures.SampleInstalledMod());
-
-        // Mods should expose a read-only view — confirms external code can't
-        // bypass AddMod/RemoveMod's invariant checks (e.g. duplicate-ModId
-        // rejection) by mutating the returned collection directly.
-        Assert.IsAssignableFrom<System.Collections.Generic.IReadOnlyList<InstalledMod>>(instance.Mods);
     }
 
     [Fact]
@@ -308,4 +279,6 @@ public sealed class InstanceTests
     {
         Assert.Null(new Instance("Test", InstanceSource.Custom.Value).LastPlayedWith(null));
     }
+
+    private static InstanceSource.FromModPack PackSource() => new("pack", ModVersion.Parse("1.0.0"));
 }

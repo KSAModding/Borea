@@ -113,12 +113,7 @@ internal static class ContentImagesParser
         return ReadRequiredString(record, "id", location);
     }
 
-    private static string? ReadIdOrNull(JsonElement record) =>
-        record.ValueKind == JsonValueKind.Object
-        && record.TryGetProperty("id", out var property)
-        && property.ValueKind == JsonValueKind.String
-            ? property.GetString()
-            : null;
+    private static string? ReadIdOrNull(JsonElement record) => IndexJsonHelpers.TryExtractString(record, "id");
 
     private static ImageDto ReadImage(JsonElement record, string location)
     {
@@ -143,7 +138,7 @@ internal static class ContentImagesParser
         if (!record.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
             throw new FormatException($"The {location} must contain a string {propertyName}.");
 
-        return property.GetString()!;
+        return IndexJsonHelpers.ReadText(property);
     }
 
     private static string? ReadOptionalString(JsonElement record, string propertyName, string location)
@@ -154,7 +149,7 @@ internal static class ContentImagesParser
         if (property.ValueKind != JsonValueKind.String)
             throw new FormatException($"The {location} {propertyName} value must be a string, but was {property.ValueKind}.");
 
-        return property.GetString();
+        return IndexJsonHelpers.ReadText(property);
     }
 
     private static int ReadPixels(JsonElement record, string propertyName, string location)

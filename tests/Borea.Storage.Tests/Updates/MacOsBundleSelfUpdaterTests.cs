@@ -184,9 +184,8 @@ public sealed class MacOsBundleSelfUpdaterTests : IDisposable
 
         Assert.Equal(_programPath, _starter.ProgramPath);
         var arguments = _starter.Arguments.ToArray();
-        var handover = SelfUpdateHandover.Take(ref arguments);
-        Assert.NotNull(handover);
-        Assert.Equal(_replacedPath, handover!.PreviousProgramPath);
+        var handover = SelfUpdateHandover.Take(ref arguments)!;
+        Assert.Equal(_replacedPath, handover.PreviousProgramPath);
         Assert.Equal(Environment.ProcessId, handover.PreviousProcessId);
         Assert.False(handover.FromCommandLine);
         Assert.True(SelfUpdateReceipt.Matches(_folder, handover, _replacedPath));

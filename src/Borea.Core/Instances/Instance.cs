@@ -44,6 +44,9 @@ public sealed class Instance
     /// <summary>The kept game build this instance runs on, or null when it runs on the game folder of the settings.</summary>
     public GameVersion? GameBuild { get; private set; }
 
+    /// <summary>The mod loader, and its version, that a start of this instance uses.</summary>
+    public LoaderSetting Loader { get; private set; } = LoaderSetting.Automatic;
+
     public Instance(string name, InstanceSource source) : this(Guid.NewGuid(), name, source, DateTimeOffset.UtcNow, Array.Empty<InstalledMod>(), Array.Empty<ForeignMod>())
     {
     }
@@ -272,6 +275,7 @@ public sealed class Instance
     public void SetLaunchArguments(IReadOnlyList<string> arguments) => _launchArguments = CheckedArguments(arguments);
 
     public void SetGameBuild(GameVersion? build) => GameBuild = build;
+    public void SetLoader(LoaderSetting loader) => Loader = loader ?? throw new ArgumentNullException(nameof(loader));
 
     // a null character would cut the argument short on its way to the process
     private static List<string> CheckedArguments(IReadOnlyList<string> arguments)

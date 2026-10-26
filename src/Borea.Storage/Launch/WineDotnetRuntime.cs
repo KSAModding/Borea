@@ -32,7 +32,6 @@ internal static class WineDotnetRuntime
     /// <param name="launchFile">The host path of the program, whose runtimeconfig.json has the same name.</param>
     public static DotnetRuntimeNeed? Missing(WineInstall install, string launchFile)
     {
-        ArgumentNullException.ThrowIfNull(install);
         var need = Need(launchFile);
         return need is null || need.IsMetBy(InstalledVersions(install)) ? null : need;
     }

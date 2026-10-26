@@ -65,7 +65,7 @@ public sealed class InstallChoicesTests
         await row.InstallCommand.ExecuteAsync(null);
 
         Assert.True(row.IsConfirmingInstall);
-        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", shown);
+        Assert.Equal(SizedText(harness, 38_000_000), shown);
     }
 
     [Fact]
@@ -140,12 +140,14 @@ public sealed class InstallChoicesTests
         var flightComputer = item.Choices.Recommended.Single(choice => choice.Text.Contains("Advanced Flight Computer", StringComparison.Ordinal));
         var planning = new TaskCompletionSource();
         var plans = 0;
+        var firstPlan = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         harness.ViewModel.ChoicePlanMods = services => new ViewModelHarness.HeldModRepository(services.OfflineMods, modId =>
         {
             if (modId != "MeasureTools")
                 return Task.CompletedTask;
 
             Interlocked.Increment(ref plans);
+            firstPlan.TrySetResult();
             return planning.Task;
         });
         var shown = new ConcurrentQueue<string>();
@@ -156,7 +158,7 @@ public sealed class InstallChoicesTests
         };
 
         armory.IsSelected = false;
-        await ViewModelHarness.WaitUntilAsync(() => Volatile.Read(ref plans) == 1);
+        await firstPlan.Task.WaitAsync(TimeSpan.FromSeconds(30));
         flightComputer.IsSelected = false;
         armory.IsSelected = true;
         planning.SetResult();
@@ -195,15 +197,15 @@ public sealed class InstallChoicesTests
         using var harness = await CreateWithGameAsync(MeasureToolsDepends("""[{ "id": "AdvancedFlightComputer", "kind": "required", "source": "authored" }, { "id": "KSArmory", "kind": "recommends", "source": "authored" }]"""));
         var item = await InstallMeasureToolsAsync(harness);
         var planning = new TaskCompletionSource();
-        var lookups = 0;
+        var lookingUp = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         harness.SpaceDock.VersionLookup = _ =>
         {
-            Interlocked.Increment(ref lookups);
+            lookingUp.TrySetResult();
             return planning.Task;
         };
 
         var confirm = item.ConfirmInstallCommand.ExecuteAsync(null);
-        await ViewModelHarness.WaitUntilAsync(() => Volatile.Read(ref lookups) > 0);
+        await lookingUp.Task.WaitAsync(TimeSpan.FromSeconds(30));
         item.Choices!.Recommended.Single().IsSelected = false;
         planning.SetResult();
         await confirm;
@@ -368,7 +370,7 @@ public sealed class InstallChoicesTests
         Assert.Null(row.Choices);
         Assert.Null(row.InstallWarning);
         Assert.Equal(harness.Localization.FormatInstallAlsoAdds("library 1.3.2"), row.AddedModsText);
-        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", row.ConfirmInstallText);
+        Assert.Equal(SizedText(harness, 38_000_000), row.ConfirmInstallText);
         Assert.Empty(await ModIdsAsync(harness, instance));
         Assert.DoesNotContain(harness.Requests, uri => uri.Host == ArchiveHost);
     }
@@ -535,7 +537,7 @@ public sealed class InstallChoicesTests
         Assert.True(item.IsConfirmingInstall);
         Assert.Null(item.InstallWarning);
         Assert.Equal(harness.Localization.FormatInstallAlsoAdds("KSArmory 0.8.44"), item.AddedModsText);
-        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(41_782 + 985_743)})", item.ConfirmInstallText);
+        Assert.Equal(SizedText(harness, MeasureToolsSize + ArmorySize), item.ConfirmInstallText);
         Assert.DoesNotContain(harness.Requests, uri => uri.Host is "github.com" or "spacedock.info");
 
         var raised = false;

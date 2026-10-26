@@ -72,19 +72,17 @@ public static class DropdownAnimation
     private static void OnDropDownOpened(object? sender, EventArgs e)
     {
         if (sender is ComboBox box)
-            FadeIn(PopupOf(box), PlacementMode.Bottom);
+            FadeIn(FindPopup(box), PlacementMode.Bottom);
     }
 
-    private static Popup? PopupOf(Control owner) => Popped(owner);
-
-    private static Popup? Popped(Visual visual)
+    private static Popup? FindPopup(Visual visual)
     {
         if (visual is Popup popup)
             return popup;
 
         foreach (var child in visual.GetVisualChildren())
         {
-            if (Popped(child) is { } found)
+            if (FindPopup(child) is { } found)
                 return found;
         }
 

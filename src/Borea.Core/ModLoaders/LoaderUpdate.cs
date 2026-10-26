@@ -1,4 +1,5 @@
 using Borea.Core.Game;
+using Borea.Core.Launch;
 using Borea.Core.Mods;
 
 namespace Borea.Core.ModLoaders;
@@ -21,13 +22,18 @@ public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion,
 
     /// <param name="installation">The recorded loader, or null when it is not installed.</param>
     /// <param name="game">The installed game. Null rates nothing and offers the newest release of the channel.</param>
+    /// <param name="need">
+    /// What the mods of an instance accept. A release outside that range is never offered, and a range that
+    /// is empty limits nothing. Null offers without that limit.
+    /// </param>
     public static async Task<LoaderUpdate> FindAsync(
         IModRepository mods,
         ReleaseChannel channel,
         string loaderId,
         LoaderInstallation? installation,
         GameVersion? game,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        NeededLoader? need = null)
     {
         ArgumentNullException.ThrowIfNull(mods);
 
@@ -54,6 +60,7 @@ public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion,
             var release = await mods.GetReleaseAsync(loaderId, candidate, cancellationToken).ConfigureAwait(false);
             if (release is { IsOffered: true }
                 && channel.Includes(release.ReleaseStatus)
+                && (need is null || need.HasConflict || need.Accepts(candidate))
                 && Compatibility.Evaluate(release, game) != GameCompatibility.Incompatible)
             {
                 offer = release;
@@ -62,5 +69,32 @@ public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion,
         }
 
         return new LoaderUpdate(loaderId, installedVersion, compatibility, offer, needsNewerGame);
+    }
+
+    /// <summary>
+    /// True when the index rates the recorded release incompatible with the game and does not rate
+    /// <paramref name="release"/> so. An install of <paramref name="release"/> then moves the record also to a lower
+    /// version, because an older Borea starts the recorded version and it cannot start the game.
+    /// </summary>
+    /// <param name="record">The recorded loader, or null when nothing is recorded.</param>
+    /// <param name="game">The installed game. Null rates nothing, so the result is false.</param>
+    public static async Task<bool> ReplacesUnfitRecordAsync(
+        IModRepository mods,
+        LoaderInstallation? record,
+        ModVersionMetadata release,
+        GameVersion? game,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(mods);
+        ArgumentNullException.ThrowIfNull(release);
+
+        if (record?.Version is not { } recorded || recorded == release.Version || Compatibility.Evaluate(release, game) == GameCompatibility.Incompatible)
+            return false;
+
+        while (mods is ReleaseChannelModRepository channelled)
+            mods = channelled.Inner;
+
+        return await mods.GetReleaseAsync(release.ModId, recorded, cancellationToken).ConfigureAwait(false) is { } recordedRelease
+            && Compatibility.Evaluate(recordedRelease, game) == GameCompatibility.Incompatible;
     }
 }

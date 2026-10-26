@@ -14,7 +14,6 @@ public static class ListingArchive
     /// <summary>The stamper reads a mod.toml of at most this many bytes.</summary>
     public const long ModTomlLimit = 1024 * 1024;
 
-    /// <summary>Reads the facts of a release archive.</summary>
     /// <param name="installRoot">
     /// The install root that the listing authors, or null when the stamper derives it. The mod.toml of that root gives the
     /// dependencies, as the stamper reads it.

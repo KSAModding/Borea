@@ -1,3 +1,6 @@
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Composition;
 using Borea.Core.Instances;
@@ -28,11 +31,11 @@ public sealed class InstanceLoaderTests
         Assert.Contains("Advanced Flight Computer", row.NeededByText);
         Assert.DoesNotContain("AdvancedFlightComputer", row.NeededByText);
         Assert.Null(row.StatusToolTip);
-        Assert.False(row.CanFix);
+        Assert.False(row.CanInstall);
     }
 
     [Fact]
-    public async Task OpenInstance_InstalledVersionIsTooOld_SaysSoAndLeadsToTheSettings()
+    public async Task OpenInstance_InstalledVersionIsTooOld_SaysSoAndOffersTheReleaseTheModsAccept()
     {
         using var harness = await CreateAsync(starMap: "0.4.5");
         await OpenWithAsync(harness, "KSArmory");
@@ -40,7 +43,7 @@ public sealed class InstanceLoaderTests
         var row = Assert.Single(harness.ViewModel.InstanceLoader!.Rows);
         Assert.Equal(InstanceLoaderState.WrongVersion, row.State);
         Assert.Equal(harness.Localization.FormatInstanceLoaderWrongVersion("0.4.5"), row.StatusText);
-        Assert.True(row.CanFix);
+        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), row.UpdateText);
     }
 
     [Fact]
@@ -52,7 +55,7 @@ public sealed class InstanceLoaderTests
         var row = Assert.Single(harness.ViewModel.InstanceLoader!.Rows);
         Assert.Equal(InstanceLoaderState.NotInstalled, row.State);
         Assert.Equal(harness.Localization.InstanceLoaderNotInstalled, row.StatusText);
-        Assert.True(row.CanFix);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderInstall("0.4.6"), row.InstallText);
     }
 
     [Fact]
@@ -63,9 +66,13 @@ public sealed class InstanceLoaderTests
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
 
+        // the row of the loader that starts the instance says it, so the section has no line of its own
         var section = harness.ViewModel.InstanceLoader!;
-        Assert.Empty(section.Rows);
-        Assert.Equal(harness.Localization.InstanceLoaderNone, section.NoneText);
+        var row = Assert.Single(section.Rows);
+        Assert.Null(section.NoneText);
+        Assert.Equal(harness.Localization.InstanceLoaderNone, row.NoneText);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderAutomatic("0.4.7"), row.ModeText);
+        Assert.Null(row.RangeText);
     }
 
     [Fact]
@@ -84,18 +91,6 @@ public sealed class InstanceLoaderTests
         Assert.Equal("StarMap", viewModel.SelectedContent?.ModId);
         Assert.True(viewModel.IsContentFromInstance);
         Assert.Equal(instance.InstanceId, viewModel.ContentReturnInstance?.InstanceId);
-    }
-
-    [Fact]
-    public async Task OpenLoaderSettings_OpensTheGameTabOfTheSettings()
-    {
-        using var harness = await CreateAsync(starMap: null);
-        await OpenWithAsync(harness, "AdvancedFlightComputer");
-
-        await harness.ViewModel.OpenLoaderSettingsCommand.ExecuteAsync(null);
-
-        Assert.True(harness.ViewModel.IsSettingsOpen);
-        Assert.True(harness.ViewModel.IsGameTab);
     }
 
     [Fact]
@@ -135,6 +130,119 @@ public sealed class InstanceLoaderTests
         Assert.Equal(harness.Localization.InstanceLoaderNotInIndex, row.NoPageText);
     }
 
+    [Fact]
+    public async Task OpenInstance_NoModsAndNoLoaderInstalled_ShowsTheLoaderThatWouldStartItWithAnInstallLink()
+    {
+        using var harness = await CreateWithReleasesAsync(starMap: null);
+        await OpenEmptyAsync(harness);
+
+        var row = Assert.Single(harness.ViewModel.InstanceLoader!.Rows);
+        Assert.Equal("StarMap", row.Name);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderAutomatic("0.4.8"), row.ModeText);
+        Assert.False(row.IsPinned);
+        Assert.Equal(InstanceLoaderState.NotInstalled, row.State);
+        Assert.True(row.CanInstall);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderInstall("0.4.8"), row.InstallText);
+    }
+
+    [Fact]
+    public async Task SaveLoaderSetting_PinnedToAnInstalledVersion_SavesThePinAndTheRowShowsIt()
+    {
+        using var harness = await CreateWithReleasesAsync(starMap: "0.4.7");
+        await OpenEmptyAsync(harness);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.SelectedInstance!.BeginEditLoaderSettingCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsLoaderSettingModalOpen);
+        Assert.False(viewModel.ShowLoaderSettingLoaders);
+        Assert.True(viewModel.IsLoaderSettingAutomatic);
+        Assert.Equal(["0.4.8", "0.4.7", "0.4.6"], viewModel.LoaderSettingReleases.Select(choice => choice.VersionText));
+        viewModel.IsLoaderSettingPinned = true;
+        viewModel.SelectedLoaderSettingRelease = viewModel.LoaderSettingReleases.Single(choice => choice.VersionText == "0.4.7");
+        Assert.Equal(harness.Localization.LibrarySave, viewModel.LoaderSettingActionText);
+
+        await viewModel.SaveLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsLoaderSettingModalOpen);
+        var saved = await harness.Services.Instances.GetByIdAsync(viewModel.SelectedInstance!.InstanceId);
+        Assert.Equal(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")), saved!.Loader);
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        Assert.True(row.IsPinned);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderPinned("0.4.7"), row.ModeText);
+        Assert.False(row.CanUpdate);
+    }
+
+    [Fact]
+    public async Task SaveLoaderSetting_PinnedToAMissingVersion_InstallsItBeforeItSaves()
+    {
+        using var harness = await CreateWithReleasesAsync(starMap: null);
+        await OpenEmptyAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.SelectedInstance!.BeginEditLoaderSettingCommand.ExecuteAsync(null);
+        viewModel.IsLoaderSettingPinned = true;
+        viewModel.SelectedLoaderSettingRelease = viewModel.LoaderSettingReleases.Single(choice => choice.VersionText == "0.4.7");
+        Assert.Equal(harness.Localization.InstanceLoaderSaveAndInstall, viewModel.LoaderSettingActionText);
+
+        await viewModel.SaveLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SetupError);
+        Assert.Single(harness.Requests, uri => uri.AbsoluteUri == DownloadUrl("0.4.7"));
+        Assert.NotNull(InstalledLoaderVersion.Find(await harness.Services.LoaderVersions.ListAsync(), "StarMap", ModVersion.Parse("0.4.7")));
+        var saved = await harness.Services.Instances.GetByIdAsync(viewModel.SelectedInstance!.InstanceId);
+        Assert.Equal(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")), saved!.Loader);
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        Assert.Equal(InstanceLoaderState.Installed, row.State);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderPinned("0.4.7"), row.ModeText);
+    }
+
+    [Fact]
+    public async Task SaveLoaderSetting_PinnedToAnOlderMissingVersion_InstallsItAndKeepsTheRecord()
+    {
+        using var harness = await CreateWithReleasesAsync(starMap: "0.4.8");
+        await OpenEmptyAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.SelectedInstance!.BeginEditLoaderSettingCommand.ExecuteAsync(null);
+        viewModel.IsLoaderSettingPinned = true;
+        viewModel.SelectedLoaderSettingRelease = viewModel.LoaderSettingReleases.Single(choice => choice.VersionText == "0.4.7");
+
+        await viewModel.SaveLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SetupError);
+        Assert.NotNull(InstalledLoaderVersion.Find(await harness.Services.LoaderVersions.ListAsync(), "StarMap", ModVersion.Parse("0.4.7")));
+
+        // the record is what an older Borea starts for every instance, so a pin of one instance leaves it on 0.4.8
+        var record = (await harness.Services.SettingsRepository.GetAsync())!.LoaderInstallations["StarMap"];
+        Assert.Equal(ModVersion.Parse("0.4.8"), record.Version);
+        Assert.Equal(harness.Services.Paths.GetLoaderVersionDirectoryPath("StarMap", ModVersion.Parse("0.4.8")), record.DirectoryPath);
+    }
+
+    [Fact]
+    public async Task OpenLoaderSetting_PinnedToAMissingVersionOutsideTheChannel_SelectsThatPinAndSaveKeepsIt()
+    {
+        using var harness = await CreateWithReleasesAsync(starMap: null, testing: "0.4.7");
+        var created = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.UpdateAsync(created.InstanceId, instance =>
+        {
+            instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+            return true;
+        });
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.SelectedInstance!.BeginEditLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLoaderSettingPinned);
+        Assert.Equal("0.4.7", viewModel.SelectedLoaderSettingRelease?.VersionText);
+        Assert.Equal(harness.Localization.InstanceLoaderSaveAndInstall, viewModel.LoaderSettingActionText);
+
+        await viewModel.SaveLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SetupError);
+        var saved = await harness.Services.Instances.GetByIdAsync(created.InstanceId);
+        Assert.Equal(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")), saved!.Loader);
+    }
+
     private static Instance InstanceWith(params InstalledMod[] mods) =>
         Instance.FromExisting(Guid.NewGuid(), "Main", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, [], isFavorite: false);
 
@@ -164,6 +272,75 @@ public sealed class InstanceLoaderTests
 
     private static string Loader(BoreaServices services) =>
         Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Loaders", "StarMap")).FullName;
+
+    private static readonly byte[] StarMapArchive = CreateStarMapArchive();
+
+    private static string DownloadUrl(string version) => $"https://github.com/StarMapLoader/StarMap/releases/download/{version}/StarMap-{version}.zip";
+
+    /// <summary>
+    /// A game folder, StarMap 0.4.6 to 0.4.8 in the index with their downloads, and <paramref name="starMap"/> recorded
+    /// with its launch file. The release <paramref name="testing"/>, when given, is a testing release.
+    /// </summary>
+    private static Task<ViewModelHarness> CreateWithReleasesAsync(string? starMap, string? testing = null) =>
+        ViewModelHarness.CreateAsync(
+            async services =>
+            {
+                var root = Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!;
+                var settings = services.Settings.WithGameDirectory(Directory.CreateDirectory(Path.Combine(root, "Game")).FullName);
+                if (starMap is not null)
+                {
+                    var loader = Loader(services);
+                    File.WriteAllText(Path.Combine(loader, "StarMap.exe"), string.Empty);
+                    settings = settings.WithLoaderInstallation("StarMap", new LoaderInstallation(loader, ModVersion.Parse(starMap), rawVersion: null, isAdopted: false));
+                }
+
+                await services.SettingsRepository.SaveAsync(settings);
+            },
+            respond: request => request.RequestUri?.AbsoluteUri is { } uri && (uri == DownloadUrl("0.4.7") || uri == DownloadUrl("0.4.8"))
+                ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(StarMapArchive) }
+                : null,
+            editSnapshot: json => WithStarMapReleases(json, testing));
+
+    /// <summary>Adds StarMap 0.4.7 and 0.4.8 beside 0.4.6, for the same game builds.</summary>
+    private static string WithStarMapReleases(string json, string? testing)
+    {
+        var root = JsonNode.Parse(json)!;
+        var releases = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "StarMap")!["releases"]!.AsArray();
+        var first = releases.Single()!;
+        foreach (var version in new[] { "0.4.7", "0.4.8" })
+        {
+            var release = first.DeepClone();
+            release["version"] = version;
+            release["download"]!["url"] = DownloadUrl(version);
+            release["download"]!["sha256"] = Convert.ToHexString(SHA256.HashData(StarMapArchive));
+            release["download"]!["size"] = StarMapArchive.Length;
+            if (version == testing)
+                release["release_status"] = "testing";
+            releases.Add(release);
+        }
+
+        return root.ToJsonString();
+    }
+
+    /// <summary>The launch file and the assembly of a StarMap release.</summary>
+    private static byte[] CreateStarMapArchive()
+    {
+        using var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            archive.CreateEntry("StarMap.exe");
+            archive.CreateEntry("StarMap.dll");
+        }
+
+        return buffer.ToArray();
+    }
+
+    private static async Task OpenEmptyAsync(ViewModelHarness harness)
+    {
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
+    }
 
     private static async Task OpenWithAsync(ViewModelHarness harness, params string[] modIds)
     {

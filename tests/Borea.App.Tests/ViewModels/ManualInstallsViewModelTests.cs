@@ -85,6 +85,8 @@ public sealed class ManualInstallsViewModelTests
         var replaced = WriteForeignMod(harness, instance, "KSArmory");
         var idle = WriteForeignMod(harness, instance, "LocalOnly");
         await OpenAsync(harness, "Main");
+        // the update check and the size walk of the page read in the mods folder, and Windows does not move a folder that is open
+        await harness.WhenIdleAsync();
         var busy = viewModel.ManualInstallItems.Single(item => item.FolderName == "KSArmory");
         busy.IsInstalling = true;
         // a replace moves the folder aside while it installs

@@ -163,7 +163,7 @@ public sealed class InstanceGameBuildTests
 
     /// <summary>
     /// The settings point at build 5117 and the library keeps build 0.4.6.0, and each build lists its own content.
-    /// The newest MeasureTools release needs 5117, and the one before it fits every build. StarMap is installed.
+    /// The newest MeasureTools release needs 5117, and the one before it fits every build. StarMap 0.4.6 is installed and fits every build.
     /// </summary>
     private static Task<ViewModelHarness> CreateWithKeptBuildAsync(IProcessStarter? processStarter = null) =>
         ViewModelHarness.CreateAsync(
@@ -191,6 +191,12 @@ public sealed class InstanceGameBuildTests
                 releases[0]!["game_min_revision"] = 5117;
                 releases[1]!["game_min"] = "0.4.6.0";
                 releases[1]!["game_min_revision"] = 0;
+
+                // a launch rates the loader version against the build of the instance, so the installed StarMap must fit the kept build too
+                var starMap = root["listings"]!.AsArray().Single(listing => (string?)listing!["id"] == "StarMap")!["releases"]!.AsArray()
+                    .Single(release => (string?)release!["version"] == "0.4.6")!;
+                starMap["game_min"] = "0.4.6.0";
+                starMap["game_min_revision"] = 0;
                 return root.ToJsonString();
             });
 

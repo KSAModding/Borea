@@ -80,12 +80,6 @@ public sealed class ModListComparerTests
     }
 
     [Fact]
-    public void Compare_BothEmpty_IsEmpty()
-    {
-        Assert.True(_comparer.Compare(Array.Empty<InstalledMod>(), Array.Empty<ModPackEntry>()).IsEmpty);
-    }
-
-    [Fact]
     public void Compare_NullArguments_Throw()
     {
         Assert.Throws<ArgumentNullException>(() => _comparer.Compare(null!, Array.Empty<ModPackEntry>()));

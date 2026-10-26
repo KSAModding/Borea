@@ -2,7 +2,6 @@ using System;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 
 namespace Borea.App.Views;
 

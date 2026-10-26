@@ -284,6 +284,52 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task RoundTrip_PersistsAPinnedLoader_AndAnAutomaticLoaderWritesNoKey()
+    {
+        var instance = (await _repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        Assert.DoesNotContain(File.ReadAllLines(path), line => line.StartsWith("Loader", StringComparison.Ordinal));
+
+        await _repository.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+            return true;
+        });
+
+        var reloaded = await new FileInstanceRepository(_pathProvider).GetByIdAsync(instance.InstanceId);
+        Assert.Equal(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")), reloaded!.Loader);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_RecordWithAPinnedLoader_ReadsInABuildThatDoesNotKnowIt()
+    {
+        var instance = (await _repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
+        instance.AddMod(new InstalledMod("helper-lib", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, MetadataFixtures.MinimalRelease("helper-lib", "1.0.0")));
+        instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+        await _repository.SaveAsync(instance);
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        // the older build must meet the keys, or the read below proves nothing
+        Assert.Contains(File.ReadAllLines(path), line => line.StartsWith("LoaderVersion = \"0.4.7\"", StringComparison.Ordinal));
+
+        var older = await TomlFileStore.ReadAsync<RecordWithoutDetachedDto>(path);
+
+        Assert.Equal((instance.InstanceId.ToString(), "Custom"), (older!.InstanceId, older.SourceType));
+        Assert.Equal(("helper-lib", "1.0.0"), (Assert.Single(older.Mods).ModId, older.Mods[0].Version));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_HandEditedLoaderVersionThatDoesNotParse_ReadsAsAutomatic()
+    {
+        var instance = (await _repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        await File.WriteAllTextAsync(path, "LoaderId = \"StarMap\"\nLoaderVersion = \"latest\"\n" + await File.ReadAllTextAsync(path));
+
+        var all = await new FileInstanceRepository(_pathProvider).GetAllAsync();
+
+        Assert.Equal(LoaderSetting.Automatic, Assert.Single(all).Loader);
+    }
+
+    [Fact]
     public async Task CreateAsync_ThrowsWhenNameAlreadyTaken()
     {
         await _repository.CreateAsync("Duplicate Name", InstanceSource.Custom.Value);

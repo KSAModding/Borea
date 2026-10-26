@@ -3,7 +3,8 @@ using Borea.Core.Mods;
 namespace Borea.Core.ModLoaders;
 
 /// <summary>
-/// The loader installation Borea records for launch, update, and uninstall.
+/// The one version of a loader that Borea records in its settings. An older Borea launches, updates, and uninstalls only
+/// this version, and the version store lists it with the other installed versions.
 /// </summary>
 public sealed class LoaderInstallation
 {

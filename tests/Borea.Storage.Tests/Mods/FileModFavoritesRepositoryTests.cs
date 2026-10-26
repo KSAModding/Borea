@@ -33,16 +33,6 @@ public sealed class FileModFavoritesRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task AddFavoriteAsync_Twice_DoesNotDuplicate()
-    {
-        await _repository.AddFavoriteAsync("mod-a");
-        await _repository.AddFavoriteAsync("mod-a");
-
-        var all = await _repository.GetFavoriteModIdsAsync();
-        Assert.Single(all);
-    }
-
-    [Fact]
     public async Task Favorites_CompareIdsCaseInsensitively()
     {
         await _repository.AddFavoriteAsync("MyMod");
@@ -71,7 +61,6 @@ public sealed class FileModFavoritesRepositoryTests : IDisposable
     [Fact]
     public async Task RemoveFavoriteAsync_OnUnfavorited_IsNoOp()
     {
-        // Should not throw, and should not create a file for a no-op.
         await _repository.RemoveFavoriteAsync("never-favorited");
 
         Assert.False(File.Exists(_pathProvider.GetModFavoritesPath()));

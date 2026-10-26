@@ -41,9 +41,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
     {
         var current = await InstallAsync(Release("1.0.0"), "old", enabled);
         _downloader.Bytes = Archive("new");
-        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
 
-        var result = await replacer.ReplaceAsync(_instanceId, current, Release("1.1.0"));
+        var result = await Replacer.ReplaceAsync(_instanceId, current, Release("1.1.0"));
 
         Assert.Equal(ModVersion.Parse("1.1.0"), result.Replacement.Version);
         Assert.Equal("new", File.ReadAllText(Path.Combine(ModFolder, "value.txt")));
@@ -61,7 +60,7 @@ public sealed class FileModReplacerTests : IAsyncLifetime
         var current = Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods);
         _downloader.Bytes = Archive("again");
 
-        await new FileModReplacer(_paths, _downloader, _instances, _state).ReplaceAsync(_instanceId, current, Release("1.0.0"));
+        await Replacer.ReplaceAsync(_instanceId, current, Release("1.0.0"));
 
         Assert.True(Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods).IsPinned);
     }
@@ -71,9 +70,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
     {
         var current = await InstallAsync(Release("1.0.0"), "old", enabled: true);
         _downloader.Bytes = TestArchives.Build((ModId + "/value.txt", "new"));
-        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => replacer.ReplaceAsync(_instanceId, current, Release("1.1.0")));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Replacer.ReplaceAsync(_instanceId, current, Release("1.1.0")));
 
         Assert.Equal("old", File.ReadAllText(Path.Combine(ModFolder, "value.txt")));
         Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods).Version);
@@ -84,9 +82,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
     {
         var current = await InstallAsync(Release("1.0.0"), "old", enabled: true);
         var stale = new InstalledMod(ModId, current.Version, current.Reason, current.InstalledAt, current.Metadata, current.Checksum, ModInstallOwnership.Borea, "different-token");
-        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => replacer.ReplaceAsync(_instanceId, stale, Release("1.1.0")));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Replacer.ReplaceAsync(_instanceId, stale, Release("1.1.0")));
         Assert.Equal("old", File.ReadAllText(Path.Combine(ModFolder, "value.txt")));
     }
 
@@ -95,9 +92,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
     {
         var metadata = Release("1.0.0");
         var foreign = new InstalledMod(ModId, metadata.Version, InstallReason.Manual, DateTimeOffset.UtcNow, metadata, ownership: ModInstallOwnership.Foreign);
-        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => replacer.ReplaceAsync(_instanceId, foreign, Release("1.1.0")));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Replacer.ReplaceAsync(_instanceId, foreign, Release("1.1.0")));
     }
 
     [Fact]
@@ -106,9 +102,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
         var current = await InstallAsync(Release("1.0.0"), "old", enabled: true);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => replacer.ReplaceAsync(_instanceId, current, Release("1.1.0"), cancellationToken: cancellation.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Replacer.ReplaceAsync(_instanceId, current, Release("1.1.0"), cancellationToken: cancellation.Token));
         Assert.Equal("old", File.ReadAllText(Path.Combine(ModFolder, "value.txt")));
     }
 
@@ -163,9 +158,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
         var current = await InstallAsync(Release("1.0.0"), "old", enabled: true);
         var expected = InstallPlanningState.Capture((await _instances.GetByIdAsync(_instanceId))!);
         _downloader.Bytes = Archive("new");
-        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
 
-        var result = await replacer.ReplaceGuardedAsync(_instanceId, current, Release("1.1.0"), expected);
+        var result = await Replacer.ReplaceGuardedAsync(_instanceId, current, Release("1.1.0"), expected);
 
         Assert.True(result.State.Matches((await _instances.GetByIdAsync(_instanceId))!));
         Assert.Equal(ModVersion.Parse("1.1.0"), result.Result.Replacement.Version);
@@ -184,9 +178,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
                 instance.ReplaceForeignMods([new ForeignMod("foreign-dependency")]);
                 return true;
             }).GetAwaiter().GetResult();
-        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => replacer.ReplaceGuardedAsync(_instanceId, current, Release("1.1.0"), expected));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Replacer.ReplaceGuardedAsync(_instanceId, current, Release("1.1.0"), expected));
 
         Assert.Equal("old", File.ReadAllText(Path.Combine(ModFolder, "value.txt")));
         var saved = await _instances.GetByIdAsync(_instanceId);
@@ -195,6 +188,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
     }
 
     private string ModFolder => Path.Combine(_paths.GetInstanceModsFolder(_instanceId), ModId);
+
+    private FileModReplacer Replacer => new(_paths, _downloader, _instances, _state);
 
     private async Task<InstalledMod> InstallAsync(ModVersionMetadata release, string value, bool enabled)
     {

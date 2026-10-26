@@ -115,8 +115,7 @@ public sealed class FileForeignModAdopterTests : IAsyncLifetime
         var result = await _adopter.AdoptArchiveAsync(_instanceId, "LocalMod", archive);
 
         Assert.False(result.Matched);
-        Assert.NotNull(result.ForeignMod);
-        Assert.Null(result.ForeignMod.Version);
+        Assert.Null(result.ForeignMod!.Version);
         Assert.Null(result.InstalledMod);
         var saved = await _instances.GetByIdAsync(_instanceId);
         Assert.Empty(saved!.Mods);

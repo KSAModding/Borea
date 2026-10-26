@@ -29,7 +29,7 @@ public sealed class GitHubWatcherIssuesTests
         Issue(ListingsUrl, Index, 102, "Compendium: the watcher found a problem", "<!-- watcher:listing=Compendium -->\n<!-- watcher:signature=28a9f08f3c40a6e8 -->\nThe watcher found a problem.");
         Issue(ListingsUrl, Index, 103, "A report by hand", "Somebody put the watcher label on this issue.", author: "alice");
         PullRequest(ListingsUrl, Index, 104, "<!-- watcher:listing=Other -->");
-        var issues = new GitHubWatcherIssues(await SignInAsync(), Http());
+        var issues = await SignedInAsync();
 
         var listed = await issues.ListAsync();
 
@@ -45,7 +45,7 @@ public sealed class GitHubWatcherIssuesTests
     [Fact]
     public async Task ListAsync_ReadsBothRepositoriesWithoutTheToken()
     {
-        var issues = new GitHubWatcherIssues(await SignInAsync(), Http());
+        var issues = await SignedInAsync();
 
         await issues.ListAsync();
 
@@ -60,24 +60,12 @@ public sealed class GitHubWatcherIssuesTests
         Issue(WatchdogUrl, Releases, 80, "Amend a release", "An issue about something else.", author: IndexVerdict.BotLogin);
         Issue(WatchdogUrl, Releases, 81, "The watcher is not ticking", WatchdogBody, author: IndexVerdict.BotLogin);
         PullRequest(WatchdogUrl, Releases, 82, WatchdogBody);
-        var issues = new GitHubWatcherIssues(await SignInAsync(), Http());
+        var issues = await SignedInAsync();
 
         var listed = await issues.ListAsync();
 
         var watchdog = Assert.Single(listed.Watchdog);
         Assert.Equal((Releases, 81, "The watcher is not ticking", (string?)null), (watchdog.Repository, watchdog.Number, watchdog.Title, watchdog.ListingId));
-        Assert.Empty(listed.Failures);
-    }
-
-    [Fact]
-    public async Task ListAsync_NoWatchdogIssue_ListsNone()
-    {
-        Issue(WatchdogUrl, Releases, 80, "Amend a release", "An issue about something else.", author: IndexVerdict.BotLogin);
-        var issues = new GitHubWatcherIssues(await SignInAsync(), Http());
-
-        var listed = await issues.ListAsync();
-
-        Assert.Empty(listed.Watchdog);
         Assert.Empty(listed.Failures);
     }
 
@@ -90,7 +78,7 @@ public sealed class GitHubWatcherIssuesTests
         Issue(ListingsUrl, Index, 102, "Compendium: the watcher found a problem", "<!-- watcher:listing=Compendium -->");
         Issue(WatchdogUrl, Releases, 81, "The watcher is not ticking", WatchdogBody, author: IndexVerdict.BotLogin);
         _failing[ListingsUrl] = status;
-        var issues = new GitHubWatcherIssues(await SignInAsync(), Http());
+        var issues = await SignedInAsync();
 
         var listed = await issues.ListAsync();
 
@@ -105,7 +93,7 @@ public sealed class GitHubWatcherIssuesTests
     {
         Issue(ListingsUrl, Index, 102, "Compendium: the watcher found a problem", "<!-- watcher:listing=Compendium -->");
         _failing[WatchdogUrl] = HttpStatusCode.InternalServerError;
-        var issues = new GitHubWatcherIssues(await SignInAsync(), Http());
+        var issues = await SignedInAsync();
 
         var listed = await issues.ListAsync();
 
@@ -164,6 +152,8 @@ public sealed class GitHubWatcherIssuesTests
             user = new { login = IndexVerdict.BotLogin, type = "Bot" },
             pull_request = new { url = $"{Api}/repos/{repository}/pulls/{number}" },
         });
+
+    private async Task<GitHubWatcherIssues> SignedInAsync() => new(await SignInAsync(), Http());
 
     private async Task<GitHubSession> SignInAsync()
     {

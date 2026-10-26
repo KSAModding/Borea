@@ -14,6 +14,7 @@ using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Updates;
 using Borea.Storage.Game;
+using Borea.Storage.ModLoaders;
 
 namespace Borea.Cli;
 
@@ -110,6 +111,8 @@ internal sealed class CliServices : IDisposable
 
     public required ILoaderUninstaller LoaderUninstaller { get; init; }
 
+    public required ILoaderVersionStore LoaderVersions { get; init; }
+
     public required ILauncher Launcher { get; init; }
 
     public required IModPackRepository ModPacks { get; init; }
@@ -169,6 +172,7 @@ internal sealed class CliServices : IDisposable
         ILoaderInstaller? loaderInstaller = null,
         ILoaderAdopter? loaderAdopter = null,
         ILoaderUninstaller? loaderUninstaller = null,
+        ILoaderVersionStore? loaderVersions = null,
         ILauncher? launcher = null,
         IModPackRepository? modPacks = null,
         IModPackRepository? readOnlyModPacks = null,
@@ -228,7 +232,11 @@ internal sealed class CliServices : IDisposable
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
             LoaderConfiguration = loaderConfiguration ?? services.LoaderConfiguration,
-            LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,
+            // The uninstaller refuses on its own while a game runs, so it uses the same game check as the commands.
+            LoaderUninstaller = loaderUninstaller ?? (isGameProcessRunning is null
+                ? services.LoaderUninstaller
+                : new FileLoaderUninstaller(services.SettingsRepository, services.Paths, loaderVersions ?? services.LoaderVersions, isGameProcessRunning)),
+            LoaderVersions = loaderVersions ?? services.LoaderVersions,
             Launcher = launcher ?? services.Launcher,
             ModPacks = modPacks ?? services.ModPacks,
             ReadOnlyModPacks = readOnlyModPacks ?? services.ReadOnlyModPacks,

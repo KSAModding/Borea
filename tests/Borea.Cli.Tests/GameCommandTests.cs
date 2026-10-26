@@ -33,7 +33,7 @@ public sealed class GameCommandTests : IDisposable
     [Fact]
     public async Task Version_PrintsBothBuilds_AndSaysANewerOneIsAvailable()
     {
-        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.8.22.5348"), "2026.8.22.5348") };
+        _host.InstalledVersion = Installed("2026.8.22.5348");
 
         var run = await _host.RunAsync("game", "version");
 
@@ -46,7 +46,7 @@ public sealed class GameCommandTests : IDisposable
     [Fact]
     public async Task Version_InstalledIsTheLatest_SaysItIsCurrent()
     {
-        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.9.7.5402"), "2026.9.7.5402") };
+        _host.InstalledVersion = Installed("2026.9.7.5402");
 
         var run = await _host.RunAsync("game", "version");
 
@@ -56,7 +56,7 @@ public sealed class GameCommandTests : IDisposable
     [Fact]
     public async Task Version_Json_CarriesBothHalves()
     {
-        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.8.22.5348"), "2026.8.22.5348") };
+        _host.InstalledVersion = Installed("2026.8.22.5348");
 
         var run = await _host.RunAsync("game", "version", "--json");
 
@@ -129,7 +129,7 @@ public sealed class GameCommandTests : IDisposable
     [Fact]
     public async Task Version_HostUnreachable_WithAnInstalledBuild_WarnsAndStillAnswers()
     {
-        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.9.7.5402"), "2026.9.7.5402") };
+        _host.InstalledVersion = Installed("2026.9.7.5402");
         _host.LatestVersion.Failure = new HttpRequestException("No such host is known.");
 
         var human = await _host.RunAsync("game", "version");
@@ -227,6 +227,11 @@ public sealed class GameCommandTests : IDisposable
         Assert.Equal("Unknown", document.RootElement.GetProperty("status").GetString());
         Assert.Equal(Enum.GetValues<GameAssumption>().Length, document.RootElement.GetProperty("assumptions").GetArrayLength());
     }
+
+    private static FakeInstalledGameVersionProvider Installed(string version) => new()
+    {
+        Installed = new InstalledGameVersion(GameVersion.Parse(version), version),
+    };
 
     public void Dispose() => _host.Dispose();
 }

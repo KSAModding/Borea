@@ -73,6 +73,11 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+      # The Simplified Chinese rendering tests need a font with Chinese glyphs.
+      - name: Install CJK font for Linux rendering tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-wqy-microhei
       - run: dotnet test Borea.slnx --configuration Release
 
   # One job per platform publishes the App and the CLI.
