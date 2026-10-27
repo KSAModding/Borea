@@ -669,6 +669,39 @@
   <data name="StewardReportNoIssuesPermission" xml:space="preserve">
     <value>GitHub hat die Änderung abgelehnt, vielleicht weil die Borea App noch keine Issues-Berechtigung hat. Antworte stattdessen auf GitHub. Dein Text bleibt hier, damit du ihn kopieren kannst.</value>
   </data>
+  <data name="StewardReportLeavePack" xml:space="preserve">
+    <value>Mod aus dem Modpack nehmen</value>
+  </data>
+  <data name="StewardLeavePackTitleFormat" xml:space="preserve">
+    <value>Eine Mod aus {0} nehmen</value>
+  </data>
+  <data name="StewardLeaveTitleFormat" xml:space="preserve">
+    <value>Jede Version von {0} zurückziehen, die {1} festlegt</value>
+  </data>
+  <data name="StewardLeaveEffect" xml:space="preserve">
+    <value>Jede Version des Modpacks, die die Mod festlegt, wird mit einem eigenen Zustand zurückgezogen, alle in einem Pull Request. Eine zurückgezogene Version bleibt installiert, wo sie ist, und Clients bieten sie nicht mehr an. Der Autor des Modpacks veröffentlicht eine Version ohne die Mod.</value>
+  </data>
+  <data name="StewardLeaveMod" xml:space="preserve">
+    <value>Herauszunehmende Mod</value>
+  </data>
+  <data name="StewardLeaveChooseMod" xml:space="preserve">
+    <value>Wähle die Mod, die laut Meldung aus dem Modpack soll.</value>
+  </data>
+  <data name="StewardLeaveVersionsFormat" xml:space="preserve">
+    <value>Zurückzuziehende Versionen: {0}</value>
+  </data>
+  <data name="StewardLeaveRetractedFormat" xml:space="preserve">
+    <value>Schon zurückgezogen: {0}</value>
+  </data>
+  <data name="StewardLeaveReporterOwnsFormat" xml:space="preserve">
+    <value>{0} besitzt den Eintrag von {1} laut seinem Eigentumsnachweis.</value>
+  </data>
+  <data name="StewardLeaveReporterUnprovenFormat" xml:space="preserve">
+    <value>Der Eigentumsnachweis des Eintrags von {1} nennt {0} nicht. Bestätige über das Forenkonto des Eintrags, dass {0} ihn besitzt, bevor du weitermachst.</value>
+  </data>
+  <data name="StewardLeaveConfirmFormat" xml:space="preserve">
+    <value>Ich habe über das Forenkonto bestätigt, dass {0} {1} besitzt</value>
+  </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>Watcher</value>
   </data>
@@ -851,6 +884,12 @@
   </data>
   <data name="StewardRefusedNotInFile" xml:space="preserve">
     <value>index-status.toml hat diesen Zustand nicht mehr. Lade die Liste neu.</value>
+  </data>
+  <data name="StewardRefusedNotPinnedFormat" xml:space="preserve">
+    <value>Keine Version von {0}, die nicht zurückgezogen ist, legt {1} fest.</value>
+  </data>
+  <data name="StewardRefusedNotConfirmedFormat" xml:space="preserve">
+    <value>Bestätige zuerst über das Forenkonto, dass {0} {1} besitzt.</value>
   </data>
   <data name="StewardErrorSignedOut" xml:space="preserve">
     <value>GitHub hat dich abgemeldet. Melde dich in den Einstellungen wieder an.</value>

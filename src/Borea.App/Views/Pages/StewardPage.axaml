@@ -219,6 +219,7 @@
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardDispute}" Command="{Binding DisputeCommand}" />
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardDelist}" Command="{Binding DelistCommand}" />
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardRetract}" Command="{Binding RetractCommand}" IsVisible="{Binding HasVersion}" />
+                                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportLeavePack}" Command="{Binding LeavePackCommand}" IsVisible="{Binding IsLeavePack}" />
                                                         </WrapPanel>
                                                     </WrapPanel>
                                                 </WrapPanel>

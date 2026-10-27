@@ -337,6 +337,7 @@ internal sealed class GitHubApi
 
         return new GitHubIssue(issue.Number, link, issue.Title, issue.Body, issue.User?.Login, issue.User?.Type, issue.CreatedAt, issue.UpdatedAt)
         {
+            AuthorId = issue.User?.Id,
             IsClosed = issue.State == "closed",
             StateReason = issue.StateReason,
             Closed = issue.ClosedAt,
@@ -583,6 +584,8 @@ internal sealed class GitHubApi
     {
         public string? Login { get; set; }
 
+        public long? Id { get; set; }
+
         public string? Type { get; set; }
     }
 }
@@ -602,6 +605,8 @@ internal sealed record GitHubIssue(int Number, Uri Url, string Title, string? Bo
     public DateTimeOffset? Closed { get; init; }
 
     public int Comments { get; init; }
+
+    public long? AuthorId { get; init; }
 }
 
 /// <param name="Message">GitHub's error message with its details, or null.</param>

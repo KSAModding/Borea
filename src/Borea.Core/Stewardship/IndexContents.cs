@@ -71,4 +71,7 @@ public sealed class IndexContents
         var same = versions.Where(stem => ModVersion.TryParse(stem, out var parsed) && parsed == wanted).Take(2).ToList();
         return same.Count == 1 ? same[0] : null;
     }
+
+    /// <summary>The versions of the pack as its file names spell them, or none when there is no such pack.</summary>
+    public IReadOnlyCollection<string> PackVersions(string id) => _versions.TryGetValue(id, out var versions) ? versions : [];
 }
