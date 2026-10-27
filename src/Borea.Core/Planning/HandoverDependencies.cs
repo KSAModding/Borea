@@ -18,7 +18,7 @@ public sealed record HandoverDependencies(
     /// <summary>Installs what is missing. Null until <see cref="PlanAsync"/> ran, and when nothing is missing.</summary>
     public InstallPlan? Plan { get; init; }
 
-    /// <summary>The mods the plan replaces although Borea does not own their folders, so the plan would fail.</summary>
+    /// <summary>The mods that the plan replaces or would have to replace, although Borea does not own their folders.</summary>
     public IReadOnlyList<string> NotOwned { get; init; } = [];
 
     public bool CanInstallMissing => Plan is { IsReady: true, Operations.Count: > 0 } && NotOwned.Count == 0;
@@ -64,6 +64,7 @@ public sealed record HandoverDependencies(
         var notOwned = plan.Operations
             .Where(operation => instance.Mods.Any(installed => ModIds.Equals(installed.ModId, operation.Release.ModId) && !installed.CanDeleteFiles))
             .Select(operation => operation.Release.ModId)
+            .Concat(plan.Conflicts.Where(conflict => conflict.Kind == PlanningMessageKind.ForeignOwned && !ModIds.Equals(conflict.ModId, mod.ModId)).Select(conflict => conflict.ModId))
             .ToList();
         return this with { Plan = plan, NotOwned = notOwned };
     }
