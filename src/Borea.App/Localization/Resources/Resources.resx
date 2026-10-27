@@ -3088,7 +3088,7 @@
     <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page and open the pull request. A version from the account that owns the pack merges itself.</value>
   </data>
   <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page. The first version of a new pack also adds {1} to the same pull request. A steward accepts a first claim after the checks pass, and the checks of a new GitHub account can wait for a steward to start them.</value>
+    <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page. The first version of a new pack also adds {1} to the same pull request, which merges itself when the checks pass. The checks of a new GitHub account can wait for a steward to start them.</value>
   </data>
   <data name="ListingOwnerFileTextFormat" xml:space="preserve">
     <value>The first version of a new pack also adds {0}, which names your GitHub account as the owner of the pack. When Borea opens the pull request from your account, it writes this file itself. In the browser, add it to the branch of the same pull request with Add file, and put in your GitHub login and the numeric id that https://api.github.com/users/&lt;your GitHub name&gt; shows.</value>
@@ -3157,7 +3157,7 @@
     <value>Borea could not read who owns the pack id. The checks decide after you open the pull request.</value>
   </data>
   <data name="ListingOwnershipFirstClaim" xml:space="preserve">
-    <value>The pack id is free. The pull request claims it for your account, and a steward accepts a first claim after the checks pass.</value>
+    <value>The pack id is free. The pull request claims it for your account, and it merges itself when the checks pass.</value>
   </data>
   <data name="ListingProofOwnerFormat" xml:space="preserve">
     <value>You own {0}.</value>

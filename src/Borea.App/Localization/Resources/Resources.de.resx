@@ -3088,7 +3088,7 @@
     <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein und öffnest den Pull Request. Eine Version von dem Konto, dem das Pack gehört, wird von selbst gemergt.</value>
   </data>
   <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein. Die erste Version eines neuen Packs fügt demselben Pull Request außerdem {1} hinzu. Ein Steward nimmt einen ersten Anspruch an, wenn die Prüfungen bestanden sind, und bei einem neuen GitHub-Konto können die Prüfungen warten, bis ein Steward sie startet.</value>
+    <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein. Die erste Version eines neuen Packs fügt demselben Pull Request außerdem {1} hinzu, und er kann sich selbst mergen, wenn die Prüfungen bestanden sind. Bei einem neuen GitHub-Konto können die Prüfungen warten, bis ein Steward sie startet.</value>
   </data>
   <data name="ListingOwnerFileTextFormat" xml:space="preserve">
     <value>Die erste Version eines neuen Packs fügt auch {0} hinzu, die dein GitHub-Konto als Besitzer des Packs nennt. Wenn Borea den Pull Request von deinem Konto öffnet, schreibt es diese Datei selbst. Im Browser fügst du sie mit Add file zum Branch desselben Pull Requests hinzu und trägst deinen GitHub-Namen und die numerische ID ein, die https://api.github.com/users/&lt;dein GitHub-Name&gt; zeigt.</value>
@@ -3157,7 +3157,7 @@
     <value>Borea konnte nicht lesen, wem die Pack-ID gehört. Die Prüfungen entscheiden, wenn du den Pull Request öffnest.</value>
   </data>
   <data name="ListingOwnershipFirstClaim" xml:space="preserve">
-    <value>Die Pack-ID ist frei. Der Pull Request beansprucht sie für dein Konto, und ein Steward nimmt einen ersten Anspruch an, wenn die Prüfungen bestanden sind.</value>
+    <value>Die Pack-ID ist frei. Der Pull Request beansprucht sie für dein Konto und kann sich selbst mergen, wenn die Prüfungen bestanden sind.</value>
   </data>
   <data name="ListingProofOwnerFormat" xml:space="preserve">
     <value>{0} gehört dir.</value>

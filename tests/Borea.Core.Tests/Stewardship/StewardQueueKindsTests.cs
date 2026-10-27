@@ -25,6 +25,37 @@ public sealed class StewardQueueKindsTests
         Assert.False(hasOtherFiles);
     }
 
+    [Fact]
+    public void Of_FirstPackClaim_CountsItsOwnerRecordAsPartOfThePack()
+    {
+        StewardQueueFile[] claim = [new("packs/my-pack/1.0.0.toml", "added"), new("packs/my-pack/owner.json", "added")];
+
+        var (kinds, hasOtherFiles) = StewardQueueKinds.Of(ContentIndex, ["pack"], claim);
+
+        Assert.Equal([StewardQueueKind.Pack], kinds);
+        Assert.False(hasOtherFiles);
+        Assert.Equal(["packs/my-pack/owner.json"], StewardQueueKinds.FirstClaims(claim));
+    }
+
+    /// <summary>The cases of claims in tools/check_scope.py of content-index: only an added record beside an added version of its own pack is a claim.</summary>
+    [Theory]
+    [InlineData("modified", "added", "packs/my-pack/1.1.0.toml")]
+    [InlineData("removed", "added", "packs/my-pack/1.1.0.toml")]
+    [InlineData("added", "modified", "packs/my-pack/1.0.0.toml")]
+    [InlineData("added", "added", "packs/other-pack/1.0.0.toml")]
+    [InlineData("added", "added", "packs/My-Pack/1.0.0.toml")]
+    [InlineData("added", "added", "listings/my-pack.toml")]
+    public void Of_HandoverOrAnyOtherOwnerRecordChange_IsAnOwnerRecordForASteward(string recordStatus, string documentStatus, string document)
+    {
+        StewardQueueFile[] files = [new(document, documentStatus), new("packs/my-pack/owner.json", recordStatus)];
+
+        var (kinds, hasOtherFiles) = StewardQueueKinds.Of(ContentIndex, [], files);
+
+        Assert.Equal([StewardQueueKind.OwnerRecord], kinds);
+        Assert.False(hasOtherFiles);
+        Assert.Empty(StewardQueueKinds.FirstClaims(files));
+    }
+
     [Theory]
     [InlineData("tools/decide.py")]
     [InlineData(".github/workflows/checks.yml")]
