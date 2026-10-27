@@ -1,13 +1,17 @@
 using Borea.App.ViewModels;
 using Borea.Core.Dependencies;
+using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Storage.Logging;
 
 namespace Borea.App.Tests.ViewModels;
 
 public sealed class ManualInstallsViewModelTests
 {
+    private const string OwnId = ViewModelHarness.FakeSpaceDock.OwnId;
+
     [Fact]
     public void InstanceTabs_AreContentGameDataAndLog()
     {
@@ -308,6 +312,86 @@ public sealed class ManualInstallsViewModelTests
         Assert.Empty(RecoveryFolders(harness, instance));
     }
 
+    [Fact]
+    public async Task Replace_WhileTheInstancePageHoldsAFileOfTheFolder_WaitsForTheReadAndReplaces()
+    {
+        var hold = new FileHold();
+        using var harness = await HoldingHarnessAsync(hold);
+        var viewModel = harness.ViewModel;
+        var (instance, row) = await ConfirmingReplaceWhileHeldAsync(harness, hold);
+
+        var install = row.ConfirmInstallCommand.ExecuteAsync(null);
+        try
+        {
+            await Task.WhenAny(install, Task.Delay(TimeSpan.FromSeconds(1)));
+
+            Assert.False(install.IsCompleted);
+            Assert.True(File.Exists(hold.File));
+        }
+        finally
+        {
+            // the harness waits for the update check when it ends, so a failed assert still lets the read go
+            hold.Release.SetResult();
+        }
+
+        await install;
+
+        Assert.Equal(TaskState.Finished, Assert.Single(viewModel.Tasks.History, task => task.Kind == TaskKind.ManualReplace).State);
+        Assert.False(viewModel.Toasts.Items[^1].IsFailed);
+        var saved = await harness.Services.Instances.GetByIdAsync(instance.InstanceId);
+        Assert.Equal(ModInstallOwnership.Borea, saved!.Mods.Single(mod => mod.ModId == OwnId).Ownership);
+        Assert.Empty(RecoveryFolders(harness, instance));
+        Assert.Empty(viewModel.ManualInstallItems);
+    }
+
+    [Fact]
+    public async Task Replace_WindowClosesWhileItWaitsForTheInstancePage_StopsAtOnceAndKeepsTheFolder()
+    {
+        var hold = new FileHold();
+        using var harness = await HoldingHarnessAsync(hold);
+        var viewModel = harness.ViewModel;
+        var (instance, row) = await ConfirmingReplaceWhileHeldAsync(harness, hold);
+
+        var install = row.ConfirmInstallCommand.ExecuteAsync(null);
+        var stop = viewModel.StopInstallsAsync();
+        var first = await Task.WhenAny(stop, Task.Delay(TimeSpan.FromSeconds(30)));
+        hold.Release.SetResult();
+        await install;
+
+        Assert.Same(stop, first);
+        Assert.Equal(TaskState.Stopped, Assert.Single(viewModel.Tasks.History, task => task.Kind == TaskKind.ManualReplace).State);
+        Assert.True(File.Exists(hold.File));
+        Assert.Empty(RecoveryFolders(harness, instance));
+    }
+
+    [WindowsFact("Only Windows refuses to move a folder while a handle below it is open.")]
+    public async Task Replace_AnotherProgramHoldsAFileOfTheFolder_FailsWithAccessDeniedAndKeepsTheFolder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ContentUpdateTests.ServeArchive);
+        harness.SpaceDock.Releases.Add(ContentUpdateTests.Release("1.0.0"));
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var folder = WriteForeignMod(harness, instance, OwnId);
+        await OpenAsync(harness, "Main");
+        var row = viewModel.ManualInstallItems.Single();
+        await row.BeginReplaceCommand.ExecuteAsync(null);
+        await row.ConfirmReplaceCommand.ExecuteAsync(null);
+
+        IOException denied;
+        using (new FileStream(Path.Combine(folder, "mod.toml"), FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            await row.ConfirmInstallCommand.ExecuteAsync(null);
+            denied = Assert.ThrowsAny<IOException>(() => Directory.Move(folder, folder + "-moved"));
+        }
+
+        Assert.Equal(TaskState.Failed, Assert.Single(viewModel.Tasks.History, task => task.Kind == TaskKind.ManualReplace).State);
+        Assert.True(viewModel.Toasts.Items[^1].IsFailed);
+        Assert.Equal(denied.Message, viewModel.Toasts.Items[^1].Detail);
+        Assert.True(File.Exists(Path.Combine(folder, "mod.toml")));
+        Assert.Empty(RecoveryFolders(harness, instance));
+        Assert.Equal([OwnId], viewModel.ManualInstallItems.Select(item => item.FolderName));
+    }
+
     private static string WriteForeignMod(ViewModelHarness harness, Instance instance, string folderName)
     {
         var folder = Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), folderName);
@@ -326,5 +410,58 @@ public sealed class ManualInstallsViewModelTests
     {
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.Instances.Single(instance => instance.Name == name).OpenCommand.ExecuteAsync(null);
+    }
+
+    private static Task<ViewModelHarness> HoldingHarnessAsync(FileHold hold)
+        => ViewModelHarness.CreateAsync(respond: ContentUpdateTests.ServeArchive, wrapInstallPlanner: inner => new HoldingPlanner(inner, hold));
+
+    /// <summary>
+    /// Opens the instance page with a foreign folder that the update check holds open, and confirms its take-over.
+    /// </summary>
+    private static async Task<(Instance Instance, ManualInstallItem Row)> ConfirmingReplaceWhileHeldAsync(ViewModelHarness harness, FileHold hold)
+    {
+        harness.SpaceDock.Releases.AddRange([ContentUpdateTests.Release("1.0.0"), ContentUpdateTests.Release("1.0.0", modId: "helper")]);
+        var instance = await InstalledContent.AddAsync(harness, "helper", activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        hold.File = Path.Combine(WriteForeignMod(harness, instance, OwnId), "mod.toml");
+        await OpenAsync(harness, "Main");
+        await hold.Held.Task;
+        var row = harness.ViewModel.ManualInstallItems.Single();
+        await row.BeginReplaceCommand.ExecuteAsync(null);
+        await row.ConfirmReplaceCommand.ExecuteAsync(null);
+        return (instance, row);
+    }
+
+    private sealed class FileHold
+    {
+        private int _taken;
+
+        public string File { get; set; } = string.Empty;
+
+        public TaskCompletionSource Held { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool Take() => Interlocked.Exchange(ref _taken, 1) == 0;
+    }
+
+    /// <summary>
+    /// The update check of the instance page plans each mod Borea owns, so the first plan for helper
+    /// holds the file open there until the test releases it, as a slow read of the folder does.
+    /// </summary>
+    private sealed class HoldingPlanner(IInstallPlanner inner, FileHold hold) : IInstallPlanner
+    {
+        public async Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
+        {
+            if (request.Requested.Any(mod => mod.Release.ModId == "helper") && hold.Take())
+            {
+                using (new FileStream(hold.File, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    hold.Held.SetResult();
+                    await hold.Release.Task;
+                }
+            }
+
+            return await inner.PlanAsync(request, cancellationToken);
+        }
     }
 }
