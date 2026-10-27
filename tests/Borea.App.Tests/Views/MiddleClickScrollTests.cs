@@ -37,18 +37,18 @@ public sealed class MiddleClickScrollTests
             var start = page.Point(page.Spacer, 10);
             page.Window.MouseDown(start, MouseButton.Middle);
             page.Window.MouseMove(start + new Point(0, 100), RawInputModifiers.MiddleMouseButton);
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var down = page.Viewer.Offset.Y;
             var cursorWhileHeld = page.Viewer.Cursor;
 
             page.Window.MouseMove(start - new Point(0, 100), RawInputModifiers.MiddleMouseButton);
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var up = page.Viewer.Offset.Y;
 
             page.Window.MouseUp(start - new Point(0, 100), MouseButton.Middle);
             var released = page.Viewer.Offset.Y;
             page.Window.MouseMove(start + new Point(0, 200));
-            await FramesAsync();
+            await FramesAsync(page.Window);
             return (down, up, released, page.Viewer.Offset.Y, cursorWhileHeld, page.Viewer.Cursor, page.Pointer?.Captured);
         });
 
@@ -68,7 +68,7 @@ public sealed class MiddleClickScrollTests
             var start = page.Point(page.Spacer, 10);
             page.Window.MouseDown(start, MouseButton.Middle);
             page.Window.MouseMove(start + new Point(0, MiddleClickScroll.DeadZone - 2), RawInputModifiers.MiddleMouseButton);
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var offset = page.Viewer.Offset.Y;
             page.Window.MouseUp(start, MouseButton.Middle);
             return offset;
@@ -87,13 +87,13 @@ public sealed class MiddleClickScrollTests
             var start = page.Point(page.Spacer, 10);
             page.Window.MouseDown(start, MouseButton.Middle);
             page.Window.MouseMove(start + new Point(0, 100), RawInputModifiers.MiddleMouseButton);
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var before = page.Viewer.Offset.Y;
 
             page.Window.KeyPress(Key.Escape, RawInputModifiers.MiddleMouseButton, PhysicalKey.Escape, null);
             var ended = page.Viewer.Offset.Y;
             var capture = page.Pointer?.Captured;
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var after = page.Viewer.Offset.Y;
             page.Window.MouseUp(start, MouseButton.Middle);
             return (before, ended, after, escapes, capture);
@@ -113,14 +113,14 @@ public sealed class MiddleClickScrollTests
             var start = page.Point(page.Spacer, 10);
             page.Window.MouseDown(start, MouseButton.Middle);
             page.Window.MouseMove(start + new Point(0, 100), RawInputModifiers.MiddleMouseButton);
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var before = page.Viewer.Offset.Y;
 
             // no input and no frame runs between the capture and the check
             page.Pointer!.Capture(page.Outside);
             var cursorAtOnce = page.Viewer.Cursor;
             var ended = page.Viewer.Offset.Y;
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var after = page.Viewer.Offset.Y;
             page.Window.MouseUp(start, MouseButton.Middle);
             return (before, cursorAtOnce, after, ended);
@@ -146,14 +146,14 @@ public sealed class MiddleClickScrollTests
             var start = page.Point(page.Spacer, 10);
             page.Window.MouseDown(start, MouseButton.Middle);
             page.Window.MouseMove(start + new Point(0, 100), RawInputModifiers.MiddleMouseButton);
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var before = page.Viewer.Offset.Y;
 
             steal = true;
             page.Window.MouseMove(start + new Point(0, 120), RawInputModifiers.MiddleMouseButton);
-            await FramesAsync(1);
+            await FramesAsync(page.Window, 1);
             var ended = page.Viewer.Offset.Y;
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var after = page.Viewer.Offset.Y;
             page.Window.MouseUp(start, MouseButton.Middle);
             return (before, after, ended);
@@ -245,7 +245,7 @@ public sealed class MiddleClickScrollTests
             var start = page.Point(page.Spacer, 10);
             page.Window.MouseDown(start, MouseButton.Left);
             page.Window.MouseMove(start + new Point(0, 100), RawInputModifiers.LeftMouseButton);
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var offset = page.Viewer.Offset.Y;
             page.Window.MouseUp(start, MouseButton.Left);
             return offset;
@@ -271,12 +271,12 @@ public sealed class MiddleClickScrollTests
             var below = start + new Point(0, 100);
             page.Window.MouseDown(start, MouseButton.Middle);
             page.Window.MouseMove(below, RawInputModifiers.MiddleMouseButton);
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var before = page.Viewer.Offset.Y;
 
             page.Window.MouseDown(below, MouseButton.Left, RawInputModifiers.MiddleMouseButton);
             var ended = page.Viewer.Offset.Y;
-            await FramesAsync();
+            await FramesAsync(page.Window);
             var after = page.Viewer.Offset.Y;
             page.Window.MouseUp(below, MouseButton.Left, RawInputModifiers.MiddleMouseButton);
             page.Window.MouseUp(below, MouseButton.Middle);
@@ -340,20 +340,27 @@ public sealed class MiddleClickScrollTests
         var start = page.Point(target, 5);
         page.Window.MouseDown(start, MouseButton.Middle);
         page.Window.MouseMove(start + new Point(0, 100), RawInputModifiers.MiddleMouseButton);
-        await FramesAsync();
+        await FramesAsync(page.Window);
         var offset = page.Viewer.Offset.Y;
         page.Window.MouseUp(start + new Point(0, 100), MouseButton.Middle);
         return offset;
     }
 
-    /// <summary>Lets real time pass between render frames, because the scroll moves by the time between them.</summary>
-    private static async Task FramesAsync(int count = 5)
+    /// <summary>
+    /// Waits for <paramref name="count"/> animation frames that Avalonia delivered with real time between them, because the
+    /// scroll moves by the time between frames and asks for its next frame before this does, so it has moved on each frame
+    /// this waits for.
+    /// </summary>
+    private static async Task FramesAsync(TopLevel window, int count = 5)
     {
         for (var i = 0; i < count; i++)
         {
             await Task.Delay(20);
             Dispatcher.UIThread.RunJobs();
+            var frame = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            window.RequestAnimationFrame(_ => frame.SetResult());
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            await frame.Task;
         }
     }
 
