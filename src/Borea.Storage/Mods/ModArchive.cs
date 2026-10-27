@@ -59,7 +59,9 @@ internal static class ModArchive
     /// <paramref name="destination"/> with the root stripped, and returns how
     /// many files that was. A null root is the archive root. An entry whose
     /// path would land outside the destination fails the whole extraction,
-    /// because the archive is the author's bytes and not ours.
+    /// because the archive is the author's bytes and not ours. So does an
+    /// entry with a ':' below the root, because Windows writes notes.txt:x as
+    /// a hidden stream of notes.txt and Setup.exe::$DATA as Setup.exe.
     /// </summary>
     public static int Extract(string archivePath, string? root, string destination)
     {
@@ -80,6 +82,9 @@ internal static class ModArchive
             var relative = name[prefix.Length..];
             if (relative.Length == 0)
                 continue;
+
+            if (relative.Contains(':'))
+                throw new InvalidOperationException($"The archive entry '{entry.FullName}' has a ':' in its name, which Windows reads as a stream of another file.");
 
             var target = Path.GetFullPath(Path.Combine(destinationRoot, relative));
             if (!target.StartsWith(inside, StringComparison.Ordinal))
