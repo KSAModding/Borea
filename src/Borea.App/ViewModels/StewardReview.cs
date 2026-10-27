@@ -45,6 +45,8 @@ public sealed partial class StewardReview : ObservableObject
 
     public ObservableCollection<StewardReviewDocument> Documents { get; } = [];
 
+    public ObservableCollection<StewardReviewOwnerRecord> OwnerRecords { get; } = [];
+
     public string NumberText => MainViewModel.RepositoryNumberText(_item.Repository, _item.Number);
 
     public string Title => PullRequest?.Title ?? _item.Title;
@@ -111,6 +113,8 @@ public sealed partial class StewardReview : ObservableObject
     public string FilesHeading => _owner.Localization.FormatStewardReviewFiles(Files.Count.ToString(CultureInfo.CurrentCulture));
 
     public bool HasDocuments => Documents.Count > 0;
+
+    public bool HasOwnerRecords => OwnerRecords.Count > 0;
 
     /// <summary>The actions show for an open pull request of a repository whose ruleset the account bypasses.</summary>
     public bool CanAct => !IsLoading && PullRequest is { State: PullRequestState.Open } pull && _owner.IsStewardOf(pull.Repository);
@@ -200,6 +204,10 @@ public sealed partial class StewardReview : ObservableObject
         PullRequest = pull;
         Files.Clear();
         Documents.Clear();
+        OwnerRecords.Clear();
+        foreach (var record in pull?.OwnerRecords ?? [])
+            OwnerRecords.Add(new StewardReviewOwnerRecord(_owner, record));
+
         foreach (var file in pull?.Files ?? [])
             Files.Add(new StewardReviewFile(_owner, this, file));
 

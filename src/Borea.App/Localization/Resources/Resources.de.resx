@@ -256,7 +256,7 @@
     <value>Nachtrag</value>
   </data>
   <data name="StewardQueueKindOwnerRecord" xml:space="preserve">
-    <value>Besitzer-Eintrag</value>
+    <value>Besitzerdatei</value>
   </data>
   <data name="StewardQueueKindIndexStatus" xml:space="preserve">
     <value>Index-Status</value>
@@ -386,6 +386,42 @@
   </data>
   <data name="StewardReviewProofSpaceDockLinkFormat" xml:space="preserve">
     <value>Der Quellcode-Link der SpaceDock-Mod {0} nennt kein GitHub-Repository.</value>
+  </data>
+  <data name="StewardReviewOwnerRecords" xml:space="preserve">
+    <value>Besitzerdateien</value>
+  </data>
+  <data name="StewardOwnerRecordFirstClaim" xml:space="preserve">
+    <value>Der Pull Request fügt diese Besitzerdatei mit der ersten Version ihres Modpacks hinzu. Ein solcher erster Anspruch kann sich selbst mergen, wenn die Prüfungen bestanden sind.</value>
+  </data>
+  <data name="StewardOwnerRecordBeforeFormat" xml:space="preserve">
+    <value>Besitzer im Basis-Branch: {0}, Konto-ID {1}</value>
+  </data>
+  <data name="StewardOwnerRecordNoneBefore" xml:space="preserve">
+    <value>Der Basis-Branch hat keine Besitzerdatei dieses Modpacks.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableBefore" xml:space="preserve">
+    <value>Die Besitzerdatei im Basis-Branch nennt keinen Login und keine Konto-ID.</value>
+  </data>
+  <data name="StewardOwnerRecordAfterFormat" xml:space="preserve">
+    <value>Besitzer nach dem Merge: {0}, Konto-ID {1}</value>
+  </data>
+  <data name="StewardOwnerRecordRemoved" xml:space="preserve">
+    <value>Der Pull Request entfernt die Besitzerdatei, daher hat das Modpack nach dem Merge keinen Besitzer.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableAfter" xml:space="preserve">
+    <value>Die neue Besitzerdatei nennt keinen Login und keine Konto-ID.</value>
+  </data>
+  <data name="StewardOwnerAccountSameFormat" xml:space="preserve">
+    <value>Das GitHub-Konto {0} hat noch den Login {1}.</value>
+  </data>
+  <data name="StewardOwnerAccountOtherLoginFormat" xml:space="preserve">
+    <value>Das GitHub-Konto {0} hat jetzt den Login {1}, nicht {2}. Die Prüfungen vergleichen die Konto-ID, daher besitzt {1} das Modpack nach dem Merge.</value>
+  </data>
+  <data name="StewardOwnerAccountGoneFormat" xml:space="preserve">
+    <value>GitHub hat kein Konto mit der ID {0}, daher kann nach dem Merge niemand eine Version des Modpacks hinzufügen.</value>
+  </data>
+  <data name="StewardOwnerAccountUnknownFormat" xml:space="preserve">
+    <value>Borea konnte GitHub nicht fragen, welchen Login das Konto {0} jetzt hat.</value>
   </data>
   <data name="StewardReviewFilesFormat" xml:space="preserve">
     <value>Geänderte Dateien ({0})</value>

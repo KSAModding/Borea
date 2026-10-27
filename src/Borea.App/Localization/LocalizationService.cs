@@ -549,6 +549,36 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatStewardReviewProofSpaceDockLink(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewProofSpaceDockLinkFormat, mod);
 
+    public string StewardReviewOwnerRecords => Resources.StewardReviewOwnerRecords;
+
+    public string StewardOwnerRecordFirstClaim => Resources.StewardOwnerRecordFirstClaim;
+
+    public string FormatStewardOwnerRecordBefore(string login, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerRecordBeforeFormat, login, id);
+
+    public string StewardOwnerRecordNoneBefore => Resources.StewardOwnerRecordNoneBefore;
+
+    public string StewardOwnerRecordUnreadableBefore => Resources.StewardOwnerRecordUnreadableBefore;
+
+    public string FormatStewardOwnerRecordAfter(string login, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerRecordAfterFormat, login, id);
+
+    public string StewardOwnerRecordRemoved => Resources.StewardOwnerRecordRemoved;
+
+    public string StewardOwnerRecordUnreadableAfter => Resources.StewardOwnerRecordUnreadableAfter;
+
+    public string FormatStewardOwnerAccountSame(string id, string login)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountSameFormat, id, login);
+
+    public string FormatStewardOwnerAccountOtherLogin(string id, string login, string recorded)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountOtherLoginFormat, id, login, recorded);
+
+    public string FormatStewardOwnerAccountGone(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountGoneFormat, id);
+
+    public string FormatStewardOwnerAccountUnknown(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountUnknownFormat, id);
+
     public string FormatStewardReviewFiles(string count)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewFilesFormat, count);
 

@@ -387,6 +387,42 @@
   <data name="StewardReviewProofSpaceDockLinkFormat" xml:space="preserve">
     <value>The source code link of SpaceDock mod {0} names no GitHub repository.</value>
   </data>
+  <data name="StewardReviewOwnerRecords" xml:space="preserve">
+    <value>Owner records</value>
+  </data>
+  <data name="StewardOwnerRecordFirstClaim" xml:space="preserve">
+    <value>The pull request adds this record with the first version of its pack. Such a first claim merges itself when the checks pass.</value>
+  </data>
+  <data name="StewardOwnerRecordBeforeFormat" xml:space="preserve">
+    <value>Owner on the base branch: {0}, account id {1}</value>
+  </data>
+  <data name="StewardOwnerRecordNoneBefore" xml:space="preserve">
+    <value>The base branch has no owner record of this pack.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableBefore" xml:space="preserve">
+    <value>The record on the base branch names no login and account id.</value>
+  </data>
+  <data name="StewardOwnerRecordAfterFormat" xml:space="preserve">
+    <value>Owner after the merge: {0}, account id {1}</value>
+  </data>
+  <data name="StewardOwnerRecordRemoved" xml:space="preserve">
+    <value>The pull request removes the owner record, so the pack has no owner after the merge.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableAfter" xml:space="preserve">
+    <value>The new record names no login and account id.</value>
+  </data>
+  <data name="StewardOwnerAccountSameFormat" xml:space="preserve">
+    <value>GitHub account {0} still has the login {1}.</value>
+  </data>
+  <data name="StewardOwnerAccountOtherLoginFormat" xml:space="preserve">
+    <value>GitHub account {0} has the login {1} now, not {2}. The checks compare the account id, so {1} owns the pack after the merge.</value>
+  </data>
+  <data name="StewardOwnerAccountGoneFormat" xml:space="preserve">
+    <value>GitHub has no account with the id {0}, so nobody can add a version of the pack after the merge.</value>
+  </data>
+  <data name="StewardOwnerAccountUnknownFormat" xml:space="preserve">
+    <value>Borea could not ask GitHub which login the account {0} has now.</value>
+  </data>
   <data name="StewardReviewFilesFormat" xml:space="preserve">
     <value>Changed files ({0})</value>
   </data>

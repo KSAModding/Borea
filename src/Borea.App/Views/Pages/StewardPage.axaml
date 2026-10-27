@@ -637,6 +637,42 @@
                             </ItemsControl>
                         </StackPanel>
 
+                        <!-- each pack owner record that the pull request changes: the owner before and after it, and the login of the new account id now -->
+                        <StackPanel Spacing="12" Margin="0,32,0,0" IsVisible="{Binding HasOwnerRecords}">
+                            <TextBlock Classes="heading-sm heading" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReviewOwnerRecords}" />
+                            <ItemsControl ItemsSource="{Binding OwnerRecords}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="12" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StewardReviewOwnerRecord">
+                                        <Border Classes="card" Padding="24">
+                                            <StackPanel Spacing="8">
+                                                <WrapPanel ItemSpacing="8" LineSpacing="4">
+                                                    <TextBlock Classes="label-md" Text="{Binding Path}" VerticalAlignment="Center" />
+                                                    <Border Classes="chip" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding KindText}" />
+                                                    </Border>
+                                                </WrapPanel>
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding FirstClaimText}" TextWrapping="Wrap" IsVisible="{Binding FirstClaimText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                <TextBlock Classes="body-md" Text="{Binding BeforeText}" TextWrapping="Wrap" />
+                                                <Border Background="{StaticResource Brush.Window}" CornerRadius="8" Padding="12" IsVisible="{Binding RawBefore, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                    <SelectableTextBlock FontFamily="{StaticResource Font.Mono}" FontSize="12" Text="{Binding RawBefore}" TextWrapping="Wrap" />
+                                                </Border>
+                                                <TextBlock Classes="body-md" Text="{Binding AfterText}" TextWrapping="Wrap" />
+                                                <Border Background="{StaticResource Brush.Window}" CornerRadius="8" Padding="12" IsVisible="{Binding RawAfter, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                    <SelectableTextBlock FontFamily="{StaticResource Font.Mono}" FontSize="12" Text="{Binding RawAfter}" TextWrapping="Wrap" />
+                                                </Border>
+                                                <TextBlock Classes="body-md" Classes.positive="{Binding IsAccountSame}" Classes.danger="{Binding IsAccountWrong}" Text="{Binding AccountText}" TextWrapping="Wrap" IsVisible="{Binding AccountText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                         <!-- the changed files with their diff, or the way to GitHub where it sends none -->
                         <StackPanel Spacing="12" Margin="0,32,0,0" IsVisible="{Binding CommitText, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Classes="heading-sm heading" Text="{Binding FilesHeading}" />
