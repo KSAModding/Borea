@@ -16,8 +16,8 @@ public partial class MainViewModel
 {
     /// <summary>
     /// The loader and its version for a launch of <paramref name="instance"/>. The listings come from the index that
-    /// Borea holds and only else from the live index, and the versions are rated only with the held releases, so a
-    /// launch never asks the network for a release.
+    /// Borea holds and only else from the live index. The versions are rated with the held releases, and only when
+    /// Borea holds no index with the live releases that the choice already read, so a launch never asks the network for a release.
     /// </summary>
     /// <exception cref="InvalidOperationException">No listings could be read.</exception>
     /// <exception cref="IOException">No listings could be read.</exception>
@@ -31,7 +31,7 @@ public partial class MainViewModel
             installed,
             services.OfflineContentIndex,
             services.ContentIndex,
-            await HeldLoaderReleasesAsync(services),
+            await HeldLoaderReleasesAsync(services) ?? services.ContentIndex,
             services.Settings.ReleaseChannel,
             services.InstanceGames.Resolve(instance).Version?.Version);
     }
