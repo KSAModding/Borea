@@ -8,13 +8,14 @@ using Borea.Core.Settings;
 using Borea.Storage.Files;
 using Borea.Storage.Launch;
 using Borea.Storage.ModLoaders;
+using Borea.Storage.Mods;
 
 namespace Borea.Storage.Game;
 
 /// <summary>
 /// Copies the game folder of the settings, or a game folder the player chose, to the Game Builds folder of the
-/// library, once per build. The copy goes to a temporary folder that is renamed only after it matched, so a folder
-/// of a kept build is never a partial copy.
+/// library, once per build. The copy goes to a temporary folder that is renamed only after it matched and the source
+/// still matched the plan, so a folder of a kept build is never a partial copy or a mix of two builds.
 /// </summary>
 public sealed class GameBuildKeeper : IGameBuildKeeper
 {
@@ -68,6 +69,15 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
 
     public GameBuildKeepCheck CheckFolder(string folder) => PlanFolder(folder).Check;
 
+    public GameBuildKeepRefusal CheckGameFolder()
+    {
+        var configured = _paths.GetGameDirectoryPath();
+        if (string.IsNullOrWhiteSpace(configured) || !Path.IsPathFullyQualified(configured))
+            return GameBuildKeepRefusal.None;
+
+        return GameFolderRefusal(Path.TrimEndingDirectorySeparator(Path.GetFullPath(configured)));
+    }
+
     public Task<GameBuildKeepCheck> KeepAsync(Guid instanceId, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
         => KeepAsync(
             async () => Plan(await _instances.GetByIdAsync(instanceId).ConfigureAwait(false)
@@ -97,8 +107,8 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
             if (version != expected)
                 return new GameBuildKeepCheck(GameBuildKeepRefusal.BuildChanged, version, folder, 0, null);
 
-            if (plan.Files.Count > 0)
-                Copy(plan, version, folder, progress, cancellationToken);
+            if (plan.Files.Count > 0 && Copy(plan, version, folder, progress, cancellationToken) is var copied and not GameBuildKeepRefusal.None)
+                return new GameBuildKeepCheck(copied, version, folder, 0, null);
 
             if (instanceId is { } id)
             {
@@ -152,8 +162,8 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     {
         var gameDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(source));
         var folder = _paths.GetGameBuildFolder(version);
-        if (_wine.Find(gameDirectory)?.Wrapper is not null)
-            return Refused(GameBuildKeepRefusal.WineWrapper, version, folder);
+        if (GameFolderRefusal(gameDirectory) is var startRefusal and not GameBuildKeepRefusal.None)
+            return Refused(startRefusal, version, folder);
 
         if (IsGameRunning())
             return Refused(GameBuildKeepRefusal.GameRunning, version, folder);
@@ -168,11 +178,22 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
 
         var directories = new List<string>();
         var files = new List<GameFile>();
-        Scan(gameDirectory, string.Empty, directories, files);
+        if (Scan(gameDirectory, string.Empty, directories, files) is { } link)
+            return Refused(GameBuildKeepRefusal.HoldsFolderLink, version, folder, link);
+
         var bytes = files.Sum(file => file.Length);
-        var free = _freeSpace.Measure(_paths.GetGameBuildsRoot())?.AvailableBytes;
-        var refusal = free < bytes ? GameBuildKeepRefusal.NotEnoughSpace : GameBuildKeepRefusal.None;
-        return new KeepPlan(new GameBuildKeepCheck(refusal, version, folder, bytes, free), gameDirectory, directories, files);
+        var free = _freeSpace.Measure(_paths.GetGameBuildsRoot());
+        var refusal = free?.AvailableBytes < bytes + DriveInstallSpaceCheck.MarginFor(bytes) ? GameBuildKeepRefusal.NotEnoughSpace : GameBuildKeepRefusal.None;
+        return new KeepPlan(new GameBuildKeepCheck(refusal, version, folder, bytes, free?.AvailableBytes, free?.VolumeName), gameDirectory, directories, files);
+    }
+
+    // the wrapper comes first, because a macOS wrapper app also holds the Windows build
+    private GameBuildKeepRefusal GameFolderRefusal(string gameDirectory)
+    {
+        if (_wine.Find(gameDirectory)?.Wrapper is not null)
+            return GameBuildKeepRefusal.WineWrapper;
+
+        return WindowsBuildOnHost.IsIn(_host, gameDirectory) ? GameBuildKeepRefusal.NotAGame : GameBuildKeepRefusal.None;
     }
 
     public async Task<GameBuildChangeRefusal> UseCurrentBuildAsync(Guid instanceId, CancellationToken cancellationToken)
@@ -445,8 +466,8 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
             .EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint })
             .Sum(file => file.Length);
 
-    private static KeepPlan Refused(GameBuildKeepRefusal refusal, GameVersion? version, string? folder)
-        => new(new GameBuildKeepCheck(refusal, version, folder, 0, null), string.Empty, [], []);
+    private static KeepPlan Refused(GameBuildKeepRefusal refusal, GameVersion? version, string? folder, string? link = null)
+        => new(new GameBuildKeepCheck(refusal, version, folder, 0, null, LinkPath: link), string.Empty, [], []);
 
     private List<Guid> InstanceIds()
     {
@@ -479,9 +500,9 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     /// <summary>
     /// A file link is copied as the file it points to, which is what the game reads through it. A folder link is
     /// refused, because following it can loop and copying it as a link would tie the copy to the folder the client
-    /// changes.
+    /// changes. Returns the full path of the first folder link, and the lists are then incomplete.
     /// </summary>
-    private static void Scan(string folder, string relative, List<string> directories, List<GameFile> files)
+    private static string? Scan(string folder, string relative, List<string> directories, List<GameFile> files)
     {
         foreach (var entry in new DirectoryInfo(folder).EnumerateFileSystemInfos("*", EveryEntry))
         {
@@ -489,27 +510,34 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
             if (entry is DirectoryInfo directory)
             {
                 if (DirectoryLinks.IsLink(directory))
-                    throw new IOException($"The game folder holds the folder link {directory.FullName}, so Borea does not copy it.");
+                    return directory.FullName;
 
                 directories.Add(path);
-                Scan(directory.FullName, path, directories, files);
+                if (Scan(directory.FullName, path, directories, files) is { } link)
+                    return link;
             }
             else if (entry is FileInfo file)
             {
                 var source = DirectoryLinks.IsLink(file) ? file.ResolveLinkTarget(returnFinalTarget: true) as FileInfo ?? file : file;
-                files.Add(new GameFile(source.FullName, path, source.Length));
+                files.Add(new GameFile(source.FullName, path, source.Length, source.LastWriteTimeUtc));
             }
         }
+
+        return null;
     }
 
-    private static void Copy(KeepPlan plan, GameVersion version, string folder, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
+    /// <summary>
+    /// Copies the planned files to a temporary folder and renames it to <paramref name="folder"/> only after the copy
+    /// matched and the source still matched the plan. A refusal or an exception deletes the temporary folder first.
+    /// </summary>
+    private GameBuildKeepRefusal Copy(KeepPlan plan, GameVersion version, string folder, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
     {
         var temporary = Path.Combine(Path.GetDirectoryName(folder)!, "." + Path.GetFileName(folder) + TemporarySuffix);
         DirectoryLinks.DeleteTreeWithoutFollowingLinks(temporary);
+        var totalBytes = plan.Check.BytesToCopy;
+        long bytes = 0;
         try
         {
-            var totalBytes = plan.Check.BytesToCopy;
-            long bytes = 0;
             var copied = 0;
             Directory.CreateDirectory(temporary);
             foreach (var directory in plan.Directories)
@@ -539,10 +567,17 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
                 progress?.Report(new LibraryMoveProgress(LibraryMoveStage.Copying, bytes, totalBytes, copied, plan.Files.Count));
             }
 
+            // a client update can replace files that the loop already copied, and the copy then mixes two builds
+            if (SourceChanged(plan, version))
+            {
+                TryDelete(temporary);
+                return GameBuildKeepRefusal.ChangedDuringCopy;
+            }
+
             var copiedDirectories = new List<string>();
             var copiedFiles = new List<GameFile>();
-            Scan(temporary, string.Empty, copiedDirectories, copiedFiles);
-            if (copiedFiles.Count != plan.Files.Count || copiedFiles.Sum(file => file.Length) != totalBytes)
+            if (Scan(temporary, string.Empty, copiedDirectories, copiedFiles) is not null
+                || copiedFiles.Count != plan.Files.Count || copiedFiles.Sum(file => file.Length) != totalBytes)
                 throw new IOException($"The copy of KSA {version} in {temporary} does not match the game folder {plan.GameDirectory}.");
 
             if (InstalledGameVersionProvider.Read(temporary)?.Version != version)
@@ -550,12 +585,49 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
 
             cancellationToken.ThrowIfCancellationRequested();
             Directory.Move(temporary, folder);
+            return GameBuildKeepRefusal.None;
         }
-        catch
+        catch (Exception exception)
         {
+            // the free space is read before the delete, which frees the partial copy again
+            var refusal = exception is IOException or UnauthorizedAccessException ? FailedCopyRefusal(plan, version, totalBytes - bytes) : GameBuildKeepRefusal.None;
             TryDelete(temporary);
-            throw;
+            if (refusal == GameBuildKeepRefusal.None)
+                throw;
+
+            return refusal;
         }
+    }
+
+    private GameBuildKeepRefusal FailedCopyRefusal(KeepPlan plan, GameVersion version, long remainingBytes)
+    {
+        if (SourceChanged(plan, version))
+            return GameBuildKeepRefusal.ChangedDuringCopy;
+
+        return _freeSpace.Measure(_paths.GetGameBuildsRoot())?.AvailableBytes < remainingBytes ? GameBuildKeepRefusal.DriveFull : GameBuildKeepRefusal.None;
+    }
+
+    /// <summary>
+    /// Whether the source no longer holds the planned files with their lengths and write times, or its KSA.dll no
+    /// longer reads <paramref name="version"/>. The files compare as a set, because a folder listing can change its order.
+    /// </summary>
+    private static bool SourceChanged(KeepPlan plan, GameVersion version)
+    {
+        var directories = new List<string>();
+        var files = new List<GameFile>();
+        try
+        {
+            if (Scan(plan.GameDirectory, string.Empty, directories, files) is not null)
+                return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // a source that cannot be read as planned is not the planned source
+            return true;
+        }
+
+        return !new HashSet<GameFile>(files).SetEquals(plan.Files)
+            || InstalledGameVersionProvider.Read(plan.GameDirectory)?.Version != version;
     }
 
     // a folder that stays is a dot folder, which no kept build reads, and the next keep or remove deletes it
@@ -578,7 +650,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         return string.Equals(path, folder, comparison) || path.StartsWith(prefix, comparison);
     }
 
-    private sealed record GameFile(string SourcePath, string RelativePath, long Length);
+    private sealed record GameFile(string SourcePath, string RelativePath, long Length, DateTime LastWriteTimeUtc);
 
     private sealed record KeepPlan(GameBuildKeepCheck Check, string GameDirectory, IReadOnlyList<string> Directories, IReadOnlyList<GameFile> Files);
 }

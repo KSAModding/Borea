@@ -14,7 +14,9 @@ public interface IGameBuildKeeper
 
     /// <summary>
     /// Copies the build once and sets it as the build of the instance. A refused check copies nothing and is
-    /// returned as it is. A cancel or a failure removes the partial copy before the exception leaves.
+    /// returned as it is. A source that changes during the copy, or a drive that runs full, gives
+    /// <see cref="GameBuildKeepRefusal.ChangedDuringCopy"/> or <see cref="GameBuildKeepRefusal.DriveFull"/> and sets no
+    /// build. A cancel or another failure removes the partial copy before the exception leaves.
     /// </summary>
     /// <param name="expected">The build the player confirmed. Another build in the game folder is refused as <see cref="GameBuildKeepRefusal.BuildChanged"/>.</param>
     Task<GameBuildKeepCheck> KeepAsync(Guid instanceId, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken);
@@ -36,6 +38,13 @@ public interface IGameBuildKeeper
 
     /// <summary>What keeping the build in <paramref name="folder"/> would do, or why it is refused. It only reads.</summary>
     GameBuildKeepCheck CheckFolder(string folder);
+
+    /// <summary>
+    /// Why a keep of the game folder of the settings is refused before any scan: <see cref="GameBuildKeepRefusal.WineWrapper"/>
+    /// for a Wine wrapper app, <see cref="GameBuildKeepRefusal.NotAGame"/> for a Windows build that this system cannot start,
+    /// else <see cref="GameBuildKeepRefusal.None"/>. It only reads, also when the settings name no game folder.
+    /// </summary>
+    GameBuildKeepRefusal CheckGameFolder();
 
     /// <summary>
     /// Copies the build in <paramref name="folder"/> once, for new instances to pick, and sets the build of no
@@ -75,7 +84,9 @@ public enum GameBuildChangeRefusal
 /// <param name="Folder">The folder of that build in the Game Builds folder.</param>
 /// <param name="BytesToCopy">0 when the folder already holds this build, so nothing is copied.</param>
 /// <param name="FreeBytes">The free space where the copy goes, or null when it could not be read or nothing is copied.</param>
-public sealed record GameBuildKeepCheck(GameBuildKeepRefusal Refusal, GameVersion? Version, string? Folder, long BytesToCopy, long? FreeBytes);
+/// <param name="VolumeName">The volume of the Game Builds folder as the free space probe names it, such as C:\ or /, or null when <paramref name="FreeBytes"/> is null.</param>
+/// <param name="LinkPath">The folder link in the source that refuses the copy as <see cref="GameBuildKeepRefusal.HoldsFolderLink"/>, else null.</param>
+public sealed record GameBuildKeepCheck(GameBuildKeepRefusal Refusal, GameVersion? Version, string? Folder, long BytesToCopy, long? FreeBytes, string? VolumeName = null, string? LinkPath = null);
 
 public enum GameBuildKeepRefusal
 {
@@ -105,7 +116,17 @@ public enum GameBuildKeepRefusal
 
     /// <summary>
     /// The folder the player chose holds no executable that this system starts, KSA.exe on Windows and the app host
-    /// KSA on Linux, or its KSA.dll gives no version. On macOS every folder is refused.
+    /// KSA on Linux, or its KSA.dll gives no version. On macOS every folder is refused. For the game folder of the
+    /// settings, it is the Windows build on a Linux or macOS host outside a Wine wrapper app.
     /// </summary>
     NotAGame = 9,
+
+    /// <summary>The source folder changed while Borea copied it, for example by a client update. The partial copy is deleted.</summary>
+    ChangedDuringCopy = 10,
+
+    /// <summary>The drive of the library ran full during the copy. The partial copy is deleted.</summary>
+    DriveFull = 11,
+
+    /// <summary>The source folder holds a folder link, which Borea does not copy. <see cref="GameBuildKeepCheck.LinkPath"/> names it.</summary>
+    HoldsFolderLink = 12,
 }

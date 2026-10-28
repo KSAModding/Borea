@@ -7,6 +7,7 @@ using Borea.Core.Settings;
 using Borea.Storage.Files;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
+using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.ModPacks;
@@ -151,6 +152,87 @@ public sealed class GameBuildKeeperTests : IDisposable
         Assert.Equal(refusal, result.Refusal);
         Assert.False(Directory.Exists(GameBuilds));
         Assert.Null((await _instances.GetByIdAsync(instance.InstanceId))?.GameBuild);
+    }
+
+    [Theory]
+    [InlineData(-1L, GameBuildKeepRefusal.NotEnoughSpace)]
+    [InlineData(0L, GameBuildKeepRefusal.None)]
+    public async Task Check_FreeSpaceAroundTheMargin_RefusesOnlyBelowIt(long offset, GameBuildKeepRefusal refusal)
+    {
+        var instance = await CreateInstanceAsync("Career");
+        var bytes = Keeper().Check(instance).BytesToCopy;
+
+        var check = Keeper(freeSpace: new FixedFreeSpace(bytes + DriveInstallSpaceCheck.MarginFor(bytes) + offset)).Check(instance);
+
+        Assert.Equal(refusal, check.Refusal);
+        Assert.Equal(@"D:\", check.VolumeName);
+    }
+
+    // the change comes with the report after the first file, and whether it hits a copied file or one still to copy,
+    // the keep is refused
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task KeepAsync_SourceChangesDuringTheCopy_IsRefusedAndLeavesNoFolder(bool delete)
+    {
+        var instance = await CreateInstanceAsync("Career");
+        var changed = Path.Combine(SettingsGame, "Content", "Core", "Astronomicals.xml");
+        var progress = new SynchronousProgress<LibraryMoveProgress>(value =>
+        {
+            if (value.Files != 1)
+                return;
+
+            if (delete)
+                File.Delete(changed);
+            else
+                File.WriteAllText(changed, "<Astronomicals patched=\"true\" />");
+        });
+
+        var result = await Keeper().KeepAsync(instance.InstanceId, FixtureVersion, progress, CancellationToken.None);
+
+        Assert.Equal(GameBuildKeepRefusal.ChangedDuringCopy, result.Refusal);
+        Assert.Empty(Directory.GetFileSystemEntries(GameBuilds));
+        Assert.Null((await _instances.GetByIdAsync(instance.InstanceId))?.GameBuild);
+    }
+
+    [Fact]
+    public async Task Check_FolderLinkInTheSource_IsRefusedWithTheLink()
+    {
+        var instance = await CreateInstanceAsync("Career");
+        WriteGame(PlayerFolder);
+        var shared = Path.Combine(_tempRoot, "Shared");
+        Directory.CreateDirectory(shared);
+        var linker = new DirectoryLinker();
+        Assert.True(linker.TryCreate(Path.Combine(SettingsGame, "Mods"), shared).Linked);
+        Assert.True(linker.TryCreate(Path.Combine(PlayerFolder, "Mods"), shared).Linked);
+        var keeper = Keeper();
+
+        var game = keeper.Check(instance);
+        var folder = keeper.CheckFolder(PlayerFolder);
+
+        Assert.Equal(GameBuildKeepRefusal.HoldsFolderLink, game.Refusal);
+        Assert.Equal(Path.GetFullPath(Path.Combine(SettingsGame, "Mods")), game.LinkPath);
+        Assert.Equal(GameBuildKeepRefusal.HoldsFolderLink, folder.Refusal);
+        Assert.Equal(Path.GetFullPath(Path.Combine(PlayerFolder, "Mods")), folder.LinkPath);
+    }
+
+    // WriteGame writes KSA.exe and no Linux app host, so the macOS row also shows that the wrapper comes first
+    [Theory]
+    [InlineData(OsPlatform.Windows, false, GameBuildKeepRefusal.None)]
+    [InlineData(OsPlatform.MacOs, true, GameBuildKeepRefusal.WineWrapper)]
+    [InlineData(OsPlatform.Linux, false, GameBuildKeepRefusal.NotAGame)]
+    public async Task CheckGameFolder_WrapperOrWindowsBuildOnLinux_RefusesTheKeepOfAnInstance(OsPlatform host, bool inWrapper, GameBuildKeepRefusal refusal)
+    {
+        var instance = await CreateInstanceAsync("Career");
+        var bundle = Path.Combine(_tempRoot, "Kitten Space Agency.app");
+        var wine = new FakeWineProbe(new WineInstall(
+            Path.GetFullPath(inWrapper ? _tempRoot : Path.Combine(_tempRoot, "Elsewhere")),
+            WineFixtures.Drives(new Dictionary<char, string>()),
+            inWrapper ? new WineWrapper(bundle, Path.Combine(bundle, "Contents", "MacOS", "launcher")) : null));
+        var keeper = Keeper(host: host, wine: wine);
+
+        Assert.Equal(refusal, keeper.CheckGameFolder());
+        Assert.Equal(refusal, keeper.Check(instance).Refusal);
     }
 
     [Fact]
@@ -415,7 +497,7 @@ public sealed class GameBuildKeeperTests : IDisposable
         File.WriteAllText(Path.Combine(folder, "KSA.exe"), "app host");
     }
 
-    private GameBuildKeeper Keeper(GamePathProvider? paths = null, bool gameRunning = false, IModRepository? listings = null, OsPlatform host = OsPlatform.Windows, ILoaderVersionStore? versions = null) => new(paths ?? _paths, _instances, listings ?? Loaders(), versions ?? new FixedVersions(), () => gameRunning, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace(), host);
+    private GameBuildKeeper Keeper(GamePathProvider? paths = null, bool gameRunning = false, IModRepository? listings = null, OsPlatform host = OsPlatform.Windows, ILoaderVersionStore? versions = null, IFreeSpaceProbe? freeSpace = null, IWinePrefixProbe? wine = null) => new(paths ?? _paths, _instances, listings ?? Loaders(), versions ?? new FixedVersions(), () => gameRunning, _ => false, wine ?? new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), freeSpace ?? new UnknownFreeSpace(), host);
 
     private static ModPackInstallerTests.FakeModRepository Loaders() => new([], [LoaderLauncherTests.LoaderListing(provides: LoaderLauncherTests.StarMapProvides())]);
 
@@ -452,6 +534,11 @@ public sealed class GameBuildKeeperTests : IDisposable
     private sealed class UnknownFreeSpace : IFreeSpaceProbe
     {
         public FreeSpace? Measure(string path) => null;
+    }
+
+    private sealed class FixedFreeSpace(long available) : IFreeSpaceProbe
+    {
+        public FreeSpace? Measure(string path) => new(@"D:\", available);
     }
 
     private sealed class UnreadableListings : IModRepository
