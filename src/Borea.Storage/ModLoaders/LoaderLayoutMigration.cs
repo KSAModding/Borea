@@ -90,8 +90,9 @@ public sealed class LoaderLayoutMigration
     }
 
     /// <summary>
-    /// What the flat folder Loaders/&lt;id&gt; holds. The launch file decides, and not the record, because the player can have put
-    /// a loader there by hand or adopted it.
+    /// What the flat folder Loaders/&lt;id&gt; holds. The launch file decides first, because the player can have put a loader there
+    /// by hand or adopted it. A folder that the record names and that lost its launch file is a damaged install of
+    /// Borea, not files of the player, so it is still a loader and moves into its version folder.
     /// </summary>
     internal FlatLoaderFolder Inspect(string loaderId, string? launch, LoaderInstallation? record)
     {
@@ -110,6 +111,9 @@ public sealed class LoaderLayoutMigration
         }
 
         var foreign = Directory.EnumerateFileSystemEntries(folder).Any(entry => !IsVersionFolderOrHidden(entry));
+        if (foreign && record is not null && SamePath(record.DirectoryPath, folder))
+            return new FlatLoaderFolder(FlatLoaderFolderKind.Loader, record.Version);
+
         return new FlatLoaderFolder(foreign ? FlatLoaderFolderKind.Foreign : FlatLoaderFolderKind.None, null);
     }
 

@@ -343,6 +343,8 @@ public sealed class LoaderCommandTests : IDisposable
     public async Task Uninstall_IndexWithoutReadAccess_RemovesWithoutSteps()
     {
         _host.IndexReader.Read = _ => throw new UnauthorizedAccessException("Access to the cached index is denied.");
+        var recorded = CreateVersionFolder(_host, "0.4.7");
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{recorded}'\nVersion = '0.4.7'\nIsAdopted = false\n");
         _host.LoaderUninstaller = new FakeLoaderUninstaller
         {
             Result = new LoaderUninstallResult("StarMap", "C:\\Loaders\\StarMap", RecordRemoved: true, DirectoryRemoved: true),
@@ -402,6 +404,21 @@ public sealed class LoaderCommandTests : IDisposable
         var version = Assert.Single(show.Json.GetProperty("loaderVersions").EnumerateArray());
         Assert.Equal("0.4.7", version.GetProperty("version").GetString());
         Assert.True(version.GetProperty("recorded").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Uninstall_OnlyVersionThatAnAutomaticInstanceStarts_RemovesItAndItsFolder()
+    {
+        _host.IndexReader.Snapshot = LaunchCommandTests.StarMapIndex();
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        var recorded = CreateVersionFolder(_host, "0.4.8");
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{recorded}'\nVersion = '0.4.8'\nIsAdopted = false\n");
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.False(Directory.Exists(recorded));
     }
 
     [Fact]
