@@ -2565,6 +2565,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstanceLoaderInstall(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstallFormat, version);
 
+    public string FormatInstanceLoaderInstalling(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstallingFormat, loader);
+
     public string FormatInstanceLoaderModalHint(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderModalHintFormat, instanceName);
 

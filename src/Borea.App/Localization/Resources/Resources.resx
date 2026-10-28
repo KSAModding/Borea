@@ -3897,6 +3897,9 @@
   <data name="InstanceLoaderInstallFormat" xml:space="preserve">
     <value>Install {0}</value>
   </data>
+  <data name="InstanceLoaderInstallingFormat" xml:space="preserve">
+    <value>Installing {0}...</value>
+  </data>
   <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
     <value>Choose which version of the mod loader starts {0}. Other instances keep their own setting.</value>
   </data>
