@@ -151,6 +151,7 @@ public sealed partial class ListingEditor
         steps.Add(Step("images", Localization.ListingImages, Icon is not null || DescriptionImages.Count > 0));
         if (HasFixedId)
             steps.Add(Step("status", Localization.ListingStatus, IsDeprecated));
+        steps.RemoveAll(step => (!ShowsIndexOnlyCards && IndexOnlySections.Contains(step.Key)) || (!ShowsListingCards && step.Key is "about" or "tags"));
         MainViewModel.Arrange(Steps, steps);
 
         OnPropertyChanged(nameof(HasVisibleErrors));

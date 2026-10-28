@@ -89,6 +89,19 @@ public sealed class ListingOwnershipCheckTests
         Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.NoHost), noHost);
     }
 
+    [Fact]
+    public async Task CheckAsync_ShareHost_LeavesTheProofToTheChecksAndAsksNothing()
+    {
+        var check = await SignedInAsync();
+        _sent.Clear();
+        var draft = new ListingDraft { Id = "ExampleRover", Type = "vehicle", Releases = new ListingReleases(null, null, Share: new ListingShareHost("ksamods", "ExampleRover")) };
+
+        var ownership = await check.CheckAsync(Alice, draft, null);
+
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.CouldNotEvaluate, Problem: ListingOwnershipProblem.ShareHost), ownership);
+        Assert.Empty(_sent);
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.BadGateway)]
     [InlineData(HttpStatusCode.UnavailableForLegalReasons)]

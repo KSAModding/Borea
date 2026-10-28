@@ -261,7 +261,8 @@ public sealed record ListingDraft
         };
     }
 
-    private static AuthoredTable WriteDependency(ListingDependency dependency)
+    /// <summary>The <c>[[dependencies]]</c> table of one dependency, as a listing writes it.</summary>
+    public static AuthoredTable WriteDependency(ListingDependency dependency)
     {
         if (dependency.Preserved is { } preserved)
             return preserved.Clone();

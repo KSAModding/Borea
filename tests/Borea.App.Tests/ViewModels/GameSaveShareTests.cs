@@ -245,6 +245,26 @@ public sealed class GameSaveShareTests
         Assert.EndsWith("[releases]\ngithub = \"maxi/ksa-shares\"\nauthority = \"ksamods\"\nksamods = \"ExampleRover\"\n", editor.DocumentText, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ListedVehicleOnARegisteredShareHost_NamesTheHostAsHostsTomlDoes()
+    {
+        const string listed = "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Maxi\"]\nabstract = \"A rover.\"\nlicense = \"CC-BY-4.0\"\n\n[releases]\nksamods = \"ExampleRover\"\n";
+        const string hosts = "[ksamods]\nkind = \"share\"\nname = \"ksamods.gg\"\napi = \"https://ksamods.gg/api/share/v1/\"\ntypes = [\"vehicle\"]\n";
+        using var harness = await ViewModelHarness.CreateAsync(respond: request => request.RequestUri?.AbsoluteUri switch
+        {
+            "https://raw.githubusercontent.com/KSAModding/content-index/main/vehicles/ExampleRover.toml" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(listed) },
+            "https://raw.githubusercontent.com/KSAModding/content-index/main/hosts.toml" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(hosts) },
+            _ => Ungated(request),
+        });
+        await harness.ViewModel.OpenListingAsync();
+        var editor = harness.ViewModel.ListingEditor;
+        editor.SelectedListed = new ListedListing("ExampleRover", "Example Rover", string.Empty, IsOwn: false, Type: "vehicle");
+        await editor.LoadListedCommand.ExecuteAsync(null);
+        await editor.ShareHostsLoad;
+
+        Assert.Equal(harness.Localization.FormatListingReleasesShareHost("ksamods.gg", "ExampleRover"), editor.ShareHostText);
+    }
+
     /// <summary>An instance with a vehicle that names a part of ExamplePartsMod, which Borea installed at 1.4.0, and a part no mod defines.</summary>
     internal static async Task<Guid> CreateInstanceAsync(ViewModelHarness harness, string vehicleName)
     {
