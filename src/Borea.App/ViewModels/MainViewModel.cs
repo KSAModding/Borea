@@ -84,7 +84,6 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void DismissUnexpectedError() => UnexpectedError = null;
 
-    //windows
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsHomeSection))]
     private bool _currentWindowHome = true;
@@ -118,7 +117,7 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public bool IsDiscoverSection => CurrentWindowDiscover || (CurrentWindowContent && !IsContentFromInstance && !IsContentFromHome) || CurrentWindowPack || CurrentWindowListing;
     [RelayCommand]
-    public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowHome()
     {
         LeaveContentPage();
         LeavePackPage();
@@ -132,7 +131,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowPack = false;
     }
     [RelayCommand]
-    public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowDiscover()
     {
         LeaveContentPage();
         UpdateIndexRefreshStatus();
@@ -148,7 +147,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowPack = false;
     }
     [RelayCommand]
-    public void SetMainWindowLibrary() // used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowLibrary()
     {
         LeaveContentPage();
         LeavePackPage();
@@ -193,7 +192,6 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isSettingsOpen;
 
-    //home
     /// <summary>
     /// The installed build as KSA reports it, or null when no game directory is set
     /// or the version file could not be read.
@@ -232,7 +230,6 @@ public partial class MainViewModel : ViewModelBase
 
     public bool HasRecentItems => RecentItems.Count > 0;
 
-    //library
     public ObservableCollection<InstanceItem> Instances { get; } = [];
 
     [ObservableProperty]
@@ -278,7 +275,6 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string? _instanceError;
 
-    //themes
     public IReadOnlyList<string> ThemeNames { get; } = BundledThemeNames.ToArray();
 
     [ObservableProperty]
@@ -550,6 +546,9 @@ public partial class MainViewModel : ViewModelBase
 
     internal static string DateTimeText(DateTimeOffset at) => at.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 
+    /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
+    internal static string GameBoundsText(string? gameMin, string? gameMax) => gameMax is null ? $">= {gameMin}" : $"{gameMin} - {gameMax}";
+
     /// <summary>Brings the rows into the given order in place, so a row that stays keeps its view and what the view shows.</summary>
     internal static void Arrange<T>(ObservableCollection<T> rows, IReadOnlyList<T> order)
     {
@@ -584,7 +583,6 @@ public partial class MainViewModel : ViewModelBase
         StartGameBuildChoicesLoad();
     }
 
-    /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
     internal void BeginRenameInstance(InstanceItem item)
     {
         InstanceError = null;
@@ -752,7 +750,6 @@ public partial class MainViewModel : ViewModelBase
         ShowOpenError(name, error);
     }
 
-    /// <summary>Shows an error toast when a folder, file or link could not be opened.</summary>
     private void ShowOpenError(Func<string> name, string? error)
     {
         if (error is not null)

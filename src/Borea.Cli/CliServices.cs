@@ -18,10 +18,6 @@ using Borea.Storage.ModLoaders;
 
 namespace Borea.Cli;
 
-/// <summary>
-/// The services the commands run against, seen as Borea.Core interfaces.
-/// The program fills it from <see cref="BoreaServices"/>.
-/// </summary>
 internal sealed class CliServices : IDisposable
 {
     /// <summary>

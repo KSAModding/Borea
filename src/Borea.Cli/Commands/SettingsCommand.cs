@@ -7,9 +7,6 @@ using Borea.Core.Settings;
 
 namespace Borea.Cli.Commands;
 
-/// <summary>
-/// <c>borea settings</c>: where the game, the mod loaders and the library are, the release channel and the shared mod store.
-/// </summary>
 internal static class SettingsCommand
 {
     private const string On = "on";

@@ -12,7 +12,7 @@ internal static class LaunchCommand
 {
     public static Command Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
-        var instance = ArgumentRules.Text("instance", "The instance's name, or its id when two names differ only in case.");
+        var instance = ArgumentRules.Text("instance", InstanceCommand.InstanceArgumentDescription);
         var loaderId = ArgumentRules.OptionalContentId("loader-id", "The installed mod loader to use. Omit it to use the loader the mods need, or an installed loader that takes an instance when no mod needs one.");
         var json = ArgumentRules.Json();
         var launch = new Command("launch", "Start one instance through an installed mod loader. Arguments after -- go to the loader and the game for this launch, after the saved launch arguments of the instance.");

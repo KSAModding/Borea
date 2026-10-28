@@ -607,29 +607,24 @@ public sealed class LaunchFailureTests
         Assert.False(viewModel.CanDisableBlamedMod);
     }
 
-    [Fact]
-    public async Task PlayWithoutModLoader_GameOnNoDriveOfTheWrapper_NamesTheExecutable()
+    [Theory]
+    [InlineData(SharedProfileLaunchOutcome.WrapperBusy)]
+    [InlineData(SharedProfileLaunchOutcome.PathOutsidePrefix)]
+    public async Task PlayWithoutModLoader_WrapperRefusesTheLaunch_SaysWhyInTheDisplayLanguage(SharedProfileLaunchOutcome outcome)
     {
         var executable = Path.Combine(Path.GetTempPath(), "KSA.exe");
-        var launcher = new FixedSharedProfileLauncher(SharedProfileLaunchResult.Failed(SharedProfileLaunchOutcome.PathOutsidePrefix, "English text.", wine: WrapperInstall, unmappedPath: executable));
+        var launcher = new FixedSharedProfileLauncher(SharedProfileLaunchResult.Failed(outcome, "English text.", wine: WrapperInstall, unmappedPath: outcome == SharedProfileLaunchOutcome.PathOutsidePrefix ? executable : null));
         using var harness = await ViewModelHarness.CreateAsync(sharedProfileLauncher: launcher);
         harness.Localization.TrySetCulture("de");
 
         await harness.ViewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatLaunchPathOutsidePrefix(executable, WrapperInstall.PrefixRoot), harness.ViewModel.LaunchMessage);
-    }
-
-    [Fact]
-    public async Task PlayWithoutModLoader_WrapperBusy_SaysWhyInTheDisplayLanguage()
-    {
-        var launcher = new FixedSharedProfileLauncher(SharedProfileLaunchResult.Failed(SharedProfileLaunchOutcome.WrapperBusy, "English text.", wine: WrapperInstall));
-        using var harness = await ViewModelHarness.CreateAsync(sharedProfileLauncher: launcher);
-        harness.Localization.TrySetCulture("de");
-
-        await harness.ViewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
-
-        Assert.Equal(harness.Localization.FormatLaunchWrapperBusy(WrapperBundle), harness.ViewModel.LaunchMessage);
+        var expected = outcome switch
+        {
+            SharedProfileLaunchOutcome.WrapperBusy => harness.Localization.FormatLaunchWrapperBusy(WrapperBundle),
+            _ => harness.Localization.FormatLaunchPathOutsidePrefix(executable, WrapperInstall.PrefixRoot),
+        };
+        Assert.Equal(expected, harness.ViewModel.LaunchMessage);
     }
 
     private static readonly DotnetRuntimeNeed Dotnet10 = DotnetRuntimeNeed.Parse("""{ "runtimeOptions": { "framework": { "name": "Microsoft.NETCore.App", "version": "10.0.0" } } }""")!;

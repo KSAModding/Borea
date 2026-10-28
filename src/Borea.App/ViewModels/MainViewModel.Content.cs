@@ -346,7 +346,6 @@ public partial class MainViewModel
         _ => char.ToUpperInvariant(key[0]) + key[1..],
     };
 
-    /// <summary>Fills the links of a detail panel in the order of #8.</summary>
     private void FillLinks(ObservableCollection<ContentLink> links, IReadOnlyDictionary<string, string> source)
     {
         links.Clear();
@@ -610,7 +609,7 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     public string InstallToolTip => ReplacedVersion is { } installed ? _owner.ReplaceVersionText(installed) : _owner.AddToText;
 
     /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
-    public string GameVersionText => _release.GameMax is null ? $">= {_release.GameMin}" : $"{_release.GameMin} - {_release.GameMax}";
+    public string GameVersionText => MainViewModel.GameBoundsText(_release.GameMin, _release.GameMax);
 
     public DateTimeOffset ReleaseDate => _release.ReleaseDate;
 

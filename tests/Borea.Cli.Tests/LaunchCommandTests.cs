@@ -15,9 +15,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_StarMapStartsWithTheHandoverItsListingNames()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
 
         var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
@@ -33,9 +31,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_HeldIndexListsTheLoader_StartsWithoutAskingTheSources()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.IndexReader.Snapshot = new ContentIndexSnapshot(1, [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release()], null)], [], null, []);
         _host.Mods.AvailableMods = _ => new TaskCompletionSource<IReadOnlyList<ModMetadata>>().Task;
@@ -227,9 +223,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_LoaderStopsRightAway_FailsWithWhatItWrote()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.ProcessStarter.CrashExitCode = -532462766;
         _host.ProcessStarter.CrashOutput.Add("Unhandled exception. System.TypeLoadException: Method 'DrawAxes' from assembly 'KSArmory, Version=0.8.44.0' does not have an implementation.");
@@ -245,9 +239,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_LoaderCannotLoadAGameAssembly_NamesTheInstallCommand()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.ProcessStarter.CrashExitCode = -532462766;
         _host.ProcessStarter.CrashOutput.Add("Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.");
@@ -262,9 +254,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_GameAssemblyNamedWithoutALoaderFrame_NamesNoInstallCommand()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.ProcessStarter.CrashExitCode = -532462766;
         _host.ProcessStarter.CrashOutput.Add("File name: 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'");
@@ -279,9 +269,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_GameStarts_RecordsWhenTheInstanceWasPlayed()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         var before = DateTimeOffset.UtcNow;
 
@@ -296,9 +284,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_LoaderStopsRightAway_RecordsNoPlay()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.ProcessStarter.CrashExitCode = -532462766;
 
@@ -397,9 +383,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_WithoutLoaderId_UsesTheOneLoaderTheModsNeed()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"), NeedsLoader("orbit-tools", "starmap"), ContentCommandFixtures.Release("parts-pack"));
 
         var run = await _host.RunAsync("launch", "Flight Test");
@@ -413,9 +397,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_WithoutLoaderId_ArgumentsAfterTheSeparator_GoToTheLoaderNotTheLoaderId()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"));
 
         var run = await _host.RunAsync("launch", "Flight Test", "--", "-windowed", "a b");
@@ -427,9 +409,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_SavedAndGivenArguments_FollowTheHandoverAsSeparateArguments()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         await _host.RunAsync("instance", "set-arguments", "Flight Test", "--", "-saved", "saved value");
 
@@ -444,9 +424,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_HandoverFlagAfterTheSeparator_FailsWithoutStarting()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
 
         var run = await _host.RunAsync("launch", "Flight Test", "StarMap", "--", "-INSTANCEPATH", "D:/Other");
@@ -517,9 +495,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_WithoutLoaderId_ModsNeedNoLoader_UsesAndNamesTheInstalledLoaderThatTakesAnInstance()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
 
         var run = await _host.RunAsync("launch", "Flight Test");
@@ -532,9 +508,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_Json_CarriesTheLoaderAndWhetherTheModsNeedIt()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
 
         var run = await _host.RunAsync("launch", "Flight Test", "--json");
@@ -548,9 +522,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_Json_ModsNeedTheLoader_SaysTheModsRequireIt()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"));
 
         var run = await _host.RunAsync("launch", "Flight Test", "--json");
@@ -563,9 +535,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_Json_CarriesTheArgumentsOfTheStartedProcess()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         await _host.RunAsync("instance", "set-arguments", "Flight Test", "--", "-saved");
 
@@ -619,9 +589,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_WithoutLoaderId_InstalledLoaderNoSourceLists_NamesIt()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         _host.Mods.Listings.Clear();
         await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
 
@@ -770,6 +738,13 @@ public sealed class LaunchCommandTests : IDisposable
 
     private static ModVersionMetadata NeedsLoader(string id, string loaderId) =>
         ContentCommandFixtures.Release(id, loader: new LoaderRequirement(loaderId, ModVersion.Parse("0.4.0")));
+
+    private async Task RecordStarMapAsync()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+    }
 
     public void Dispose() => _host.Dispose();
 }

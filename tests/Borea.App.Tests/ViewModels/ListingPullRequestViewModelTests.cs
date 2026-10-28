@@ -98,10 +98,7 @@ public sealed class ListingPullRequestViewModelTests
         _session.SignIn();
         _publisher.Ownership = new ListingOwnership(ListingOwnershipState.FirstClaim, Claim: new ListingPackOwner("octocat", 583231));
         using var harness = await CreateAsync();
-        var editor = harness.ViewModel.ListingEditor;
-        editor.OwnershipDelay = TimeSpan.Zero;
-        await harness.ViewModel.OpenListingAsync();
-        ListingEditorTests.FillPack(editor);
+        var editor = await NewPackAsync(harness);
 
         await editor.OwnershipCheck;
 
@@ -138,10 +135,7 @@ public sealed class ListingPullRequestViewModelTests
         _session.SignIn();
         _publisher.Ownership = new ListingOwnership(state, state == ListingOwnershipState.Verified ? ListingOwnershipProof.PackOwner : null, problem, PackOwner: "someone", TakenBy: "My-Pack");
         using var harness = await CreateAsync();
-        var editor = harness.ViewModel.ListingEditor;
-        editor.OwnershipDelay = TimeSpan.Zero;
-        await harness.ViewModel.OpenListingAsync();
-        ListingEditorTests.FillPack(editor);
+        var editor = await NewPackAsync(harness);
 
         await editor.OwnershipCheck;
 
@@ -163,10 +157,7 @@ public sealed class ListingPullRequestViewModelTests
         _session.SignIn();
         _publisher.Ownership = ListingOwnership.Unknown;
         using var harness = await CreateAsync();
-        var editor = harness.ViewModel.ListingEditor;
-        editor.OwnershipDelay = TimeSpan.Zero;
-        await harness.ViewModel.OpenListingAsync();
-        ListingEditorTests.FillPack(editor);
+        var editor = await NewPackAsync(harness);
 
         await editor.OwnershipCheck;
 
@@ -207,10 +198,7 @@ public sealed class ListingPullRequestViewModelTests
         _session.SignIn();
         _publisher.Failure = new ListingPublishException(ListingPublishFailure.NotFound, ListingPublishStep.Ownership);
         using var harness = await CreateAsync();
-        var editor = harness.ViewModel.ListingEditor;
-        editor.OwnershipDelay = TimeSpan.Zero;
-        await harness.ViewModel.OpenListingAsync();
-        ListingEditorTests.FillPack(editor);
+        var editor = await NewPackAsync(harness);
 
         await editor.PublishCommand.ExecuteAsync(null);
 
@@ -878,14 +866,18 @@ public sealed class ListingPullRequestViewModelTests
         editor.OwnershipDelay = TimeSpan.Zero;
         await harness.ViewModel.OpenListingAsync();
         editor.StartEmptyCommand.Execute(null);
-        editor.Id = "MyMod";
-        editor.Name = "My Mod";
-        editor.Authors = "Maxi";
-        editor.Abstract = "Does a thing.";
-        editor.License = "MIT";
-        editor.Forums = "https://forums.ahwoo.com/threads/my-mod.42/";
-        editor.ReleasesGitHub = "owner/MyMod";
+        ListingEditorTests.FillListingFields(editor);
         Assert.True(editor.CanOpenPullRequest, string.Join("\n", editor.Errors));
+        return editor;
+    }
+
+    /// <summary>The listing page with the new pack of ListingEditorTests.FillPack, whose ownership check starts at once.</summary>
+    private static async Task<ListingEditor> NewPackAsync(ViewModelHarness harness)
+    {
+        var editor = harness.ViewModel.ListingEditor;
+        editor.OwnershipDelay = TimeSpan.Zero;
+        await harness.ViewModel.OpenListingAsync();
+        ListingEditorTests.FillPack(editor);
         return editor;
     }
 

@@ -14,8 +14,6 @@ namespace Borea.Storage.Index;
 /// <summary>
 /// Maps parsed index DTOs into the RFC 0031/0035 domain types. Each mapper
 /// assumes its input already passed <see cref="SnapshotParser"/> validation.
-/// <br></br><br></br>
-/// All the mappers are in one file since only the index will use these.
 /// </summary>
 public static class DtoMapper
 {
@@ -48,7 +46,6 @@ public static class DtoMapper
             provides: dto.Provides is null ? null : MapProvides(dto.Provides)));
     }
 
-    // Requires the authored ModMetadata to make sure listing has all the correct info
     public static ModVersionMetadata MapRelease(ReleasesEntryDto dto, string? source, ModMetadata? authored, string? changelogText = null)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -146,8 +143,6 @@ public static class DtoMapper
             id, dto.Url, dto.Sha256, dto.Width, dto.Height, dto.Size, dto.License, dto.Attribution, dto.Source));
     }
 
-    // Enum / value mappings
-
     private static ModStatus MapModStatus(string? status) =>
         status is null ? ModStatus.Active : MetadataEnumMapper.ParseModStatus(status);
 
@@ -184,8 +179,6 @@ public static class DtoMapper
 
         return mapped;
     }
-
-    // Object mappings
 
     private static ModPackEntry MapPackEntry(IndexModPackItemEntryDto dto)
     {

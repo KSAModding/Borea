@@ -1611,7 +1611,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <summary>"3 mods of this instance are not on disk."</summary>
     public string FormatInstanceModsMissing(int count)
         => FormatCount(count, Resources.InstanceModsMissingOne, Resources.InstanceModsMissingFormat);
-    public string ContentEnabled => Resources.ContentEnabled;
 
     public string ContentOpenPage => Resources.ContentOpenPage;
 
@@ -1697,8 +1696,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverSortRecentlyListed => Resources.DiscoverSortRecentlyListed;
 
     public string DiscoverSortName => Resources.DiscoverSortName;
-
-    public string DiscoverAll => Resources.DiscoverAll;
 
     public string DiscoverEmpty => Resources.DiscoverEmpty;
 
@@ -2449,8 +2446,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentGameVersionHeader => Resources.ContentGameVersionHeader;
 
     public string ContentPublishedHeader => Resources.ContentPublishedHeader;
-
-    public string ContentDownloads => Resources.ContentDownloads;
 
     public string ContentDownloadSize => Resources.ContentDownloadSize;
 

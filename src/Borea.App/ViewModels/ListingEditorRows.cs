@@ -121,7 +121,7 @@ public sealed partial class ListingDependencyRow : ObservableObject
 
     public bool HasNotes => NoteText is not null;
 
-    internal ListingDependency ToDependency() => new(Id.Trim(), Kind, Empty(Min), Empty(Max)) { Preserved = _preserved };
+    internal ListingDependency ToDependency() => new(Id.Trim(), Kind, ListingEditor.Empty(Min), ListingEditor.Empty(Max)) { Preserved = _preserved };
 
     internal void RefreshText()
     {
@@ -161,8 +161,6 @@ public sealed partial class ListingDependencyRow : ObservableObject
     partial void OnMinChanged(string value) => _owner.Refresh();
 
     partial void OnMaxChanged(string value) => _owner.Refresh();
-
-    private static string? Empty(string value) => value.Trim().Length == 0 ? null : value.Trim();
 }
 
 /// <summary>
@@ -468,14 +466,14 @@ public sealed partial class ListingImageRow : ObservableObject
 
     internal ListingImageRecord ToRecord() => new(Url.Trim())
     {
-        Id = IsDescriptionImage ? Empty(Id) : null,
+        Id = IsDescriptionImage ? ListingEditor.Empty(Id) : null,
         Sha256 = Sha256,
         Width = Width,
         Height = Height,
         Size = Size,
-        License = Empty(License),
-        Attribution = Empty(Attribution),
-        Source = Empty(Source),
+        License = ListingEditor.Empty(License),
+        Attribution = ListingEditor.Empty(Attribution),
+        Source = ListingEditor.Empty(Source),
     };
 
     /// <summary>Takes what the check read at <paramref name="url"/>, unless the author changed the address since.</summary>
@@ -565,6 +563,4 @@ public sealed partial class ListingImageRow : ObservableObject
     partial void OnAttributionChanged(string value) => _owner.Refresh();
 
     partial void OnSourceChanged(string value) => _owner.Refresh();
-
-    private static string? Empty(string value) => value.Trim().Length == 0 ? null : value.Trim();
 }

@@ -36,22 +36,7 @@ public sealed class StewardViewsTests
         viewModel.OpenStewardPageCommand.Execute(null);
         await viewModel.StewardPage.ShowStatusCommand.ExecuteAsync(null);
 
-        var (texts, buttons) = await HeadlessApp.RunAsync(harness, () =>
-        {
-            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
-            window.Show();
-            try
-            {
-                window.UpdateLayout();
-                var shown = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
-                var visible = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).Select(button => button.Content as string).ToList();
-                return Task.FromResult((shown, visible));
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        var (texts, buttons) = await RenderPageAsync(harness);
 
         Assert.Contains(harness.Localization.StewardHeading, texts);
         Assert.Contains("GoneMod", texts);
@@ -75,22 +60,7 @@ public sealed class StewardViewsTests
         await viewModel.StewardPage.Queue.WhenLoadedAsync();
         viewModel.StewardPage.Queue.SelectScopeCommand.Execute(StewardQueueScope.All);
 
-        var (texts, buttons) = await HeadlessApp.RunAsync(harness, () =>
-        {
-            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
-            window.Show();
-            try
-            {
-                window.UpdateLayout();
-                var shown = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
-                var visible = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).Select(button => button.Content as string).ToList();
-                return Task.FromResult((shown, visible));
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        var (texts, buttons) = await RenderPageAsync(harness);
 
         Assert.Contains("Queue (2)", buttons);
         Assert.Contains(harness.Localization.StewardTabStatus, buttons);
@@ -124,22 +94,7 @@ public sealed class StewardViewsTests
         await viewModel.StewardPage.ShowWatcherCommand.ExecuteAsync(null);
         var name = viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools").Name;
 
-        var (texts, buttons) = await HeadlessApp.RunAsync(harness, () =>
-        {
-            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
-            window.Show();
-            try
-            {
-                window.UpdateLayout();
-                var shown = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
-                var visible = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).Select(button => button.Content as string).ToList();
-                return Task.FromResult((shown, visible));
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        var (texts, buttons) = await RenderPageAsync(harness);
 
         Assert.Contains(harness.Localization.StewardTabWatcher, buttons);
         Assert.Contains(harness.Localization.StewardWatcherHint, texts);
@@ -170,20 +125,7 @@ public sealed class StewardViewsTests
         await viewModel.StewardPage.ShowWatcherCommand.ExecuteAsync(null);
         var name = viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools").Name;
 
-        var texts = await HeadlessApp.RunAsync(harness, () =>
-        {
-            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
-            window.Show();
-            try
-            {
-                window.UpdateLayout();
-                return Task.FromResult(window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList());
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        var (texts, _) = await RenderPageAsync(harness);
 
         Assert.Contains(harness.Localization.StewardWatcherGone, texts);
         Assert.Contains(harness.Localization.StewardWatcherGoneHint, texts);
@@ -240,22 +182,7 @@ public sealed class StewardViewsTests
         await viewModel.StewardPage.ShowReportsCommand.ExecuteAsync(null);
         var name = viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools").Name;
 
-        var (texts, buttons) = await HeadlessApp.RunAsync(harness, () =>
-        {
-            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
-            window.Show();
-            try
-            {
-                window.UpdateLayout();
-                var shown = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
-                var visible = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).Select(button => button.Content as string).ToList();
-                return Task.FromResult((shown, visible));
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        var (texts, buttons) = await RenderPageAsync(harness);
 
         Assert.Contains(harness.Localization.StewardTabReports, buttons);
         Assert.Contains($"{harness.Localization.StewardReportsHint} {harness.Localization.StewardReportsWriteHint}", texts);
@@ -321,11 +248,7 @@ public sealed class StewardViewsTests
         _amendments.Yanked.Add("1.1.0");
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
-        await viewModel.EnsureDiscoverLoadedAsync();
-        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
-        viewModel.AmendContentReleasesCommand.Execute(null);
-        var dialog = viewModel.StewardAmendment!;
-        await dialog.WhenDoneAsync();
+        var dialog = await OpenAmendmentAsync(harness, "MeasureTools");
         dialog.IsScopeUpTo = true;
         dialog.UpTo = "1.2.0";
         dialog.Yank = true;
@@ -378,11 +301,7 @@ public sealed class StewardViewsTests
     {
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
-        await viewModel.EnsureDiscoverLoadedAsync();
-        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
-        viewModel.AmendContentReleasesCommand.Execute(null);
-        var dialog = viewModel.StewardAmendment!;
-        await dialog.WhenDoneAsync();
+        var dialog = await OpenAmendmentAsync(harness, "MeasureTools");
         dialog.OnBehalfOfAuthor = true;
         dialog.AuthorRequest = "github.com/issues/1";
         dialog.BoundDependencyCommand.Execute(null);
@@ -426,11 +345,7 @@ public sealed class StewardViewsTests
         _amendments.Texts["1.2.0"] = FakeReleaseAmendments.WithDependency(FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402"), "ModMenu", "authored");
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
-        await viewModel.EnsureDiscoverLoadedAsync();
-        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
-        viewModel.AmendContentReleasesCommand.Execute(null);
-        var dialog = viewModel.StewardAmendment!;
-        await dialog.WhenDoneAsync();
+        var dialog = await OpenAmendmentAsync(harness, "MeasureTools");
         dialog.Versions[0].IsSelected = true;
         dialog.OnBehalfOfAuthor = true;
         dialog.BoundDependencyCommand.Execute(null);
@@ -475,11 +390,7 @@ public sealed class StewardViewsTests
         _amendments.Texts["1.2.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402");
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
-        await viewModel.EnsureDiscoverLoadedAsync();
-        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
-        viewModel.AmendContentReleasesCommand.Execute(null);
-        var dialog = viewModel.StewardAmendment!;
-        await dialog.WhenDoneAsync();
+        var dialog = await OpenAmendmentAsync(harness, "MeasureTools");
         dialog.Versions[0].IsSelected = true;
 
         var (texts, picks) = await HeadlessApp.RunAsync(harness, () =>
@@ -517,11 +428,7 @@ public sealed class StewardViewsTests
         using var harness = await CreateAsync();
         var localization = harness.Localization;
         var viewModel = harness.ViewModel;
-        await viewModel.EnsureDiscoverLoadedAsync();
-        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
-        viewModel.AmendContentReleasesCommand.Execute(null);
-        var dialog = viewModel.StewardAmendment!;
-        await dialog.WhenDoneAsync();
+        var dialog = await OpenAmendmentAsync(harness, "MeasureTools");
         dialog.Versions[0].IsSelected = true;
         dialog.BoundDependencyCommand.Execute(null);
         dialog.Dependencies[0].Id = "KittenExtensions";
@@ -754,22 +661,7 @@ public sealed class StewardViewsTests
         await viewModel.StewardPage.Reports.WhenLoadedAsync();
         var closedText = viewModel.StewardPage.Reports.Reports[0].ClosedText;
 
-        var (texts, buttons) = await HeadlessApp.RunAsync(harness, () =>
-        {
-            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
-            window.Show();
-            try
-            {
-                window.UpdateLayout();
-                var shown = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
-                var visible = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).Select(button => button.Content as string).ToList();
-                return Task.FromResult((shown, visible));
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        var (texts, buttons) = await RenderPageAsync(harness);
 
         Assert.Contains(closedText, texts);
         Assert.Contains(harness.Localization.StewardReportReopen, buttons);
@@ -826,6 +718,36 @@ public sealed class StewardViewsTests
 
         static List<string?> Shown(Control modal) =>
             modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+    }
+
+    /// <summary>Renders the steward page of the harness and returns its visible texts and the text of each visible button.</summary>
+    private static Task<(List<string?> Texts, List<string?> Buttons)> RenderPageAsync(ViewModelHarness harness) => HeadlessApp.RunAsync(harness, () =>
+    {
+        var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = harness.ViewModel };
+        window.Show();
+        try
+        {
+            window.UpdateLayout();
+            var shown = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+            var visible = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).Select(button => button.Content as string).ToList();
+            return Task.FromResult((shown, visible));
+        }
+        finally
+        {
+            window.Close();
+        }
+    });
+
+    /// <summary>Opens the release amendment of <paramref name="modId"/> from its content page and waits until the dialog has read the releases.</summary>
+    private static async Task<ReleaseAmendmentDialog> OpenAmendmentAsync(ViewModelHarness harness, string modId)
+    {
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == modId));
+        viewModel.AmendContentReleasesCommand.Execute(null);
+        var dialog = viewModel.StewardAmendment!;
+        await dialog.WhenDoneAsync();
+        return dialog;
     }
 
     private async Task<ViewModelHarness> CreateAsync(Func<string, string>? editSnapshot = null)

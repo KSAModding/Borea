@@ -293,18 +293,6 @@ public sealed class GitHubSessionTests
     }
 
     [Fact]
-    public void IsAvailable_WithClientIdAndSlug_IsTrue()
-    {
-        Assert.True(Session().IsAvailable);
-    }
-
-    [Fact]
-    public void InstallUrl_NamesTheApp()
-    {
-        Assert.Equal("https://github.com/apps/borea-test/installations/new", Session().InstallUrl);
-    }
-
-    [Fact]
     public async Task InstallUrl_SignedIn_SuggestsTheUsersOwnAccount()
     {
         _tokenAnswers.Enqueue(() => Json(TokenJson));

@@ -216,10 +216,7 @@ public sealed class GitHubSession : IGitHubSession
             running = _signIn;
             _signIn = null;
             changed = _state.Status != GitHubSessionStatus.SignedOut;
-            _token = null;
-            _refreshToken = null;
-            _userId = null;
-            _state = GitHubSessionState.SignedOut;
+            ForgetSession();
 
             // also while staying signed in is off, because turning it off may have failed to delete
             QueueSecret(secrets => secrets.Delete(RefreshTokenSecret));
@@ -408,6 +405,15 @@ public sealed class GitHubSession : IGitHubSession
         OnStateChanged();
     }
 
+    /// <summary>Called under the gate.</summary>
+    private void ForgetSession()
+    {
+        _token = null;
+        _refreshToken = null;
+        _userId = null;
+        _state = GitHubSessionState.SignedOut;
+    }
+
     /// <summary>
     /// Replaces the kept token with <paramref name="refreshToken"/> while staying signed in is on. Called under the gate.
     /// Without a refresh token, as for an App whose user tokens do not expire or for a sign-in that is not kept, the kept token of an earlier session is deleted.
@@ -535,10 +541,7 @@ public sealed class GitHubSession : IGitHubSession
                 return;
 
             // The kept refresh token stays, because an access token that expired after its 8 hours is refused the same way.
-            _token = null;
-            _refreshToken = null;
-            _userId = null;
-            _state = GitHubSessionState.SignedOut;
+            ForgetSession();
         }
 
         OnStateChanged();

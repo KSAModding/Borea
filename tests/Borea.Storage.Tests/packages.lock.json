@@ -56,16 +56,16 @@
       },
       "JsonSchema.Net": {
         "type": "Transitive",
-        "resolved": "9.4.1",
-        "contentHash": "7Nh0XyIse3a5nsc1nJJTECZVjxqHVE5jANGEPpQc2H+/M7u2sLueL93X6ZUuJLkLYy/pYzFmJhKYEpVIctaUZw==",
+        "resolved": "9.5.0",
+        "contentHash": "yCohYtv0mi0oU+n3rpPBhoP/6OKkmxxwkGfprohst5DywbKoHaf9yJtFR8CYasKUUO5KfIR3gm43vsqxgT0nzA==",
         "dependencies": {
           "JsonPointer.Net": "7.0.3"
         }
       },
       "Markdig": {
         "type": "Transitive",
-        "resolved": "1.4.2",
-        "contentHash": "C5jl2hFLK5KHxWWWO6JxfuQCRirW5DGnCn9IEhJ7xgBMVnd+PjRNdAKO2C6YHpkOtVvZMJ8Zbma7B+CDi+hl+g=="
+        "resolved": "1.5.0",
+        "contentHash": "oEm6N4PYFPUZiJ5e89993AE6hfC8EWRGD5M8nyoSJbwD4GgW818mjlQCk++SdTV4godaN50Ybcmm4j2Dp76oIQ=="
       },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
@@ -133,14 +133,14 @@
       "borea.core": {
         "type": "Project",
         "dependencies": {
-          "Markdig": "[1.4.2, )"
+          "Markdig": "[1.5.0, )"
         }
       },
       "borea.storage": {
         "type": "Project",
         "dependencies": {
           "Borea.Core": "[1.0.0, )",
-          "JsonSchema.Net": "[9.4.1, )",
+          "JsonSchema.Net": "[9.5.0, )",
           "Tomlyn": "[2.10.1, )"
         }
       }

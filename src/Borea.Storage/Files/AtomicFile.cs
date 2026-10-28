@@ -14,51 +14,15 @@ internal static class AtomicFile
     /// write does not finish.
     /// </summary>
     /// <remarks>Not safe against a second writer of the same path.</remarks>
-    public static async Task WriteAllTextAsync(string path, string text, CancellationToken cancellationToken = default)
-    {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
+    public static Task WriteAllTextAsync(string path, string text, CancellationToken cancellationToken = default) =>
+        ReplaceThroughTempFileAsync(path, tempPath => File.WriteAllTextAsync(tempPath, text, cancellationToken), cancellationToken);
 
-        // Written beside the file and moved onto it: the move is atomic in one
-        // directory, and the unique name keeps a second writer off this file.
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            await File.WriteAllTextAsync(tempPath, text, cancellationToken).ConfigureAwait(false);
-            await FileReplace.MoveOverAsync(tempPath, path, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            TryDeleteLeftover(tempPath);
-        }
-    }
-
-    public static async Task WriteAllBytesAsync(string path, byte[] content, CancellationToken cancellationToken = default)
-    {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            await File.WriteAllBytesAsync(tempPath, content, cancellationToken).ConfigureAwait(false);
-            await FileReplace.MoveOverAsync(tempPath, path, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            TryDeleteLeftover(tempPath);
-        }
-    }
+    public static Task WriteAllBytesAsync(string path, byte[] content, CancellationToken cancellationToken = default) =>
+        ReplaceThroughTempFileAsync(path, tempPath => File.WriteAllBytesAsync(tempPath, content, cancellationToken), cancellationToken);
 
     public static void WriteAllBytes(string path, byte[] content)
     {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+        var tempPath = TempFileBeside(path);
         try
         {
             File.WriteAllBytes(tempPath, content);
@@ -66,25 +30,32 @@ internal static class AtomicFile
         }
         finally
         {
-            TryDeleteLeftover(tempPath);
+            LeftoverCleanup.TryDeleteFile(tempPath);
         }
     }
 
-    /// <summary>
-    /// Clears the temporary file without replacing the error that caused it.
-    /// </summary>
-    private static void TryDeleteLeftover(string tempPath)
+    private static async Task ReplaceThroughTempFileAsync(string path, Func<string, Task> writeTempFile, CancellationToken cancellationToken)
     {
+        var tempPath = TempFileBeside(path);
         try
         {
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
+            await writeTempFile(tempPath).ConfigureAwait(false);
+            await FileReplace.MoveOverAsync(tempPath, path, cancellationToken).ConfigureAwait(false);
         }
-        catch (IOException)
+        finally
         {
+            LeftoverCleanup.TryDeleteFile(tempPath);
         }
-        catch (UnauthorizedAccessException)
-        {
-        }
+    }
+
+    private static string TempFileBeside(string path)
+    {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
+        // Written beside the file and moved onto it: the move is atomic in one
+        // directory, and the unique name keeps a second writer off this file.
+        return $"{path}.{Guid.NewGuid():N}.tmp";
     }
 }

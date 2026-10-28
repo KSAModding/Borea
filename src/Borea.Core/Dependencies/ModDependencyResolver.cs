@@ -10,9 +10,8 @@ namespace Borea.Core.Dependencies;
 public sealed class ModDependencyResolver
 {
     /// <summary>
-    /// Weighs every entry that bears on installing a release into an instance.
-    /// the ones the release declares, in document order, then the ones installed
-    /// mods declare against it. group by <see cref="DependencyEvaluation.InstalledModId"/>.
+    /// Weighs every entry that bears on installing a release into an instance, first the ones the release declares
+    /// in document order, then the ones that installed mods declare against it. Group by <see cref="DependencyEvaluation.InstalledModId"/>.
     /// </summary>
     public IReadOnlyList<DependencyEvaluation> Evaluate(Instance instance, ModVersionMetadata candidate)
     {
