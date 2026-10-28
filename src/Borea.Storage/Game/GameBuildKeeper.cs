@@ -585,7 +585,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
                 throw new IOException($"The KSA.dll in the copy of KSA {version} does not read that version.");
 
             cancellationToken.ThrowIfCancellationRequested();
-            Directory.Move(temporary, folder);
+            DirectoryRename.Move(temporary, folder);
             return GameBuildKeepRefusal.None;
         }
         catch (Exception exception)
