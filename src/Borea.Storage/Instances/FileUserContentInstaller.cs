@@ -242,6 +242,7 @@ public sealed class FileUserContentInstaller : IUserContentInstaller
             TryDeleteFile(archive);
         }
 
+        UserContentFolder.CheckFiles(staging, release);
         UserContentFolder.Check(staging, release);
         if (!string.Equals(folderName, release.Install!.Folder, StringComparison.Ordinal))
         {

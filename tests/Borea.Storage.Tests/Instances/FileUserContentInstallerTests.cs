@@ -155,6 +155,31 @@ public sealed class FileUserContentInstallerTests : IDisposable
         Assert.Contains("has no vehicle.xml", failure.Message, StringComparison.Ordinal);
     }
 
+    public static TheoryData<string, string, string> UnsafeFiles => new()
+    {
+        { "Plugins/Rover.dll", "MZ", "'Plugins/Rover.dll', a .dll file" },
+        { "mods/ExampleMod/state/deep/run.ps1", "Write-Host", "'mods/ExampleMod/state/deep/run.ps1', a .ps1 file" },
+        { "parts/SETUP.EXE", "MZ", "'parts/SETUP.EXE', a .exe file" },
+        { "parts/Setup.exe. ", "MZ", "a .exe file" },
+        { "Rover.app/Contents/MacOS/Rover", "", "'Rover.app', a .app folder" },
+        { "parts/notes.txt:Zone.Identifier", "[ZoneTransfer]", "':'" },
+        { "mods/ExampleMod/state%41.xml", "<!DOCTYPE x [<!ENTITY a \"b\">]><x>&a;</x>", "'mods/ExampleMod/state%41.xml'" },
+    };
+
+    [Theory]
+    [MemberData(nameof(UnsafeFiles))]
+    public async Task Install_ArchiveWithCodeOrUnsafeNameOrXml_ChangesNothing(string entry, string content, string message)
+    {
+        _downloader.Bytes = Zip(("meta.toml", "name = \"Example Rover\"\n"), ("vehicle.xml", "<Vehicle />"), (entry, content));
+
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => Installer().InstallAsync(_instanceId, Release(), name: null));
+
+        Assert.Contains(message, failure.Message, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(_paths.GetInstanceVehiclesFolder(_instanceId)));
+        Assert.Empty(await _records.ListAsync(_instanceId));
+        AssertNoStaging();
+    }
+
     [Fact]
     public async Task Install_HashMismatch_ChangesNothing()
     {
@@ -374,7 +399,7 @@ public sealed class FileUserContentInstallerTests : IDisposable
 
     internal static byte[] Archive(ContentType type, string name, string prefix, string vehicle = "<Vehicle />") =>
         type == ContentType.Save
-            ? Zip(($"{prefix}meta.toml", $"name = \"{name}\"\n"), ($"{prefix}universe.xml", "<Universe />"))
+            ? Zip(($"{prefix}meta.toml", $"name = \"{name}\"\n"), ($"{prefix}universe.xml", "<Universe />"), ($"{prefix}mods/ExampleMod/state.xml", "<State />"))
             : Zip([($"{prefix}meta.toml", $"name = \"{name}\"\nversion = \"2026.10.19.5638\"\n"), ($"{prefix}vehicle.xml", vehicle), ($"{prefix}parts/notes.txt", "notes"), .. prefix.Length == 0 ? Array.Empty<(string, string)>() : [("README.md", "outside the root")]]);
 
     internal static byte[] Zip(params (string Path, string Content)[] entries)
