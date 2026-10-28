@@ -36,7 +36,7 @@ public sealed partial class GitHubIndexReportsTests
 
         Assert.Equal([(10, IndexReportKind.Takedown), (12, IndexReportKind.Dispute)], listed.Select(report => (report.Number, report.Kind)));
         var takedown = listed[0];
-        Assert.Equal((new Uri($"https://github.com/{Index}/issues/10"), "[Takedown] Harmful installer", "alice", Day.AddHours(10)), (takedown.Url, takedown.Title, takedown.Author, takedown.Created));
+        Assert.Equal((new Uri($"https://github.com/{Index}/issues/10"), "[Takedown] Harmful installer", "alice", 110L, Day.AddHours(10)), (takedown.Url, takedown.Title, takedown.Author, takedown.AuthorId, takedown.Created));
         Assert.Equal(("tools-pack", "1.1.0", "The archive carries something harmful", "A player."), (takedown.Id, takedown.Version, takedown.Ground, takedown.Reporter));
         var dispute = listed[1];
         Assert.Equal(("MeasureTools", "I announced it first.", "@bob"), (dispute.Id, dispute.Claim, dispute.OtherParty));
@@ -109,7 +109,7 @@ public sealed partial class GitHubIndexReportsTests
             body,
             created_at = Day.AddHours(number),
             updated_at = Day.AddHours(number + 1),
-            user = new { login = author, type = author.EndsWith("[bot]", StringComparison.Ordinal) ? "Bot" : "User" },
+            user = new { login = author, id = 100 + number, type = author.EndsWith("[bot]", StringComparison.Ordinal) ? "Bot" : "User" },
         });
 
     private async Task<GitHubIndexReports> SignedInAsync() => new(await SignInAsync(), Http());

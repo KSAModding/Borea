@@ -43,7 +43,7 @@ public sealed class GitHubIndexReports : IIndexReports, IReportActions
 
             void Add(GitHubIssue issue)
             {
-                if (IndexReport.FromIssue(issue.Number, issue.Url, issue.Title, issue.Author, issue.Created, issue.Body) is { } report)
+                if (IndexReport.FromIssue(issue.Number, issue.Url, issue.Title, issue.Author, issue.Created, issue.Body, issue.AuthorId) is { } report)
                     reports.Add(issue.IsClosed ? report with { IsClosed = true, CloseReason = CloseReasonOf(issue.StateReason), Closed = issue.Closed } : report);
             }
         }

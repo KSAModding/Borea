@@ -23,6 +23,12 @@ public enum IndexStatusRefusal
 
     /// <summary>The state to lift is no longer in the file.</summary>
     NotInFile,
+
+    /// <summary>No version of the pack pins the mod, or each one that does is retracted already.</summary>
+    NotPinned,
+
+    /// <summary>Neither the ownership proof nor the steward confirms that the reporter owns the listing of the mod.</summary>
+    NotConfirmed,
 }
 
 public sealed class IndexStatusRefusedException(IndexStatusRefusal refusal, string id, string? version = null)

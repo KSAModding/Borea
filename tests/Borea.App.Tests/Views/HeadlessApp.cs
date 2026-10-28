@@ -51,13 +51,23 @@ internal static class HeadlessApp
     /// returned, so work that is left behind never continues and whoever waits for
     /// it waits for ever.
     /// </summary>
-    public static Task<T> RunAsync<T>(ViewModelHarness harness, Func<Task<T>> body) =>
-        RunAsync(async () =>
+    /// <remarks>
+    /// The dispatch also starts only once the harness work is done, because between
+    /// two dispatches Avalonia has no UI thread, and the first thread that asks for
+    /// one becomes it while the next dispatch sets up its application. A binding of an
+    /// earlier window asks on the thread that raises PropertyChanged, so a test that
+    /// must render background work in flight uses the overload without a harness.
+    /// </remarks>
+    public static async Task<T> RunAsync<T>(ViewModelHarness harness, Func<Task<T>> body)
+    {
+        await harness.WhenIdleAsync(Limit);
+        return await RunAsync(async () =>
         {
             var result = await body();
             await harness.WhenIdleAsync();
             return result;
         });
+    }
 
 
     public static async Task FramesAsync(int count = 60)

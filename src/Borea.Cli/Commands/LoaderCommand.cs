@@ -248,12 +248,15 @@ internal static class LoaderCommand
             if (parseResult.GetValue(unused))
                 return await UninstallUnusedAsync(cli, id, output, ct).ConfigureAwait(false);
 
-            // the recorded version gets the same check as one version, so no instance loses the version that it starts
+            // only a pin blocks, because an automatic instance starts another installed version or gets the install offer at its launch
             var installed = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
-            if (InstalledLoaderVersion.Of(installed, id).Any(v => v.IsRecorded)
-                && (await UsesAsync(cli, installed, ct).ConfigureAwait(false))
-                    .FirstOrDefault(use => use.IsUsed && use.Version.IsRecorded && ModIds.Equals(use.Version.LoaderId, id)) is { } used)
+            if (InstalledLoaderVersion.Of(installed, id).FirstOrDefault(v => v.IsRecorded) is { Version: { } recordedVersion } recorded
+                && (await cli.Instances.GetAllAsync().ConfigureAwait(false))
+                    .Where(instance => instance.Loader.Version == recordedVersion && ModIds.Equals(instance.Loader.LoaderId, id))
+                    .Select(instance => new LoaderVersionUser(instance, IsPinned: true))
+                    .ToList() is { Count: > 0 } pinned)
             {
+                var used = new LoaderVersionUse(recorded, pinned);
                 throw new InvalidOperationException(
                     $"Borea keeps {used.Version.LoaderId} {VersionText(used.Version)}, because {DescribeUsers(used.Users)} {Starts(used)} it. Change their mod loader setting with 'borea instance set-loader' first.");
             }

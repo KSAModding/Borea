@@ -10,6 +10,9 @@ namespace Borea.Storage.Mods;
 
 public sealed class FileForeignModAdopter : IForeignModAdopter
 {
+    private const int RestoreAttempts = 20;
+    private static readonly TimeSpan RestoreRetryDelay = TimeSpan.FromMilliseconds(100);
+
     private readonly IGamePathProvider _pathProvider;
     private readonly IInstanceRepository _instances;
     private readonly IModArchiveReleaseLookup _releaseLookup;
@@ -218,6 +221,26 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
     }
 
     private async Task RestoreFolderAsync(Guid instanceId, string folder, string recoveryFolder, ForeignMod? record)
+    {
+        // A size walk of the instance can still read the recovery folder, and Windows does not move a
+        // folder while a file or folder below it is open, so the move back is tried again for about two seconds.
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await MoveBackAsync(instanceId, folder, recoveryFolder, record).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+                && attempt < RestoreAttempts
+                && Directory.Exists(recoveryFolder))
+            {
+                await Task.Delay(RestoreRetryDelay, _timeProvider).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async Task MoveBackAsync(Guid instanceId, string folder, string recoveryFolder, ForeignMod? record)
     {
         await _instances.UpdateAsync(
             instanceId,

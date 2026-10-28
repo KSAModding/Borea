@@ -49,7 +49,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         Func<bool>? isGameProcessRunning = null,
         Func<bool>? isOtherBoreaRunning = null,
         Func<string, string, bool>? isSameVolume = null)
-        : this(settings, paths, defaultFolder, launcher, locks, isGameProcessRunning, isOtherBoreaRunning, isSameVolume, Directory.Move)
+        : this(settings, paths, defaultFolder, launcher, locks, isGameProcessRunning, isOtherBoreaRunning, isSameVolume, DirectoryRename.Move)
     {
     }
 
