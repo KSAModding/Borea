@@ -1290,6 +1290,9 @@
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>Ein neuerer KSA-Build ist verfügbar:</value>
   </data>
+  <data name="GameBuildKeepHintFormat" xml:space="preserve">
+    <value>Deine Mods brauchen für den neuen Build vielleicht Updates. Damit du {0} nach dem Update weiter mit KSA {1} spielen kannst, behalte diesen Build, bevor du das Spiel aktualisierst.</value>
+  </data>
   <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
     <value>{0} {1} unterstützt KSA {2} nicht. {0} {3} unterstützt es.</value>
   </data>

@@ -217,6 +217,8 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasHomeInstance))]
+    [NotifyPropertyChangedFor(nameof(GameBuildKeepHintText))]
+    [NotifyPropertyChangedFor(nameof(GameBuildKeepActionText))]
     private InstanceItem? _homeInstance;
 
     public bool HasHomeInstance => HomeInstance is not null;
@@ -967,6 +969,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(ReleaseBannerText));
         OnPropertyChanged(nameof(SelfUpdateActionText));
         OnPropertyChanged(nameof(GameBuildBannerText));
+        OnPropertyChanged(nameof(GameBuildKeepHintText));
+        OnPropertyChanged(nameof(GameBuildKeepActionText));
         OnPropertyChanged(nameof(GameShapeBrokenText));
         OnPropertyChanged(nameof(GameShapeUntestedText));
         OnPropertyChanged(nameof(NewerGamePatchNotesCappedText));

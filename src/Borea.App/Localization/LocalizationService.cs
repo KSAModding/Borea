@@ -1236,6 +1236,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameBuildAvailable => Resources.GameBuildAvailable;
 
+    public string FormatGameBuildKeepHint(string instance, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameBuildKeepHintFormat, instance, build);
+
     public string FormatLoaderUpdateUrgent(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentFormat, loader, installed, game, offer);
 
