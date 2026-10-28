@@ -1058,7 +1058,7 @@ public sealed class ContentUpdateTests
         Assert.Empty(row.Changelogs);
     }
 
-    private static ModVersionMetadata Release(string version, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyList<ModDependency>? dependencies = null, string? changelog = null, string modId = OwnId) => new(
+    internal static ModVersionMetadata Release(string version, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyList<ModDependency>? dependencies = null, string? changelog = null, string modId = OwnId) => new(
         specVersion: 1,
         modId: modId,
         version: ModVersion.Parse(version),
@@ -1072,7 +1072,7 @@ public sealed class ContentUpdateTests
         changelog: changelog);
 
     /// <summary>Serves a zip with a mod.toml at its root, named for the mod the archive URL names.</summary>
-    private static HttpResponseMessage? ServeArchive(HttpRequestMessage request)
+    internal static HttpResponseMessage? ServeArchive(HttpRequestMessage request)
     {
         if (request.RequestUri?.Host != ArchiveHost)
             return null;
