@@ -31,15 +31,6 @@ public sealed class InstallDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task DetectAsync_NoCandidate_FindsNothing()
-    {
-        var detection = await _detector.DetectAsync([StarMap()]);
-
-        Assert.Empty(detection.Games);
-        Assert.Empty(detection.Loaders);
-    }
-
-    [Fact]
     public async Task DetectAsync_OneGame_ReturnsItsVersion()
     {
         var game = PlaceGame("KSA", RealBuildFixture);

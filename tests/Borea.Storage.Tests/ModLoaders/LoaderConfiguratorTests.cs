@@ -473,18 +473,11 @@ public sealed class LoaderConfiguratorTests : IDisposable
     }
 
     [Theory]
-    [InlineData("relative/loader")]
+    [InlineData("relative/directory")]
     [InlineData("")]
-    public async Task ConfigureAsync_RelativeLoaderDirectory_ThrowsArgumentException(string directory)
+    public async Task ConfigureAsync_RelativeDirectory_ThrowsArgumentException(string directory)
     {
         await Assert.ThrowsAsync<ArgumentException>(() => _configurator.ConfigureAsync(Loader(Json()), directory, _gameDirectory));
-    }
-
-    [Theory]
-    [InlineData("relative/game")]
-    [InlineData("")]
-    public async Task ConfigureAsync_RelativeGameDirectory_ThrowsArgumentException(string directory)
-    {
         await Assert.ThrowsAsync<ArgumentException>(() => _configurator.ConfigureAsync(Loader(Json()), _loaderDirectory, directory));
     }
 

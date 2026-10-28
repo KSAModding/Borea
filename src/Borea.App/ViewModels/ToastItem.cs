@@ -52,7 +52,7 @@ public sealed partial class ToastItem : ObservableObject
         _messageState = kind == ToastKind.Error ? TaskState.Failed : TaskState.Finished;
     }
 
-    /// <summary>The task the toast is about. Null for a toast about a short result.</summary>
+    /// <summary>Null for a toast about a short result.</summary>
     internal TaskItem? TaskItem { get; }
 
     private LocalizationService Localization => _owner.Localization;
@@ -80,7 +80,7 @@ public sealed partial class ToastItem : ObservableObject
     public string? Detail => TaskItem is not { } task ? _detail : task.State switch
     {
         TaskState.Failed => task.FailureReason,
-        TaskState.Stopped when task.StoppedAfter is { Completed: > 0 } after => task.Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate
+        TaskState.Stopped when task.StoppedAfter is { Completed: > 0 } after => TaskItem.IsUpdate(task.Kind)
             ? Localization.FormatToastStoppedUpdated(after.Completed, after.Total)
             : Localization.FormatToastStoppedInstalled(after.Completed, after.Total),
         _ => null,

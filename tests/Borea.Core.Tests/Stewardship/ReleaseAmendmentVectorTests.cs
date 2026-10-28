@@ -63,8 +63,7 @@ public sealed class ReleaseAmendmentVectorTests
         switch ((string)vector["verdict"]!)
         {
             case "accepted":
-                var amended = Run(vector, options, amender);
-                Assert.NotNull(amended);
+                var amended = Run(vector, options, amender)!;
                 Assert.Equal(Encoding.UTF8.GetBytes((string)vector["written"]!), Encoding.UTF8.GetBytes(amended.Text));
                 if (amender == ReleaseAmender.Owner)
                     AssertWidensOnlyWhereAStewardIsRefused(vector, options, amended);
@@ -142,12 +141,11 @@ public sealed class ReleaseAmendmentVectorTests
         var onRequest = alone with { AuthorRequest = "https://github.com/KSAModding/content-index/issues/42#issuecomment-7" };
 
         var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => Run(refusedVector, refusedVector["amendment"]!.AsObject(), alone.Amender));
-        var amended = Run(acceptedVector, acceptedVector["amendment"]!.AsObject(), onRequest.Amender);
+        var amended = Run(acceptedVector, acceptedVector["amendment"]!.AsObject(), onRequest.Amender)!;
 
         Assert.Equal((ReleaseAmender.Steward, ReleaseAmender.Owner), (alone.Amender, onRequest.Amender));
         Assert.Equal(ReleaseAmendmentRefusal.Widens, refused.Refusal);
         Assert.Contains(refused.Details, detail => detail.Contains((string)refusedVector["reason"]!, StringComparison.Ordinal));
-        Assert.NotNull(amended);
         Assert.True(amended.Widens);
         Assert.Equal(Encoding.UTF8.GetBytes((string)acceptedVector["written"]!), Encoding.UTF8.GetBytes(amended.Text));
         Assert.DoesNotContain("--owner", alone.Command, StringComparison.Ordinal);

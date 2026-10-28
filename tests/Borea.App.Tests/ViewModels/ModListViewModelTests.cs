@@ -26,8 +26,7 @@ public sealed class ModListViewModelTests
 
         await viewModel.Instances.Single().DuplicateCommand.ExecuteAsync(null);
 
-        var review = viewModel.ModListImport;
-        Assert.NotNull(review);
+        var review = viewModel.ModListImport!;
         Assert.True(review.IsDuplicate);
         Assert.Equal("Main (copy)", review.Name);
         Assert.Equal([harness.Localization.FormatModListNotCopied(["LocalOnly"])], review.Notes);

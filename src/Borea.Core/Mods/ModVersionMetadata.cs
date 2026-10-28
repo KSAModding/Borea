@@ -13,14 +13,8 @@ public sealed class ModVersionMetadata
 {
     public const int MaxChangelogTextBytes = 16 * 1024;
 
-    /// <summary>
-    /// The version of the metadata specification.
-    /// </summary>
     public int SpecVersion { get; }
 
-    /// <summary>
-    /// The mod's unique identifier.
-    /// </summary>
     public string ModId { get; }
 
     /// <summary>
@@ -38,9 +32,6 @@ public sealed class ModVersionMetadata
     /// </summary>
     public string VersionScheme { get; }
 
-    /// <summary>
-    /// The maturity of the release.
-    /// </summary>
     public ReleaseStatus ReleaseStatus { get; }
 
     /// <summary>

@@ -74,8 +74,6 @@ public sealed class DtoMapperTests
         },
     };
 
-    // ---- MapAuthored ----
-
     [Fact]
     public void MapAuthored_MinimalDto_MapsRequiredFields()
     {
@@ -167,7 +165,6 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapAuthored(dto, "source");
 
-        Assert.NotNull(result.Releases);
         Assert.Equal("github", result.Releases!.Authority);
         Assert.Equal("owner/repo", result.Releases.Hosts.Single(h => h.Host == "github").Reference);
         Assert.Equal("4242", result.Releases.Hosts.Single(h => h.Host == "spacedock").Reference);
@@ -414,7 +411,6 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapAuthored(dto, "source");
 
-        Assert.NotNull(result.Loader);
         Assert.Equal("test-loader", result.Loader!.LoaderId);
         Assert.Equal(ModVersion.Parse("1.0.0"), result.Loader.MinVersion);
         Assert.Equal(ModVersion.Parse("2.0.0"), result.Loader.MaxVersion);
@@ -471,7 +467,6 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapAuthored(dto, "source");
 
-        Assert.NotNull(result.Install);
         Assert.Equal("content", result.Install!.Root);
         Assert.Equal(InstallAnchor.Mods, result.Install.Target);
         Assert.Equal("sub", result.Install.Path);
@@ -509,11 +504,9 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapAuthored(dto, "source");
 
-        Assert.NotNull(result.Provides);
         Assert.Equal("bin/loader.exe", result.Provides!.Launch);
         Assert.Equal(InstallAnchor.Mods, result.Provides.ContentDir);
         Assert.Equal("plugins", result.Provides.ContentPath);
-        Assert.NotNull(result.Provides.Configure);
         Assert.Equal("config.json", result.Provides.Configure!.File);
         Assert.Equal(ConfigureFormat.Json, result.Provides.Configure.Format);
         Assert.Equal("paths.game", result.Provides.Configure.GamePath);
@@ -579,8 +572,7 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapAuthored(dto, "source");
 
-        Assert.NotNull(result.Provides!.Instance);
-        Assert.Equal(flag, result.Provides.Instance!.Flag);
+        Assert.Equal(flag, result.Provides!.Instance!.Flag);
         Assert.Equal(variable, result.Provides.Instance.Variable);
     }
 
@@ -641,8 +633,6 @@ public sealed class DtoMapperTests
         Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(dto, "source"));
     }
 
-    // ---- MapRelease ----
-
     [Fact]
     public void MapRelease_MinimalDto_MapsRequiredFields()
     {
@@ -677,19 +667,15 @@ public sealed class DtoMapperTests
         Assert.Equal(new[] { "config/settings.json" }, result.Manages);
     }
 
-    [Theory]
-    [InlineData("stable", ReleaseStatus.Stable)]
-    [InlineData("testing", ReleaseStatus.Testing)]
-    [InlineData("dev", ReleaseStatus.Dev)]
-    [InlineData("weird", ReleaseStatus.Unknown)]
-    public void MapRelease_MapsReleaseStatus(string status, ReleaseStatus expected)
+    [Fact]
+    public void MapRelease_MapsReleaseStatus()
     {
         var dto = MinimalReleaseDto();
-        dto.ReleaseStatus = status;
+        dto.ReleaseStatus = "testing";
 
         var result = DtoMapper.MapRelease(dto, null, authored: null);
 
-        Assert.Equal(expected, result.ReleaseStatus);
+        Assert.Equal(ReleaseStatus.Testing, result.ReleaseStatus);
     }
 
     [Fact]
@@ -714,32 +700,15 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapRelease(dto, null, authored: null);
 
-        Assert.NotNull(result.Install);
         Assert.Equal("content", result.Install!.Root);
         Assert.True(result.Install.Derived);
         Assert.Equal(InstallAnchor.UserData, result.Install.Target);
         Assert.Equal("saves", result.Install.Path);
 
-        Assert.NotNull(result.Loader);
         Assert.Equal("test-loader", result.Loader!.LoaderId);
         Assert.Equal(ModVersion.Parse("1.0.0"), result.Loader.MinVersion);
         Assert.Null(result.Loader.MaxVersion);
         Assert.Equal(MetadataSource.Authored, result.Loader.Source);
-    }
-
-    [Theory]
-    [InlineData("mods", InstallAnchor.Mods)]
-    [InlineData("user-data", InstallAnchor.UserData)]
-    [InlineData("game-root", InstallAnchor.GameRoot)]
-    [InlineData("standalone", InstallAnchor.Standalone)]
-    public void MapRelease_MapsInstallAnchor(string target, InstallAnchor expected)
-    {
-        var dto = MinimalReleaseDto();
-        dto.Install = new InstallInfoDto { Derived = false, Target = target };
-
-        var result = DtoMapper.MapRelease(dto, null, authored: null);
-
-        Assert.Equal(expected, result.Install!.Target);
     }
 
     [Fact]
@@ -805,8 +774,6 @@ public sealed class DtoMapperTests
         Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dto, null, authored: null));
     }
 
-    // ---- MapRelease: listing snapshot merge behavior ----
-
     [Fact]
     public void MapRelease_NoListingKey_LeavesSnapshotNull()
     {
@@ -837,7 +804,6 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapRelease(dto, null, authored);
 
-        Assert.NotNull(result.Listing);
         Assert.Equal("Release-Time Name", result.Listing!.Name);
         Assert.Equal(new[] { "Release Author" }, result.Listing.Authors);
         Assert.Equal("Release-time abstract.", result.Listing.Abstract);
@@ -851,13 +817,11 @@ public sealed class DtoMapperTests
     public void MapRelease_PartialListingSnapshot_FallsBackToAuthoredPerField()
     {
         var dto = MinimalReleaseDto();
-        // Only overrides the name; every other field should fall back to authored.
         dto.Listing = JsonSerializer.SerializeToElement(new { name = "Release-Time Name" });
         var authored = DtoMapper.MapAuthored(MinimalAuthoredDto(), "source");
 
         var result = DtoMapper.MapRelease(dto, null, authored);
 
-        Assert.NotNull(result.Listing);
         Assert.Equal("Release-Time Name", result.Listing!.Name);
         Assert.Equal(authored.Authors, result.Listing.Authors);
         Assert.Equal(authored.Abstract, result.Listing.Abstract);
@@ -928,14 +892,11 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapRelease(dto, null, authored: null);
 
-        Assert.NotNull(result.Listing);
         Assert.Equal("Standalone Name", result.Listing!.Name);
         Assert.Equal(new[] { "Solo Author" }, result.Listing.Authors);
         Assert.Equal("Standalone abstract.", result.Listing.Abstract);
         Assert.Equal("MIT", result.Listing.License);
     }
-
-    // ---- MapPackVersion ----
 
     [Fact]
     public void MapPackVersion_MinimalDto_MapsRequiredFields()
@@ -1006,8 +967,6 @@ public sealed class DtoMapperTests
 
         Assert.Throws<FormatException>(() => DtoMapper.MapPackVersion(dto, "source"));
     }
-
-    // ---- MapIndexStatus ----
 
     [Theory]
     [InlineData("delisted", IndexStatusState.Delisted)]

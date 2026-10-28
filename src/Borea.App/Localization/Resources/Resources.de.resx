@@ -4770,4 +4770,13 @@
   <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
     <value>{0} wurde ohne die Vorlage erstellt</value>
   </data>
+  <data name="AboutTranslators" xml:space="preserve">
+    <value>Übersetzer</value>
+  </data>
+  <data name="AboutTranslatorNotListed" xml:space="preserve">
+    <value>Noch nicht in den credits</value>
+  </data>
+  <data name="AboutOriginalRepository" xml:space="preserve">
+    <value>Borea-Repository</value>
+  </data>
 </root>

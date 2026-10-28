@@ -593,7 +593,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
     internal static bool OnSameVolume(string left, string right)
     {
         var leftVolume = VolumeRoot(left);
-        return leftVolume is not null && string.Equals(leftVolume, VolumeRoot(right), PathComparison);
+        return leftVolume is not null && string.Equals(leftVolume, VolumeRoot(right), FileSystemPaths.PathComparison);
     }
 
     /// <summary>The longest mount point that holds the path, or its root when the mount points cannot be read.</summary>
@@ -660,17 +660,15 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         }
     }
 
-    private static bool SamePath(string left, string right) => string.Equals(left, right, PathComparison);
+    private static bool SamePath(string left, string right) => string.Equals(left, right, FileSystemPaths.PathComparison);
 
     private static bool IsSameOrInside(string path, string folder) => SamePath(path, folder) || IsInside(path, folder);
 
     private static bool IsInside(string path, string folder)
     {
         var prefix = Path.EndsInDirectorySeparator(folder) ? folder : folder + Path.DirectorySeparatorChar;
-        return path.Length > prefix.Length && path.StartsWith(prefix, PathComparison);
+        return path.Length > prefix.Length && path.StartsWith(prefix, FileSystemPaths.PathComparison);
     }
-
-    private static StringComparison PathComparison => OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
     private sealed record FolderMove(string From, string To);
 

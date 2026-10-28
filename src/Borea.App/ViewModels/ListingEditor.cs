@@ -248,8 +248,6 @@ public sealed partial class ListingEditor : ObservableObject
 
     public bool HasNotes => Notes.Count > 0;
 
-    public bool HasNoIssues => Errors.Count == 0 && Notes.Count == 0;
-
     [ObservableProperty]
     private string? _schemaText;
 
@@ -266,7 +264,6 @@ public sealed partial class ListingEditor : ObservableObject
     [ObservableProperty]
     private string? _outputMessage;
 
-    /// <summary>The page the last pull request action opened.</summary>
     internal ListingPullRequestPage? LastPullRequestPage { get; private set; }
 
     public string PullRequestText => IsPack
@@ -748,7 +745,6 @@ public sealed partial class ListingEditor : ObservableObject
         };
         OnPropertyChanged(nameof(HasErrors));
         OnPropertyChanged(nameof(HasNotes));
-        OnPropertyChanged(nameof(HasNoIssues));
         OnPropertyChanged(nameof(CanOpenPullRequest));
         RefreshOverview(issues);
         foreach (var row in DeclaredDependencies)
@@ -870,7 +866,7 @@ public sealed partial class ListingEditor : ObservableObject
         };
     }
 
-    private static string? Empty(string value) => value.Trim().Length == 0 ? null : value.Trim();
+    internal static string? Empty(string value) => value.Trim().Length == 0 ? null : value.Trim();
 
     private string DescribeArchive(ListingSource source)
     {

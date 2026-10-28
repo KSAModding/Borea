@@ -52,6 +52,14 @@ internal static class ContentOutput
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 
+    public static string Name(InstallReason reason) => reason switch
+    {
+        InstallReason.Manual => "manual",
+        InstallReason.ModPack => "modpack",
+        InstallReason.Dependency => "dependency",
+        _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
+    };
+
     public static string? Name(MetadataSource? source) => source switch
     {
         null => null,
@@ -92,6 +100,25 @@ internal static class ContentOutput
         ? null
         : new IndexStatusView(status.RawState, status.Since, status.Reason);
 
+    /// <summary>Orders version text newest first: semantic versions by precedence, text that does not parse after them, ordinal text as the tie-break.</summary>
+    public static int CompareVersionsNewestFirst(string left, string right)
+    {
+        var leftParsed = ModVersion.TryParse(left, out var leftVersion);
+        var rightParsed = ModVersion.TryParse(right, out var rightVersion);
+        if (leftParsed && rightParsed)
+        {
+            var precedence = rightVersion.CompareTo(leftVersion);
+            if (precedence != 0)
+                return precedence;
+        }
+        else if (leftParsed != rightParsed)
+        {
+            return leftParsed ? -1 : 1;
+        }
+
+        return StringComparer.Ordinal.Compare(left, right);
+    }
+
     /// <summary>
     /// Writes the author's steps of RFC 0035 as a numbered list. They are prose that
     /// Borea never acts on, and an absent list writes nothing, the same as an empty one.
@@ -125,6 +152,14 @@ internal static class ContentOutput
             var specVersion = diagnostic.SpecVersion is null ? string.Empty : $" (spec version {diagnostic.SpecVersion})";
             output.WriteLine($"  {diagnostic.Kind} {diagnostic.Scope}{identity}{version}{specVersion}: {diagnostic.Reason}");
         }
+    }
+
+    public static void WriteIndexStatus(TextWriter output, IndexStatusView status)
+    {
+        var since = status.Since is null ? string.Empty : $" since {status.Since:O}";
+        output.WriteLine($"Index status: {status.State}{since}");
+        if (status.Reason is not null)
+            output.WriteLine($"Index reason: {status.Reason}");
     }
 }
 

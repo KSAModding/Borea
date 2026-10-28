@@ -6,7 +6,7 @@ using Borea.Core.Settings;
 namespace Borea.Storage.ModLoaders;
 
 /// <summary>
-/// File-backed <see cref="ILoaderUninstaller"/>. A folder is first renamed to a hidden sibling, then the record is saved, and
+/// A folder is first renamed to a hidden sibling, then the record is saved, and
 /// the sibling is deleted last. The rename is the one step that can fail on a locked file, and it changes nothing when it
 /// fails. The version store skips hidden folders, so a sibling that could not be deleted is never listed, and the next
 /// removal deletes it when it is inside the Loaders root.

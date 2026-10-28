@@ -61,9 +61,7 @@ public partial class MainViewModel
     private void StartGameSettingsPresetLoad()
     {
         SelectedGameSettingsPreset = GameSettingsPresets.FirstOrDefault();
-        var previous = _gameSettingsPresetLoad;
-        var load = LoadGameSettingsPresetsAsync();
-        _gameSettingsPresetLoad = previous.IsCompleted ? load : Task.WhenAll(previous, load);
+        _gameSettingsPresetLoad = Chain(_gameSettingsPresetLoad, LoadGameSettingsPresetsAsync());
     }
 
     /// <summary>

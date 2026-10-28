@@ -150,11 +150,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped, item.InstallError);
-            item.IsInstalling = false;
-            item.Run = null;
-            item.Progress = 0;
-            item.ProgressStatus = null;
-            item.ProgressDetail = null;
+            EndRowInstall(item, null);
         }
 
         await ReloadInstancesAsync();

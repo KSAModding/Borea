@@ -192,8 +192,7 @@ public sealed class LoggingDecoratorsTests
     [Fact]
     public async Task WatchStart_OtherModsNeedTheMissingAssembly_WritesThem()
     {
-        var loader = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "StarMap"));
-        var plan = new LaunchPlan(Path.Combine(loader, "StarMap.exe"), [], loader, new Dictionary<string, string>());
+        var plan = StarMapPlan();
         var instance = new Instance("Main", InstanceSource.Custom.Value);
         var launcher = new LoggingLauncher(new FixedLauncher(LaunchResult.Success(plan, 42, "Started.")), _log);
 
@@ -208,8 +207,7 @@ public sealed class LoggingDecoratorsTests
     [Fact]
     public async Task WatchStart_StoppedWhileLoadingMods_WritesTheLikelyModAndTheExitCode()
     {
-        var loader = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "StarMap"));
-        var plan = new LaunchPlan(Path.Combine(loader, "StarMap.exe"), [], loader, new Dictionary<string, string>());
+        var plan = StarMapPlan();
         var instance = new Instance("Main", InstanceSource.Custom.Value);
         var launcher = new LoggingLauncher(new FixedLauncher(LaunchResult.Success(plan, 42, "Started.")), _log);
 
@@ -228,8 +226,7 @@ public sealed class LoggingDecoratorsTests
     [Fact]
     public async Task WatchExit_WritesACrashWithItsLogAndAQuitWithItsExitCode()
     {
-        var loader = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "StarMap"));
-        var started = LaunchResult.Success(new LaunchPlan(Path.Combine(loader, "StarMap.exe"), [], loader, new Dictionary<string, string>()), 42, "Started.");
+        var started = LaunchResult.Success(StarMapPlan(), 42, "Started.");
         var instance = new Instance("Main", InstanceSource.Custom.Value);
         var crash = new GameCrash("C:/logs/KittenSpaceAgency.260926-122536.42.previous-crash.log", "KittenSpaceAgency.260926-122536.42", DateTimeOffset.UnixEpoch, "System.NullReferenceException: Object reference not set.", "KSArmory");
 
@@ -371,23 +368,14 @@ public sealed class LoggingDecoratorsTests
     [Theory]
     [InlineData(ListingPublishOutcome.Opened, "Opened listing pull request https://github.com/KSAModding/content-index/pull/90")]
     [InlineData(ListingPublishOutcome.Updated, "Updated listing pull request https://github.com/KSAModding/content-index/pull/90")]
-    public async Task ListingPublisher_OpenedOrUpdated_WritesTheUrl(ListingPublishOutcome outcome, string message)
+    [InlineData(ListingPublishOutcome.Unchanged)]
+    public async Task ListingPublisher_Outcome_WritesTheUrlOnlyForAnOpenedOrUpdatedPullRequest(ListingPublishOutcome outcome, params string[] messages)
     {
         var publisher = new LoggingListingPublisher(new FakeListingPublisher { Outcome = outcome }, _log);
 
         await publisher.PublishAsync(new ListingSubmission("MyMod", "My Mod", [], IsEdit: false));
 
-        Assert.Equal([message], _log.Messages);
-    }
-
-    [Fact]
-    public async Task ListingPublisher_NothingToCommit_WritesNothing()
-    {
-        var publisher = new LoggingListingPublisher(new FakeListingPublisher { Outcome = ListingPublishOutcome.Unchanged }, _log);
-
-        await publisher.PublishAsync(new ListingSubmission("MyMod", "My Mod", [], IsEdit: false));
-
-        Assert.Empty(_log.Messages);
+        Assert.Equal(messages, _log.Messages);
     }
 
     [Fact]
@@ -473,6 +461,12 @@ public sealed class LoggingDecoratorsTests
                 "Release amendment pull request \"Amend MyMod 1.2.0\" failed. Widens: game_max_revision rises",
             ],
             _log.Messages);
+    }
+
+    private static LaunchPlan StarMapPlan()
+    {
+        var loader = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "StarMap"));
+        return new LaunchPlan(Path.Combine(loader, "StarMap.exe"), [], loader, new Dictionary<string, string>());
     }
 
     private static PullRequestReview Shown { get; } =

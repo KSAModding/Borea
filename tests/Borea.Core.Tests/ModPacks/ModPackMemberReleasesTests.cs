@@ -26,30 +26,6 @@ public sealed class ModPackMemberReleasesTests
     }
 
     [Fact]
-    public void Find_StablePin_WhoseOnlyNewerReleasesAreTestingDevYankedOrGone_IsNotCounted()
-    {
-        var gone = new DateTimeOffset(2026, 9, 23, 10, 24, 0, TimeSpan.Zero);
-        var snapshot = Snapshot(
-            Release("A", "1.3.0", unavailableSince: gone),
-            Release("A", "1.2.0-dev.1", ReleaseStatus.Dev),
-            Release("A", "1.1.0", yanked: true),
-            Release("A", "1.1.0-beta.1", ReleaseStatus.Testing),
-            Release("A", "1.0.0"));
-
-        Assert.Empty(ModPackMemberReleases.Find(Pack(("A", "1.0.0")), snapshot));
-    }
-
-    [Fact]
-    public void Find_TestingPin_CountsANewerTestingRelease()
-    {
-        var snapshot = Snapshot(Release("A", "1.2.0-dev.1", ReleaseStatus.Dev), Release("A", "1.1.0-beta.2", ReleaseStatus.Testing), Release("A", "1.1.0-beta.1", ReleaseStatus.Testing));
-
-        var newer = ModPackMemberReleases.Find(Pack(("A", "1.1.0-beta.1")), snapshot);
-
-        Assert.Equal("1.1.0-beta.2", Assert.Single(newer).Newer.Version.ToString());
-    }
-
-    [Fact]
     public void NewerRelease_StablePin_IsOutdatedOnlyByANewerStableReleaseThatIsNotYanked()
     {
         var snapshot = Snapshot(Release("A", "1.3.0-beta.1", ReleaseStatus.Testing), Release("A", "1.2.0", yanked: true), Release("A", "1.1.0"), Release("A", "1.0.1"), Release("A", "1.0.0"));

@@ -35,20 +35,14 @@ public sealed class UninstallCheckTests
             new UninstallCheck(Guid.NewGuid(), "test-mod", ModVersion.Parse("1.0.0"), null!, isActive: false));
     }
 
-    [Fact]
-    public void CanUninstall_NoDependents_IsTrue()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false, "dependent-a")]
+    public void CanUninstall_IsTrueOnlyWithoutDependentMods(bool canUninstall, params string[] dependentModIds)
     {
-        var check = new UninstallCheck(Guid.NewGuid(), "test-mod", ModVersion.Parse("1.0.0"), Array.Empty<string>(), isActive: false);
+        var check = new UninstallCheck(Guid.NewGuid(), "test-mod", ModVersion.Parse("1.0.0"), dependentModIds, isActive: false);
 
-        Assert.True(check.CanUninstall);
-    }
-
-    [Fact]
-    public void CanUninstall_HasDependents_IsFalse()
-    {
-        var check = new UninstallCheck(Guid.NewGuid(), "test-mod", ModVersion.Parse("1.0.0"), new[] { "dependent-a" }, isActive: false);
-
-        Assert.False(check.CanUninstall);
+        Assert.Equal(canUninstall, check.CanUninstall);
     }
 
     [Fact]

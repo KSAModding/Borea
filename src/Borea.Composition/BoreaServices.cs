@@ -74,10 +74,10 @@ public sealed class BoreaServices : IDisposable
     private static readonly TimeSpan ConnectionLifetime = TimeSpan.FromMinutes(2);
 
     /// <summary>
-    /// The one HttpClient every network service shares. It names Borea in its
-    /// User-Agent and its handler recycles pooled connections, so only the process
-    /// GitHub session creates a second one. LatestVersionPing caches per instance,
-    /// so the single instance built here is the one to use.
+    /// The one HttpClient that every network service shares. Only the GitHub
+    /// session (without redirects) and the image source build their own.
+    /// LatestVersionPing caches per instance, so the single instance built here
+    /// is the one to use.
     /// </summary>
     private readonly HttpClient _http;
 
@@ -195,10 +195,8 @@ public sealed class BoreaServices : IDisposable
 
     public required ILatestVersionPing LatestVersion { get; init; }
 
-    /// <summary>The newest published Borea release.</summary>
     public required IBoreaReleaseCheck ReleaseCheck { get; init; }
 
-    /// <summary>Replaces the running Borea build with a published release.</summary>
     public required ISelfUpdater SelfUpdater { get; init; }
 
     /// <summary>The posts of the KSAModding team, fetched from the Borea repository and cached.</summary>
@@ -638,7 +636,6 @@ public sealed class BoreaServices : IDisposable
             ? new MacOsBundleSelfUpdater(files, log, platform: BoreaArchive.RunningPlatform, fromCommandLine: fromCommandLine)
             : new FileSelfUpdater(files, log, RunningProduct(), platform: BoreaArchive.RunningPlatform, fromCommandLine: fromCommandLine);
 
-    /// <summary>The client of the process GitHub session, which does not follow redirects.</summary>
     internal static HttpClient BuildGitHubHttpClient()
         => BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false });
 
