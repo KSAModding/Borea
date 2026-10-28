@@ -28,6 +28,25 @@ public interface IIndexStatusEditor
     /// </summary>
     /// <exception cref="StewardException">The account is signed out, or GitHub could not be read.</exception>
     Task<IReadOnlyList<string>> OwnedAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default);
+
+    /// <summary>The ids of the mods that the versions of the pack pin on the base branch, each once. A pack that is not there pins none.</summary>
+    /// <exception cref="StewardException">GitHub could not be read, or a version of the pack does not parse.</exception>
+    Task<IReadOnlyList<string>> PackMembersAsync(string packId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks a request to take a mod out of a pack against the base branch: the versions that pin the mod, and the ownership proof of the
+    /// reporter for the listing of the mod (RFC 0080). It writes nothing.
+    /// </summary>
+    /// <exception cref="StewardException">GitHub could not be read, the account is no steward of content-index, or a file does not parse.</exception>
+    Task<PackLeaveCheck> CheckLeaveAsync(PackLeave leave, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks the request again and opens one pull request that retracts every version of the pack that pins the mod. The reporter must
+    /// have the ownership proof of the listing, or the steward must have confirmed it by the forums account.
+    /// </summary>
+    /// <exception cref="IndexStatusRefusedException">No version can be retracted, the ownership is not confirmed, or the checks of content-index would refuse the file. Nothing was written.</exception>
+    /// <exception cref="StewardException">A request failed.</exception>
+    Task<IndexStatusPullRequest> OpenLeaveAsync(PackLeave leave, CancellationToken cancellationToken = default);
 }
 
 public sealed record IndexStatusOverview(IReadOnlyList<IndexStatusEntry> Entries, IReadOnlyList<IndexStatusPullRequest> OpenPullRequests);

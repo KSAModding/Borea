@@ -256,7 +256,7 @@
     <value>Nachtrag</value>
   </data>
   <data name="StewardQueueKindOwnerRecord" xml:space="preserve">
-    <value>Besitzer-Eintrag</value>
+    <value>Besitzerdatei</value>
   </data>
   <data name="StewardQueueKindIndexStatus" xml:space="preserve">
     <value>Index-Status</value>
@@ -386,6 +386,42 @@
   </data>
   <data name="StewardReviewProofSpaceDockLinkFormat" xml:space="preserve">
     <value>Der Quellcode-Link der SpaceDock-Mod {0} nennt kein GitHub-Repository.</value>
+  </data>
+  <data name="StewardReviewOwnerRecords" xml:space="preserve">
+    <value>Besitzerdateien</value>
+  </data>
+  <data name="StewardOwnerRecordFirstClaim" xml:space="preserve">
+    <value>Der Pull Request fügt diese Besitzerdatei mit der ersten Version ihres Modpacks hinzu. Ein solcher erster Anspruch kann sich selbst mergen, wenn die Prüfungen bestanden sind.</value>
+  </data>
+  <data name="StewardOwnerRecordBeforeFormat" xml:space="preserve">
+    <value>Besitzer im Basis-Branch: {0}, Konto-ID {1}</value>
+  </data>
+  <data name="StewardOwnerRecordNoneBefore" xml:space="preserve">
+    <value>Der Basis-Branch hat keine Besitzerdatei dieses Modpacks.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableBefore" xml:space="preserve">
+    <value>Die Besitzerdatei im Basis-Branch nennt keinen Login und keine Konto-ID.</value>
+  </data>
+  <data name="StewardOwnerRecordAfterFormat" xml:space="preserve">
+    <value>Besitzer nach dem Merge: {0}, Konto-ID {1}</value>
+  </data>
+  <data name="StewardOwnerRecordRemoved" xml:space="preserve">
+    <value>Der Pull Request entfernt die Besitzerdatei, daher hat das Modpack nach dem Merge keinen Besitzer.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableAfter" xml:space="preserve">
+    <value>Die neue Besitzerdatei nennt keinen Login und keine Konto-ID.</value>
+  </data>
+  <data name="StewardOwnerAccountSameFormat" xml:space="preserve">
+    <value>Das GitHub-Konto {0} hat noch den Login {1}.</value>
+  </data>
+  <data name="StewardOwnerAccountOtherLoginFormat" xml:space="preserve">
+    <value>Das GitHub-Konto {0} hat jetzt den Login {1}, nicht {2}. Die Prüfungen vergleichen die Konto-ID, daher besitzt {1} das Modpack nach dem Merge.</value>
+  </data>
+  <data name="StewardOwnerAccountGoneFormat" xml:space="preserve">
+    <value>GitHub hat kein Konto mit der ID {0}, daher kann nach dem Merge niemand eine Version des Modpacks hinzufügen.</value>
+  </data>
+  <data name="StewardOwnerAccountUnknownFormat" xml:space="preserve">
+    <value>Borea konnte GitHub nicht fragen, welchen Login das Konto {0} jetzt hat.</value>
   </data>
   <data name="StewardReviewFilesFormat" xml:space="preserve">
     <value>Geänderte Dateien ({0})</value>
@@ -633,6 +669,39 @@
   <data name="StewardReportNoIssuesPermission" xml:space="preserve">
     <value>GitHub hat die Änderung abgelehnt, vielleicht weil die Borea App noch keine Issues-Berechtigung hat. Antworte stattdessen auf GitHub. Dein Text bleibt hier, damit du ihn kopieren kannst.</value>
   </data>
+  <data name="StewardReportLeavePack" xml:space="preserve">
+    <value>Mod aus dem Modpack nehmen</value>
+  </data>
+  <data name="StewardLeavePackTitleFormat" xml:space="preserve">
+    <value>Eine Mod aus {0} nehmen</value>
+  </data>
+  <data name="StewardLeaveTitleFormat" xml:space="preserve">
+    <value>Jede Version von {0} zurückziehen, die {1} festlegt</value>
+  </data>
+  <data name="StewardLeaveEffect" xml:space="preserve">
+    <value>Jede Version des Modpacks, die die Mod festlegt, wird mit einem eigenen Zustand zurückgezogen, alle in einem Pull Request. Eine zurückgezogene Version bleibt installiert, wo sie ist, und Clients bieten sie nicht mehr an. Der Autor des Modpacks veröffentlicht eine Version ohne die Mod.</value>
+  </data>
+  <data name="StewardLeaveMod" xml:space="preserve">
+    <value>Herauszunehmende Mod</value>
+  </data>
+  <data name="StewardLeaveChooseMod" xml:space="preserve">
+    <value>Wähle die Mod, die laut Meldung aus dem Modpack soll.</value>
+  </data>
+  <data name="StewardLeaveVersionsFormat" xml:space="preserve">
+    <value>Zurückzuziehende Versionen: {0}</value>
+  </data>
+  <data name="StewardLeaveRetractedFormat" xml:space="preserve">
+    <value>Schon zurückgezogen: {0}</value>
+  </data>
+  <data name="StewardLeaveReporterOwnsFormat" xml:space="preserve">
+    <value>{0} besitzt den Eintrag von {1} laut seinem Eigentumsnachweis.</value>
+  </data>
+  <data name="StewardLeaveReporterUnprovenFormat" xml:space="preserve">
+    <value>Der Eigentumsnachweis des Eintrags von {1} nennt {0} nicht. Bestätige über das Forenkonto des Eintrags, dass {0} ihn besitzt, bevor du weitermachst.</value>
+  </data>
+  <data name="StewardLeaveConfirmFormat" xml:space="preserve">
+    <value>Ich habe über das Forenkonto bestätigt, dass {0} {1} besitzt</value>
+  </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>Watcher</value>
   </data>
@@ -815,6 +884,12 @@
   </data>
   <data name="StewardRefusedNotInFile" xml:space="preserve">
     <value>index-status.toml hat diesen Zustand nicht mehr. Lade die Liste neu.</value>
+  </data>
+  <data name="StewardRefusedNotPinnedFormat" xml:space="preserve">
+    <value>Keine Version von {0}, die nicht zurückgezogen ist, legt {1} fest.</value>
+  </data>
+  <data name="StewardRefusedNotConfirmedFormat" xml:space="preserve">
+    <value>Bestätige zuerst über das Forenkonto, dass {0} {1} besitzt.</value>
   </data>
   <data name="StewardErrorSignedOut" xml:space="preserve">
     <value>GitHub hat dich abgemeldet. Melde dich in den Einstellungen wieder an.</value>
@@ -3088,7 +3163,7 @@
     <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein und öffnest den Pull Request. Eine Version von dem Konto, dem das Pack gehört, wird von selbst gemergt.</value>
   </data>
   <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein. Die erste Version eines neuen Packs fügt demselben Pull Request außerdem {1} hinzu. Ein Steward nimmt einen ersten Anspruch an, wenn die Prüfungen bestanden sind, und bei einem neuen GitHub-Konto können die Prüfungen warten, bis ein Steward sie startet.</value>
+    <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein. Die erste Version eines neuen Packs fügt demselben Pull Request außerdem {1} hinzu, und er kann sich selbst mergen, wenn die Prüfungen bestanden sind. Bei einem neuen GitHub-Konto können die Prüfungen warten, bis ein Steward sie startet.</value>
   </data>
   <data name="ListingOwnerFileTextFormat" xml:space="preserve">
     <value>Die erste Version eines neuen Packs fügt auch {0} hinzu, die dein GitHub-Konto als Besitzer des Packs nennt. Wenn Borea den Pull Request von deinem Konto öffnet, schreibt es diese Datei selbst. Im Browser fügst du sie mit Add file zum Branch desselben Pull Requests hinzu und trägst deinen GitHub-Namen und die numerische ID ein, die https://api.github.com/users/&lt;dein GitHub-Name&gt; zeigt.</value>
@@ -3157,7 +3232,7 @@
     <value>Borea konnte nicht lesen, wem die Pack-ID gehört. Die Prüfungen entscheiden, wenn du den Pull Request öffnest.</value>
   </data>
   <data name="ListingOwnershipFirstClaim" xml:space="preserve">
-    <value>Die Pack-ID ist frei. Der Pull Request beansprucht sie für dein Konto, und ein Steward nimmt einen ersten Anspruch an, wenn die Prüfungen bestanden sind.</value>
+    <value>Die Pack-ID ist frei. Der Pull Request beansprucht sie für dein Konto und kann sich selbst mergen, wenn die Prüfungen bestanden sind.</value>
   </data>
   <data name="ListingProofOwnerFormat" xml:space="preserve">
     <value>{0} gehört dir.</value>

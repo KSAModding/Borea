@@ -145,6 +145,9 @@
     <!-- modal: a steward amendment of release files -->
     <views:ReleaseAmendmentModal IsVisible="{Binding IsStewardAmendmentOpen}" />
 
+    <!-- modal: a mod author's request to take their mod out of a pack -->
+    <views:PackLeaveModal IsVisible="{Binding IsStewardLeaveOpen}" />
+
     <!-- modal: a steward action on the pull request of the review -->
     <views:PullRequestActionModal IsVisible="{Binding IsStewardActionOpen}" />
 
