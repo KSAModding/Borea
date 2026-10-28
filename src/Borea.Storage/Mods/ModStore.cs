@@ -250,7 +250,7 @@ public sealed class ModStore
             FileModInstaller.Unpack(archivePath, release, staging);
             Directory.CreateDirectory(Path.GetDirectoryName(entry)!);
             await StoredReleaseSnapshot.Measure(staging).WriteAsync(SnapshotPath(entry), cancellationToken).ConfigureAwait(false);
-            Directory.Move(staging, entry);
+            DirectoryRename.Move(staging, entry);
         }
         catch
         {
