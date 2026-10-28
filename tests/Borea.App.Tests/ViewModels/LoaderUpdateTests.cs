@@ -738,7 +738,7 @@ public sealed class LoaderUpdateTests
         await viewModel.WhenLoaderUpdatesCheckedAsync();
 
         Assert.True(viewModel.ShowUrgentLoaderUpdateBanner);
-        Assert.Equal(harness.Localization.FormatLoaderUpdateUrgent("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), viewModel.LoaderUpdateBannerText);
+        Assert.Equal(harness.Localization.FormatLoaderUpdateUrgentKept("Kept", "0.4.6.0", "StarMap", "0.4.7", "0.4.6"), viewModel.LoaderUpdateBannerText);
 
         await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
 
@@ -806,6 +806,44 @@ public sealed class LoaderUpdateTests
         Assert.Equal(InstanceLoaderState.GameIncompatible, row.State);
         Assert.Equal(harness.Localization.FormatLoaderUpdateUrgent("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), row.StatusToolTip);
         Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), row.UpdateText);
+    }
+
+    [Fact]
+    public async Task BuildChange_OfTheActiveInstance_RatesTheLoaderAgainForTheBuildItStarts()
+    {
+        using var harness = await CreateAsync(installed: "0.4.7", keptBuild: true);
+        var instance = (await harness.Services.Instances.CreateAsync("Kept", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        Assert.False(viewModel.ShowUrgentLoaderUpdateBanner);
+
+        // A keep and a use-current write the build into the record and reload the instances, as this activation does.
+        // The commands share the static gate of the keeper with a keep test that runs at the same time: a keep waits
+        // for it, and a use-current is refused as busy.
+        await SetGameBuildAsync(KeptBuild);
+        Assert.True(viewModel.ShowUrgentLoaderUpdateBanner);
+        Assert.Equal(harness.Localization.FormatLoaderUpdateUrgentKept("Kept", "0.4.6.0", "StarMap", "0.4.7", "0.4.6"), viewModel.LoaderUpdateBannerText);
+
+        // a rename rates nothing again, and the banner names the instance as it is called now
+        await viewModel.RenameInstanceAsync(viewModel.ActiveInstance!, "Career");
+        Assert.Equal(harness.Localization.FormatLoaderUpdateUrgentKept("Career", "0.4.6.0", "StarMap", "0.4.7", "0.4.6"), viewModel.LoaderUpdateBannerText);
+
+        await SetGameBuildAsync(null);
+        Assert.False(viewModel.ShowUrgentLoaderUpdateBanner);
+        Assert.Null(viewModel.LoaderUpdateBannerText);
+
+        async Task SetGameBuildAsync(GameVersion? build)
+        {
+            await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
+            {
+                saved.SetGameBuild(build);
+                return true;
+            });
+            await viewModel.ActivateInstanceAsync(instance.InstanceId);
+            await viewModel.WhenLoaderUpdatesCheckedAsync();
+        }
     }
 
     /// <summary>A new instance on <see cref="KeptBuild"/>, which Home starts.</summary>

@@ -1251,6 +1251,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLoaderUpdateUrgent(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentFormat, loader, installed, game, offer);
 
+    public string FormatLoaderUpdateUrgentKept(string instance, string build, string loader, string installed, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentKeptFormat, instance, build, loader, installed, offer);
+
     public string FormatLoaderUpdateNone(string loader, string installed, string game)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateNoneFormat, loader, installed, game);
 

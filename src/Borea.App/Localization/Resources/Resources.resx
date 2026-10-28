@@ -1299,6 +1299,9 @@
   <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
     <value>{0} {1} does not support KSA {2}. {0} {3} does.</value>
   </data>
+  <data name="LoaderUpdateUrgentKeptFormat" xml:space="preserve">
+    <value>{0} keeps KSA {1}, which {2} {3} does not support. {2} {4} does.</value>
+  </data>
   <data name="LoaderUpdateNoneFormat" xml:space="preserve">
     <value>{0} {1} does not support KSA {2}, and no newer release of {0} does yet.</value>
   </data>
