@@ -104,6 +104,13 @@ public partial class MainViewModel
         if (_services is not { } services)
             return;
 
+        // a second keep of the same instance during the copy shows that copy instead of offering it again
+        if (Tasks.Running.FirstOrDefault(task => task.Kind == TaskKind.GameBuildKeep && task.InstanceId == item.InstanceId) is { } running)
+        {
+            ShowTaskDetails(running);
+            return;
+        }
+
         GameBuildKeepCheck check;
         try
         {
@@ -197,12 +204,23 @@ public partial class MainViewModel
 
         var run = StartInstallRun(StartTask(TaskKind.GameBuildKeep, build, item?.InstanceId));
         var task = run.TaskItem;
-        if (folder is not null)
-            ShowTaskDetails(task);
+        ShowTaskDetails(task);
 
-        var progress = new Progress<LibraryMoveProgress>(value => run.ShowReport(() => task.Report(
-            Localization.FormatLibraryFolderCopying(value.Files, value.TotalFiles, InstallProgressText.Number(value.Bytes), InstallProgressText.Number(value.TotalBytes)),
-            value.PercentComplete)));
+        // the keeper copies one build at a time, so this keep waits for that copy and then reuses it when the build is the same
+        if (Tasks.Running.FirstOrDefault(other => other != task && other.Kind == TaskKind.GameBuildKeep) is { } copying)
+        {
+            void ShowWaiting() => task.Report(Localization.FormatTaskGameBuildWaiting(copying.Subject ?? string.Empty), null);
+            ShowWaiting();
+            run.RepeatPausedReport = () => run.ShowReport(ShowWaiting);
+        }
+
+        var progress = new Progress<LibraryMoveProgress>(value =>
+        {
+            run.RepeatPausedReport = null;
+            run.ShowReport(() => task.Report(
+                Localization.FormatGameBuildCopying(value.Files, value.TotalFiles, KeepSizeText(value.Bytes), KeepSizeText(value.TotalBytes)),
+                value.PercentComplete));
+        });
         var completed = false;
         var stopped = false;
         string? error = null;
@@ -356,6 +374,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(KeepGameBuildRefusalText));
         OnPropertyChanged(nameof(KeepGameBuildDismissText));
         OnPropertyChanged(nameof(UseCurrentGameBuildDismissText));
+        OnPropertyChanged(nameof(CloseNowGameBuildKeepWarningText));
         OnPropertyChanged(nameof(GameFolderKeepRefusalText));
         OnPropertyChanged(nameof(UseCurrentGameBuildText));
         OnPropertyChanged(nameof(UseCurrentGameBuildFitText));

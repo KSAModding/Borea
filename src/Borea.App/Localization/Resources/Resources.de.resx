@@ -1140,6 +1140,9 @@
   <data name="LibraryFolderCopyingFormat" xml:space="preserve">
     <value>{0} von {1} Dateien kopiert ({2} von {3} MB)</value>
   </data>
+  <data name="GameBuildCopyingFormat" xml:space="preserve">
+    <value>{2} von {3} kopiert, Datei {0} von {1}</value>
+  </data>
   <data name="LibraryFolderRemovingOldFiles" xml:space="preserve">
     <value>Alte Dateien werden gelöscht...</value>
   </data>
@@ -1595,6 +1598,9 @@
   </data>
   <data name="TaskKeepGameBuildFormat" xml:space="preserve">
     <value>KSA {0} behalten</value>
+  </data>
+  <data name="TaskGameBuildWaitingFormat" xml:space="preserve">
+    <value>Wartet auf die Kopie von KSA {0}</value>
   </data>
   <data name="TaskWaiting" xml:space="preserve">
     <value>Wartet</value>
@@ -4508,6 +4514,9 @@
   </data>
   <data name="CloseNowInstallWarning" xml:space="preserve">
     <value>Wenn du jetzt schließt, ist eine Mod, die Borea gerade installiert, vielleicht unvollständig, und du kannst sie erneut installieren.</value>
+  </data>
+  <data name="CloseNowGameBuildKeepWarningFormat" xml:space="preserve">
+    <value>Borea stoppt die Kopie von KSA {0}, darum behält die Instanz keinen Build. Behalte den Build erneut, wenn du Borea startest, bevor das Spiel aktualisiert wird.</value>
   </data>
   <data name="CloseNowKeepWaiting" xml:space="preserve">
     <value>Weiter warten</value>

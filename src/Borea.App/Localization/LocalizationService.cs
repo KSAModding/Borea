@@ -118,6 +118,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatTaskKeepGameBuild(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskKeepGameBuildFormat, build);
 
+    public string FormatTaskGameBuildWaiting(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskGameBuildWaitingFormat, build);
+
     public string TaskWaiting => Resources.TaskWaiting;
 
     public string TaskRunning => Resources.TaskRunning;
@@ -1116,6 +1119,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLibraryFolderCopying(int files, int totalFiles, string megabytes, string totalMegabytes)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderCopyingFormat, files, totalFiles, megabytes, totalMegabytes);
+
+    public string FormatGameBuildCopying(int files, int totalFiles, string size, string totalSize)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameBuildCopyingFormat, files, totalFiles, size, totalSize);
 
     public string LibraryFolderRemovingOldFiles => Resources.LibraryFolderRemovingOldFiles;
 
@@ -3548,6 +3554,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string CloseNowSavingHistory => Resources.CloseNowSavingHistory;
 
     public string CloseNowInstallWarning => Resources.CloseNowInstallWarning;
+
+    public string FormatCloseNowGameBuildKeepWarning(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.CloseNowGameBuildKeepWarningFormat, build);
 
     public string CloseNowKeepWaiting => Resources.CloseNowKeepWaiting;
 

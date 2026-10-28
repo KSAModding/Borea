@@ -1140,6 +1140,9 @@
   <data name="LibraryFolderCopyingFormat" xml:space="preserve">
     <value>Copying {0} of {1} files ({2} of {3} MB)</value>
   </data>
+  <data name="GameBuildCopyingFormat" xml:space="preserve">
+    <value>{2} of {3} copied, file {0} of {1}</value>
+  </data>
   <data name="LibraryFolderRemovingOldFiles" xml:space="preserve">
     <value>Deleting the old files...</value>
   </data>
@@ -1595,6 +1598,9 @@
   </data>
   <data name="TaskKeepGameBuildFormat" xml:space="preserve">
     <value>Keep KSA {0}</value>
+  </data>
+  <data name="TaskGameBuildWaitingFormat" xml:space="preserve">
+    <value>Waiting for the copy of KSA {0}</value>
   </data>
   <data name="TaskWaiting" xml:space="preserve">
     <value>Waiting</value>
@@ -4517,6 +4523,9 @@
   </data>
   <data name="CloseNowInstallWarning" xml:space="preserve">
     <value>If you close now, a mod that Borea is installing may be incomplete, and you can install it again.</value>
+  </data>
+  <data name="CloseNowGameBuildKeepWarningFormat" xml:space="preserve">
+    <value>Borea stops the copy of KSA {0}, so the instance keeps no build. Keep the build again after you start Borea, before the game updates.</value>
   </data>
   <data name="CloseNowKeepWaiting" xml:space="preserve">
     <value>Keep waiting</value>
