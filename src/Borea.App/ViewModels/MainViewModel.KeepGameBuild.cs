@@ -6,12 +6,14 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Borea.App.Localization;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Storage.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -49,14 +51,14 @@ public partial class MainViewModel
             if (_keepGameBuildFolder is { } source)
             {
                 return check.BytesToCopy > 0
-                    ? Localization.FormatModalAddGameBuildText(version.ToString(), SizeText(check.BytesToCopy), source, folder)
+                    ? Localization.FormatModalAddGameBuildText(version.ToString(), KeepSizeText(check.BytesToCopy), source, folder)
                     : Localization.FormatModalAddGameBuildShared(version.ToString(), folder);
             }
 
             if (_keepGameBuildItem is { } item)
             {
                 return check.BytesToCopy > 0
-                    ? Localization.FormatModalKeepGameBuildText(version.ToString(), SizeText(check.BytesToCopy), folder, item.Name)
+                    ? Localization.FormatModalKeepGameBuildText(version.ToString(), KeepSizeText(check.BytesToCopy), folder, item.Name)
                     : Localization.FormatModalKeepGameBuildShared(version.ToString(), folder, item.Name);
             }
 
@@ -64,8 +66,10 @@ public partial class MainViewModel
         }
     }
 
-    public string? KeepGameBuildFreeSpaceText => KeepGameBuildCheck is { Refusal: GameBuildKeepRefusal.None, BytesToCopy: > 0, FreeBytes: { } free }
-        ? Localization.FormatModalKeepGameBuildFreeSpace(SizeText(free))
+    public string? KeepGameBuildFreeSpaceText => KeepGameBuildCheck is { Refusal: GameBuildKeepRefusal.None, BytesToCopy: > 0, FreeBytes: { } free } check
+        ? WindowsDrive(check.VolumeName) is { } drive
+            ? Localization.FormatModalKeepGameBuildFreeSpaceDrive(KeepSizeText(free), drive)
+            : Localization.FormatModalKeepGameBuildFreeSpace(KeepSizeText(free))
         : null;
 
     public string? KeepGameBuildRefusalText => KeepGameBuildCheck is { } check ? KeepGameBuildRefusal(check, _keepGameBuildFolder is not null) : null;
@@ -207,12 +211,45 @@ public partial class MainViewModel
         GameBuildKeepRefusal.GameRunning => Localization.GameSaveCloseGame,
         GameBuildKeepRefusal.FolderTaken => Localization.FormatKeepGameBuildFolderTaken(check.Folder ?? string.Empty),
         GameBuildKeepRefusal.LibraryInsideGame => Localization.KeepGameBuildLibraryInsideGame,
-        GameBuildKeepRefusal.NotEnoughSpace => Localization.FormatKeepGameBuildNotEnoughSpace(SizeText(check.BytesToCopy), SizeText(check.FreeBytes ?? 0)),
+        GameBuildKeepRefusal.NotEnoughSpace => Localization.FormatKeepGameBuildNotEnoughSpace(KeepSizeText(check.BytesToCopy), KeepSizeText(DriveInstallSpaceCheck.MarginFor(check.BytesToCopy)), KeepSizeText(check.FreeBytes ?? 0)),
         GameBuildKeepRefusal.BuildChanged when fromFolder => Localization.FormatKeepGameBuildFolderChanged(check.Version?.ToString() ?? string.Empty),
         GameBuildKeepRefusal.BuildChanged => Localization.FormatKeepGameBuildBuildChanged(check.Version?.ToString() ?? string.Empty),
-        GameBuildKeepRefusal.NotAGame => Localization.KeepGameBuildNotAGame,
+        GameBuildKeepRefusal.ChangedDuringCopy when fromFolder => Localization.FormatKeepGameBuildFolderChangedDuringCopy(check.Version?.ToString() ?? string.Empty),
+        GameBuildKeepRefusal.ChangedDuringCopy => Localization.FormatKeepGameBuildChangedDuringCopy(check.Version?.ToString() ?? string.Empty),
+        GameBuildKeepRefusal.DriveFull => Localization.KeepGameBuildDriveFull,
+        GameBuildKeepRefusal.HoldsFolderLink when fromFolder => Localization.FormatKeepGameBuildFolderSourceLink(check.LinkPath ?? string.Empty),
+        GameBuildKeepRefusal.HoldsFolderLink => Localization.FormatKeepGameBuildFolderLink(check.LinkPath ?? string.Empty),
+        GameBuildKeepRefusal.NotAGame when fromFolder => Localization.KeepGameBuildNotAGame,
+        GameBuildKeepRefusal.NotAGame => Localization.KeepGameBuildWindowsBuild,
         _ => null,
     };
+
+    /// <summary>A size of the keep feature, with its number and unit on one line.</summary>
+    internal static string KeepSizeText(long bytes) => SizeText(bytes).Replace(' ', LocalizationService.NoBreakSpace);
+
+    // a drive root reads as "C:", and a Linux mount point such as "/" names no drive that a player knows
+    private static string? WindowsDrive(string? volume) => volume is [var letter, ':', '\\'] && char.IsAsciiLetter(letter) ? volume[..2] : null;
+
+    /// <summary>Why a keep of the game folder of the settings is refused before any scan, for the instance menu and the Home banner.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GameFolderKeepRefusalText), nameof(GameBuildKeepHintText), nameof(GameBuildKeepActionText))]
+    private GameBuildKeepRefusal _gameFolderKeepRefusal;
+
+    /// <summary>The tooltip of the disabled "Keep this game build", or null while the menu offers it.</summary>
+    public string? GameFolderKeepRefusalText => GameFolderKeepRefusal switch
+    {
+        GameBuildKeepRefusal.WineWrapper => Localization.KeepGameBuildWineWrapper,
+        GameBuildKeepRefusal.NotAGame => Localization.KeepGameBuildWindowsBuild,
+        _ => null,
+    };
+
+    private async Task RefreshGameFolderKeepRefusalAsync()
+    {
+        if (_services is not { } services)
+            return;
+
+        GameFolderKeepRefusal = await Task.Run(services.GameBuilds.CheckGameFolder);
+    }
 
     /// <summary>The game build picker of the new instance modal, with the game folder of the settings first.</summary>
     public ObservableCollection<GameBuildChoice> GameBuildChoices { get; } = [];
@@ -274,6 +311,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(KeepGameBuildText));
         OnPropertyChanged(nameof(KeepGameBuildFreeSpaceText));
         OnPropertyChanged(nameof(KeepGameBuildRefusalText));
+        OnPropertyChanged(nameof(GameFolderKeepRefusalText));
         OnPropertyChanged(nameof(UseCurrentGameBuildText));
         OnPropertyChanged(nameof(UseCurrentGameBuildFitText));
         OnPropertyChanged(nameof(UseCurrentGameBuildIncompatibleText));
@@ -527,7 +565,8 @@ public partial class MainViewModel
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
-                error = exception.Message;
+                // an InvalidOperationException names the loader file that Borea could not write
+                error = exception is InvalidOperationException ? exception.Message : Localization.FormatKeptGameBuildInUseByProgram(build);
                 services.Log.Write($"The kept KSA {build} was not removed. {exception.Message}");
             }
         }

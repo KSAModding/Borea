@@ -9,6 +9,9 @@ namespace Borea.App.Localization;
 
 public sealed class LocalizationService : INotifyPropertyChanged
 {
+    /// <summary>Joins a number and its unit, or "KSA" and its build, so that a wrap never splits them.</summary>
+    internal const char NoBreakSpace = '\u00A0';
+
     private static readonly SupportedCulture English = new("en", "English");
     private static readonly SupportedCulture German = new("de", "Deutsch");
     private static readonly SupportedCulture Pirate = new("en-QP", "Pirate speak");
@@ -171,10 +174,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackupDeletedFormat, name);
 
     public string FormatToastGameBuildKept(string build, string instanceName)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ToastGameBuildKeptFormat, build, instanceName);
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildKeptFormat), build, instanceName);
 
     public string FormatToastGameBuildAdded(string build)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ToastGameBuildAddedFormat, build);
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildAddedFormat), build);
 
     public string FormatToastInstallStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstallStoppedFormat, content);
@@ -182,7 +185,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ToastLibraryFolderStopped => Resources.ToastLibraryFolderStopped;
 
     public string FormatToastGameBuildKeepStopped(string build)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ToastGameBuildKeepStoppedFormat, build);
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildKeepStoppedFormat), build);
 
     public string FormatToastUpdateStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateStoppedFormat, content);
@@ -236,7 +239,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackupDeleteFailedFormat, name);
 
     public string FormatToastGameBuildKeepFailed(string build)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ToastGameBuildKeepFailedFormat, build);
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildKeepFailedFormat), build);
 
     public string FormatToastActivateFailed(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastActivateFailedFormat, instanceName);
@@ -2194,6 +2197,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatModalKeepGameBuildFreeSpace(string size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFreeSpaceFormat, size);
 
+    public string FormatModalKeepGameBuildFreeSpaceDrive(string size, string drive)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFreeSpaceDriveFormat, size, drive);
+
     public string ModalKeepGameBuildPopupNote => Resources.ModalKeepGameBuildPopupNote;
 
     public string ModalKeepGameBuildConfirm => Resources.ModalKeepGameBuildConfirm;
@@ -2207,13 +2213,23 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string KeepGameBuildWineWrapper => Resources.KeepGameBuildWineWrapper;
 
+    public string KeepGameBuildWindowsBuild => Resources.KeepGameBuildWindowsBuild;
+
     public string FormatKeepGameBuildFolderTaken(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderTakenFormat, folder);
 
     public string KeepGameBuildLibraryInsideGame => Resources.KeepGameBuildLibraryInsideGame;
 
-    public string FormatKeepGameBuildNotEnoughSpace(string needed, string free)
-        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildNotEnoughSpaceFormat, needed, free);
+    public string FormatKeepGameBuildNotEnoughSpace(string needed, string margin, string free)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildNotEnoughSpaceFormat, needed, margin, free);
+
+    public string KeepGameBuildDriveFull => Resources.KeepGameBuildDriveFull;
+
+    public string FormatKeepGameBuildFolderLink(string link)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderLinkFormat, link);
+
+    public string FormatKeepGameBuildFolderSourceLink(string link)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderSourceLinkFormat, link);
 
     public string FormatKeepGameBuildBuildChanged(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildBuildChangedFormat, build);
@@ -2238,10 +2254,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ModalUseCurrentGameBuildConfirm => Resources.ModalUseCurrentGameBuildConfirm;
 
     public string FormatToastUsesCurrentGameBuild(string instanceName, string build)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUsesCurrentGameBuildFormat, instanceName, build);
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastUsesCurrentGameBuildFormat), instanceName, build);
 
     public string FormatKeepGameBuildFolderChanged(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderChangedFormat, build);
+
+    public string FormatKeepGameBuildChangedDuringCopy(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildChangedDuringCopyFormat, build);
+
+    public string FormatKeepGameBuildFolderChangedDuringCopy(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderChangedDuringCopyFormat, build);
 
     public string ModalInstanceExplanation => Resources.ModalInstanceExplanation;
 
@@ -2838,6 +2860,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string KeptGameBuildBusy => Resources.KeptGameBuildBusy;
 
+    public string FormatKeptGameBuildInUseByProgram(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeptGameBuildInUseByProgramFormat, build);
+
     public string SetupAddGameBuild => Resources.SetupAddGameBuild;
 
     public string SetupAddGameBuildHint => Resources.SetupAddGameBuildHint;
@@ -3348,6 +3373,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     private const double DaysPerMonth = DaysPerYear / 12;
 
     private const double DaysPerWeek = 7;
+
+    // the resx stays ASCII, so the toasts of the game builds put the no-break space in here
+    private static string JoinKsaAndBuild(string format) => format.Replace("KSA {", "KSA" + NoBreakSpace + "{", StringComparison.Ordinal);
 
     private static string FormatCount(int count, string one, string format)
         => count == 1 ? one : string.Format(CultureInfo.CurrentCulture, format, count);

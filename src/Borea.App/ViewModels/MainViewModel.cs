@@ -363,6 +363,9 @@ public partial class MainViewModel : ViewModelBase
         RecordFirstStart();
         StartAnnouncementCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
+
+        // read before the instances and the build check, so the banner and the menu never offer a keep that is refused
+        await RefreshGameFolderKeepRefusalAsync();
         StartGameBuildCheck();
         StartGameSettingsPresetLoad();
         await ReloadInstancesAsync();
@@ -394,6 +397,9 @@ public partial class MainViewModel : ViewModelBase
 
         // a new build is a new shape, so the assumptions are checked again
         await RefreshGameShapeAsync();
+
+        // the new build in the same folder can be a Windows build that this system cannot start
+        await RefreshGameFolderKeepRefusalAsync();
 
         // the content page shows the same rows, so its chip follows too
         await RefreshCompatibilityAsync();

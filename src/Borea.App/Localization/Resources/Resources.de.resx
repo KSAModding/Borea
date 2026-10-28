@@ -124,7 +124,7 @@
     <value>Bibliotheksordner</value>
   </data>
   <data name="SettingsLibraryFolderHint" xml:space="preserve">
-    <value>Hier speichert Borea deine Instanzen und Sicherungen. Beim Verschieben der Bibliothek nimmt Borea sie mit. Einstellungen, Caches, Logs und Mod-Loader bleiben in Boreas eigenem Ordner.</value>
+    <value>Hier speichert Borea deine Instanzen, Sicherungen und behaltenen Spiel-Builds. Beim Verschieben der Bibliothek nimmt Borea sie mit. Einstellungen, Caches, Logs und Mod-Loader bleiben in Boreas eigenem Ordner.</value>
   </data>
   <data name="SettingsLibraryFolderUseDefault" xml:space="preserve">
     <value>Zurück in den Standardordner verschieben</value>
@@ -133,7 +133,7 @@
     <value>Bibliothek verschieben...</value>
   </data>
   <data name="SettingsLibraryFolderMoveToolTip" xml:space="preserve">
-    <value>Wähle einen neuen Ordner für deine Instanzen und Sicherungen. Borea verschiebt sie dorthin.</value>
+    <value>Wähle einen neuen Ordner für deine Instanzen, Sicherungen und behaltenen Spiel-Builds. Borea verschiebt sie dorthin.</value>
   </data>
   <data name="SettingsLibraryFolderOpenToolTip" xml:space="preserve">
     <value>Zeigt diesen Ordner in deinem Dateimanager. Nichts wird verschoben.</value>
@@ -3514,7 +3514,10 @@
     <value>KSA {0} ist schon in {1} behalten, also kopiert Borea nichts.</value>
   </data>
   <data name="ModalKeepGameBuildFreeSpaceFormat" xml:space="preserve">
-    <value>Freier Platz auf dem Laufwerk: {0}</value>
+    <value>{0} frei auf dem Laufwerk der Bibliothek</value>
+  </data>
+  <data name="ModalKeepGameBuildFreeSpaceDriveFormat" xml:space="preserve">
+    <value>{0} frei auf Laufwerk {1}</value>
   </data>
   <data name="ModalKeepGameBuildPopupNote" xml:space="preserve">
     <value>Wenn ein neuerer Build verfügbar ist, zeigt das Spiel bei jedem Start mit Internetverbindung sein Update-Fenster. Wähle dort Cancel, denn GET schließt das Spiel.</value>
@@ -3534,6 +3537,9 @@
   <data name="KeepGameBuildWineWrapper" xml:space="preserve">
     <value>Das Spiel liegt in einer Wine-Wrapper-App, die keine Kopie außerhalb des Wrappers starten kann. Borea behält diesen Build nicht.</value>
   </data>
+  <data name="KeepGameBuildWindowsBuild" xml:space="preserve">
+    <value>Der Spielordner enthält den Windows-Build von KSA, den Borea auf diesem System noch nicht starten kann, darum behält Borea ihn nicht.</value>
+  </data>
   <data name="KeepGameBuildFolderTakenFormat" xml:space="preserve">
     <value>{0} enthält schon einen anderen Build oder keinen. Borea ändert diesen Ordner nicht.</value>
   </data>
@@ -3541,7 +3547,16 @@
     <value>Der Bibliotheksordner liegt im Spielordner, also würde eine Kopie des Spiels die Bibliothek enthalten. Verschiebe zuerst den Bibliotheksordner.</value>
   </data>
   <data name="KeepGameBuildNotEnoughSpaceFormat" xml:space="preserve">
-    <value>Die Kopie braucht {0}, und auf dem Laufwerk sind {1} frei.</value>
+    <value>Die Kopie braucht {0}, und darüber hinaus müssen {1} frei bleiben, aber auf dem Laufwerk der Bibliothek sind {2} frei. Gib Speicherplatz frei, oder verschiebe die Bibliothek im Tab Allgemein der Einstellungen auf ein anderes Laufwerk.</value>
+  </data>
+  <data name="KeepGameBuildDriveFull" xml:space="preserve">
+    <value>Das Laufwerk der Bibliothek wurde beim Kopieren voll, darum hat Borea nichts behalten und die halbe Kopie gelöscht. Gib Speicherplatz frei und versuche es erneut.</value>
+  </data>
+  <data name="KeepGameBuildFolderLinkFormat" xml:space="preserve">
+    <value>Der Spielordner enthält einen Ordner-Link, und Borea kopiert keine Links, weil sich die Kopie sonst mit dem Spielordner ändern würde. Ersetze den Link durch einen echten Ordner, oder behalte den Build aus einem Ordner ohne Links. Der Link ist {0}.</value>
+  </data>
+  <data name="KeepGameBuildFolderSourceLinkFormat" xml:space="preserve">
+    <value>Der Ordner, den du gewählt hast, enthält einen Ordner-Link, darum kopiert Borea ihn nicht. Wähle einen Ordner ohne Ordner-Links. Der Link ist {0}.</value>
   </data>
   <data name="KeepGameBuildBuildChangedFormat" xml:space="preserve">
     <value>Der Spielordner hat vor dem Kopieren zu KSA {0} gewechselt, also hat Borea nichts kopiert. Um KSA {0} zu behalten, wähle noch einmal „Diesen Spiel-Build behalten“.</value>
@@ -3572,6 +3587,12 @@
   </data>
   <data name="KeepGameBuildFolderChangedFormat" xml:space="preserve">
     <value>Der Ordner hat vor dem Kopieren zu KSA {0} gewechselt, also hat Borea nichts kopiert.</value>
+  </data>
+  <data name="KeepGameBuildChangedDuringCopyFormat" xml:space="preserve">
+    <value>Der Spielordner hat sich während des Kopierens von KSA {0} geändert, wahrscheinlich durch ein Spiel-Update. Borea hat nichts behalten. Wenn der Spielordner noch KSA {0} enthält, versuche es erneut. Wenn er jetzt einen neueren Build enthält, kann Borea KSA {0} daraus nicht mehr behalten.</value>
+  </data>
+  <data name="KeepGameBuildFolderChangedDuringCopyFormat" xml:space="preserve">
+    <value>Der Ordner hat sich während des Kopierens von KSA {0} geändert, darum hat Borea nichts behalten. Versuche es erneut, wenn kein anderes Programm den Ordner ändert.</value>
   </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instanzen sind Pakete aus Mods und Spielinhalten, die Borea zusätzlich zu deiner vorhandenen Spielinstallation verwaltet. Du kannst mehrere Instanzen erstellen und für verschiedene Spielerlebnisse jeweils eine davon aktivieren.</value>
@@ -4742,6 +4763,9 @@
   </data>
   <data name="KeptGameBuildBusy" xml:space="preserve">
     <value>Borea kopiert oder löscht gerade einen Spiel-Build. Versuche es erneut, wenn das fertig ist.</value>
+  </data>
+  <data name="KeptGameBuildInUseByProgramFormat" xml:space="preserve">
+    <value>Borea konnte KSA {0} nicht löschen, wahrscheinlich weil ein Programm eine Datei in seinem Ordner verwendet. Schließe das Spiel und jedes Fenster, das diesen Ordner zeigt, und versuche es dann erneut.</value>
   </data>
   <data name="SetupAddGameBuild" xml:space="preserve">
     <value>Build aus einem Ordner behalten</value>

@@ -124,7 +124,7 @@
     <value>Library folder</value>
   </data>
   <data name="SettingsLibraryFolderHint" xml:space="preserve">
-    <value>Borea keeps your instances and backups here. Moving the library takes them along. Settings, caches, logs and mod loaders stay in Borea's own folder.</value>
+    <value>Borea keeps your instances, backups and kept game builds here. Moving the library takes them along. Settings, caches, logs and mod loaders stay in Borea's own folder.</value>
   </data>
   <data name="SettingsLibraryFolderUseDefault" xml:space="preserve">
     <value>Move back to the default folder</value>
@@ -133,7 +133,7 @@
     <value>Move library...</value>
   </data>
   <data name="SettingsLibraryFolderMoveToolTip" xml:space="preserve">
-    <value>Pick a new folder for your instances and backups. Borea moves them there.</value>
+    <value>Pick a new folder for your instances, backups and kept game builds. Borea moves them there.</value>
   </data>
   <data name="SettingsLibraryFolderOpenToolTip" xml:space="preserve">
     <value>Shows this folder in your file manager. Nothing moves.</value>
@@ -3514,7 +3514,10 @@
     <value>KSA {0} is already kept in {1}, so Borea copies nothing.</value>
   </data>
   <data name="ModalKeepGameBuildFreeSpaceFormat" xml:space="preserve">
-    <value>Free space on the drive: {0}</value>
+    <value>{0} free on the drive of the library</value>
+  </data>
+  <data name="ModalKeepGameBuildFreeSpaceDriveFormat" xml:space="preserve">
+    <value>{0} free on drive {1}</value>
   </data>
   <data name="ModalKeepGameBuildPopupNote" xml:space="preserve">
     <value>When a newer build is out, the game shows its update popup on each start with an internet connection. Select Cancel there, because GET closes the game.</value>
@@ -3534,6 +3537,9 @@
   <data name="KeepGameBuildWineWrapper" xml:space="preserve">
     <value>The game is in a Wine wrapper app, which cannot start a copy outside the wrapper. Borea does not keep this build.</value>
   </data>
+  <data name="KeepGameBuildWindowsBuild" xml:space="preserve">
+    <value>The game folder holds the Windows build of KSA, which Borea cannot start on this system yet, so Borea does not keep it.</value>
+  </data>
   <data name="KeepGameBuildFolderTakenFormat" xml:space="preserve">
     <value>{0} already holds another build or no build. Borea does not change that folder.</value>
   </data>
@@ -3541,7 +3547,16 @@
     <value>The library folder is inside the game folder, so a copy of the game would hold the library. Move the library folder first.</value>
   </data>
   <data name="KeepGameBuildNotEnoughSpaceFormat" xml:space="preserve">
-    <value>The copy needs {0}, and the drive has {1} free.</value>
+    <value>The copy needs {0}, and {1} must stay free on top of it, but the drive of the library has {2} free. Free up space, or move the library to another drive on the General tab of Settings.</value>
+  </data>
+  <data name="KeepGameBuildDriveFull" xml:space="preserve">
+    <value>The drive of the library ran full during the copy, so Borea kept nothing and deleted the partial copy. Free some space and try again.</value>
+  </data>
+  <data name="KeepGameBuildFolderLinkFormat" xml:space="preserve">
+    <value>The game folder holds a folder link, and Borea does not copy links, because the copy would then change with the game folder. Replace the link with a real folder, or keep the build from a folder without links. The link is {0}.</value>
+  </data>
+  <data name="KeepGameBuildFolderSourceLinkFormat" xml:space="preserve">
+    <value>The folder you chose holds a folder link, so Borea does not copy it. Choose a folder without folder links. The link is {0}.</value>
   </data>
   <data name="KeepGameBuildBuildChangedFormat" xml:space="preserve">
     <value>The game folder changed to KSA {0} before the copy started, so Borea copied nothing. To keep KSA {0}, select "Keep this game build" again.</value>
@@ -3572,6 +3587,12 @@
   </data>
   <data name="KeepGameBuildFolderChangedFormat" xml:space="preserve">
     <value>The folder changed to KSA {0} before the copy started, so Borea copied nothing.</value>
+  </data>
+  <data name="KeepGameBuildChangedDuringCopyFormat" xml:space="preserve">
+    <value>The game folder changed while Borea copied KSA {0}, most likely because of a game update. Borea kept nothing. If the game folder still holds KSA {0}, try again. If it now holds a newer build, Borea cannot keep KSA {0} from it any more.</value>
+  </data>
+  <data name="KeepGameBuildFolderChangedDuringCopyFormat" xml:space="preserve">
+    <value>The folder changed while Borea copied KSA {0}, so Borea kept nothing. Try again when no other program changes the folder.</value>
   </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instances are packages of mods and game content that Borea manages on top of your existing game install. You can create multiple instances and activate one at a time for different play experiences.</value>
@@ -4751,6 +4772,9 @@
   </data>
   <data name="KeptGameBuildBusy" xml:space="preserve">
     <value>Borea is copying or deleting a game build. Try again when that is done.</value>
+  </data>
+  <data name="KeptGameBuildInUseByProgramFormat" xml:space="preserve">
+    <value>Borea could not delete KSA {0}, most likely because a program uses a file in its folder. Close the game and any window that shows that folder, then try again.</value>
   </data>
   <data name="SetupAddGameBuild" xml:space="preserve">
     <value>Keep a build from a folder</value>

@@ -186,6 +186,23 @@ public sealed class GameBuildBannerTests
         Assert.Equal(offered, viewModel.GameBuildKeepActionText is not null);
     }
 
+    // the harness cannot make a Wine wrapper on Windows, and GameBuildKeeperTests covers the read of the game folder
+    [Fact]
+    public async Task KeepRefusedForTheGameFolder_GivesTheMenuReasonAndHidesTheBannerKeep()
+    {
+        using var harness = await CreateAsync(MasterServer("2026.9.10.5438"));
+        await CreateHomeInstanceAsync(harness, hasMods: true, keptBuild: null);
+        var viewModel = harness.ViewModel;
+        Assert.Null(viewModel.GameFolderKeepRefusalText);
+        Assert.NotNull(viewModel.GameBuildKeepHintText);
+
+        viewModel.GameFolderKeepRefusal = GameBuildKeepRefusal.WineWrapper;
+
+        Assert.Equal(viewModel.Localization.KeepGameBuildWineWrapper, viewModel.GameFolderKeepRefusalText);
+        Assert.Null(viewModel.GameBuildKeepHintText);
+        Assert.Null(viewModel.GameBuildKeepActionText);
+    }
+
     [Fact]
     public async Task KeepOfTheHomeInstance_RemovesTheKeepOffer()
     {
