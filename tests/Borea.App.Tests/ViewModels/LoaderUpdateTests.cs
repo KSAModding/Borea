@@ -739,10 +739,12 @@ public sealed class LoaderUpdateTests
 
         Assert.True(viewModel.ShowUrgentLoaderUpdateBanner);
         Assert.Equal(harness.Localization.FormatLoaderUpdateUrgentKept("Kept", "0.4.6.0", "StarMap", "0.4.7", "0.4.6"), viewModel.LoaderUpdateBannerText);
+        Assert.Equal(harness.Localization.FormatLoaderInstallAction("StarMap", "0.4.6"), viewModel.LoaderUpdateActionText);
 
         await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatLaunchLoaderUpdate("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.FormatLaunchLoaderInstallOlder("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.LaunchInstallAndPlay, viewModel.LoaderPromptActionText);
 
         await viewModel.InstallPromptedLoaderCommand.ExecuteAsync(null);
 
@@ -805,7 +807,7 @@ public sealed class LoaderUpdateTests
         var row = Assert.Single(viewModel.InstanceLoader!.Rows);
         Assert.Equal(InstanceLoaderState.GameIncompatible, row.State);
         Assert.Equal(harness.Localization.FormatLoaderUpdateUrgent("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), row.StatusToolTip);
-        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), row.UpdateText);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderInstall("0.4.6"), row.UpdateText);
     }
 
     [Fact]

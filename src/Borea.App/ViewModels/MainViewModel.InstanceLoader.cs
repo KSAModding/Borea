@@ -339,8 +339,15 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     /// <summary>A conflict or a release that does not support the game shows as a danger.</summary>
     public bool IsDanger => State is InstanceLoaderState.Conflict or InstanceLoaderState.GameIncompatible;
 
-    /// <summary>"Update to 0.4.8" when a release that fits the game and the mods is offered, newer or for a kept build also older, else null.</summary>
-    public string? UpdateText => _offer is { } offer ? _owner.Localization.FormatSetupUpdateLoader(offer.Version.ToString()) : null;
+    /// <summary>
+    /// "Update to 0.4.8" when a newer release that fits the game and the mods is offered, or "Install 0.4.6" for an
+    /// older release that a kept build needs, which goes beside the installed one. Else null.
+    /// </summary>
+    public string? UpdateText => _offer is not { } offer
+        ? null
+        : MainViewModel.IsOlderOffer(offer, _version)
+            ? _owner.Localization.FormatInstanceLoaderInstall(offer.Version.ToString())
+            : _owner.Localization.FormatSetupUpdateLoader(offer.Version.ToString());
 
     public bool CanUpdate => _offer is not null;
 

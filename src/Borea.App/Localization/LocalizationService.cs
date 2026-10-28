@@ -2915,10 +2915,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchLoaderUpdate(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderUpdateFormat, loader, installed, game, offer);
 
+    public string FormatLaunchLoaderInstallOlder(string loader, string installed, string game, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderInstallOlderFormat, loader, installed, game, offer);
+
     public string FormatLaunchLoaderIncompatible(string loader, string installed, string game)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderIncompatibleFormat, loader, installed, game);
 
     public string LaunchUpdateAndPlay => Resources.LaunchUpdateAndPlay;
+
+    public string LaunchInstallAndPlay => Resources.LaunchInstallAndPlay;
 
     public string LaunchPlayAnyway => Resources.LaunchPlayAnyway;
 

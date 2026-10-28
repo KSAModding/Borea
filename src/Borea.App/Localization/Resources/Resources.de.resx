@@ -4548,11 +4548,17 @@
   <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
     <value>{0} {1} unterstützt KSA {2} nicht. Vor dem Spielen auf {3} aktualisieren?</value>
   </data>
+  <data name="LaunchLoaderInstallOlderFormat" xml:space="preserve">
+    <value>{0} {1} unterstützt KSA {2} nicht. Vor dem Spielen {0} {3} für diese Instanz installieren? {0} {1} bleibt installiert.</value>
+  </data>
   <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0} {1} unterstützt KSA {2} nicht, darum startet das Spiel vielleicht nicht. Trotzdem spielen?</value>
   </data>
   <data name="LaunchUpdateAndPlay" xml:space="preserve">
     <value>Aktualisieren und spielen</value>
+  </data>
+  <data name="LaunchInstallAndPlay" xml:space="preserve">
+    <value>Installieren und spielen</value>
   </data>
   <data name="LaunchPlayAnyway" xml:space="preserve">
     <value>Trotzdem spielen</value>

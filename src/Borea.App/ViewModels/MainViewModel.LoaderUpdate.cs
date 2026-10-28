@@ -84,8 +84,10 @@ public partial class MainViewModel
         ? pinned.Install is { } install
             ? Localization.FormatLoaderInstallAction(_loaderUpdateName, install.Version.ToString())
             : Localization.LoaderChangeAction
-        : LoaderUpdate?.Offer is { } release
-            ? Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
+        : LoaderUpdate is { Offer: { } release } update
+            ? IsOlderOffer(release, update.InstalledVersion)
+                ? Localization.FormatLoaderInstallAction(_loaderUpdateName, release.Version.ToString())
+                : Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
             : null;
 
     partial void OnLoaderUpdateChanged(LoaderUpdate? value) => RefreshLoaderUpdateText();
@@ -95,6 +97,12 @@ public partial class MainViewModel
     /// <summary>True when the index says the installed release does not support the game, with or without a release to update to.</summary>
     private static bool IsBroken(LoaderUpdate? update) =>
         update is { InstalledCompatibility: GameCompatibility.Incompatible, InstalledVersion: not null };
+
+    /// <summary>
+    /// True when <paramref name="offer"/> is older than the installed version, which only a kept build asks for. It
+    /// installs beside the installed version, so the texts say Install, not Update.
+    /// </summary>
+    internal static bool IsOlderOffer(ModVersionMetadata offer, ModVersion? installed) => installed is { } known && offer.Version < known;
 
     /// <summary>
     /// Why the installed release does not fit the game, and the next step: the
