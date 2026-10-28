@@ -2194,6 +2194,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatModalAddGameBuildShared(string build, string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildSharedFormat, build, folder);
 
+    public string FormatModalKeepGameBuildFolder(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFolderFormat, folder);
+
+    public string FormatModalAddGameBuildSource(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildSourceFormat, folder);
+
+    public string FormatModalKeepGameBuildIncompatible(int count, int total, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildIncompatibleFormat, count, total, build);
+
     public string FormatModalKeepGameBuildFreeSpace(string size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFreeSpaceFormat, size);
 

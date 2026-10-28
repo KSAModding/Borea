@@ -30,7 +30,8 @@
                         <TextBlock Classes="body-md danger" Text="{Binding UseCurrentGameBuildNoGameText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildNoGameText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelUseCurrentGameBuildCommand}" />
+                        <Button Classes="text" Content="{Binding UseCurrentGameBuildDismissText}" Command="{Binding CancelUseCurrentGameBuildCommand}" />
+                        <Button Classes="text primary" Content="{Binding Localization.SetupBannerAction}" Command="{Binding SetUpGameForGameBuildCommand}" IsVisible="{Binding UseCurrentGameBuildNoGameText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <Button Classes="text primary" Content="{Binding Localization.ModalUseCurrentGameBuildConfirm}" Command="{Binding ConfirmUseCurrentGameBuildCommand}" IsVisible="{Binding CanConfirmUseCurrentGameBuild}" />
                     </StackPanel>
                 </StackPanel>

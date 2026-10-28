@@ -212,6 +212,38 @@ public sealed class InstanceGameBuildTests
         Assert.Equal(["KeptContent"], (await harness.Services.ModState.GetEntriesAsync(created.InstanceId)).Select(entry => entry.ModId));
     }
 
+    [Theory]
+    [InlineData("1.1.10", true)]
+    [InlineData("1.1.9", false)]
+    public async Task KeepModal_CountsTheModsThatDoNotSupportTheBuild(string version, bool incompatible)
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var folder = harness.Services.Paths.GetGameBuildFolder(KeptBuild);
+        // a folder the player chooses must hold the executable of the host
+        File.WriteAllBytes(Path.Combine(folder, "KSA.exe"), []);
+        File.WriteAllBytes(Path.Combine(folder, "KSA"), []);
+        viewModel.SetMainWindowSettings();
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        viewModel.GameDirectoryInput = folder;
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+        var instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, version: version);
+        await viewModel.LoadAsync();
+
+        await viewModel.BeginKeepGameBuildAsync(viewModel.Instances.Single(item => item.InstanceId == instance.InstanceId));
+
+        Assert.True(viewModel.CanConfirmKeepGameBuild);
+        Assert.Equal(incompatible ? harness.Localization.FormatModalKeepGameBuildIncompatible(1, 1, KeptBuild.ToString()) : null, viewModel.KeepGameBuildIncompatibleText);
+
+        viewModel.CancelKeepGameBuildCommand.Execute(null);
+        await viewModel.BeginAddGameBuildAsync(folder);
+
+        Assert.Equal(harness.Localization.FormatModalAddGameBuildShared(KeptBuild.ToString(), folder), viewModel.KeepGameBuildText);
+        Assert.Null(viewModel.KeepGameBuildIncompatibleText);
+        Assert.False(viewModel.CanConfirmKeepGameBuild);
+        Assert.Equal(harness.Localization.ModalClose, viewModel.KeepGameBuildDismissText);
+    }
+
     private static async Task<Instance> CreateInstanceAsync(ViewModelHarness harness, string name, GameVersion? build)
     {
         var instance = (await harness.Services.Instances.CreateAsync(name, InstanceSource.Custom.Value)).Instance;
