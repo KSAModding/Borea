@@ -316,11 +316,14 @@ public sealed class VehiclePreviewViewTests
         var result = await HeadlessApp.RunAsync(async () =>
         {
             var (window, view) = Show(PreviewTestScenes.StackedBoxes());
-            view.RefineDelay = TimeSpan.FromMilliseconds(30);
+            // IdleAsync runs a render tick and the dispatcher after the first frame shows, and on a slow machine that
+            // takes longer than a short refine delay. The first frame waits longer than the test, so the press always
+            // comes before its refine. The drag gets the short delay, so a refine that it started would show below.
+            view.RefineDelay = TimeSpan.FromHours(1);
             await IdleAsync(view, 1);
 
-            // Nothing runs the dispatcher between the first frame and the press, so the timer cannot fire before it.
             window.MouseDown(Center, MouseButton.Left);
+            view.RefineDelay = TimeSpan.FromMilliseconds(30);
             window.MouseMove(Center + new Point(20, 0));
             await IdleAsync(view, 2);
             await HeadlessApp.FramesAsync(10);
