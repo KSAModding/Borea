@@ -2364,6 +2364,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDependencyOtherHint => Resources.ContentDependencyOtherHint;
 
+    public string ContentDependencyRequiredBy => Resources.ContentDependencyRequiredBy;
+
+    public string ContentDependencyRequiredByHint => Resources.ContentDependencyRequiredByHint;
+
     public string ContentDependencyOneOf => Resources.ContentDependencyOneOf;
 
     public string FormatContentDependencyMin(string low)

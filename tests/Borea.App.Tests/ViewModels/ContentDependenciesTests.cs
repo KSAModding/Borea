@@ -32,12 +32,15 @@ public sealed class ContentDependenciesTests
         return viewModel.DiscoverItems.Single(item => item.ModId == modId).OpenCommand.ExecuteAsync(null);
     }
 
-    private static Func<string, string> EditReleases(string modId, Action<JsonArray> edit) => json =>
+    private static Func<string, string> EditListings(Action<Func<string, JsonNode>> edit) => json =>
     {
         var root = JsonNode.Parse(json)!;
-        edit(root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!["releases"]!.AsArray());
+        edit(modId => root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!);
         return root.ToJsonString();
     };
+
+    private static Func<string, string> EditReleases(string modId, Action<JsonArray> edit)
+        => EditListings(listing => edit(listing(modId)["releases"]!.AsArray()));
 
     [Fact]
     public async Task Groups_FollowTheKindOrderAndListAnyOfMembersAsAlternatives()
@@ -268,6 +271,119 @@ public sealed class ContentDependenciesTests
 
         Assert.True(viewModel.HasContentDependenciesTab);
         Assert.Equal(DependencyGroupKind.Suggested, Assert.Single(viewModel.ContentDependencyGroups).Kind);
+    }
+
+    [Fact]
+    public async Task Tab_OnALoaderPage_ShowsWhenARequiredEntryNamesTheLoader()
+    {
+        using var harness = await CreateAsync(EditReleases("AdvancedFlightComputer", releases =>
+            releases[0]!["dependencies"] = JsonNode.Parse("""[{ "id": "StarMap", "kind": "required", "source": "authored" }]""")));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "StarMap", ContentType.ModLoader);
+
+        Assert.True(viewModel.HasContentDependenciesTab);
+        Assert.Empty(viewModel.ContentDependencyGroups);
+        Assert.Equal("AdvancedFlightComputer", Assert.Single(viewModel.ContentRequiredBy).ModId);
+    }
+
+    [Fact]
+    public async Task RequiredBy_ListsOnlyARequiredEntryOfTheNewestRelease()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("AdvancedFlightComputer")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "min": "0.8.0", "source": "authored" }]""");
+            var measureTools = listing("MeasureTools")["releases"]!;
+            measureTools[0]!["dependencies"] = JsonNode.Parse("""
+                [
+                    { "id": "KSArmory", "kind": "recommends", "source": "authored" },
+                    { "id": "KSArmory", "kind": "suggests", "source": "authored" },
+                    { "id": "KSArmory", "kind": "optional", "source": "authored" },
+                    { "id": "KSArmory", "kind": "conflict", "source": "authored" },
+                    { "kind": "required", "any_of": [{ "id": "KSArmory" }, { "id": "AdvancedFlightComputer" }], "source": "authored" }
+                ]
+                """);
+            measureTools[1]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.True(viewModel.HasContentRequiredBy);
+        var dependent = Assert.Single(viewModel.ContentRequiredBy);
+        Assert.Equal("AdvancedFlightComputer", dependent.ModId);
+        Assert.Equal("Advanced Flight Computer", dependent.Name);
+        Assert.Null(dependent.BoundsText);
+        Assert.Null(dependent.StateText);
+
+        await dependent.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal("AdvancedFlightComputer", viewModel.SelectedContent!.ModId);
+        Assert.Empty(viewModel.ContentRequiredBy);
+        Assert.False(viewModel.HasContentRequiredBy);
+    }
+
+    [Fact]
+    public async Task RequiredBy_IsMostDownloadedFirst_AndShowsOnlyTheInstalledState()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            var needsArmory = """[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""";
+            listing("AdvancedFlightComputer")["releases"]![0]!["dependencies"] = JsonNode.Parse(needsArmory);
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse(needsArmory);
+            listing("MeasureTools")["downloads"] = JsonNode.Parse("""{ "total": 1234, "hosts": { "github": 1234 } }""");
+        }));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Equal(["MeasureTools", "AdvancedFlightComputer"], viewModel.ContentRequiredBy.Select(member => member.ModId));
+        Assert.All(viewModel.ContentRequiredBy, member => Assert.Null(member.BoundsText));
+        Assert.Equal("Installed 1.1.10", viewModel.ContentRequiredBy[0].StateText);
+        Assert.True(viewModel.ContentRequiredBy[0].IsInstalled);
+        Assert.Null(viewModel.ContentRequiredBy[1].StateText);
+        Assert.False(viewModel.ContentRequiredBy[1].IsInstalled);
+    }
+
+    [Fact]
+    public async Task RequiredBy_ShowsOnAPageWithoutARelease()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("KSArmory")["releases"]![0]!["release_status"] = "dev";
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Null(viewModel.LatestVersion);
+        Assert.Equal("MeasureTools", Assert.Single(viewModel.ContentRequiredBy).ModId);
+    }
+
+    [Fact]
+    public async Task RequiredBy_FollowsAChangeOfTheReleaseChannelOnAPageWithoutARelease()
+    {
+        var addTesting = SnapshotRelease.Add(new SnapshotRelease("MeasureTools", "1.2.0-rc.1", "testing", "2026-09-20T10:00:00Z"));
+        var edit = EditListings(listing =>
+        {
+            foreach (var release in listing("KSArmory")["releases"]!.AsArray())
+                release!["release_status"] = "dev";
+            listing("MeasureTools")["releases"]!.AsArray().Single(node => (string?)node!["version"] == "1.2.0-rc.1")!["dependencies"] =
+                JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""");
+        });
+        using var harness = await CreateAsync(json => edit(addTesting(json)));
+        var viewModel = harness.ViewModel;
+        await OpenAsync(viewModel, "KSArmory");
+        Assert.Empty(viewModel.ContentRequiredBy);
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Testing);
+        await viewModel.WhenReleaseChannelSavedAsync();
+
+        Assert.Null(viewModel.LatestVersion);
+        Assert.Equal("MeasureTools", Assert.Single(viewModel.ContentRequiredBy).ModId);
     }
 
     [Fact]

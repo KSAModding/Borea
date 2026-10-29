@@ -3645,6 +3645,12 @@
   <data name="ContentDependencyOtherHint" xml:space="preserve">
     <value>A kind this version of Borea does not know</value>
   </data>
+  <data name="ContentDependencyRequiredBy" xml:space="preserve">
+    <value>Required by</value>
+  </data>
+  <data name="ContentDependencyRequiredByHint" xml:space="preserve">
+    <value>Mods whose newest release needs this mod</value>
+  </data>
   <data name="ContentDependencyOneOf" xml:space="preserve">
     <value>One of:</value>
   </data>
