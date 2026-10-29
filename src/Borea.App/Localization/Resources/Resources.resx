@@ -4629,6 +4629,9 @@
   <data name="LaunchStartingFormat" xml:space="preserve">
     <value>Starting {0}…</value>
   </data>
+  <data name="LaunchStartedFormat" xml:space="preserve">
+    <value>Started {0} for instance "{1}".</value>
+  </data>
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} stopped {2} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.</value>
   </data>

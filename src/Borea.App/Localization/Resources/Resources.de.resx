@@ -4620,6 +4620,9 @@
   <data name="LaunchStartingFormat" xml:space="preserve">
     <value>{0} wird gestartet…</value>
   </data>
+  <data name="LaunchStartedFormat" xml:space="preserve">
+    <value>{0} für die Instanz „{1}“ gestartet.</value>
+  </data>
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} hat den Start von {2} verhindert. Die Mod funktioniert womöglich nicht mit dieser KSA-Version. Deaktiviere sie und versuche es erneut, oder suche nach einem Update.</value>
   </data>

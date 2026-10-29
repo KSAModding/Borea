@@ -751,7 +751,11 @@ public partial class MainViewModel
             if (result.Outcome == LaunchOutcome.ExitedEarly)
                 await ShowLaunchFailureAsync(result, instance, loader);
             else
-                LaunchMessage = LaunchResultText(result, loader);
+                LaunchMessage = LaunchResultText(result, loader, instance.Name);
+
+            // the game shows its update popup on every online start of a kept build, and its GET closes the game
+            if (result.Started && instance.GameBuild is not null)
+                LaunchMessage += " " + Localization.ModalKeepGameBuildPopupNote;
 
             if (result.Started)
             {
@@ -928,8 +932,9 @@ public partial class MainViewModel
             LaunchFailureError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instanceId));
     }
 
-    private string LaunchResultText(LaunchResult result, ModMetadata loader) => result.Outcome switch
+    private string LaunchResultText(LaunchResult result, ModMetadata loader, string instanceName) => result.Outcome switch
     {
+        LaunchOutcome.Started => Localization.FormatLaunchStarted(loader.Name, instanceName),
         LaunchOutcome.UnknownPlatformKey => Localization.FormatLaunchUnknownPlatformKey(loader.Name, result.UnknownName!),
         LaunchOutcome.UnknownRuntime => Localization.FormatLaunchUnknownRuntime(loader.Name, result.UnknownName!),
         LaunchOutcome.DotnetMissing => Localization.FormatLaunchDotnetMissing(loader.Name),

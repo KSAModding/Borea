@@ -670,7 +670,7 @@ public sealed class LaunchFailureTests
         Assert.Equal(1, launcher.Watches);
         Assert.False(openWhileWatched);
         Assert.False(viewModel.IsRuntimePromptOpen);
-        Assert.Equal("Started StarMap.", viewModel.LaunchMessage);
+        Assert.Equal(harness.Localization.FormatLaunchStarted("StarMap", "Main"), viewModel.LaunchMessage);
     }
 
     [Fact]

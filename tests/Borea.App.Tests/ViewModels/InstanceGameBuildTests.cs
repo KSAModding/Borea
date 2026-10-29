@@ -85,6 +85,25 @@ public sealed class InstanceGameBuildTests
         Assert.Equal(["KeptContent"], (await harness.Services.ModState.GetEntriesAsync(kept.InstanceId)).Select(entry => entry.ModId));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Play_NotesTheUpdatePopupOnlyAfterAStartOnAKeptBuild(bool keepsBuild)
+    {
+        var starter = new GameSavesViewModelTests.RunningGameStarter();
+        using var harness = await CreateWithKeptBuildAsync(starter);
+        var instance = await CreateInstanceAsync(harness, "Instance", keepsBuild ? KeptBuild : null);
+        starter.GameLogPath = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.ViewModel.LoadAsync();
+
+        await harness.ViewModel.LaunchActiveInstanceAsync();
+
+        Assert.True(harness.Services.Launcher.IsRunning(instance.InstanceId));
+        var started = harness.Localization.FormatLaunchStarted("StarMap", "Instance");
+        Assert.Equal(keepsBuild ? started + " " + harness.Localization.ModalKeepGameBuildPopupNote : started, harness.ViewModel.LaunchMessage);
+    }
+
     [Fact]
     public async Task Play_WhileAKeptBuildRunsFromTheSameFolder_IsRefusedAndTheFileStays()
     {
