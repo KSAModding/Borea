@@ -65,9 +65,9 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         _freeSpace = freeSpace ?? throw new ArgumentNullException(nameof(freeSpace));
     }
 
-    public GameBuildKeepCheck Check(Instance instance) => Plan(instance).Check;
+    public GameBuildKeepCheck Check(Instance instance, CancellationToken cancellationToken) => Plan(instance, cancellationToken).Check;
 
-    public GameBuildKeepCheck CheckFolder(string folder) => PlanFolder(folder).Check;
+    public GameBuildKeepCheck CheckFolder(string folder, CancellationToken cancellationToken) => PlanFolder(folder, cancellationToken).Check;
 
     public GameBuildKeepRefusal CheckGameFolder()
     {
@@ -81,14 +81,14 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     public Task<GameBuildKeepCheck> KeepAsync(Guid instanceId, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
         => KeepAsync(
             async () => Plan(await _instances.GetByIdAsync(instanceId).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"The instance {instanceId} does not exist.")),
+                ?? throw new InvalidOperationException($"The instance {instanceId} does not exist."), cancellationToken),
             expected,
             instanceId,
             progress,
             cancellationToken);
 
     public Task<GameBuildKeepCheck> KeepFolderAsync(string folder, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
-        => KeepAsync(() => Task.FromResult(PlanFolder(folder)), expected, instanceId: null, progress, cancellationToken);
+        => KeepAsync(() => Task.FromResult(PlanFolder(folder, cancellationToken)), expected, instanceId: null, progress, cancellationToken);
 
     public IReadOnlyList<GameVersion> ListKept() => KeptVersions();
 
@@ -130,7 +130,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         }
     }
 
-    private KeepPlan Plan(Instance instance)
+    private KeepPlan Plan(Instance instance, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -142,12 +142,12 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
             || InstalledGameVersionProvider.Read(configured)?.Version is not { } version)
             return Refused(GameBuildKeepRefusal.NoGame, null, null);
 
-        return Plan(configured, version);
+        return Plan(configured, version, cancellationToken);
     }
 
     // an instance must be able to start the copy, so the folder needs the executable of this system, and macOS, which
     // starts the game only through a wrapper app, has none
-    private KeepPlan PlanFolder(string folder)
+    private KeepPlan PlanFolder(string folder, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(folder) || !Path.IsPathFullyQualified(folder)
             || GameExecutable.FileName(_host) is not { } executable
@@ -155,10 +155,10 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
             || InstalledGameVersionProvider.Read(folder)?.Version is not { } version)
             return Refused(GameBuildKeepRefusal.NotAGame, null, null);
 
-        return Plan(folder, version);
+        return Plan(folder, version, cancellationToken);
     }
 
-    private KeepPlan Plan(string source, GameVersion version)
+    private KeepPlan Plan(string source, GameVersion version, CancellationToken cancellationToken)
     {
         var gameDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(source));
         var folder = _paths.GetGameBuildFolder(version);
@@ -178,7 +178,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
 
         var directories = new List<string>();
         var files = new List<GameFile>();
-        if (Scan(gameDirectory, string.Empty, directories, files) is { } link)
+        if (Scan(gameDirectory, string.Empty, directories, files, cancellationToken) is { } link)
             return Refused(GameBuildKeepRefusal.HoldsFolderLink, version, folder, link);
 
         var bytes = files.Sum(file => file.Length);
@@ -502,10 +502,11 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     /// refused, because following it can loop and copying it as a link would tie the copy to the folder the client
     /// changes. Returns the full path of the first folder link, and the lists are then incomplete.
     /// </summary>
-    private static string? Scan(string folder, string relative, List<string> directories, List<GameFile> files)
+    private static string? Scan(string folder, string relative, List<string> directories, List<GameFile> files, CancellationToken cancellationToken = default)
     {
         foreach (var entry in new DirectoryInfo(folder).EnumerateFileSystemInfos("*", EveryEntry))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var path = Path.Combine(relative, entry.Name);
             if (entry is DirectoryInfo directory)
             {
@@ -513,7 +514,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
                     return directory.FullName;
 
                 directories.Add(path);
-                if (Scan(directory.FullName, path, directories, files) is { } link)
+                if (Scan(directory.FullName, path, directories, files, cancellationToken) is { } link)
                     return link;
             }
             else if (entry is FileInfo file)

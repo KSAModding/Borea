@@ -6,6 +6,7 @@ using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Core.Settings;
 using Borea.Storage.Launch;
 
 namespace Borea.App.Tests.ViewModels;
@@ -378,6 +379,86 @@ public sealed class InstanceGameBuildTests
         Assert.False(viewModel.IsUseCurrentGameBuildBackupFailed);
     }
 
+    [Fact]
+    public async Task UseCurrentGameBuild_WhileTheModsAreRead_ShowsTheCheckingStateAndDropsTheResultAfterCancel()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+
+        // both releases need a newer build than the settings, and the instance lists them out of their order
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: false, version: "1.1.8");
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: false);
+        var row = await KeptInstanceWithSpaceDockModAsync(harness);
+        var held = new TaskCompletionSource();
+        harness.SpaceDock.ReleaseLookup = () => held.Task;
+
+        var begin = row.BeginUseCurrentGameBuildCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsUseCurrentGameBuildModalOpen);
+        Assert.True(viewModel.IsUseCurrentGameBuildChecking);
+        Assert.False(viewModel.CanConfirmUseCurrentGameBuild);
+
+        viewModel.CancelUseCurrentGameBuildCommand.Execute(null);
+
+        Assert.True(row.BeginUseCurrentGameBuildCommand.CanExecute(null));
+
+        held.SetResult();
+        await begin;
+
+        Assert.False(viewModel.IsUseCurrentGameBuildModalOpen);
+        Assert.Null(viewModel.UseCurrentGameBuildPreview);
+
+        harness.SpaceDock.ReleaseLookup = null;
+        await row.BeginUseCurrentGameBuildCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsUseCurrentGameBuildChecking);
+        Assert.True(viewModel.CanConfirmUseCurrentGameBuild);
+        Assert.Equal("KSArmory, MeasureTools", viewModel.UseCurrentGameBuildIncompatibleText);
+    }
+
+    [Fact]
+    public async Task UseCurrentGameBuild_CheckThatFails_ClosesTheModalAndNamesTheInstance()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var row = await KeptInstanceWithSpaceDockModAsync(harness);
+
+        // the reads skip a network or IO error, so only this one fails the check
+        harness.SpaceDock.ReleaseFailure = _ => new UnauthorizedAccessException("Access denied.");
+
+        await viewModel.BeginUseCurrentGameBuildAsync(row);
+
+        Assert.False(viewModel.IsUseCurrentGameBuildModalOpen);
+        Assert.False(viewModel.IsUseCurrentGameBuildChecking);
+        Assert.Contains(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatToastUseCurrentGameBuildFailed("Main"));
+    }
+
+    [Fact]
+    public async Task KeepGameBuild_ReopenAfterCancelDuringTheCheck_StopsTheWalkOfTheFirstCheck()
+    {
+        HoldingGameBuildKeeper? keeper = null;
+        using var harness = await CreateWithKeptBuildAsync(wrapGameBuilds: inner => keeper = new HoldingGameBuildKeeper(inner));
+        var viewModel = harness.ViewModel;
+        var instance = await CreateInstanceAsync(harness, "Main", build: null);
+        await viewModel.LoadAsync();
+        var row = viewModel.Instances.Single(item => item.InstanceId == instance.InstanceId);
+        using var release = new ManualResetEventSlim();
+        var held = keeper!.HoldNextCheck(release);
+
+        var first = viewModel.BeginKeepGameBuildAsync(row);
+        var firstCheck = await held;
+        viewModel.CancelKeepGameBuildCommand.Execute(null);
+
+        Assert.True(firstCheck.IsCancellationRequested);
+
+        await viewModel.BeginKeepGameBuildAsync(row);
+        release.Set();
+        await first;
+
+        Assert.Equal((Walked: 1, Stopped: 1), (keeper.Walked, keeper.Stopped));
+        Assert.True(viewModel.CanConfirmKeepGameBuild);
+    }
+
     [Theory]
     [InlineData(null, true)]
     [InlineData("0.4.6.0", false)]
@@ -523,6 +604,36 @@ public sealed class InstanceGameBuildTests
         return instance;
     }
 
+    /// <summary>
+    /// The instance Main on the kept build with one mod that only SpaceDock serves, so its release read goes to <see cref="ViewModelHarness.FakeSpaceDock"/>.
+    /// The mods that the test added to Main before stay in it.
+    /// </summary>
+    private static async Task<InstanceItem> KeptInstanceWithSpaceDockModAsync(ViewModelHarness harness)
+    {
+        harness.SpaceDock.Releases.Add(new ModVersionMetadata(
+            specVersion: 1,
+            modId: ViewModelHarness.FakeSpaceDock.OwnId,
+            version: ModVersion.Parse("1.0.0"),
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: DateTimeOffset.UnixEpoch,
+            gameMin: "2026.1.1.1",
+            gameMinRevision: 1,
+            download: new DownloadInfo("https://archives.test/1.0.0.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
+            installSizeBytes: null,
+            dependencies: []));
+        var instance = await InstalledContent.AddAsync(harness, ViewModelHarness.FakeSpaceDock.OwnId, activate: false, version: "1.0.0");
+
+        // the add saves the instance it read, so the build is set after it
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, record =>
+        {
+            record.SetGameBuild(KeptBuild);
+            return true;
+        });
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.WhenContentUpdatesCheckedAsync();
+        return harness.ViewModel.Instances.Single(item => item.InstanceId == instance.InstanceId);
+    }
+
     /// <summary>The configuration file of the recorded StarMap folder, which holds its game path.</summary>
     private static async Task<string> LoaderFileAsync(ViewModelHarness harness)
     {
@@ -534,7 +645,7 @@ public sealed class InstanceGameBuildTests
     /// The settings point at build 5117 and the library keeps build 0.4.6.0, and each build lists its own content.
     /// The newest MeasureTools release needs 5117, and the one before it fits every build. StarMap 0.4.6 is installed and fits every build.
     /// </summary>
-    private static Task<ViewModelHarness> CreateWithKeptBuildAsync(IProcessStarter? processStarter = null, ILauncher? loaderLauncher = null) =>
+    private static Task<ViewModelHarness> CreateWithKeptBuildAsync(IProcessStarter? processStarter = null, ILauncher? loaderLauncher = null, Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null) =>
         ViewModelHarness.CreateAsync(
             services =>
             {
@@ -553,6 +664,7 @@ public sealed class InstanceGameBuildTests
             },
             processStarter: processStarter,
             loaderLauncher: loaderLauncher,
+            wrapGameBuilds: wrapGameBuilds,
             editSnapshot: json =>
             {
                 var root = JsonNode.Parse(json)!;
@@ -574,5 +686,70 @@ public sealed class InstanceGameBuildTests
     {
         var content = Directory.CreateDirectory(Path.Combine(gameDirectory, "Content")).FullName;
         File.WriteAllText(Path.Combine(content, "manifest.toml"), $"[[mods]]\nid = \"{contentId}\"\nenabled = true\n");
+    }
+
+    /// <summary>
+    /// The keeper of the services, which can hold one keep check before the keeper walks the files, and counts the
+    /// checks that walked to the end and the checks that a cancel stopped.
+    /// </summary>
+    private sealed class HoldingGameBuildKeeper(IGameBuildKeeper inner) : IGameBuildKeeper
+    {
+        private Hold? _hold;
+        private int _walked;
+        private int _stopped;
+
+        public int Walked => Volatile.Read(ref _walked);
+
+        public int Stopped => Volatile.Read(ref _stopped);
+
+        /// <summary>Holds the next check until <paramref name="release"/> is set, and gives its token once it waits.</summary>
+        public Task<CancellationToken> HoldNextCheck(ManualResetEventSlim release)
+        {
+            var hold = new Hold(new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously), release);
+            _hold = hold;
+            return hold.Waiting.Task;
+        }
+
+        public GameBuildKeepCheck Check(Instance instance, CancellationToken cancellationToken)
+        {
+            if (Interlocked.Exchange(ref _hold, null) is { } hold)
+            {
+                hold.Waiting.SetResult(cancellationToken);
+                if (!hold.Release.Wait(TimeSpan.FromSeconds(30)))
+                    throw new TimeoutException("The test did not release the held keep check.");
+            }
+
+            try
+            {
+                var check = inner.Check(instance, cancellationToken);
+                Interlocked.Increment(ref _walked);
+                return check;
+            }
+            catch (OperationCanceledException)
+            {
+                Interlocked.Increment(ref _stopped);
+                throw;
+            }
+        }
+
+        public Task<GameBuildKeepCheck> KeepAsync(Guid instanceId, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
+            => inner.KeepAsync(instanceId, expected, progress, cancellationToken);
+
+        public Task<GameBuildChangeRefusal> UseCurrentBuildAsync(Guid instanceId, CancellationToken cancellationToken) => inner.UseCurrentBuildAsync(instanceId, cancellationToken);
+
+        public Task<IReadOnlyList<KeptGameBuild>> ListKeptAsync(CancellationToken cancellationToken) => inner.ListKeptAsync(cancellationToken);
+
+        public Task<GameBuildChangeRefusal> RemoveAsync(GameVersion build, CancellationToken cancellationToken) => inner.RemoveAsync(build, cancellationToken);
+
+        public GameBuildKeepCheck CheckFolder(string folder, CancellationToken cancellationToken) => inner.CheckFolder(folder, cancellationToken);
+
+        public GameBuildKeepRefusal CheckGameFolder() => inner.CheckGameFolder();
+
+        public Task<GameBuildKeepCheck> KeepFolderAsync(string folder, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
+            => inner.KeepFolderAsync(folder, expected, progress, cancellationToken);
+
+        public IReadOnlyList<GameVersion> ListKept() => inner.ListKept();
+
+        private sealed record Hold(TaskCompletionSource<CancellationToken> Waiting, ManualResetEventSlim Release);
     }
 }

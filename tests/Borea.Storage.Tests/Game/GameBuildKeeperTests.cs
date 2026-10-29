@@ -68,7 +68,7 @@ public sealed class GameBuildKeeperTests : IDisposable
         await keeper.KeepAsync(first.InstanceId, FixtureVersion, null, CancellationToken.None);
         File.WriteAllText(Path.Combine(SettingsGame, "KSA.exe"), "patched app host");
 
-        var check = keeper.Check(second);
+        var check = keeper.Check(second, CancellationToken.None);
         var result = await keeper.KeepAsync(second.InstanceId, FixtureVersion, null, CancellationToken.None);
 
         Assert.Equal(GameBuildKeepRefusal.None, result.Refusal);
@@ -112,7 +112,7 @@ public sealed class GameBuildKeeperTests : IDisposable
     {
         var instance = await CreateInstanceAsync("Career");
         var keeper = Keeper();
-        var check = keeper.Check(instance);
+        var check = keeper.Check(instance, CancellationToken.None);
         File.Copy(Path.Combine(AppContext.BaseDirectory, OtherBuildFixture), Path.Combine(SettingsGame, "KSA.dll"), overwrite: true);
 
         var result = await keeper.KeepAsync(instance.InstanceId, check.Version!.Value, null, CancellationToken.None);
@@ -160,9 +160,9 @@ public sealed class GameBuildKeeperTests : IDisposable
     public async Task Check_FreeSpaceAroundTheMargin_RefusesOnlyBelowIt(long offset, GameBuildKeepRefusal refusal)
     {
         var instance = await CreateInstanceAsync("Career");
-        var bytes = Keeper().Check(instance).BytesToCopy;
+        var bytes = Keeper().Check(instance, CancellationToken.None).BytesToCopy;
 
-        var check = Keeper(freeSpace: new FixedFreeSpace(bytes + DriveInstallSpaceCheck.MarginFor(bytes) + offset)).Check(instance);
+        var check = Keeper(freeSpace: new FixedFreeSpace(bytes + DriveInstallSpaceCheck.MarginFor(bytes) + offset)).Check(instance, CancellationToken.None);
 
         Assert.Equal(refusal, check.Refusal);
         Assert.Equal(@"D:\", check.VolumeName);
@@ -207,8 +207,8 @@ public sealed class GameBuildKeeperTests : IDisposable
         Assert.True(linker.TryCreate(Path.Combine(PlayerFolder, "Mods"), shared).Linked);
         var keeper = Keeper();
 
-        var game = keeper.Check(instance);
-        var folder = keeper.CheckFolder(PlayerFolder);
+        var game = keeper.Check(instance, CancellationToken.None);
+        var folder = keeper.CheckFolder(PlayerFolder, CancellationToken.None);
 
         Assert.Equal(GameBuildKeepRefusal.HoldsFolderLink, game.Refusal);
         Assert.Equal(Path.GetFullPath(Path.Combine(SettingsGame, "Mods")), game.LinkPath);
@@ -232,7 +232,7 @@ public sealed class GameBuildKeeperTests : IDisposable
         var keeper = Keeper(host: host, wine: wine);
 
         Assert.Equal(refusal, keeper.CheckGameFolder());
-        Assert.Equal(refusal, keeper.Check(instance).Refusal);
+        Assert.Equal(refusal, keeper.Check(instance, CancellationToken.None).Refusal);
     }
 
     [Fact]
@@ -449,7 +449,7 @@ public sealed class GameBuildKeeperTests : IDisposable
             File.WriteAllText(Path.Combine(PlayerFolder, "KSA.dll"), "not an assembly");
         var keeper = Keeper(host: host);
 
-        var check = keeper.CheckFolder(PlayerFolder);
+        var check = keeper.CheckFolder(PlayerFolder, CancellationToken.None);
         var result = await keeper.KeepFolderAsync(PlayerFolder, FixtureVersion, null, CancellationToken.None);
 
         Assert.Equal(GameBuildKeepRefusal.NotAGame, check.Refusal);
@@ -465,7 +465,7 @@ public sealed class GameBuildKeeperTests : IDisposable
         await keeper.KeepFolderAsync(PlayerFolder, FixtureVersion, null, CancellationToken.None);
         File.WriteAllText(Path.Combine(PlayerFolder, "KSA.exe"), "patched app host");
 
-        var check = keeper.CheckFolder(PlayerFolder);
+        var check = keeper.CheckFolder(PlayerFolder, CancellationToken.None);
         var result = await keeper.KeepFolderAsync(PlayerFolder, FixtureVersion, null, CancellationToken.None);
 
         var kept = Path.Combine(GameBuilds, "2026.8.3.5117");
@@ -482,7 +482,7 @@ public sealed class GameBuildKeeperTests : IDisposable
         WriteGame(PlayerFolder);
         File.Move(Path.Combine(PlayerFolder, "KSA.exe"), Path.Combine(PlayerFolder, "KSA"));
 
-        var check = Keeper(host: OsPlatform.Linux).CheckFolder(PlayerFolder);
+        var check = Keeper(host: OsPlatform.Linux).CheckFolder(PlayerFolder, CancellationToken.None);
 
         Assert.Equal(GameBuildKeepRefusal.None, check.Refusal);
         Assert.Equal(FixtureVersion, check.Version);

@@ -1248,10 +1248,11 @@ public sealed partial class InstanceItem : ObservableObject
     [RelayCommand]
     private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(Instance);
 
-    [RelayCommand]
+    // a check that a Cancel left running must not hold the next open, and the load count of the modals drops its result
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private Task BeginKeepGameBuildAsync() => _owner.BeginKeepGameBuildAsync(this);
 
-    [RelayCommand]
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private Task BeginUseCurrentGameBuildAsync() => _owner.BeginUseCurrentGameBuildAsync(this);
 
     [RelayCommand]
