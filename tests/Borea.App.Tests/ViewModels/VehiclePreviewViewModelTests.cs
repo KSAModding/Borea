@@ -46,17 +46,38 @@ public sealed class VehiclePreviewViewModelTests
         Assert.False(preview.HasMissingMods);
     }
 
-    [Fact]
-    public async Task NeedsVehicleFile_LoadsNothingBeforeTheClick_AndTheClickFetchesOnlyTheVehicle()
+    [Theory]
+    [InlineData(2_500_000L)]
+    [InlineData(VehiclePreviewViewModel.AutoFetchVehicleBytes)]
+    public async Task NeedsASmallVehicleFile_FetchesOnlyTheVehicle_WithoutAClick(long size)
     {
         var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
-        using var preview = Start(service);
+        using var preview = Start(service, release: RoverOfSize(size), autoFetchDelay: TimeSpan.Zero);
+        await preview.Loading;
+
+        Assert.Equal([(true, false)], service.Loads);
+        Assert.Equal(VehiclePreviewState.Ready, preview.State);
+    }
+
+    public static TheoryData<long?, string> LargeOrUnsizedFiles => new()
+    {
+        { VehiclePreviewViewModel.AutoFetchVehicleBytes + 1, Localization.FormatPreviewShowSize(MainViewModel.SizeText(VehiclePreviewViewModel.AutoFetchVehicleBytes + 1)) },
+        { null, Localization.PreviewShow },
+    };
+
+    // The rows read the shared resource culture, so they are made when the test runs and not at discovery.
+    [Theory]
+    [MemberData(nameof(LargeOrUnsizedFiles), DisableDiscoveryEnumeration = true)]
+    public async Task NeedsALargeOrUnsizedVehicleFile_LoadsNothingBeforeTheClick_AndTheClickFetchesOnlyTheVehicle(long? size, string showText)
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
+        using var preview = Start(service, release: RoverOfSize(size), autoFetchDelay: TimeSpan.Zero);
         await preview.Loading;
 
         Assert.Equal(VehiclePreviewState.Idle, preview.State);
         Assert.Empty(service.Loads);
         Assert.True(preview.ShowCommand.CanExecute(null));
-        Assert.Equal(Localization.FormatPreviewShowSize(MainViewModel.SizeText(2_500_000)), preview.ShowText);
+        Assert.Equal(showText, preview.ShowText);
 
         await preview.ShowCommand.ExecuteAsync(null);
 
@@ -77,6 +98,20 @@ public sealed class VehiclePreviewViewModelTests
         service.LastProgress!.Report(VehiclePreviewStage.ReadingParts);
 
         Assert.Equal(VehiclePreviewState.Ready, preview.State);
+    }
+
+    [Fact]
+    public async Task LeavingThePageDuringTheDelay_DownloadsNothing()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
+        var preview = Start(service, autoFetchDelay: TimeSpan.FromMinutes(5));
+        Assert.Equal(VehiclePreviewState.Fetching, preview.State);
+        Assert.True(preview.CancelCommand.CanExecute(null));
+
+        preview.Dispose();
+        await preview.Loading.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Empty(service.Loads);
     }
 
     [Fact]
@@ -189,6 +224,217 @@ public sealed class VehiclePreviewViewModelTests
 
         viewModel.SetMainWindowDiscover();
         Assert.Null(viewModel.VehiclePreview);
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainForTheSameRelease_KeepsARunningAutoFetch()
+    {
+        var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var first = viewModel.VehiclePreview!;
+
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+
+        Assert.Same(first, viewModel.VehiclePreview);
+        Assert.False(Assert.Single(service.LoadTokens).Token.IsCancellationRequested);
+        held.SetResult(service.Ready(new FakeAssets()));
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+        Assert.Equal([(true, false)], service.Loads);
+        Assert.Equal(VehiclePreviewState.Ready, first.State);
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainAfterACancel_WaitsForTheClick()
+    {
+        var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var first = viewModel.VehiclePreview!;
+        first.CancelCommand.Execute(null);
+        held.SetResult(service.Ready(new FakeAssets()));
+        await first.Loading;
+        Assert.Equal(VehiclePreviewState.Cancelled, first.State);
+
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.NotSame(first, viewModel.VehiclePreview);
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Single(service.Loads);
+
+        // the cancel also holds for the next page refresh and for a rebuild of the services
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Testing);
+        await viewModel.WhenReleaseChannelSavedAsync();
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Single(service.Loads);
+    }
+
+    [Fact]
+    public async Task Page_OpenedAgainAfterACancel_StillWaitsForTheClick()
+    {
+        var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var first = viewModel.VehiclePreview!;
+        first.CancelCommand.Execute(null);
+        held.SetResult(service.Ready(new FakeAssets()));
+        await first.Loading;
+
+        // the cancel holds for the whole session, so the player leaving the page and opening it again sends no download
+        viewModel.SetMainWindowDiscover();
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.NotSame(first, viewModel.VehiclePreview);
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Single(service.Loads);
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainAfterAFailedFetch_WaitsForTheClick()
+    {
+        var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var first = viewModel.VehiclePreview!;
+        held.SetException(new IOException("The archive has another SHA-256."));
+        await first.Loading;
+        Assert.Equal(VehiclePreviewState.Failed, first.State);
+
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Single(service.Loads);
+    }
+
+    [Fact]
+    public async Task Page_AnInstallDuringTheDelay_StopsTheAutoFetch_SoOnlyTheInstallDownloads()
+    {
+        var (harness, service) = await OpenRoverForAnInstallAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var row = viewModel.SelectedContent!;
+        var waiting = viewModel.VehiclePreview!;
+        Assert.True(waiting.IsWaitingToFetch);
+
+        await row.InstallCommand.ExecuteAsync(null);
+        await waiting.Loading;
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+        Assert.NotSame(waiting, viewModel.VehiclePreview);
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+
+        // without a game the install waits for a go, as in the tests of the content install
+        Assert.True(row.IsConfirmingInstall);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        Assert.Empty(service.Loads);
+        Assert.Single(harness.Requests, uri => uri.AbsoluteUri == UserContentFixtures.RoverUrl);
+
+        // the install changed the instance, so the page made a preview again, which waits out its delay until the test leaves the page
+        viewModel.SetMainWindowDiscover();
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainWhileAnInstallWaitsForItsConfirmation_FetchesNothing()
+    {
+        var (harness, service) = await OpenRoverForAnInstallAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var row = viewModel.SelectedContent!;
+        await row.InstallCommand.ExecuteAsync(null);
+        Assert.True(row.IsConfirmingInstall);
+
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.Zero;
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Empty(service.Loads);
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainWhileTheNameModalAsksForAnInstall_FetchesNothing()
+    {
+        var (harness, service) = await OpenRoverForAnInstallAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var vehicles = harness.Services.Paths.GetInstanceVehiclesFolder(viewModel.ActiveInstance!.InstanceId);
+        Directory.CreateDirectory(Path.Combine(vehicles, "Example Rover"));
+        await viewModel.SelectedContent!.InstallCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsNameModalOpen);
+
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.Zero;
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Empty(service.Loads);
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainAfterTheInstallConfirmationWasCancelled_FetchesWithoutAClick()
+    {
+        var (harness, service) = await OpenRoverForAnInstallAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var row = viewModel.SelectedContent!;
+        await row.InstallCommand.ExecuteAsync(null);
+        row.CancelInstallCommand.Execute(null);
+
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.Zero;
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Equal([(true, false)], service.Loads);
+    }
+
+    /// <summary>
+    /// Opens the rover page over a service that needs the small vehicle file, with an active instance to install it
+    /// into and an auto fetch delay that outlasts the test, so only the test makes the page fetch on its own.
+    /// </summary>
+    private static async Task<(ViewModelHarness Harness, FakeVehiclePreview Service)> OpenRoverForAnInstallAsync()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
+        var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.FromMinutes(5);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await OpenRoverPageAsync(viewModel);
+        return (harness, service);
+    }
+
+    /// <summary>
+    /// Opens the rover page over a service that needs the small vehicle file, and waits until the fetch that the page
+    /// starts on its own is held by the test.
+    /// </summary>
+    private static async Task<(ViewModelHarness Harness, FakeVehiclePreview Service, TaskCompletionSource<VehiclePreviewResult> Held)> OpenRoverWithHeldAutoFetchAsync()
+    {
+        var held = new TaskCompletionSource<VehiclePreviewResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var service = new FakeVehiclePreview
+        {
+            PlanState = VehiclePreviewPlanState.NeedsVehicleFile,
+            HoldLoad = _ =>
+            {
+                started.TrySetResult();
+                return held.Task;
+            },
+        };
+        var harness = await VehicleHarnessAsync();
+        harness.ViewModel.VehiclePreviewServiceOf = _ => service;
+        await OpenRoverPageAsync(harness.ViewModel);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        return (harness, service, held);
     }
 
     [Fact]
@@ -316,10 +562,16 @@ public sealed class VehiclePreviewViewModelTests
 
     internal static async Task OpenRoverAsync(MainViewModel viewModel)
     {
+        await OpenRoverPageAsync(viewModel);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+    }
+
+    /// <summary>Opens the rover page and returns before its preview has loaded.</summary>
+    private static async Task OpenRoverPageAsync(MainViewModel viewModel)
+    {
         await viewModel.EnsureDiscoverLoadedAsync();
         viewModel.ShowDiscoverVehiclesCommand.Execute(null);
         await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
-        await viewModel.WhenVehiclePreviewLoadedAsync();
     }
 
     private static VehiclePreviewViewModel Start(
@@ -327,21 +579,37 @@ public sealed class VehiclePreviewViewModelTests
         Action? openSettings = null,
         FakeThumbnails? thumbnails = null,
         Action<string>? stillStored = null,
-        IRgbaImageDecoder? decoder = null)
+        IRgbaImageDecoder? decoder = null,
+        ModVersionMetadata? release = null,
+        TimeSpan? autoFetchDelay = null)
     {
         var preview = new VehiclePreviewViewModel(
             service,
-            Rover,
+            release ?? Rover,
             null,
             Localization,
             openSettings ?? (() => { }),
             new PreviewSceneBuilder(new PreviewTextureLoader(decoder)),
             thumbnails: thumbnails,
             encoder: thumbnails,
-            stillStored: stillStored);
+            stillStored: stillStored,
+            autoFetchDelay: autoFetchDelay);
         preview.Start();
         return preview;
     }
+
+    /// <summary>The Rover release with another stated size of its download, or with none.</summary>
+    private static ModVersionMetadata RoverOfSize(long? size) => new(
+        specVersion: 1,
+        modId: Rover.ModId,
+        version: Rover.Version,
+        releaseStatus: Rover.ReleaseStatus,
+        releaseDate: Rover.ReleaseDate,
+        gameMin: Rover.GameMin,
+        gameMinRevision: Rover.GameMinRevision,
+        download: new DownloadInfo(Rover.Download.Url, Rover.Download.Sha256, size, Rover.Download.ContentType),
+        installSizeBytes: null,
+        dependencies: []);
 
     private static readonly PreviewAssetRef TriangleFile = new("Core", "Triangle.glb");
 
