@@ -384,8 +384,10 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(UseCurrentGameBuildFitText));
         OnPropertyChanged(nameof(UseCurrentGameBuildIncompatibleText));
         OnPropertyChanged(nameof(UseCurrentGameBuildUnknownText));
+        OnPropertyChanged(nameof(UseCurrentGameBuildIncompatibleNoteText));
         OnPropertyChanged(nameof(UseCurrentGameBuildOlderText));
         OnPropertyChanged(nameof(UseCurrentGameBuildNoGameText));
+        OnPropertyChanged(nameof(UseCurrentGameBuildBackupText));
         foreach (var build in KeptGameBuilds)
             build.RefreshText();
     }
@@ -395,13 +397,40 @@ public partial class MainViewModel
     /// <summary>How the mods of the row of the open modal fit the build of the settings. Null while the modal is closed.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsUseCurrentGameBuildModalOpen), nameof(UseCurrentGameBuildText), nameof(UseCurrentGameBuildFitText), nameof(UseCurrentGameBuildIncompatibleText), nameof(UseCurrentGameBuildUnknownText), nameof(ShowsUseCurrentGameBuildModNames), nameof(UseCurrentGameBuildOlderText), nameof(UseCurrentGameBuildNoGameText), nameof(CanConfirmUseCurrentGameBuild))]
-    [NotifyPropertyChangedFor(nameof(UseCurrentGameBuildDismissText))]
+    [NotifyPropertyChangedFor(nameof(UseCurrentGameBuildDismissText), nameof(UseCurrentGameBuildIncompatibleNoteText), nameof(IsUseCurrentGameBuildToOlder), nameof(ShowsUseCurrentGameBuildPrimaryConfirm))]
+    [NotifyPropertyChangedFor(nameof(IsBackingUpUseCurrentGameBuildSaves), nameof(UseCurrentGameBuildBackupText))]
     [NotifyCanExecuteChangedFor(nameof(ConfirmUseCurrentGameBuildCommand))]
     private UseCurrentGameBuildPreview? _useCurrentGameBuildPreview;
+
+    // the modal that started the backup, so a modal that opens again while it runs does not show it as its own
+    private UseCurrentGameBuildPreview? _useCurrentGameBuildBackupPreview;
+
+    private Func<string>? _useCurrentGameBuildBackupOutcome;
+
+    /// <summary>
+    /// The move waits for the backup, so the player sees that the saves are in a backup, or that the backup failed, before the older build can start this instance.
+    /// </summary>
+    public bool IsBackingUpUseCurrentGameBuildSaves => _useCurrentGameBuildBackupPreview is { } backup && ReferenceEquals(backup, UseCurrentGameBuildPreview);
+
+    /// <summary>The modal shows the backup and its outcome itself, because a toast draws under it. Null before the backup.</summary>
+    public string? UseCurrentGameBuildBackupText => IsBackingUpUseCurrentGameBuildSaves
+        ? Localization.ModalUseCurrentGameBuildBackingUp
+        : _useCurrentGameBuildBackupOutcome?.Invoke();
+
+    [ObservableProperty]
+    private bool _isUseCurrentGameBuildBackupFailed;
 
     public bool IsUseCurrentGameBuildModalOpen => UseCurrentGameBuildPreview is not null;
 
     public bool CanConfirmUseCurrentGameBuild => UseCurrentGameBuildPreview?.Current is not null;
+
+    /// <summary>The confirm stays in view while the saves are backed up, but cannot run.</summary>
+    public bool IsUseCurrentGameBuildConfirmEnabled => CanConfirmUseCurrentGameBuild && !IsBackingUpUseCurrentGameBuildSaves;
+
+    public bool IsUseCurrentGameBuildToOlder => UseCurrentGameBuildPreview is { Current: { } current } preview && current < preview.Kept;
+
+    /// <summary>A move to an older build asks with a danger confirm instead, next to the backup of the saves.</summary>
+    public bool ShowsUseCurrentGameBuildPrimaryConfirm => CanConfirmUseCurrentGameBuild && !IsUseCurrentGameBuildToOlder;
 
     public string UseCurrentGameBuildDismissText => CanConfirmUseCurrentGameBuild ? Localization.LibraryCancel : Localization.ModalClose;
 
@@ -416,19 +445,30 @@ public partial class MainViewModel
         : null;
 
     public string? UseCurrentGameBuildIncompatibleText => UseCurrentGameBuildPreview is { Current: not null, Incompatible.Count: > 0 } preview
-        ? Localization.FormatModalUseCurrentGameBuildIncompatible(string.Join(", ", preview.Incompatible))
+        ? ModNamesText(preview.Incompatible)
         : null;
 
     public string? UseCurrentGameBuildUnknownText => UseCurrentGameBuildPreview is { Current: not null, Unknown.Count: > 0 } preview
-        ? Localization.FormatModalUseCurrentGameBuildUnknown(string.Join(", ", preview.Unknown))
+        ? ModNamesText(preview.Unknown)
         : null;
 
-    /// <summary>The two lists of mod names scroll together, so a long list does not push the buttons out of the window.</summary>
+    public string? UseCurrentGameBuildIncompatibleNoteText => UseCurrentGameBuildPreview is { Current: { } current, Incompatible.Count: > 0 }
+        ? Localization.FormatModalUseCurrentGameBuildIncompatibleNote(current.ToString())
+        : null;
+
+    /// <summary>
+    /// The list wraps only between the names, so a name never breaks inside itself.
+    /// A space in a name becomes the no-break space, and a word joiner (U+2060) after each hyphen stops the break that a hyphen allows.
+    /// </summary>
+    private static string ModNamesText(IEnumerable<string> names)
+        => string.Join(", ", names.Select(name => name.Replace(' ', LocalizationService.NoBreakSpace).Replace("-", "-\u2060", StringComparison.Ordinal)));
+
+    /// <summary>The two lists of mod names scroll together in a low box, so a long list leaves room for the notes under it.</summary>
     public bool ShowsUseCurrentGameBuildModNames => UseCurrentGameBuildPreview is { Current: not null } preview
         && (preview.Incompatible.Count > 0 || preview.Unknown.Count > 0);
 
     // SaveMetaData.Write stores the build in each save, but UncompressedSave.Load never compares it, so the game itself does not warn
-    public string? UseCurrentGameBuildOlderText => UseCurrentGameBuildPreview is { Current: { } current } preview && current < preview.Kept
+    public string? UseCurrentGameBuildOlderText => IsUseCurrentGameBuildToOlder && UseCurrentGameBuildPreview is { Current: { } current } preview
         ? Localization.FormatModalUseCurrentGameBuildOlder(current.ToString(), preview.Kept.ToString())
         : null;
 
@@ -500,7 +540,50 @@ public partial class MainViewModel
         _useCurrentGameBuildItem = null;
     }
 
-    [RelayCommand(CanExecute = nameof(CanConfirmUseCurrentGameBuild))]
+    partial void OnUseCurrentGameBuildPreviewChanged(UseCurrentGameBuildPreview? value) => SetUseCurrentGameBuildBackupOutcome(null, failed: false);
+
+    [RelayCommand]
+    private async Task BackUpUseCurrentGameBuildSavesAsync()
+    {
+        if (_useCurrentGameBuildItem is not { } item || UseCurrentGameBuildPreview is not { } preview)
+            return;
+
+        SetUseCurrentGameBuildBackupOutcome(null, failed: false);
+        SetUseCurrentGameBuildBackupPreview(preview);
+        try
+        {
+            // after the modal closed, the toast shows the outcome
+            await BackUpAllSavesAsync(item, (message, reason) =>
+            {
+                if (!ReferenceEquals(UseCurrentGameBuildPreview, preview))
+                    return false;
+
+                SetUseCurrentGameBuildBackupOutcome(reason is null ? message : () => Localization.FormatModalUseCurrentGameBuildBackupFailed(reason), failed: reason is not null);
+                return true;
+            });
+        }
+        finally
+        {
+            SetUseCurrentGameBuildBackupPreview(null);
+        }
+    }
+
+    private void SetUseCurrentGameBuildBackupPreview(UseCurrentGameBuildPreview? preview)
+    {
+        _useCurrentGameBuildBackupPreview = preview;
+        OnPropertyChanged(nameof(IsBackingUpUseCurrentGameBuildSaves));
+        OnPropertyChanged(nameof(UseCurrentGameBuildBackupText));
+        ConfirmUseCurrentGameBuildCommand.NotifyCanExecuteChanged();
+    }
+
+    private void SetUseCurrentGameBuildBackupOutcome(Func<string>? outcome, bool failed)
+    {
+        _useCurrentGameBuildBackupOutcome = outcome;
+        IsUseCurrentGameBuildBackupFailed = failed;
+        OnPropertyChanged(nameof(UseCurrentGameBuildBackupText));
+    }
+
+    [RelayCommand(CanExecute = nameof(IsUseCurrentGameBuildConfirmEnabled))]
     private async Task ConfirmUseCurrentGameBuildAsync()
     {
         if (_services is not { } services || _useCurrentGameBuildItem is not { } item || UseCurrentGameBuildPreview is not { Current: { } current } preview)
@@ -642,6 +725,7 @@ public partial class MainViewModel
         KeptGameBuildError = error;
         KeptGameBuildMessage = null;
         OnPropertyChanged(nameof(ShowsKeptGameBuilds));
+        OnPropertyChanged(nameof(DeleteModalKeptBuildText));
     }
 
     /// <summary>
@@ -733,6 +817,8 @@ public sealed partial class KeptGameBuildItem : ObservableObject
     public string VersionText => _owner.Localization.FormatInstanceGameBuild(_build.Version.ToString());
 
     public string SizeText => MainViewModel.KeepSizeText(_build.Bytes);
+
+    internal bool IsGameFolderOfSettings => _build.IsGameFolderOfSettings;
 
     /// <summary>The instances that keep this build. Null when only the game folder of the settings uses it.</summary>
     public string? UsedByText => _build.InstanceNames.Count > 0

@@ -264,12 +264,27 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>The row the delete modal asks about. Null while the modal is closed.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDeleteModalOpen), nameof(DeleteModalText))]
+    [NotifyPropertyChangedFor(nameof(IsDeleteModalOpen), nameof(DeleteModalText), nameof(DeleteModalKeptBuildText))]
     private InstanceItem? _deletingInstance;
 
     public bool IsDeleteModalOpen => DeletingInstance is not null;
 
     public string? DeleteModalText => DeletingInstance is { } item ? Localization.FormatModalDeleteInstanceText(item.Name) : null;
+
+    /// <summary>
+    /// The copy of a build that only this instance keeps stays on the disk after the delete, so the modal names it and its size.
+    /// It reads the rows of Settings, Game, which the open of the modal loads again.
+    /// </summary>
+    public string? DeleteModalKeptBuildText => DeletingInstance is { } item
+        && LastKeptBuildOf(item) is { } build
+        && KeptGameBuilds.FirstOrDefault(row => row.Version == build) is { IsGameFolderOfSettings: false } row
+            ? Localization.FormatModalDeleteInstanceKeptBuild(build.ToString(), row.SizeText)
+            : null;
+
+    private GameVersion? LastKeptBuildOf(InstanceItem item)
+        => item.Instance.GameBuild is { } build && !Instances.Any(other => other.InstanceId != item.InstanceId && other.Instance.GameBuild == build)
+            ? build
+            : null;
 
     /// <summary>
     /// Why the name modal or the launch arguments modal cannot save, as the repository reported it.
@@ -718,7 +733,12 @@ public partial class MainViewModel : ViewModelBase
             () => RenamingInstance == item,
             () => Localization.FormatToastRenameFailed(item.Name));
 
-    internal void BeginDeleteInstance(InstanceItem item) => DeletingInstance = item;
+    internal void BeginDeleteInstance(InstanceItem item)
+    {
+        DeletingInstance = item;
+        if (LastKeptBuildOf(item) is not null)
+            _ = StartKeptGameBuildLoad();
+    }
 
     [RelayCommand]
     private void CancelDeleteModal() => DeletingInstance = null;
@@ -1001,6 +1021,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(NameModalConfirmText));
         OnPropertyChanged(nameof(NameModalPlaceholder));
         OnPropertyChanged(nameof(DeleteModalText));
+        OnPropertyChanged(nameof(DeleteModalKeptBuildText));
         RefreshKeepGameBuildText();
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
         OnPropertyChanged(nameof(DiscoverSortText));

@@ -3507,6 +3507,9 @@
   <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
     <value>Delete {0}, its folder and its backups? You cannot undo this.</value>
   </data>
+  <data name="ModalDeleteInstanceKeptBuildFormat" xml:space="preserve">
+    <value>KSA {0} ({1}), which this instance keeps, stays in Game Builds. You can delete it on the Game tab of Settings.</value>
+  </data>
   <data name="ModalKeepGameBuildTitle" xml:space="preserve">
     <value>Keep this game build</value>
   </data>
@@ -3586,22 +3589,25 @@
     <value>Use the current game build</value>
   </data>
   <data name="ModalUseCurrentGameBuildTextFormat" xml:space="preserve">
-    <value>{0} then starts on KSA {1} from the game folder in the settings, and no longer on the kept build {2}. The saves stay in the instance, and the kept build stays in the Game Builds folder.</value>
+    <value>After this, {0} starts on the current game build, KSA {1}, instead of the kept KSA {2}. Its saves stay in the instance. Borea cannot move {0} back to KSA {2} later, but a new instance can still start on it. When no instance uses KSA {2} any more, you can delete it on the Game tab of Settings.</value>
   </data>
   <data name="ModalUseCurrentGameBuildMissingTextFormat" xml:space="preserve">
     <value>After this, {0} starts on the current game build, KSA {1}. Its saves stay in the instance. The folder of the kept KSA {2} is gone or holds another build, so this instance cannot start on it any more.</value>
   </data>
   <data name="ModalUseCurrentGameBuildFitFormat" xml:space="preserve">
-    <value>{0} of {1} mods fit KSA {2}.</value>
+    <value>Mods compatible with KSA {2}: {0} of {1}.</value>
   </data>
-  <data name="ModalUseCurrentGameBuildIncompatibleFormat" xml:space="preserve">
-    <value>Do not fit: {0}</value>
-  </data>
-  <data name="ModalUseCurrentGameBuildUnknownFormat" xml:space="preserve">
-    <value>Compatibility unknown: {0}</value>
+  <data name="ModalUseCurrentGameBuildIncompatibleNoteFormat" xml:space="preserve">
+    <value>These mods do not support KSA {0}, so the game may not start.</value>
   </data>
   <data name="ModalUseCurrentGameBuildOlderFormat" xml:space="preserve">
-    <value>KSA {0} in the settings is older than the kept build {1}. An older build may not load saves that a newer build wrote, and the game does not warn about this.</value>
+    <value>The current game build, KSA {0}, is older than the kept KSA {1}. An older build may not load saves that a newer build wrote, and the game does not warn about this. Back up the saves first.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildBackingUp" xml:space="preserve">
+    <value>Backing up the saves...</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildBackupFailedFormat" xml:space="preserve">
+    <value>Could not back up the saves. {0}</value>
   </data>
   <data name="ModalUseCurrentGameBuildConfirm" xml:space="preserve">
     <value>Use current build</value>
