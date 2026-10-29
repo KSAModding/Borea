@@ -409,6 +409,10 @@ public sealed class InstanceGameBuildTests
         viewModel.BeginCreateInstanceCommand.Execute(null);
         await viewModel.WhenGameBuildChoicesLoadedAsync();
         Assert.Equal([null, KeptBuild], viewModel.GameBuildChoices.Select(choice => choice.Build));
+        Assert.Equal(
+            [(harness.Localization.ModalGameBuildSettings, harness.Localization.FormatInstanceGameBuild(viewModel.InstalledVersionText!)),
+                (harness.Localization.ModalGameBuildKept, harness.Localization.FormatInstanceGameBuild(KeptBuild.ToString()))],
+            viewModel.GameBuildChoices.Select(choice => (choice.Text, choice.VersionText)));
         Assert.True(viewModel.CanPickGameBuild);
         viewModel.SelectedGameBuildChoice = viewModel.GameBuildChoices[1];
         viewModel.ModalInstanceName = "Kept";

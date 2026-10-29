@@ -4855,7 +4855,13 @@
     <value>Game build</value>
   </data>
   <data name="ModalGameBuildSettings" xml:space="preserve">
-    <value>Game folder of the settings</value>
+    <value>Current game build</value>
+  </data>
+  <data name="ModalGameBuildKept" xml:space="preserve">
+    <value>Kept build</value>
+  </data>
+  <data name="ModalGameBuildHint" xml:space="preserve">
+    <value>A kept build stays the same when KSA updates. The current game build changes with each update.</value>
   </data>
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Game settings presets</value>

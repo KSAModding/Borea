@@ -4846,7 +4846,13 @@
     <value>Spiel-Build</value>
   </data>
   <data name="ModalGameBuildSettings" xml:space="preserve">
-    <value>Spielordner der Einstellungen</value>
+    <value>Aktueller Spiel-Build</value>
+  </data>
+  <data name="ModalGameBuildKept" xml:space="preserve">
+    <value>Behaltener Build</value>
+  </data>
+  <data name="ModalGameBuildHint" xml:space="preserve">
+    <value>Ein behaltener Build bleibt bei einem KSA-Update gleich. Der aktuelle Spiel-Build ändert sich mit jedem Update.</value>
   </data>
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Vorlagen für Spieleinstellungen</value>
