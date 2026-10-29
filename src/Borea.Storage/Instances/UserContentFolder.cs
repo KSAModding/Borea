@@ -52,26 +52,40 @@ internal static class UserContentFolder
     /// with Tomlet, so a file that passes can still fail in the game.
     /// </summary>
     /// <exception cref="InvalidOperationException">The folder is not one the game reads as this release.</exception>
-    public static void Check(string folder, ModVersionMetadata release)
+    public static void Check(string folder, ModVersionMetadata release) =>
+        Check(release, name => HasFile(folder, name), name => File.OpenRead(Path.Combine(folder, name)));
+
+    /// <summary>
+    /// The same check over files that are not in a folder, such as the entries of an archive that the preview reads
+    /// in place. <paramref name="hasFile"/> tells whether the root holds a file of that name, and
+    /// <paramref name="open"/> opens it for reading, or gives null when it cannot.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The files are not ones the game reads as this release.</exception>
+    public static void Check(ModVersionMetadata release, Func<string, bool> hasFile, Func<string, Stream?> open)
     {
         var what = $"The archive of '{release.ModId}' {release.Version}";
-        var metadata = Path.Combine(folder, MetadataFileName);
-        if (!HasFile(folder, MetadataFileName))
+        if (!hasFile(MetadataFileName))
             throw new InvalidOperationException($"{what} has no {MetadataFileName} at its root, so the game would skip it.");
 
-        if (!FileGameSaveStore.TryReadName(File.ReadAllText(metadata), out var name))
+        string text;
+        using (var stream = open(MetadataFileName) ?? throw new InvalidOperationException($"{what} has a {MetadataFileName} that Borea cannot read."))
+        using (var textReader = new StreamReader(stream))
+            text = textReader.ReadToEnd();
+
+        if (!FileGameSaveStore.TryReadName(text, out var name))
             throw new InvalidOperationException($"{what} has a {MetadataFileName} that is not TOML.");
 
         if (!string.Equals(name, release.Install?.Folder, StringComparison.Ordinal))
             throw new InvalidOperationException($"{what} has the name '{name}' in its {MetadataFileName}, and its release names the folder '{release.Install?.Folder}'.");
 
         var gameFile = GameFileName(release.Type);
-        if (!HasFile(folder, gameFile))
+        if (!hasFile(gameFile))
             throw new InvalidOperationException($"{what} has no {gameFile} at its root, so the game would skip it.");
 
         try
         {
-            using var reader = XmlReader.Create(Path.Combine(folder, gameFile), new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
+            using var stream = open(gameFile) ?? throw new InvalidOperationException($"{what} has a {gameFile} that Borea cannot read.");
+            using var reader = XmlReader.Create(stream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
             while (reader.Read())
             {
             }

@@ -15,6 +15,7 @@ using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Planning;
 using Borea.Core.Preferences;
+using Borea.Core.Preview;
 using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Stewardship;
@@ -46,6 +47,7 @@ using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Preferences;
+using Borea.Storage.Preview;
 using Borea.Storage.Secrets;
 using Borea.Storage.Settings;
 using Borea.Storage.State;
@@ -183,6 +185,12 @@ public sealed class BoreaServices : IDisposable
     public required IModPackUpdater ModPackUpdater { get; init; }
 
     public required IModDownloader Downloader { get; init; }
+
+    /// <summary>
+    /// Finds and reads the files of a vehicle preview, over <see cref="OfflineMods"/> and the local disk. It starts no
+    /// task when the graph is built, and only the App starts its cache cleanup.
+    /// </summary>
+    public required IVehiclePreview VehiclePreview { get; init; }
 
     public required IInstallPlanner InstallPlanner { get; init; }
 
@@ -489,7 +497,10 @@ public sealed class BoreaServices : IDisposable
             [ContentIndexModRepository.SourceName] = offlineContentIndex,
             [SpaceDockModRepository.SourceName] = new OfflineSpaceDockModRepository(resolver),
         });
-        var downloader = new HttpModDownloader(http);
+        // An install after a vehicle preview takes the verified archive from the preview cache. Nothing here
+        // touches the disk, and the cache sweep runs only when the App starts it.
+        var previewArchives = new PreviewArchiveCache(paths, log);
+        var downloader = new CachingModDownloader(new HttpModDownloader(http), previewArchives, log);
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
         var modStore = new ModStore(paths, new DirectoryLinker(), settings.SharedModStore);
@@ -516,6 +527,11 @@ public sealed class BoreaServices : IDisposable
         if (wrapInstallPlanner is not null)
             installPlanner = wrapInstallPlanner(installPlanner);
         isGameProcessRunning ??= RunningProcesses.IsGameRunning;
+        var channelOfflineMods = new ReleaseChannelModRepository(offlineMods, settings.ReleaseChannel);
+        var gamePlatformValue = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths);
+
+        // The preview plans over the offline repository only, so opening a vehicle page never sends a request.
+        var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, installedVersion, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log);
         var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
@@ -568,7 +584,7 @@ public sealed class BoreaServices : IDisposable
                 gameShape),
             Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
             ReadOnlyMods = new ReleaseChannelModRepository(readOnlyMods, settings.ReleaseChannel),
-            OfflineMods = new ReleaseChannelModRepository(offlineMods, settings.ReleaseChannel),
+            OfflineMods = channelOfflineMods,
             OfflineContentIndex = offlineContentIndex,
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
@@ -589,7 +605,7 @@ public sealed class BoreaServices : IDisposable
             SelfUpdater = selfUpdater ?? BuildSelfUpdater(new BoreaReleaseFiles(http), log, fromCommandLine: logSource == BoreaLogSource.Cli),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
-            GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
+            GamePlatform = gamePlatformValue,
             GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),
             GamePatchNotesFetcher = new GamePatchNotesFetcher(http, new FileGamePatchNotesCache(paths)),
@@ -620,6 +636,7 @@ public sealed class BoreaServices : IDisposable
             WatcherIssues = watcherIssues ?? new GitHubWatcherIssues(gitHubSession, http),
             IndexReports = indexReports ?? gitHubReports,
             ReportActions = new LoggingReportActions(reportActions ?? gitHubReports, log),
+            VehiclePreview = vehiclePreview,
         };
     }
 
@@ -663,6 +680,8 @@ public sealed class BoreaServices : IDisposable
 
         if (StewardRole is IDisposable stewardRole)
             stewardRole.Dispose();
+
+        VehiclePreview.Dispose();
 
         _http.Dispose();
     }

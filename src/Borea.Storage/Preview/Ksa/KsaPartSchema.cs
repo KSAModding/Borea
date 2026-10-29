@@ -71,6 +71,7 @@ internal static class KsaPartSchema
     public const string Rotation = "Rotation";
     public const string Scale = "Scale";
 
+    public const string VehicleSaveData = "VehicleSaveData";
     public const string RootPartRef = "RootPartRef";
     public const string PartRef = "PartRef";
 

@@ -57,6 +57,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetListingSchemaPath() => Path.Combine(_boreaRoot, "authored.schema.json");
     public string GetImageCacheFolder() => Path.Combine(_boreaRoot, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_boreaRoot, "GamePatchNotes");
+    public string GetPreviewCacheFolder() => Path.Combine(_boreaRoot, "PreviewCache", "v1");
     public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
     public string GetStaticModFilesRoot() => Path.Combine(_libraryFolder, "Static Mod Files");
     public string GetLoadersRoot() => Path.Combine(_boreaRoot, "Loaders");
