@@ -36,12 +36,14 @@ public partial class MainViewModel
 
     /// <summary>What keeping the build would do for the row or the folder of the open modal. Null while the modal is closed.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsKeepGameBuildModalOpen), nameof(KeepGameBuildText), nameof(KeepGameBuildIncompatibleText), nameof(KeepGameBuildSourceText), nameof(KeepGameBuildFolderText), nameof(KeepGameBuildFreeSpaceText), nameof(KeepGameBuildRefusalText))]
+    [NotifyPropertyChangedFor(nameof(IsKeepGameBuildModalOpen), nameof(KeepGameBuildTitle), nameof(KeepGameBuildText), nameof(KeepGameBuildIncompatibleText), nameof(KeepGameBuildSourceText), nameof(KeepGameBuildFolderText), nameof(KeepGameBuildFreeSpaceText), nameof(KeepGameBuildRefusalText))]
     [NotifyPropertyChangedFor(nameof(IsKeepGameBuildRefusalDanger), nameof(ShowsKeepGameBuildSetup), nameof(CanConfirmKeepGameBuild), nameof(KeepGameBuildDismissText))]
     [NotifyCanExecuteChangedFor(nameof(ConfirmKeepGameBuildCommand))]
     private GameBuildKeepCheck? _keepGameBuildCheck;
 
     public bool IsKeepGameBuildModalOpen => KeepGameBuildCheck is not null;
+
+    public string KeepGameBuildTitle => _keepGameBuildFolder is not null ? Localization.ModalAddGameBuildTitle : Localization.ModalKeepGameBuildTitle;
 
     // a folder whose build Game Builds already holds adds nothing, so its modal only informs
     public bool CanConfirmKeepGameBuild => KeepGameBuildCheck is { Refusal: GameBuildKeepRefusal.None } check
@@ -142,6 +144,7 @@ public partial class MainViewModel
             return;
 
         AddGameBuildError = null;
+        KeptGameBuildMessage = null;
         GameBuildKeepCheck check;
         try
         {
@@ -366,6 +369,7 @@ public partial class MainViewModel
 
     private void RefreshKeepGameBuildText()
     {
+        OnPropertyChanged(nameof(KeepGameBuildTitle));
         OnPropertyChanged(nameof(KeepGameBuildText));
         OnPropertyChanged(nameof(KeepGameBuildIncompatibleText));
         OnPropertyChanged(nameof(KeepGameBuildSourceText));
@@ -543,8 +547,18 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(ShowsKeptGameBuilds))]
     private string? _keptGameBuildError;
 
-    /// <summary>The section stays hidden for a player who never kept a build.</summary>
+    /// <summary>The list and its error show only once a build is kept or the list cannot be read.</summary>
     public bool ShowsKeptGameBuilds => KeptGameBuilds.Count > 0 || KeptGameBuildError is not null;
+
+    /// <summary>The line under the list after a done delete, until the next load, delete or add.</summary>
+    [ObservableProperty]
+    private string? _keptGameBuildMessage;
+
+    /// <summary>
+    /// On macOS the game runs in a wrapper, so a folder that a player chooses never holds a build that Borea can start,
+    /// and the add hides.
+    /// </summary>
+    public bool ShowsAddGameBuild => !OperatingSystem.IsMacOS();
 
     /// <summary>Counts the loads, so that a load which a newer one started after drops its result.</summary>
     private int _keptGameBuildLoadCount;
@@ -616,22 +630,29 @@ public partial class MainViewModel
             KeptGameBuilds.Add(new KeptGameBuildItem(this, build));
 
         KeptGameBuildError = error;
+        KeptGameBuildMessage = null;
         OnPropertyChanged(nameof(ShowsKeptGameBuilds));
     }
 
-    /// <summary>Deletes the build behind <paramref name="item"/>, after its row asked.</summary>
+    /// <summary>
+    /// Deletes the build behind <paramref name="item"/>, after its row asked. A refusal shows in the row of that build,
+    /// and under the list only when the reload has no row of it.
+    /// </summary>
     internal async Task RemoveKeptGameBuildAsync(KeptGameBuildItem item)
     {
         if (_services is not { } services)
             return;
 
+        KeptGameBuildMessage = null;
         var build = item.Version.ToString();
+        var size = item.SizeText;
         string? error;
         using (var libraryUse = TryUseLibrary())
         {
             if (libraryUse is null)
             {
-                KeptGameBuildError = Localization.LibraryFolderBusy;
+                item.IsConfirmingRemove = false;
+                item.RemoveError = Localization.LibraryFolderBusy;
                 return;
             }
 
@@ -658,7 +679,11 @@ public partial class MainViewModel
         }
 
         await StartKeptGameBuildLoad();
-        if (error is not null)
+        if (error is null)
+            KeptGameBuildMessage = Localization.FormatSettingsGameBuildRemoved(build, size);
+        else if (KeptGameBuilds.FirstOrDefault(row => row.Version == item.Version) is { } row)
+            row.RemoveError = error;
+        else
             KeptGameBuildError = error;
     }
 }
@@ -673,9 +698,16 @@ public sealed partial class KeptGameBuildItem : ObservableObject
     private readonly MainViewModel _owner;
     private readonly KeptGameBuild _build;
 
-    /// <summary>Remove asks once, the way the other destructive actions do.</summary>
+    /// <summary>Delete asks first, with the build, its size and what stays.</summary>
     [ObservableProperty]
     private bool _isConfirmingRemove;
+
+    [ObservableProperty]
+    private bool _isRemoving;
+
+    /// <summary>Why the last delete of this build was refused, until the next load of the list or the next delete.</summary>
+    [ObservableProperty]
+    private string? _removeError;
 
     public KeptGameBuildItem(MainViewModel owner, KeptGameBuild build)
     {
@@ -689,7 +721,7 @@ public sealed partial class KeptGameBuildItem : ObservableObject
 
     public string VersionText => _owner.Localization.FormatInstanceGameBuild(_build.Version.ToString());
 
-    public string SizeText => MainViewModel.SizeText(_build.Bytes);
+    public string SizeText => MainViewModel.KeepSizeText(_build.Bytes);
 
     /// <summary>The instances that keep this build. Null when only the game folder of the settings uses it.</summary>
     public string? UsedByText => _build.InstanceNames.Count > 0
@@ -700,26 +732,41 @@ public sealed partial class KeptGameBuildItem : ObservableObject
 
     public bool CanRemove => _build.InstanceNames.Count == 0 && !_build.IsGameFolderOfSettings;
 
-    [RelayCommand]
-    private Task RemoveAsync()
-    {
-        if (!IsConfirmingRemove)
-        {
-            IsConfirmingRemove = true;
-            return Task.CompletedTask;
-        }
+    /// <summary>Why Delete is disabled.</summary>
+    public string? RemoveToolTip => _build.InstanceNames.Count > 0
+        ? _owner.Localization.SettingsGameBuildInUse
+        : _build.IsGameFolderOfSettings ? _owner.Localization.SettingsGameBuildIsGameFolder : null;
 
-        return _owner.RemoveKeptGameBuildAsync(this);
+    public string RemoveConfirmText => _owner.Localization.FormatSettingsGameBuildRemoveConfirm(_build.Version.ToString(), SizeText);
+
+    public string RemovingText => _owner.Localization.FormatSettingsGameBuildRemoving(_build.Version.ToString());
+
+    [RelayCommand]
+    private void Remove()
+    {
+        RemoveError = null;
+        _owner.KeptGameBuildMessage = null;
+        IsConfirmingRemove = true;
+    }
+
+    // no CanExecute, because the keeper refuses a build that an instance started to use after the list loaded, and the row shows why
+    [RelayCommand]
+    private async Task ConfirmRemoveAsync()
+    {
+        IsRemoving = true;
+        try
+        {
+            await _owner.RemoveKeptGameBuildAsync(this);
+        }
+        finally
+        {
+            IsRemoving = false;
+        }
     }
 
     [RelayCommand]
     private void CancelRemove() => IsConfirmingRemove = false;
 
-    internal void RefreshText()
-    {
-        OnPropertyChanged(nameof(VersionText));
-        OnPropertyChanged(nameof(SizeText));
-        OnPropertyChanged(nameof(UsedByText));
-        OnPropertyChanged(nameof(GameFolderText));
-    }
+    /// <summary>Every text in the new language. A refusal stays in the language it was made in.</summary>
+    internal void RefreshText() => OnPropertyChanged(string.Empty);
 }

@@ -9,7 +9,7 @@
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
             <StackPanel>
                 <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
-                    <TextBlock Classes="heading-lg" Text="{Binding Localization.ModalKeepGameBuildTitle}" VerticalAlignment="Center" />
+                    <TextBlock Classes="heading-lg" Text="{Binding KeepGameBuildTitle}" VerticalAlignment="Center" />
                     <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CancelKeepGameBuildCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
                         <Path Classes="icon" Data="{StaticResource Icon.Close}" />
                     </Button>

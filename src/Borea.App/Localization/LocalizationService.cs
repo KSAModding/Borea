@@ -2191,6 +2191,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ModalKeepGameBuildTitle => Resources.ModalKeepGameBuildTitle;
 
+    public string ModalAddGameBuildTitle => Resources.ModalAddGameBuildTitle;
+
     public string FormatModalKeepGameBuildText(string build, string size, string folder, string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildTextFormat, build, size, folder, instanceName);
 
@@ -2877,7 +2879,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsGameBuildUnused => Resources.SettingsGameBuildUnused;
 
-    public string SettingsGameBuildRemoveConfirm => Resources.SettingsGameBuildRemoveConfirm;
+    public string FormatSettingsGameBuildRemoveConfirm(string build, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGameBuildRemoveConfirmFormat, build, size);
+
+    public string FormatSettingsGameBuildRemoving(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGameBuildRemovingFormat, build);
+
+    public string FormatSettingsGameBuildRemoved(string build, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGameBuildRemovedFormat, build, size);
 
     public string SettingsGameBuildInUse => Resources.SettingsGameBuildInUse;
 

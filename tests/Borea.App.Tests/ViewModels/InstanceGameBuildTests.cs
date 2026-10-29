@@ -183,6 +183,55 @@ public sealed class InstanceGameBuildTests
         var row = Assert.Single(viewModel.KeptGameBuilds);
         Assert.False(row.CanRemove);
         Assert.Equal(harness.Localization.SettingsGameBuildIsGameFolder, row.GameFolderText);
+        Assert.Equal(harness.Localization.SettingsGameBuildIsGameFolder, row.RemoveToolTip);
+    }
+
+    [Fact]
+    public async Task RemoveKeptBuild_AsksFirstThenDeletesAndNamesWhatIsFree()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var folder = harness.Services.Paths.GetGameBuildFolder(KeptBuild);
+        viewModel.SetMainWindowSettings();
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        await viewModel.WhenKeptGameBuildsLoadedAsync();
+        var row = Assert.Single(viewModel.KeptGameBuilds);
+        var size = row.SizeText;
+
+        row.RemoveCommand.Execute(null);
+
+        Assert.True(row.IsConfirmingRemove);
+        Assert.Equal(harness.Localization.FormatSettingsGameBuildRemoveConfirm(KeptBuild.ToString(), size), row.RemoveConfirmText);
+        Assert.True(Directory.Exists(folder));
+
+        await row.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Empty(viewModel.KeptGameBuilds);
+        Assert.False(Directory.Exists(folder));
+        Assert.Equal(harness.Localization.FormatSettingsGameBuildRemoved(KeptBuild.ToString(), size), viewModel.KeptGameBuildMessage);
+    }
+
+    [Fact]
+    public async Task RemoveKeptBuild_ThatAnInstanceUses_SaysWhyInItsRow()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.SetMainWindowSettings();
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        await viewModel.WhenKeptGameBuildsLoadedAsync();
+        var row = Assert.Single(viewModel.KeptGameBuilds);
+        Assert.True(row.CanRemove);
+
+        await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        row.RemoveCommand.Execute(null);
+        await row.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        var reloaded = Assert.Single(viewModel.KeptGameBuilds);
+        Assert.Equal(harness.Localization.SettingsGameBuildInUse, reloaded.RemoveError);
+        Assert.False(reloaded.CanRemove);
+        Assert.Equal(harness.Localization.SettingsGameBuildInUse, reloaded.RemoveToolTip);
+        Assert.Null(viewModel.KeptGameBuildError);
+        Assert.True(Directory.Exists(harness.Services.Paths.GetGameBuildFolder(KeptBuild)));
     }
 
     [Fact]
