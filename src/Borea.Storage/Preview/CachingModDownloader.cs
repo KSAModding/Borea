@@ -7,7 +7,8 @@ namespace Borea.Storage.Preview;
 /// <summary>
 /// An <see cref="IModDownloader"/> that serves a release archive from the <see cref="PreviewArchiveCache"/>
 /// when the vehicle preview already fetched it, so an install after a preview does not download the same
-/// bytes again. Every other request goes to the inner downloader.
+/// bytes again. An install that starts while the preview still fetches the same file waits for that fetch and
+/// uses its result. Every other request goes to the inner downloader.
 /// </summary>
 /// <remarks>
 /// Only a release with a SHA-256 can use the cache, because the hash is the name of the cached file and the
@@ -30,6 +31,9 @@ public sealed class CachingModDownloader : IModDownloader
         _log = log ?? throw new ArgumentNullException(nameof(log));
     }
 
+    /// <summary>The downloader that serves every request the cache cannot serve.</summary>
+    internal IModDownloader Inner => _inner;
+
     public async Task<DownloadResult> DownloadAsync(
         ModVersionMetadata release,
         string archivePath,
@@ -42,7 +46,7 @@ public sealed class CachingModDownloader : IModDownloader
             throw new ArgumentException("Archive path cannot be null or whitespace.", nameof(archivePath));
 
         var sha256 = release.Download.Sha256;
-        if (PreviewArchiveCache.IsHash(sha256) && _cache.TryGet(sha256!) is { } cached
+        if (PreviewArchiveCache.IsHash(sha256) && await _cache.TryGetAfterFetchAsync(sha256!, cancellationToken).ConfigureAwait(false) is { } cached
             && await TryCopyAsync(release, cached, archivePath, sha256!, progress, cancellationToken).ConfigureAwait(false) is { } result)
         {
             return result;

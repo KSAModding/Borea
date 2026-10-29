@@ -6,11 +6,16 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.Preview;
 using Borea.Core.Stewardship;
+using Borea.Preview.Loading;
+using Borea.Preview.Rendering;
+using Borea.Preview.Textures;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -154,7 +159,100 @@ public partial class MainViewModel
     [ObservableProperty]
     private VersionItem? _latestVersion;
 
-    partial void OnLatestVersionChanged(VersionItem? value) => RefreshContentDependencies();
+    partial void OnLatestVersionChanged(VersionItem? value)
+    {
+        RefreshContentDependencies();
+        RefreshVehiclePreview();
+    }
+
+    /// <summary>
+    /// The 3D preview of the open vehicle page (RFC 0085), or null on any other page. It belongs to
+    /// <see cref="LatestVersion"/> and is made again whenever that release or the service graph changes.
+    /// </summary>
+    [ObservableProperty]
+    private VehiclePreviewViewModel? _vehiclePreview;
+
+    /// <summary>Gives the preview service of a service graph. Tests replace it with a fake.</summary>
+    internal Func<BoreaServices, IVehiclePreview> VehiclePreviewServiceOf { get; set; } = services => services.VehiclePreview;
+
+    /// <summary>
+    /// Makes the scene builder of a new preview. Without an image decoder, PNG and JPEG textures show as flat colors,
+    /// so the App gives a builder that decodes them with Avalonia.
+    /// </summary>
+    internal Func<PreviewSceneBuilder> VehiclePreviewBuilderOf { get; set; } = () => new PreviewSceneBuilder(new PreviewTextureLoader(null));
+
+    /// <summary>
+    /// Encodes the still that a complete preview stores for Discover. The App gives one backed by Avalonia, and without
+    /// one the preview stores no still.
+    /// </summary>
+    internal IPngEncoder? VehiclePreviewEncoder { get; set; }
+
+    /// <summary>The instance and its content that the open preview was made for, so a change to them makes it again.</summary>
+    private string? _vehiclePreviewTarget;
+
+    /// <summary>Completes when the preview of the open vehicle page has prepared or built what it can without a click.</summary>
+    internal Task WhenVehiclePreviewLoadedAsync() => VehiclePreview?.Loading ?? Task.CompletedTask;
+
+    /// <summary>
+    /// The instance whose files the preview reads. A page opened from an instance reads that instance, where the
+    /// vehicle can be installed, and any other page reads the active instance.
+    /// </summary>
+    private InstanceItem? VehiclePreviewTarget => (IsContentFromInstance ? CurrentReturnInstance : null) ?? ActiveInstance;
+
+    /// <summary>
+    /// Makes a new preview for the open vehicle page against the services that are current now, and disposes the
+    /// old one, which stops its work and drops a result that arrives later. Any other page gets none.
+    /// </summary>
+    private void RefreshVehiclePreview()
+    {
+        var old = VehiclePreview;
+        VehiclePreviewViewModel? next = null;
+        if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
+        {
+            var target = VehiclePreviewTarget;
+            _vehiclePreviewTarget = TargetKey(target);
+            next = new VehiclePreviewViewModel(
+                VehiclePreviewServiceOf(services),
+                latest.Release,
+                target?.InstanceId,
+                Localization,
+                SetMainWindowSettings,
+                VehiclePreviewBuilderOf(),
+                thumbnails: services.PreviewThumbnails,
+                encoder: VehiclePreviewEncoder,
+                stillStored: ShowPreviewStill);
+        }
+
+        VehiclePreview = next;
+        old?.Dispose();
+        next?.Start();
+    }
+
+    /// <summary>
+    /// Makes the preview again when its target instance is now another one or holds other mods or content, such as
+    /// after the player installed the vehicle or its mods. A preview that is busy keeps its work, so a running
+    /// download is not lost.
+    /// </summary>
+    private void RefreshVehiclePreviewWhenTargetChanged()
+    {
+        if (VehiclePreview is { IsBusy: false } && TargetKey(VehiclePreviewTarget) != _vehiclePreviewTarget)
+            RefreshVehiclePreview();
+    }
+
+    private static string? TargetKey(InstanceItem? instance) => instance is null
+        ? null
+        : string.Join('|', [
+            instance.InstanceId.ToString(),
+            .. instance.Mods.Select(mod => $"{mod.ModId}@{mod.Version}"),
+            .. instance.Content.Select(record => $"{record.ListingId}@{record.Metadata.Version}"),
+        ]);
+
+    private void ClearVehiclePreview()
+    {
+        var old = VehiclePreview;
+        VehiclePreview = null;
+        old?.Dispose();
+    }
 
     [RelayCommand]
     internal Task OpenContentAsync(DiscoverItem item) => OpenContentAsync(item, PageOrigin.Discover);

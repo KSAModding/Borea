@@ -62,6 +62,9 @@ public sealed class VehiclePreviewTests : IDisposable
         var stale = Path.Combine(Path.GetDirectoryName(cached)!, $"{new string('e', 64)}.abc.part");
         File.WriteAllBytes(stale, [1]);
         File.SetLastWriteTimeUtc(stale, DateTime.UtcNow.AddHours(-25));
+        var staleStill = Path.Combine(Directory.CreateDirectory(Path.Combine(_paths.GetPreviewCacheFolder(), "thumbs")).FullName, "still.png.abc.part");
+        File.WriteAllBytes(staleStill, [1]);
+        File.SetLastWriteTimeUtc(staleStill, DateTime.UtcNow.AddHours(-25));
         var release = Vehicle(zip);
         var before = Snapshot();
         using var preview = Preview();
@@ -96,6 +99,43 @@ public sealed class VehiclePreviewTests : IDisposable
         Assert.Same(maintenance, preview.StartMaintenance());
         await maintenance;
         Assert.False(File.Exists(stale));
+        Assert.False(File.Exists(staleStill));
+    }
+
+    [Fact]
+    public async Task PrepareAndLoad_DoTheirWorkOffTheCallingThread()
+    {
+        var zip = VehicleZip();
+        CacheArchive(zip);
+        var release = Vehicle(zip);
+        var version = new FixedGameVersion();
+        using var preview = Preview(gameVersion: version);
+
+        // A dedicated thread is never a thread pool thread, so a read on the same thread means the call did not yield.
+        var callerId = 0;
+        Task<VehiclePreviewPlan>? prepare = null;
+        var caller = new Thread(() =>
+        {
+            callerId = Environment.CurrentManagedThreadId;
+            prepare = preview.PrepareAsync(release, null);
+        });
+        caller.Start();
+        caller.Join();
+        var plan = await prepare!;
+        Assert.Equal(VehiclePreviewPlanState.CanBuildLocally, plan.State);
+        Assert.NotEqual(callerId, version.LastReadThreadId);
+
+        Task<VehiclePreviewResult>? load = null;
+        caller = new Thread(() =>
+        {
+            callerId = Environment.CurrentManagedThreadId;
+            load = preview.LoadAsync(plan, fetchVehicle: false, fetchMods: false);
+        });
+        caller.Start();
+        caller.Join();
+        using var result = await load!;
+        Assert.True(result.IsReady);
+        Assert.NotEqual(callerId, version.LastReadThreadId);
     }
 
     [Fact]
@@ -209,7 +249,11 @@ public sealed class VehiclePreviewTests : IDisposable
         await Assert.ThrowsAsync<ObjectDisposedException>(() => preview.PrepareAsync(plan.Release, null));
     }
 
-    private VehiclePreview Preview(TestGamePathProvider? paths = null, IModRepository? offline = null, PreviewArchiveCache? archives = null)
+    private VehiclePreview Preview(
+        TestGamePathProvider? paths = null,
+        IModRepository? offline = null,
+        PreviewArchiveCache? archives = null,
+        IInstalledGameVersionProvider? gameVersion = null)
     {
         paths ??= _paths;
         return new VehiclePreview(
@@ -221,11 +265,12 @@ public sealed class VehiclePreviewTests : IDisposable
             new FileInstalledContentRecords(paths),
             new ModStore(paths, new DirectoryLinker(), linksReleases: true),
             archives ?? new PreviewArchiveCache(paths, new RecordingLog()),
-            new FixedGameVersion(),
+            gameVersion ?? new FixedGameVersion(),
             new WindowsPlatform(),
             _downloader,
             new PlentyOfSpace(),
-            new RecordingLog());
+            new RecordingLog(),
+            new PreviewThumbnailCache(paths, new RecordingLog()));
     }
 
     private static byte[] VehicleZip() => Zip(("meta.toml", "name = \"Rover\""), ("vehicle.xml", Rover));
@@ -269,7 +314,14 @@ public sealed class VehiclePreviewTests : IDisposable
 
     private sealed class FixedGameVersion : IInstalledGameVersionProvider
     {
-        public InstalledGameVersion? GetInstalledVersion() => new(null, Build);
+        /// <summary>The thread of the last read, so a test can see where the service did its work.</summary>
+        public int LastReadThreadId { get; private set; }
+
+        public InstalledGameVersion? GetInstalledVersion()
+        {
+            LastReadThreadId = Environment.CurrentManagedThreadId;
+            return new(null, Build);
+        }
     }
 
     private sealed class WindowsPlatform : IGamePlatform

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Borea.Core.Dependencies;
 using Borea.Core.Mods;
+using Borea.Storage.Files;
 using Borea.Storage.Preview;
 using Borea.Storage.Tests.Logging;
 using Borea.Storage.Tests.Mods;
@@ -71,6 +72,41 @@ public sealed class CachingModDownloaderTests : IDisposable
         Assert.Equal([Target], _inner.ArchivePaths);
     }
 
+    [Fact]
+    public async Task Download_DuringAPreviewFetchOfTheSameFile_WaitsAndUsesTheFetchedCopy()
+    {
+        var release = Release(Sha(_inner.Bytes));
+        var started = new TaskCompletionSource();
+        var hold = new TaskCompletionSource();
+        _inner.Downloading = async (_, _) =>
+        {
+            started.TrySetResult();
+            await hold.Task;
+        };
+
+        var preview = _cache.FetchAsync(release, _downloader, new NoVolume());
+        await started.Task;
+        var install = _downloader.DownloadAsync(release, Target);
+        hold.SetResult();
+        await preview.WaitAsync(TimeSpan.FromSeconds(5));
+        var result = await install.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Single(_inner.ArchivePaths);
+        Assert.Equal(_inner.Bytes, await File.ReadAllBytesAsync(Target));
+        Assert.Equal(new DownloadResult(release.Download.Url, _inner.Bytes.Length, Sha(_inner.Bytes)), result);
+    }
+
+    [Fact]
+    public async Task Fetch_ThroughTheCachingDownloader_DoesNotWaitForItsOwnGate()
+    {
+        var release = Release(Sha(_inner.Bytes));
+
+        var path = await _cache.FetchAsync(release, _downloader, new NoVolume()).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Single(_inner.ArchivePaths);
+        Assert.Equal(_inner.Bytes, await File.ReadAllBytesAsync(path));
+    }
+
     private string PutInCache(ModVersionMetadata release, byte[] bytes)
     {
         var path = Path.Combine(_paths.GetPreviewCacheFolder(), "archives", release.Download.Sha256!.ToLowerInvariant() + ".zip");
@@ -92,4 +128,9 @@ public sealed class CachingModDownloaderTests : IDisposable
         download: new DownloadInfo("https://example.invalid/Rover.zip", sha256, null, "application/zip"),
         installSizeBytes: null,
         dependencies: Array.Empty<ModDependency>());
+
+    private sealed class NoVolume : IFreeSpaceProbe
+    {
+        public FreeSpace? Measure(string path) => null;
+    }
 }

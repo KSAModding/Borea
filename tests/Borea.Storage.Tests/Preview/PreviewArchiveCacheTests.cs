@@ -88,6 +88,23 @@ public sealed class PreviewArchiveCacheTests : IDisposable
     }
 
     [Fact]
+    public async Task Fetch_MoreBytesThanTheReleaseStates_IsStopped_AndLeavesNoFile()
+    {
+        const long stated = 3;
+        var cache = new PreviewArchiveCache(_paths, _log);
+        var downloader = new FakeModDownloader { Bytes = [1, 2, 3] };
+        downloader.Downloading = async (_, token) =>
+        {
+            downloader.LastProgress!.Report(new DownloadProgress(stated + 1, -1));
+            await Task.Delay(Timeout.Infinite, token);
+        };
+
+        await Assert.ThrowsAsync<DownloadFailedException>(() => cache.FetchAsync(Release([1, 2, 3], sizeBytes: stated), downloader, PlentyOfSpace));
+
+        Assert.Empty(Directory.GetFiles(Archives));
+    }
+
+    [Fact]
     public async Task Fetch_LowSpaceOrNoHash_IsRefusedBeforeTheDownload()
     {
         var cache = new PreviewArchiveCache(_paths, _log);

@@ -13,11 +13,14 @@ using Borea.App.Localization;
 using Borea.App.SingleInstance;
 using Borea.App.ViewModels;
 using Borea.App.Views;
+using Borea.App.Views.Preview;
 using Borea.Composition;
 using Borea.Core.Links;
 using Borea.Core.Logging;
 using Borea.Core.Preferences;
 using Borea.Core.Updates;
+using Borea.Preview.Loading;
+using Borea.Preview.Textures;
 using Borea.Storage.Updates;
 
 namespace Borea.App;
@@ -116,6 +119,8 @@ public partial class App : Application
                 LinkHandler = Services is null ? null : LinkHandler.ForThisProcess(),
                 EndApp = () => desktop.Shutdown(),
                 PendingHandover = _pendingHandover,
+                VehiclePreviewBuilderOf = () => new PreviewSceneBuilder(new PreviewTextureLoader(new AvaloniaRgbaImageDecoder())),
+                VehiclePreviewEncoder = new AvaloniaPngEncoder(),
             };
             _viewModel = viewModel;
 
@@ -134,6 +139,7 @@ public partial class App : Application
             if (Services is { } services)
             {
                 window.Opened += (_, _) => ExtractionFolderCleanup.StartForThisProcess(services.Log);
+                window.Opened += (_, _) => _ = services.VehiclePreview.StartMaintenance();
                 window.Opened += (_, _) => SweepUpdateLeftovers(services.Log);
                 if (_selfUpdateHandover is { } selfUpdateHandover)
                     window.Opened += (_, _) => RemoveReplacedBuild(selfUpdateHandover, services.Log);
