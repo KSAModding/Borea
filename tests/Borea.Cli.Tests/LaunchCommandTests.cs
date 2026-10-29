@@ -53,11 +53,11 @@ public sealed class LaunchCommandTests : IDisposable
             Version = '0.4.7'
             IsAdopted = false
             """);
-        await _host.RunAsync("instance", "create", "Flight Test");
+        await SaveInstanceAsync(ContentCommandFixtures.Release("flight-tools", loader: new LoaderRequirement("StarMap", ModVersion.Parse("0.4.0"), ModVersion.Parse("0.4.8"))));
         _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
         _host.IndexReader.Snapshot = new ContentIndexSnapshot(
             1,
-            [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.7", gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638")], null)],
+            [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.7", gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638"), LoaderFixtures.Release(version: "0.4.9", gameMin: "2026.10.19.5638")], null)],
             [],
             null,
             []);
@@ -65,7 +65,7 @@ public sealed class LaunchCommandTests : IDisposable
         var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
 
         Assert.Equal(0, run.ExitCode);
-        Assert.Contains("warning: StarMap 0.4.7 does not support KSA 2026.10.19.5638. Run 'borea loader install StarMap' to install 0.4.8.", run.Error);
+        Assert.Contains("warning: StarMap 0.4.7 does not support KSA 2026.10.19.5638. Run 'borea loader install StarMap --version 0.4.8' to install 0.4.8.", run.Error);
         Assert.Single(_host.ProcessStarter.Plans);
     }
 
@@ -590,6 +590,27 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("'borea loader install StarMap --version 0.4.7'", run.Error);
         Assert.DoesNotContain("Mod loader 'StarMap' is not installed", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_InstalledVersionsOutsideTheChannelAndNoReleaseToOffer_FailsWithAMessage()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        LoaderCommandTests.CreateLoaderDirectory("0.5.0-beta.1", "not a program", Path.Combine(_host.Paths.GetLoadersRoot(), "StarMap"));
+        _host.IndexReader.Snapshot = new ContentIndexSnapshot(
+            1,
+            [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.5.0-beta.1", releaseStatus: ReleaseStatus.Testing)], null)],
+            [],
+            null,
+            []);
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("No installed version of StarMap is in the release channel", run.Error);
+        Assert.Contains("'borea loader install StarMap --version <version>'", run.Error);
         Assert.Empty(_host.ProcessStarter.Plans);
     }
 
