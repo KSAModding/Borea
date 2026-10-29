@@ -3,6 +3,7 @@ using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.History;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Storage.Launch;
@@ -146,24 +147,98 @@ public sealed class InstanceGameBuildTests
         Assert.False(harness.Services.Launcher.IsRunning(current.InstanceId));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Play_OnAKeptBuildThatGoesAway_NamesTheBuildAndOffersTheCurrentBuildUntilTheInstanceIsDeleted(bool launcherFindsItGone)
+    {
+        // the launcher reads the kept build again after the check of the launch, and the folder can go in between
+        var launcher = launcherFindsItGone ? new LaunchFailureTests.FixedLauncher(LaunchResult.Failed(LaunchOutcome.GameBuildMissing, "English text.")) : null;
+        using var harness = await CreateWithKeptBuildAsync(loaderLauncher: launcher);
+        var viewModel = harness.ViewModel;
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        if (!launcherFindsItGone)
+        {
+            // a pin that is not installed would open the loader prompt if the launch went on past the check of the build
+            await harness.Services.Instances.UpdateAsync(kept.InstanceId, record =>
+            {
+                record.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.9")));
+                return true;
+            });
+        }
+
+        await viewModel.LoadAsync();
+        await viewModel.ActivateInstanceAsync(kept.InstanceId);
+        await viewModel.OpenInstanceAsync(viewModel.Instances.Single(item => item.InstanceId == kept.InstanceId));
+        Assert.True(viewModel.SelectedInstance!.ShowsGameBuildChip);
+        if (!launcherFindsItGone)
+            Directory.Delete(harness.Services.Paths.GetGameBuildFolder(KeptBuild), recursive: true);
+
+        await viewModel.LaunchActiveInstanceAsync();
+
+        Assert.False(viewModel.IsLoaderPromptOpen);
+        Assert.Equal(harness.Localization.FormatLaunchGameBuildMissing(KeptBuild.ToString(), Path.Combine("Game Builds", KeptBuild.ToString())), viewModel.LaunchMessage);
+        Assert.True(viewModel.HasLaunchFailed);
+        Assert.Equal(kept.InstanceId, viewModel.LaunchGameBuildMissingItem?.InstanceId);
+        Assert.Equal(harness.Localization.FormatInstanceGameBuildNotFound(KeptBuild.ToString()), viewModel.SelectedInstance!.GameBuildNotFoundText);
+        var loader = viewModel.InstanceLoader!.Rows[0];
+        Assert.Equal(harness.Localization.CompatibilityUnknown, loader.StatusText);
+        Assert.False(loader.CanInstall);
+        Assert.False(loader.CanUpdate);
+
+        viewModel.BeginDeleteInstance(viewModel.LaunchGameBuildMissingItem!);
+        await viewModel.ConfirmDeleteModalCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.LaunchMessage);
+        Assert.Null(viewModel.LaunchGameBuildMissingItem);
+    }
+
     [Fact]
-    public async Task Play_OnAKeptBuildThatIsGone_SaysSoAndRatesNoLoader()
+    public async Task Play_OnAKeptBuildThatIsBack_ShowsThePinChipAndRatesTheLoaderAgain()
+    {
+        // the launch ends after the check of the build, so no game starts
+        using var harness = await CreateWithKeptBuildAsync(loaderLauncher: new LaunchFailureTests.FixedLauncher(LaunchResult.Failed(LaunchOutcome.OtherBuildRunning, "English text.")));
+        var viewModel = harness.ViewModel;
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        await viewModel.LoadAsync();
+        await viewModel.ActivateInstanceAsync(kept.InstanceId);
+        var folder = harness.Services.Paths.GetGameBuildFolder(KeptBuild);
+        Directory.Move(folder, folder + ".away");
+        await viewModel.OpenInstanceAsync(viewModel.Instances.Single(item => item.InstanceId == kept.InstanceId));
+        Assert.Equal(InstanceLoaderState.KeptBuildMissing, viewModel.InstanceLoader!.Rows[0].State);
+        Directory.Move(folder + ".away", folder);
+
+        await viewModel.LaunchActiveInstanceAsync();
+
+        Assert.True(viewModel.SelectedInstance!.ShowsGameBuildChip);
+        Assert.Equal(InstanceLoaderState.Installed, viewModel.InstanceLoader!.Rows[0].State);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task InstancePage_OfAKeptBuild_ShowsTheBuildOrThatItIsNotFound(bool folderThere)
     {
         using var harness = await CreateWithKeptBuildAsync();
-        var gone = await CreateInstanceAsync(harness, "Gone", GameVersion.Parse("2026.10.13.5602"));
-        // a pin that is not installed would open the loader prompt
-        await harness.Services.Instances.UpdateAsync(gone.InstanceId, record =>
-        {
-            record.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.9")));
-            return true;
-        });
-        await harness.ViewModel.LoadAsync();
-        await harness.ViewModel.ActivateInstanceAsync(gone.InstanceId);
+        var viewModel = harness.ViewModel;
+        var build = folderThere ? KeptBuild : GameVersion.Parse("2026.10.13.5602");
+        var kept = await CreateInstanceAsync(harness, "Kept", build);
+        await viewModel.LoadAsync();
+        var row = viewModel.Instances.Single(item => item.InstanceId == kept.InstanceId);
 
-        await harness.ViewModel.LaunchActiveInstanceAsync();
+        await viewModel.OpenInstanceAsync(row);
 
-        Assert.False(harness.ViewModel.IsLoaderPromptOpen);
-        Assert.Equal(harness.Localization.LaunchGameBuildMissing, harness.ViewModel.LaunchMessage);
+        Assert.Equal(folderThere, row.ShowsGameBuildChip);
+        Assert.Equal(folderThere ? null : harness.Localization.FormatInstanceGameBuildNotFound("2026.10.13.5602"), row.GameBuildNotFoundText);
+
+        await row.BeginUseCurrentGameBuildCommand.ExecuteAsync(null);
+
+        var current = viewModel.UseCurrentGameBuildPreview!.Current!.Value.ToString();
+        Assert.Equal(
+            folderThere
+                ? harness.Localization.FormatModalUseCurrentGameBuildText("Kept", current, build.ToString())
+                : harness.Localization.FormatModalUseCurrentGameBuildMissingText("Kept", current, build.ToString()),
+            viewModel.UseCurrentGameBuildText);
     }
 
     [Fact]
@@ -385,7 +460,7 @@ public sealed class InstanceGameBuildTests
     /// The settings point at build 5117 and the library keeps build 0.4.6.0, and each build lists its own content.
     /// The newest MeasureTools release needs 5117, and the one before it fits every build. StarMap 0.4.6 is installed and fits every build.
     /// </summary>
-    private static Task<ViewModelHarness> CreateWithKeptBuildAsync(IProcessStarter? processStarter = null) =>
+    private static Task<ViewModelHarness> CreateWithKeptBuildAsync(IProcessStarter? processStarter = null, ILauncher? loaderLauncher = null) =>
         ViewModelHarness.CreateAsync(
             services =>
             {
@@ -403,6 +478,7 @@ public sealed class InstanceGameBuildTests
                     .WithLoaderInstallation("StarMap", new LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false)));
             },
             processStarter: processStarter,
+            loaderLauncher: loaderLauncher,
             editSnapshot: json =>
             {
                 var root = JsonNode.Parse(json)!;

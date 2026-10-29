@@ -70,6 +70,7 @@ public partial class MainViewModel
         var need = LoaderNeed.For(instance);
         var names = _content.ToDictionary(item => item.ModId, item => item.Name, ModIds.Comparer);
         var resolution = _instanceLoaderResolution is { } found && found.InstanceId == instance.InstanceId ? found.Resolution : null;
+        var keptBuildMissing = SelectedInstance is { } shown && shown.InstanceId == instance.InstanceId && shown.GameBuildProblem != KeptBuildProblem.None;
         var rows = new List<InstanceLoaderRow>();
 
         // the loader that starts the instance comes first, also when no mod needs it or it is not installed yet
@@ -92,7 +93,8 @@ public partial class MainViewModel
             id => names.TryGetValue(id, out var name) ? name : id,
             version,
             instance.Loader,
-            KeptBuildTextOf(instance));
+            KeptBuildTextOf(instance),
+            keptBuildMissing);
     }
 
     /// <summary>"0.4.5 to 0.8.0" or "0.4.5 or newer", the versions one mod accepts.</summary>
@@ -193,6 +195,9 @@ public enum InstanceLoaderState
 
     /// <summary>The mods ask for versions that do not overlap.</summary>
     Conflict,
+
+    /// <summary>The kept build of the instance is gone or holds another build, so Borea cannot rate the version.</summary>
+    KeptBuildMissing,
 }
 
 /// <summary>
@@ -228,7 +233,8 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     /// <param name="resolution">The version that starts the instance, or null for a loader that this launch does not start.</param>
     /// <param name="setting">The loader setting of the instance, which names a pinned version also when it is not installed.</param>
     /// <param name="keptBuild">The kept build that <paramref name="resolution"/> was rated against, or null on the build of the settings.</param>
-    public InstanceLoaderRow(MainViewModel owner, string loaderId, NeededLoader? loader, DiscoverItem? listing, LoaderInstallation? installation, LoaderUpdate? update, Func<string, string> nameOf, LoaderVersionResolution? resolution, LoaderSetting? setting, string? keptBuild = null)
+    /// <param name="keptBuildMissing">True when the kept build is not found, so no rating of this row is about the build that the instance starts on.</param>
+    public InstanceLoaderRow(MainViewModel owner, string loaderId, NeededLoader? loader, DiscoverItem? listing, LoaderInstallation? installation, LoaderUpdate? update, Func<string, string> nameOf, LoaderVersionResolution? resolution, LoaderSetting? setting, string? keptBuild = null, bool keptBuildMissing = false)
     {
         _owner = owner;
         _loaderId = loaderId;
@@ -247,13 +253,13 @@ public sealed partial class InstanceLoaderRow : ObservableObject
 
             // the update check reads the version of a recorded folder from its files when the settings do not know it
             _version = start is null ? null : start.Version ?? (start.IsRecorded ? update?.InstalledVersion : null);
-            State = StateOf(loader, start is not null, _version, resolution.StartCompatibility);
+            State = StateOf(loader, start is not null, _version, resolution.StartCompatibility, keptBuildMissing);
 
             // the update check rated the recorded version against the build of the settings, so its answer explains only that one there
             _update = start is { IsRecorded: true } && update is not null && keptBuild is null
                 ? update
                 : new LoaderUpdate(loaderId, _version, resolution.StartCompatibility, resolution.Offer);
-            if (!IsConflict)
+            if (State is not (InstanceLoaderState.Conflict or InstanceLoaderState.KeptBuildMissing))
             {
                 _offer = start is null ? null : resolution.Offer;
                 _missing = start is null ? resolution.Missing : null;
@@ -264,7 +270,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
 
         _update = update;
         _version = installation is null ? null : installation.Version ?? update?.InstalledVersion;
-        State = StateOf(loader, installation is not null, _version, update?.InstalledCompatibility ?? GameCompatibility.Unknown);
+        State = StateOf(loader, installation is not null, _version, update?.InstalledCompatibility ?? GameCompatibility.Unknown, keptBuildMissing);
 
         // like a mod row, an update shows in place when the mods accept the new release
         if (State is InstanceLoaderState.Installed or InstanceLoaderState.GameIncompatible && update?.Offer is { } offer && (loader is null || loader.Accepts(offer.Version)))
@@ -346,6 +352,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
         InstanceLoaderState.GameIncompatible => _owner.Localization.FormatInstanceLoaderIncompatible(_version!.Value.ToString()),
         InstanceLoaderState.WrongVersion => _owner.Localization.FormatInstanceLoaderWrongVersion(_version!.Value.ToString()),
         InstanceLoaderState.NotInstalled => _owner.Localization.InstanceLoaderNotInstalled,
+        InstanceLoaderState.KeptBuildMissing => _owner.Localization.CompatibilityUnknown,
         _ => _owner.Localization.InstanceLoaderConflictShort,
     };
 
@@ -409,10 +416,12 @@ public sealed partial class InstanceLoaderRow : ObservableObject
             await _owner.InstallLoaderFromRowAsync(_loaderId, missing, replaced: null);
     }
 
-    private static InstanceLoaderState StateOf(NeededLoader? loader, bool isInstalled, ModVersion? version, GameCompatibility compatibility)
+    private static InstanceLoaderState StateOf(NeededLoader? loader, bool isInstalled, ModVersion? version, GameCompatibility compatibility, bool keptBuildMissing = false)
     {
         if (loader?.HasConflict == true)
             return InstanceLoaderState.Conflict;
+        if (keptBuildMissing)
+            return InstanceLoaderState.KeptBuildMissing;
         if (!isInstalled)
             return InstanceLoaderState.NotInstalled;
         if (version is not { } known)

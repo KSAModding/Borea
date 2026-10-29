@@ -398,12 +398,32 @@
                             <views:InstanceMenu DataContext="{Binding SelectedInstance}" />
                         </StackPanel>
                     </Grid>
-                    <!-- the kept build trims at the body edge, because the stats before it cannot shrink -->
+                    <!-- the chips and the counts stay whole at 860 px, so playtime and sessions trim at the body edge instead -->
                     <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
                         <StackPanel Orientation="Horizontal" Spacing="24">
-                            <Border Classes="chip positive" IsVisible="{Binding SelectedInstance.SourceText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                <TextBlock Text="{Binding SelectedInstance.SourceText}" />
-                            </Border>
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <StackPanel.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                        <Binding Path="SelectedInstance.SourceText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                        <Binding Path="SelectedInstance.GameBuildText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                    </MultiBinding>
+                                </StackPanel.IsVisible>
+                                <Border Classes="chip positive" IsVisible="{Binding SelectedInstance.SourceText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <TextBlock Text="{Binding SelectedInstance.SourceText}" />
+                                </Border>
+                                <Border Classes="chip muted" IsVisible="{Binding SelectedInstance.ShowsGameBuildChip, FallbackValue={x:False}}" ToolTip.Tip="{Binding SelectedInstance.GameBuildToolTip}" AutomationProperties.Name="{Binding SelectedInstance.GameBuildToolTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.PushPin}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding SelectedInstance.GameBuildText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Classes="chip incompatible" IsVisible="{Binding SelectedInstance.GameBuildNotFoundText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SelectedInstance.GameBuildMissingText}" AutomationProperties.Name="{Binding SelectedInstance.GameBuildMissingText}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding SelectedInstance.GameBuildNotFoundText}" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding SelectedInstance.ModCountToolTip}">
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.CirclesThree}" />
                                 <TextBlock Classes="label-md" Text="{Binding SelectedInstance.ModCount}" VerticalAlignment="Center" />
@@ -412,16 +432,15 @@
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
                                 <TextBlock Classes="label-md" Text="{Binding InstanceSizeText}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding InstancePlaytimeToolTip}" IsVisible="{Binding InstancePlaytimeText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
-                                <TextBlock Classes="label-md" Text="{Binding InstancePlaytimeText}" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <TextBlock Classes="label-md" Text="{Binding InstanceSessionsText}" VerticalAlignment="Center" IsVisible="{Binding InstanceSessionsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </StackPanel>
-                        <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="4" Margin="24,0,0,0" VerticalAlignment="Center" Background="Transparent" ToolTip.Tip="{Binding SelectedInstance.GameBuildToolTip}" IsVisible="{Binding SelectedInstance.GameBuildText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <Path Classes="icon size-16" Data="{StaticResource Icon.PushPin}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding SelectedInstance.GameBuildText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </Grid>
+                        <!-- a horizontal StackPanel measures with infinite width and never trims, so a DockPanel gives the last text the rest of the row -->
+                        <DockPanel Grid.Column="1" Margin="24,0,0,0" ClipToBounds="True" VerticalAlignment="Center">
+                            <Grid DockPanel.Dock="Left" ColumnDefinitions="Auto,*" ColumnSpacing="4" Margin="0,0,24,0" Background="Transparent" ToolTip.Tip="{Binding InstancePlaytimeToolTip}" IsVisible="{Binding InstancePlaytimeText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding InstancePlaytimeText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                            <TextBlock Classes="label-md" Text="{Binding InstanceSessionsText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstanceSessionsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </DockPanel>
                     </Grid>
                 </Grid>
             </Grid>

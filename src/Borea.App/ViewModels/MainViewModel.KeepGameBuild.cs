@@ -406,7 +406,9 @@ public partial class MainViewModel
     public string UseCurrentGameBuildDismissText => CanConfirmUseCurrentGameBuild ? Localization.LibraryCancel : Localization.ModalClose;
 
     public string? UseCurrentGameBuildText => UseCurrentGameBuildPreview is { Current: { } current } preview && _useCurrentGameBuildItem is { } item
-        ? Localization.FormatModalUseCurrentGameBuildText(item.Name, current.ToString(), preview.Kept.ToString())
+        ? preview.KeptProblem == KeptBuildProblem.None
+            ? Localization.FormatModalUseCurrentGameBuildText(item.Name, current.ToString(), preview.Kept.ToString())
+            : Localization.FormatModalUseCurrentGameBuildMissingText(item.Name, current.ToString(), preview.Kept.ToString())
         : null;
 
     public string? UseCurrentGameBuildFitText => UseCurrentGameBuildPreview is { Current: { } current, Total: > 0 } preview
@@ -487,7 +489,8 @@ public partial class MainViewModel
             kept,
             instance.Mods.Count + instance.ForeignMods.Count,
             [.. incompatible.Order(StringComparer.CurrentCultureIgnoreCase)],
-            [.. unknown.Order(StringComparer.CurrentCultureIgnoreCase)]);
+            [.. unknown.Order(StringComparer.CurrentCultureIgnoreCase)],
+            services.InstanceGames.Resolve(instance).Problem);
     }
 
     [RelayCommand]
@@ -521,6 +524,13 @@ public partial class MainViewModel
                 {
                     ShowSuccessToast(() => Localization.FormatToastUsesCurrentGameBuild(name, current.ToString()));
                     logText = $"Instance {item.InstanceId}: left the kept KSA {preview.Kept} for the game folder of the settings.";
+
+                    // the launch line named the build that this instance no longer keeps
+                    if (LaunchGameBuildMissingItem?.InstanceId == item.InstanceId)
+                    {
+                        ClearLaunchFailure();
+                        LaunchMessage = null;
+                    }
                 }
                 else
                 {
@@ -690,7 +700,8 @@ public partial class MainViewModel
 
 /// <param name="Current">The build in the game folder of the settings, or null when Borea cannot read it.</param>
 /// <param name="Total">The mods of the instance, the ones Borea installed and the ones it found in the folder.</param>
-public sealed record UseCurrentGameBuildPreview(GameVersion? Current, GameVersion Kept, int Total, IReadOnlyList<string> Incompatible, IReadOnlyList<string> Unknown);
+/// <param name="KeptProblem">Whether the folder of the kept build held that build when the modal opened.</param>
+public sealed record UseCurrentGameBuildPreview(GameVersion? Current, GameVersion Kept, int Total, IReadOnlyList<string> Incompatible, IReadOnlyList<string> Unknown, KeptBuildProblem KeptProblem);
 
 /// <summary>One kept build in Settings, Game.</summary>
 public sealed partial class KeptGameBuildItem : ObservableObject
