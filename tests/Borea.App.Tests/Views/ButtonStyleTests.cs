@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Headless;
 using Avalonia.Layout;
 using Avalonia.VisualTree;
@@ -259,6 +260,68 @@ public sealed class ButtonStyleTests
         if (content?.Name.LocalName == "StackPanel")
             content = FirstContent(content);
         return content?.Name.LocalName is "Path" or "PathIcon";
+    }
+
+    public static TheoryData<string, string, bool> AppAccentKeys
+    {
+        get
+        {
+            (string Key, string Color)[] keys =
+            [
+                ("ComboBoxItemBackgroundSelected", "Color.AccentSoft"),
+                ("ComboBoxItemBackgroundSelectedPointerOver", "Color.AccentSoft"),
+                ("ComboBoxItemBackgroundSelectedPressed", "Color.AccentSoft"),
+                ("ComboBoxItemForegroundSelected", "Color.Text"),
+                ("ComboBoxItemForegroundSelectedPointerOver", "Color.Text"),
+                ("ComboBoxItemForegroundSelectedPressed", "Color.Text"),
+                ("RadioButtonOuterEllipseCheckedFill", "Color.Accent"),
+                ("RadioButtonOuterEllipseCheckedFillPointerOver", "Color.Accent"),
+                ("RadioButtonOuterEllipseCheckedFillPressed", "Color.Accent"),
+                ("RadioButtonOuterEllipseCheckedStroke", "Color.Accent"),
+                ("RadioButtonOuterEllipseCheckedStrokePointerOver", "Color.Accent"),
+                ("RadioButtonOuterEllipseCheckedStrokePressed", "Color.Accent"),
+                ("RadioButtonCheckGlyphFill", "Color.SurfaceHeader"),
+                ("RadioButtonCheckGlyphFillPointerOver", "Color.SurfaceHeader"),
+                ("RadioButtonCheckGlyphFillPressed", "Color.SurfaceHeader"),
+            ];
+            var rows = new TheoryData<string, string, bool>();
+            foreach (var (key, color) in keys)
+            {
+                rows.Add(key, color, false);
+                rows.Add(key, color, true);
+            }
+
+            return rows;
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(AppAccentKeys))]
+    public async Task SelectedComboBoxItemAndCheckedRadioButton_TakeTheAppAccent_InBothThemes(string key, string colorKey, bool light)
+    {
+        var (actual, expected) = await HeadlessApp.RunAsync(async () =>
+        {
+            var original = Application.Current!.RequestedThemeVariant;
+            Application.Current.RequestedThemeVariant = light ? ThemeVariant.Light : ThemeVariant.Dark;
+            var window = new Window { Width = 200, Height = 100 };
+            window.Show();
+            try
+            {
+                await HeadlessApp.FramesAsync(2);
+                var brushFound = window.TryFindResource(key, window.ActualThemeVariant, out var brush);
+                var colorFound = window.TryFindResource(colorKey, window.ActualThemeVariant, out var color);
+                Assert.True(brushFound, $"{key} is not set");
+                Assert.True(colorFound, $"{colorKey} is not set");
+                return (((ISolidColorBrush)brush!).Color, (Color)color!);
+            }
+            finally
+            {
+                window.Close();
+                Application.Current.RequestedThemeVariant = original;
+            }
+        });
+
+        Assert.True(expected == actual, $"{key} is {actual} and not {colorKey} ({expected})");
     }
 
     private static Point Center(Visual target, Window window)
