@@ -4,6 +4,7 @@ using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
 using Borea.Storage.Mods;
+using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Paths;
 
 namespace Borea.Storage.Tests.Mods;
@@ -115,8 +116,7 @@ public sealed class FileForeignModAdopterTests : IAsyncLifetime
         var result = await _adopter.AdoptArchiveAsync(_instanceId, "LocalMod", archive);
 
         Assert.False(result.Matched);
-        Assert.NotNull(result.ForeignMod);
-        Assert.Null(result.ForeignMod.Version);
+        Assert.Null(result.ForeignMod!.Version);
         Assert.Null(result.InstalledMod);
         var saved = await _instances.GetByIdAsync(_instanceId);
         Assert.Empty(saved!.Mods);
@@ -211,6 +211,33 @@ public sealed class FileForeignModAdopterTests : IAsyncLifetime
         await _adopter.ScanAsync(_instanceId);
 
         await Assert.ThrowsAsync<HttpRequestException>(() => _adopter.ReplaceFolderAsync(_instanceId, "LocalMod", _ => throw new HttpRequestException("offline")));
+
+        Assert.Equal("name = \"Local\"", File.ReadAllText(Path.Combine(ModsFolder, "LocalMod", "mod.toml")));
+        Assert.Empty(RecoveryFolders);
+        var saved = await _instances.GetByIdAsync(_instanceId);
+        Assert.Equal("LocalMod", Assert.Single(saved!.ForeignMods).FolderName);
+    }
+
+    [WindowsFact("Only Windows refuses to move a folder while a handle below it is open.")]
+    public async Task ReplaceFolderAsync_InstallFailsWhileAReadHoldsTheRecoveryFolder_RestoresTheFolderOnceTheReadEnds()
+    {
+        WriteMod("LocalMod", "name = \"Local\"");
+        await _adopter.ScanAsync(_instanceId);
+        FileStream? read = null;
+        var adopter = new FileForeignModAdopter(_paths, _instances, _lookup, new WaitingTimeProvider(() => read?.Dispose()));
+
+        try
+        {
+            await Assert.ThrowsAsync<HttpRequestException>(() => adopter.ReplaceFolderAsync(_instanceId, "LocalMod", _ =>
+            {
+                read = File.OpenRead(Path.Combine(Assert.Single(RecoveryFolders), "mod.toml"));
+                throw new HttpRequestException("offline");
+            }));
+        }
+        finally
+        {
+            read?.Dispose();
+        }
 
         Assert.Equal("name = \"Local\"", File.ReadAllText(Path.Combine(ModsFolder, "LocalMod", "mod.toml")));
         Assert.Empty(RecoveryFolders);
@@ -323,6 +350,16 @@ public sealed class FileForeignModAdopterTests : IAsyncLifetime
                 await _continueLookup.Task.WaitAsync(cancellationToken);
 
             return Release;
+        }
+    }
+
+    /// <summary>Runs the action when the adopter starts to wait, and then ends the wait at once.</summary>
+    private sealed class WaitingTimeProvider(Action onWait) : TimeProvider
+    {
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            onWait();
+            return TimeProvider.System.CreateTimer(callback, state, TimeSpan.Zero, period);
         }
     }
 }

@@ -92,19 +92,27 @@ public sealed partial class ForumThreadReader : IForumThreadReader
         {
             var start = threads[index].Index + threads[index].Length;
             var end = index + 1 < threads.Count ? threads[index + 1].Index : html.Length;
-            if (PrefixClass().Match(threads[index].Groups[1].Value) is not { Success: true } prefixClass
-                || !int.TryParse(prefixClass.Groups[1].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
-                || ListedTitle().Match(html, start, end - start) is not { Success: true } listedTitle
-                || Label().Matches(listedTitle.Groups[1].Value) is not [var label]
-                || ListedLink().Match(listedTitle.Groups[1].Value) is not { Success: true } link
-                || !string.Equals(ForumPath(link.Groups[1].Value), forum, StringComparison.OrdinalIgnoreCase))
+            if (ListedPrefixOf(html, threads[index], start, end, forum) is not { } prefix)
                 continue;
 
-            var text = LabelText(label);
-            ids[text] = ids.TryGetValue(text, out var known) && known != id ? null : id;
+            ids[prefix.Text] = ids.TryGetValue(prefix.Text, out var known) && known != prefix.Id ? null : prefix.Id;
         }
 
         return ids;
+    }
+
+    /// <summary>The label text and prefix id of one listed thread, whose title lies between <paramref name="start"/> and <paramref name="end"/>, or null when the thread does not give both or is in another forum than <paramref name="forum"/>.</summary>
+    private static (string Text, int Id)? ListedPrefixOf(string html, Match thread, int start, int end, string forum)
+    {
+        if (PrefixClass().Match(thread.Groups[1].Value) is not { Success: true } prefixClass
+            || !int.TryParse(prefixClass.Groups[1].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
+            || ListedTitle().Match(html, start, end - start) is not { Success: true } listedTitle
+            || Label().Matches(listedTitle.Groups[1].Value) is not [var label]
+            || ListedLink().Match(listedTitle.Groups[1].Value) is not { Success: true } link
+            || !string.Equals(ForumPath(link.Groups[1].Value), forum, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        return (LabelText(label), id);
     }
 
     /// <summary>

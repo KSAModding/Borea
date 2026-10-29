@@ -1,7 +1,6 @@
 ﻿namespace Borea.Storage.Mods;
 
 /// <summary>
-/// TOML-serializable representation of a ModVersionMetadata release.
 /// Absent optional fields stay null so they round-trip as absent.
 /// Mirrors Borea's local persistence, not the RFC 0031 wire format; the index
 /// reader gets its own DTOs.

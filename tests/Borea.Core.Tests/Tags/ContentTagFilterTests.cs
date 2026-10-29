@@ -12,18 +12,13 @@ public sealed class ContentTagFilterTests
         new CuratedTag("tools", "Tools", "Tools for players and modders."),
     ]);
 
-    [Fact]
-    public void Filter_OneSelectedTag_ReturnsMatchingListings()
+    [Theory]
+    [InlineData(new[] { "parts" }, new[] { "parts-mod" })]
+    [InlineData(new[] { "parts", "tools" }, new[] { "parts-mod", "tools-mod" })]
+    public void Filter_SelectedTags_ReturnsListingsThatMatchAnyOfThem(string[] selectedTags, string[] expected)
     {
-        var result = ContentTagFilter.Filter(Listings(), Vocabulary, ContentType.Mod, ["parts"]);
-        Assert.Equal("parts-mod", Assert.Single(result).ModId);
-    }
-
-    [Fact]
-    public void Filter_TwoSelectedTags_ReturnsListingsThatMatchEitherTag()
-    {
-        var result = ContentTagFilter.Filter(Listings(), Vocabulary, ContentType.Mod, ["parts", "tools"]);
-        Assert.Equal(["parts-mod", "tools-mod"], result.Select(item => item.ModId));
+        var result = ContentTagFilter.Filter(Listings(), Vocabulary, ContentType.Mod, selectedTags);
+        Assert.Equal(expected, result.Select(item => item.ModId));
     }
 
     [Fact]
@@ -49,6 +44,16 @@ public sealed class ContentTagFilterTests
         Assert.Equal("curated", Assert.Single(ContentTagFilter.Filter([curated, other], Vocabulary, ["parts"])).ModPackId);
         Assert.Equal("other", Assert.Single(ContentTagFilter.Filter([curated, other], Vocabulary, includeOther: true)).ModPackId);
         Assert.True(ContentTagFilter.MatchesSearch(other, "custom"));
+    }
+
+    [Fact]
+    public void Filter_NoSelectedTagForPacks_ReturnsEveryPackLikeForListings()
+    {
+        var curated = CreatePack("curated", "parts");
+        var other = CreatePack("other", "custom-tag");
+
+        Assert.Equal(["curated", "other"], ContentTagFilter.Filter([curated, other], Vocabulary).Select(pack => pack.ModPackId));
+        Assert.Equal(4, ContentTagFilter.Filter(Listings(), Vocabulary, ContentType.Mod).Count);
     }
 
     private static ModMetadata[] Listings() =>

@@ -36,8 +36,7 @@ public sealed class GitHubStewardRoleTests
     [InlineData(null, false)]
     public async Task CheckAsync_ReadsTheBypassOfTheMainRuleset(string? bypass, bool steward)
     {
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", bypass));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", bypass));
+        OnMainRulesets(bypass);
         var (role, _) = await SignedInAsync();
 
         var access = await role.CheckAsync();
@@ -103,8 +102,7 @@ public sealed class GitHubStewardRoleTests
     [InlineData(HttpStatusCode.NotFound, true)]
     public async Task CheckAsync_RefusedRead_IsNoSteward(HttpStatusCode status, bool onTheRuleset)
     {
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "always"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "always"));
+        OnMainRulesets("always");
         var refused = onTheRuleset ? $"{Api}/repos/{Index}/rulesets/1" : $"{Api}/repos/{Index}/rulesets?per_page=100&page=1";
         On("GET", refused, () => Json("""{"message":"Resource not accessible by integration"}""", status));
         var (role, session) = await SignedInAsync();
@@ -118,8 +116,7 @@ public sealed class GitHubStewardRoleTests
     [Fact]
     public async Task CheckAsync_NetworkError_IsNoSteward()
     {
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "always"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "always"));
+        OnMainRulesets("always");
         On("GET", $"{Api}/repos/{Releases}/rulesets/2", () => throw new HttpRequestException("offline"));
         var (role, _) = await SignedInAsync();
 
@@ -156,8 +153,7 @@ public sealed class GitHubStewardRoleTests
     {
         var held = new TaskCompletionSource();
         _holdFirst = held.Task;
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "always"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "always"));
+        OnMainRulesets("always");
         var (role, _) = await SignedInAsync();
 
         var first = role.CheckAsync();
@@ -172,8 +168,7 @@ public sealed class GitHubStewardRoleTests
     [Fact]
     public async Task SignOut_DropsTheRoleAndSaysSo()
     {
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "always"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "always"));
+        OnMainRulesets("always");
         var (role, session) = await SignedInAsync();
         await role.CheckAsync();
         var changes = 0;
@@ -190,8 +185,7 @@ public sealed class GitHubStewardRoleTests
     {
         var held = new TaskCompletionSource();
         _holdFirst = held.Task;
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "always"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "always"));
+        OnMainRulesets("always");
         var (role, session) = await SignedInAsync();
 
         var check = role.CheckAsync();
@@ -208,8 +202,7 @@ public sealed class GitHubStewardRoleTests
     {
         var held = new TaskCompletionSource();
         _holdFirst = held.Task;
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "always"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "always"));
+        OnMainRulesets("always");
         var (role, session) = await SignedInAsync();
         var stale = role.CheckAsync();
         await _firstArrived.Task;
@@ -227,15 +220,13 @@ public sealed class GitHubStewardRoleTests
     [Fact]
     public async Task SecondSignInAsAnotherAccount_ChecksAgain()
     {
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "always"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "always"));
+        OnMainRulesets("always");
         var (role, session) = await SignedInAsync();
         Assert.Equal(new StewardAccess("octocat", true, true), await role.CheckAsync());
 
         session.SignOut();
         _login = "alice";
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "never"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "never"));
+        OnMainRulesets("never");
         Assert.True((await session.SignInAsync()).SignedIn);
         _sent.Clear();
 
@@ -248,8 +239,7 @@ public sealed class GitHubStewardRoleTests
     [Fact]
     public async Task Dispose_StopsFollowingTheSession()
     {
-        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", "always"));
-        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", "always"));
+        OnMainRulesets("always");
         var session = new CountingSession(new GitHubSession(Http(), "Iv1.testclient", "borea-test", _time));
         Assert.True((await session.SignInAsync()).SignedIn);
         var role = new GitHubStewardRole(session, Http(), _time);
@@ -297,6 +287,12 @@ public sealed class GitHubStewardRoleTests
             var body = JsonSerializer.Serialize(ruleset.Where(pair => pair.Value is not null).ToDictionary());
             On("GET", $"{Api}/repos/{repository}/rulesets/{ruleset["id"]}", () => Json(body));
         }
+    }
+
+    private void OnMainRulesets(string? bypass)
+    {
+        OnRulesets(Index, Ruleset(1, "~DEFAULT_BRANCH", bypass));
+        OnRulesets(Releases, Ruleset(2, "~DEFAULT_BRANCH", bypass));
     }
 
     private static Dictionary<string, object?> Ruleset(long id, string include, string? bypass, string enforcement = "active", string target = "branch") => new()

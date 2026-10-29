@@ -84,7 +84,6 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void DismissUnexpectedError() => UnexpectedError = null;
 
-    //windows
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsHomeSection))]
     private bool _currentWindowHome = true;
@@ -118,7 +117,7 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public bool IsDiscoverSection => CurrentWindowDiscover || (CurrentWindowContent && !IsContentFromInstance && !IsContentFromHome) || CurrentWindowPack || CurrentWindowListing;
     [RelayCommand]
-    public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowHome()
     {
         LeaveContentPage();
         LeavePackPage();
@@ -132,7 +131,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowPack = false;
     }
     [RelayCommand]
-    public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowDiscover()
     {
         LeaveContentPage();
         UpdateIndexRefreshStatus();
@@ -148,7 +147,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowPack = false;
     }
     [RelayCommand]
-    public void SetMainWindowLibrary() // used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowLibrary()
     {
         LeaveContentPage();
         LeavePackPage();
@@ -189,7 +188,6 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isSettingsOpen;
 
-    //home
     /// <summary>
     /// The installed build as KSA reports it, or null when no game directory is set
     /// or the version file could not be read.
@@ -228,7 +226,6 @@ public partial class MainViewModel : ViewModelBase
 
     public bool HasRecentItems => RecentItems.Count > 0;
 
-    //library
     public ObservableCollection<InstanceItem> Instances { get; } = [];
 
     [ObservableProperty]
@@ -286,7 +283,6 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string? _instanceError;
 
-    //themes
     public IReadOnlyList<string> ThemeNames { get; } = BundledThemeNames.ToArray();
 
     [ObservableProperty]
@@ -378,6 +374,7 @@ public partial class MainViewModel : ViewModelBase
         await ReloadInstancesAsync();
         StartCrashCheck();
         await RefreshContentIndexAtStartAsync();
+        StartLoaderUpdateCheck();
         await LoadRecentItemsAsync();
         UpdateIndexRefreshStatus();
         RefreshGameSetup();
@@ -406,6 +403,10 @@ public partial class MainViewModel : ViewModelBase
 
         // the content page shows the same rows, so its chip follows too
         await RefreshCompatibilityAsync(installed?.Version);
+
+        // a loader release can end before the new build, so it is rated again, on Home and in the settings
+        StartLoaderUpdateCheck();
+        await RefreshLoaderStateAsync();
     }
 
     /// <summary>Refreshes the content index once per start. Later refreshes go through the index check.</summary>
@@ -554,6 +555,9 @@ public partial class MainViewModel : ViewModelBase
 
     internal static string DateTimeText(DateTimeOffset at) => at.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 
+    /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
+    internal static string GameBoundsText(string? gameMin, string? gameMax) => gameMax is null ? $">= {gameMin}" : $"{gameMin} - {gameMax}";
+
     /// <summary>Brings the rows into the given order in place, so a row that stays keeps its view and what the view shows.</summary>
     internal static void Arrange<T>(ObservableCollection<T> rows, IReadOnlyList<T> order)
     {
@@ -587,7 +591,6 @@ public partial class MainViewModel : ViewModelBase
         StartGameSettingsPresetLoad();
     }
 
-    /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
     internal void BeginRenameInstance(InstanceItem item)
     {
         InstanceError = null;
@@ -754,7 +757,6 @@ public partial class MainViewModel : ViewModelBase
         ShowOpenError(name, error);
     }
 
-    /// <summary>Shows an error toast when a folder, file or link could not be opened.</summary>
     private void ShowOpenError(Func<string> name, string? error)
     {
         if (error is not null)
@@ -815,6 +817,9 @@ public partial class MainViewModel : ViewModelBase
 
     private Task _preferenceSaves = Task.CompletedTask;
 
+    // The preferences with every change whose save failed, so the next save of any preference writes them too.
+    private AppPreferences? _unsavedPreferences;
+
     /// <summary>
     /// Saves from a property change, which cannot await. The saves run one at a
     /// time behind <see cref="_preferenceSaveLock"/>.
@@ -833,21 +838,25 @@ public partial class MainViewModel : ViewModelBase
             return;
 
         await _preferenceSaveLock.WaitAsync();
+        AppPreferences? updatedPreferences = null;
         try
         {
-            var updatedPreferences = update(_appPreferences);
+            updatedPreferences = update(_unsavedPreferences ?? _appPreferences);
             if (SamePreferences(_appPreferences, updatedPreferences))
             {
+                _unsavedPreferences = null;
                 PreferenceSaveError = null;
                 return;
             }
 
             await _appPreferencesRepository.SaveAsync(updatedPreferences, BundledThemeNames);
             _appPreferences = updatedPreferences;
+            _unsavedPreferences = null;
             PreferenceSaveError = null;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
+            _unsavedPreferences = updatedPreferences ?? _unsavedPreferences;
             PreferenceSaveError = Localization.FormatPreferenceSaveError(exception.Message);
         }
         finally
@@ -875,6 +884,7 @@ public partial class MainViewModel : ViewModelBase
             && left.BackupRetentionDays == right.BackupRetentionDays
             && left.DismissedUntestedGameRevision == right.DismissedUntestedGameRevision
             && left.StaySignedInToGitHub == right.StaySignedInToGitHub
+            && string.Equals(left.DismissedLoaderUpdate, right.DismissedLoaderUpdate, StringComparison.Ordinal)
             && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
@@ -921,6 +931,10 @@ public partial class MainViewModel : ViewModelBase
         // the service raises an empty name when the culture changes, so every
         // translated string on this model needs a refresh too.
         RefreshRowText();
+        if (SelectedContent is { } content)
+            FillLinks(ContentLinks, content.Links);
+        if (SelectedPack is { } pack)
+            FillLinks(PackLinks, pack.Links);
         // a row now carries its tag names in the new language and the search reads them,
         // so the rows that Discover and the pack list show are selected again
         ApplyDiscoverFilters();
@@ -936,6 +950,7 @@ public partial class MainViewModel : ViewModelBase
             category.RefreshText();
         RefreshContentGroups();
         RefreshInstanceLoader();
+        RefreshLoaderSettingText();
         RefreshModListText();
         foreach (var item in ManualInstallItems)
             item.RefreshText();
@@ -946,6 +961,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshGameDataItems();
         RefreshGameSaveText();
         RefreshLoaderText();
+        RefreshLoaderUpdateText();
         RefreshGitHubAccount();
         RefreshIndexStatusText();
         _stewardPage?.RefreshText();
@@ -1155,6 +1171,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void BeginEditLaunchArguments() => _owner.BeginEditLaunchArguments(this);
+
+    [RelayCommand]
+    private Task BeginEditLoaderSettingAsync() => _owner.BeginEditLoaderSettingAsync(this);
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenInstanceFolder(InstanceId);

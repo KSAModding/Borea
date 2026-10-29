@@ -382,6 +382,99 @@ public sealed partial class GitHubPullRequestReviewsTests
         Assert.Empty(_sent);
     }
 
+    [Fact]
+    public async Task ReadAsync_Handover_ShowsTheOldAndTheNewOwnerAndThatTheNewAccountIdStillHasItsLogin()
+    {
+        Pull(Index, 40, First, Index, labels: ["needs-steward"]);
+        Files(Index, 40, File("packs/my-pack/owner.json", "modified", "@@ -1,4 +1,4 @@"));
+        Status(Index, First, ("validate", "success", "a steward decides"));
+        Content(Index, "packs/my-pack/owner.json", "main", """{ "github_login": "alice", "github_id": 5 }""");
+        Content(Index, "packs/my-pack/owner.json", First, """{ "github_login": "bob", "github_id": 7 }""");
+        _routes[$"{Api}/user/7"] = () => Json("""{"login":"bob","id":7}""");
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 40);
+
+        var record = Assert.Single(review.OwnerRecords);
+        Assert.Equal(("packs/my-pack/owner.json", false), (record.Path, record.IsFirstClaim));
+        Assert.Equal(new ListingPackOwner("alice", 5), record.Before?.Owner);
+        Assert.Equal(new ListingPackOwner("bob", 7), record.After?.Owner);
+        Assert.Equal(new PackOwnerAccount(PackOwnerAccountState.Same, "bob"), record.Account);
+        Assert.Empty(review.Documents);
+        Assert.Contains(_sent, sent => sent.Url == $"{Api}/user/7" && sent.Authorization == "Bearer " + Token);
+        Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+    }
+
+    [Theory]
+    [InlineData("""{"login":"BOB","id":7}""", HttpStatusCode.OK, PackOwnerAccountState.Same, "BOB")]
+    [InlineData("""{"login":"carol","id":7}""", HttpStatusCode.OK, PackOwnerAccountState.OtherLogin, "carol")]
+    [InlineData("""{"message":"Not Found"}""", HttpStatusCode.NotFound, PackOwnerAccountState.Gone, null)]
+    [InlineData("""{"message":"Server Error"}""", HttpStatusCode.BadGateway, PackOwnerAccountState.Unknown, null)]
+    [InlineData("""{"login":"bob","id":8}""", HttpStatusCode.OK, PackOwnerAccountState.Unknown, null)]
+    public async Task ReadAsync_OwnerRecord_SaysWhichLoginGitHubGivesItsAccountIdNow(string user, HttpStatusCode status, PackOwnerAccountState state, string? login)
+    {
+        Pull(Index, 41, First, Index, labels: ["needs-steward"]);
+        Files(Index, 41, File("packs/my-pack/owner.json", "modified", "@@ -1,4 +1,4 @@"));
+        Status(Index, First, ("validate", "success", "a steward decides"));
+        Content(Index, "packs/my-pack/owner.json", "main", """{ "github_login": "alice", "github_id": 5 }""");
+        Content(Index, "packs/my-pack/owner.json", First, """{ "github_login": "bob", "github_id": 7 }""");
+        _routes[$"{Api}/user/7"] = () => Json(user, status);
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 41);
+
+        Assert.Equal(new PackOwnerAccount(state, login), Assert.Single(review.OwnerRecords).Account);
+    }
+
+    [Fact]
+    public async Task ReadAsync_FirstPackClaim_ShowsTheRecordAsAFirstClaimWithNoOwnerBefore()
+    {
+        Pull(Index, 42, First, "bob/content-index", labels: ["pack"], author: "bob");
+        Files(Index, 42, File("packs/my-pack/1.0.0.toml", "added", "@@ -0,0 +1,2 @@"), File("packs/my-pack/owner.json", "added", "@@ -0,0 +1,4 @@"));
+        Status(Index, First, ("validate", "success", "validated"));
+        Content(Index, "packs/my-pack/1.0.0.toml", First, "id = \"my-pack\"\nversion = \"1.0.0\"\n");
+        Content(Index, "packs/my-pack/owner.json", First, """{ "github_login": "bob", "github_id": 7 }""");
+        _routes[$"{Api}/user/7"] = () => Json("""{"login":"bob","id":7}""");
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 42);
+
+        var record = Assert.Single(review.OwnerRecords);
+        Assert.True(record.IsFirstClaim);
+        Assert.Null(record.Before);
+        Assert.Equal(new ListingPackOwner("bob", 7), record.After?.Owner);
+        Assert.Equal(StewardQueueKind.Pack, Assert.Single(review.Documents).Kind);
+    }
+
+    [Fact]
+    public async Task ReadAsync_RemovedOrUnreadableOwnerRecord_HasNoAfterOrShowsItsText()
+    {
+        Pull(Index, 43, First, Index, labels: ["needs-steward"]);
+        Files(
+            Index,
+            43,
+            File("packs/my-pack/owner.json", "removed", null),
+            File("packs/other-pack/owner.json", "modified", null),
+            new { filename = "packs/third-pack/owner.txt", previous_filename = "packs/third-pack/owner.json", status = "renamed", additions = 0, deletions = 0 });
+        Status(Index, First, ("validate", "failure", "every pack must record its owner"));
+        Content(Index, "packs/my-pack/owner.json", "main", """{ "github_login": "alice", "github_id": 5 }""");
+        Content(Index, "packs/other-pack/owner.json", "main", """{ "github_login": "alice", "github_id": 5 }""");
+        Content(Index, "packs/other-pack/owner.json", First, """{ "github_login": "bob" }""");
+        Content(Index, "packs/third-pack/owner.json", "main", """{ "github_login": "carol", "github_id": 9 }""");
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 43);
+
+        Assert.Equal(3, review.OwnerRecords.Count);
+        var renamed = review.OwnerRecords[2];
+        Assert.Equal(("packs/third-pack/owner.txt", new ListingPackOwner("carol", 9), (PackOwnerText?)null), (renamed.Path, renamed.Before?.Owner, renamed.After));
+        var removed = review.OwnerRecords[0];
+        Assert.Equal((new ListingPackOwner("alice", 5), (PackOwnerText?)null, (PackOwnerAccount?)null), (removed.Before?.Owner, removed.After, removed.Account));
+        var unreadable = review.OwnerRecords[1];
+        Assert.Equal(("""{ "github_login": "bob" }""", (ListingPackOwner?)null, (PackOwnerAccount?)null), (unreadable.After?.Text, unreadable.After?.Owner, unreadable.Account));
+        Assert.DoesNotContain(_sent, sent => sent.Url.StartsWith($"{Api}/user/", StringComparison.Ordinal));
+    }
+
     /// <summary>Answers the pull request, and no comments until <see cref="Comments"/> gives some.</summary>
     private void Pull(string repository, int number, string head, string? headRepository, string[]? labels = null, string state = "open", bool merged = false, string? mergedAt = null, bool draft = false, string? author = "alice", string baseBranch = "main")
     {

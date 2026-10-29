@@ -9,10 +9,6 @@ public class LinksDto
     [JsonPropertyName("forums")]
     public string? Forums { get; set; }
 
-    /// <summary>
-    /// Uses JsonExtensionData to catch any other objects/links in this objects.
-    /// The string is the name, JsonElement stores the value
-    /// </summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? OtherLinks { get; set; }
 }

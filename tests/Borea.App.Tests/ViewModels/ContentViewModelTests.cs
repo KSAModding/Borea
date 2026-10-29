@@ -349,8 +349,7 @@ public sealed class ContentViewModelTests
         text.ToggleChangelogCommand.Execute(null);
         Assert.True(text.IsChangelogExpanded);
 
-        var link = rows["1.1.0"].Changelog;
-        Assert.NotNull(link);
+        var link = rows["1.1.0"].Changelog!;
         Assert.Null(link.Text);
         Assert.Equal(new ContentLink(harness.Localization.ContentChangelog, "https://example.com/aircraft-hud/1.1.0"), link.Link);
 
@@ -365,9 +364,8 @@ public sealed class ContentViewModelTests
     [InlineData("https://example.com/changelog fixes the HUD", false)]
     public void Changelog_OnlyAnAbsoluteHttpsUriIsALink(string value, bool isLink)
     {
-        var changelog = ReleaseChangelog.From(Release("1.0.0", value), "1.0.0", "Changelog");
+        var changelog = ReleaseChangelog.From(Release("1.0.0", value), "1.0.0", "Changelog")!;
 
-        Assert.NotNull(changelog);
         Assert.Equal(isLink, changelog.Link is not null);
         Assert.Equal(isLink, changelog.Text is null);
     }
@@ -378,9 +376,8 @@ public sealed class ContentViewModelTests
     [InlineData(null, false)]
     public void Changelog_TextIsPreferredOverTheLink(string? text, bool showsText)
     {
-        var changelog = ReleaseChangelog.From(Release("1.0.0", "https://example.com/changelog", text), "1.0.0", "Changelog");
+        var changelog = ReleaseChangelog.From(Release("1.0.0", "https://example.com/changelog", text), "1.0.0", "Changelog")!;
 
-        Assert.NotNull(changelog);
         Assert.Equal(showsText ? text : null, changelog.Text);
         Assert.Equal(showsText, changelog.Link is null);
     }

@@ -14,7 +14,5 @@ public interface IModUninstaller
     /// an error and changes nothing. The manifest entry stays, because the
     /// game removes an entry that names no folder on its next launch.
     /// </summary>
-    /// <param name="instanceId">The ID of the instance to remove the mod from</param>
-    /// <param name="modId">The ID of the mod to uninstall</param>
     Task UninstallAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default);
 }

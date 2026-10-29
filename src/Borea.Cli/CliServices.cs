@@ -14,13 +14,11 @@ using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Updates;
 using Borea.Core.UserContent;
+using Borea.Storage.Game;
+using Borea.Storage.ModLoaders;
 
 namespace Borea.Cli;
 
-/// <summary>
-/// The services the commands run against, seen as Borea.Core interfaces.
-/// The program fills it from <see cref="BoreaServices"/>.
-/// </summary>
 internal sealed class CliServices : IDisposable
 {
     /// <summary>
@@ -55,6 +53,9 @@ internal sealed class CliServices : IDisposable
     public required ILatestVersionPing LatestVersion { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
+
+    /// <summary>The game folder and the installed version of one instance.</summary>
+    public required IInstanceGameResolver InstanceGames { get; init; }
 
     /// <summary>The platform whose code the game build runs, which the planner checks releases against.</summary>
     public required IGamePlatform GamePlatform { get; init; }
@@ -118,6 +119,8 @@ internal sealed class CliServices : IDisposable
 
     public required ILoaderUninstaller LoaderUninstaller { get; init; }
 
+    public required ILoaderVersionStore LoaderVersions { get; init; }
+
     public required ILauncher Launcher { get; init; }
 
     public required IModPackRepository ModPacks { get; init; }
@@ -147,7 +150,8 @@ internal sealed class CliServices : IDisposable
     /// <summary>
     /// The graph's services. <paramref name="latestVersion"/> replaces the
     /// graph's master-server ping and <paramref name="installedVersion"/> its
-    /// reader of the installed build, which is what a test needs.
+    /// reader of the installed build, which is what a test needs. The replaced
+    /// reader also answers for the game of an instance.
     /// <paramref name="spaceCheck"/> replaces the check against the real
     /// volumes, so a test does not depend on the free space of the machine it
     /// runs on.
@@ -179,6 +183,7 @@ internal sealed class CliServices : IDisposable
         ILoaderInstaller? loaderInstaller = null,
         ILoaderAdopter? loaderAdopter = null,
         ILoaderUninstaller? loaderUninstaller = null,
+        ILoaderVersionStore? loaderVersions = null,
         ILauncher? launcher = null,
         IModPackRepository? modPacks = null,
         IModPackRepository? readOnlyModPacks = null,
@@ -213,6 +218,7 @@ internal sealed class CliServices : IDisposable
             ModListFormat = services.ModListFormat,
             LatestVersion = latestVersion ?? services.LatestVersion,
             InstalledVersion = installedVersion ?? services.InstalledVersion,
+            InstanceGames = installedVersion is null ? services.InstanceGames : new InstanceGameResolver(services.Paths, installedVersion),
             GamePlatform = gamePlatform ?? services.GamePlatform,
             GameShape = gameShape ?? services.GameShape,
             IndexFetcher = indexFetcher ?? services.IndexFetcher,
@@ -241,7 +247,11 @@ internal sealed class CliServices : IDisposable
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
             LoaderConfiguration = loaderConfiguration ?? services.LoaderConfiguration,
-            LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,
+            // The uninstaller refuses on its own while a game runs, so it uses the same game check as the commands.
+            LoaderUninstaller = loaderUninstaller ?? (isGameProcessRunning is null
+                ? services.LoaderUninstaller
+                : new FileLoaderUninstaller(services.SettingsRepository, services.Paths, loaderVersions ?? services.LoaderVersions, isGameProcessRunning)),
+            LoaderVersions = loaderVersions ?? services.LoaderVersions,
             Launcher = launcher ?? services.Launcher,
             ModPacks = modPacks ?? services.ModPacks,
             ReadOnlyModPacks = readOnlyModPacks ?? services.ReadOnlyModPacks,

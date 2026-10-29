@@ -20,15 +20,7 @@ public static class ListingPrefill
         ArgumentNullException.ThrowIfNull(source);
 
         var host = source.Host;
-        var links = draft.Links.ToList();
-        foreach (var link in host.Links)
-        {
-            var index = links.FindIndex(existing => string.Equals(existing.Key, link.Key, StringComparison.OrdinalIgnoreCase));
-            if (index < 0)
-                links.Add(link);
-            else
-                links[index] = link;
-        }
+        var links = MergeLinks(host.Links, draft.Links);
 
         var root = source.Archive?.Root;
         var loader = draft.Loader;
@@ -90,6 +82,22 @@ public static class ListingPrefill
                 : string.Equals(found.Text.Trim(), text, StringComparison.OrdinalIgnoreCase)))
             .Select(tag => tag.Tag)
             .ToList();
+    }
+
+    /// <summary>The links of the draft, where a link the host knows replaces the one with the same key, or comes last when the draft has none.</summary>
+    private static List<ListingLink> MergeLinks(IReadOnlyList<ListingLink> found, IReadOnlyList<ListingLink> current)
+    {
+        var links = current.ToList();
+        foreach (var link in found)
+        {
+            var index = links.FindIndex(existing => string.Equals(existing.Key, link.Key, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+                links.Add(link);
+            else
+                links[index] = link;
+        }
+
+        return links;
     }
 
     /// <summary>

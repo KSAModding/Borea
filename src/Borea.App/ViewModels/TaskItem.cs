@@ -169,9 +169,11 @@ public sealed partial class TaskItem : ObservableObject
     private Task RetryAsync() => _registry.RetryAsync(this);
 
     /// <summary>The installs of one mod or pack share one row, and the updates of one instance run one at a time.</summary>
-    internal bool DoesSameWorkAs(TaskItem other) => Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate
-        ? other.Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate && other.InstanceId == InstanceId
+    internal bool DoesSameWorkAs(TaskItem other) => IsUpdate(Kind)
+        ? IsUpdate(other.Kind) && other.InstanceId == InstanceId
         : other.Kind == Kind && ModIds.Equals(other.ContentId, ContentId);
+
+    internal static bool IsUpdate(TaskKind kind) => kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate;
 
     /// <summary>Names the instance that the task created.</summary>
     internal void SetInstance(Guid instanceId, string instanceName)

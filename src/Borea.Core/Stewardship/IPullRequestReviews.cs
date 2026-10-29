@@ -61,6 +61,57 @@ public sealed record PullRequestReview(
 
     /// <summary>The head branch is in another repository, or its repository is gone.</summary>
     public bool IsFromFork => !string.Equals(HeadRepository, Repository, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The pack owner records that the pull request adds, changes or removes, in the order of <see cref="Files"/>.</summary>
+    public IReadOnlyList<PullRequestOwnerRecord> OwnerRecords { get; init; } = [];
+}
+
+/// <summary>
+/// A change of packs/&lt;id&gt;/owner.json in content-index. Only the first claim of a pack merges itself, so a steward reads who
+/// owns the pack before and after any other change, such as a handover (RFC 0080).
+/// </summary>
+/// <param name="Path">The path of the record after the change.</param>
+/// <param name="Before">The record on the base branch, at the old path of a renamed one, or null when the base branch has none.</param>
+/// <param name="After">The record at the head commit, or null when the pull request removes it.</param>
+/// <param name="Account">What GitHub says about the account id of <paramref name="After"/>, or null when it names no owner.</param>
+/// <param name="IsFirstClaim">The pull request adds the record together with a version of its pack, which merges itself.</param>
+public sealed record PullRequestOwnerRecord(string Path, PackOwnerText? Before, PackOwnerText? After, PackOwnerAccount? Account, bool IsFirstClaim);
+
+/// <param name="Text">The file as UTF-8 text, or null when it is not.</param>
+/// <param name="Owner">The login and the account id it names, or null when it is no owner record.</param>
+public sealed record PackOwnerText(string? Text, ListingPackOwner? Owner);
+
+/// <summary>
+/// Whether the account id of an owner record still has the login the record names. A login can be renamed and then taken by
+/// another account, so the checks compare the account id, and a login that changed tells the steward to look closer.
+/// </summary>
+/// <param name="Login">The login that GitHub gives the account id now, or null when there is no such account or GitHub did not answer.</param>
+public sealed record PackOwnerAccount(PackOwnerAccountState State, string? Login = null)
+{
+    /// <summary>Compares the answer of GET /user/{id} with the record. Logins compare without case, as GitHub compares them.</summary>
+    /// <param name="current">The login that GitHub gives the account id, or null when GitHub has no such account.</param>
+    public static PackOwnerAccount Of(ListingPackOwner owner, string? current)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        return current is null ? new PackOwnerAccount(PackOwnerAccountState.Gone)
+            : string.Equals(current, owner.Login, StringComparison.OrdinalIgnoreCase) ? new PackOwnerAccount(PackOwnerAccountState.Same, current)
+            : new PackOwnerAccount(PackOwnerAccountState.OtherLogin, current);
+    }
+}
+
+public enum PackOwnerAccountState
+{
+    /// <summary>The account id still has the login of the record.</summary>
+    Same,
+
+    /// <summary>The account id has another login now.</summary>
+    OtherLogin,
+
+    /// <summary>GitHub has no account with the id.</summary>
+    Gone,
+
+    /// <summary>GitHub could not be asked.</summary>
+    Unknown,
 }
 
 public enum PullRequestState

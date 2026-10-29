@@ -31,17 +31,16 @@ public sealed class ModListComparer
 
         foreach (var target in targetMods)
         {
-            if (currentById.TryGetValue(target.ContentId, out var current))
-            {
-                if (current.Version.Equals(target.Version))
-                    unchanged.Add(target.ContentId);
-                else
-                    toUpdate.Add(new ModVersionChange(target.ContentId, current.Version, target.Version));
-            }
-            else
+            if (!currentById.TryGetValue(target.ContentId, out var current))
             {
                 toAdd.Add(target);
+                continue;
             }
+
+            if (current.Version.Equals(target.Version))
+                unchanged.Add(target.ContentId);
+            else
+                toUpdate.Add(new ModVersionChange(target.ContentId, current.Version, target.Version));
         }
 
         var toRemove = currentMods

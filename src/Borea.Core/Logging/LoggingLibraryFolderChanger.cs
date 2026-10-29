@@ -38,8 +38,9 @@ public sealed class LoggingLibraryFolderChanger : ILibraryFolderChanger
             throw;
         }
 
+        var oldFiles = result.OldFilesRemain ? $", old files remain in {result.PreviousFolder}" : "";
         _log.Write(result.Changed
-            ? $"Library folder change to {result.Folder} finished, {result.Outcome}{(result.OldFilesRemain ? $", old files remain in {result.PreviousFolder}" : "")}."
+            ? $"Library folder change to {result.Folder} finished, {result.Outcome}{oldFiles}."
             : $"Library folder change to {target} refused, {result.Outcome}: {result.Message}");
         return result;
     }

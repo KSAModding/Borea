@@ -27,7 +27,6 @@ public sealed class UnexpectedErrorTests
 
         await viewModel.CopyUnexpectedErrorCommand.ExecuteAsync(null);
 
-        Assert.NotNull(window.CopiedText);
         Assert.StartsWith(viewModel.DiagnosticsText, window.CopiedText);
         Assert.Contains("NullReferenceException: The vehicle has no engine.", window.CopiedText);
         Assert.Contains(nameof(Thrown), window.CopiedText);

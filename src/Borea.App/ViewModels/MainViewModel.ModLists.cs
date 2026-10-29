@@ -45,7 +45,7 @@ public partial class MainViewModel
             var installer = InstallerFor(services);
             var name = await installer.FreeNameAsync(Localization.FormatModListCopyName(instance.Name));
             var reasons = instance.Mods.ToDictionary(mod => mod.ModId, mod => mod.Reason, ModIds.Comparer);
-            var plan = await installer.PlanAsync(RequestFor(services, ModList.FromInstance(instance, manifest), instance.Source, reasons) with { Origin = InstanceOrigin.Duplicate });
+            var plan = await installer.PlanAsync(RequestFor(services, ModList.FromInstance(instance, manifest), instance.Source, reasons) with { Origin = InstanceOrigin.Duplicate, Loader = instance.Loader });
             ShowModListPlan(new ModListImportItem(this, plan, name, isDuplicate: true, instance.ForeignMods.Select(mod => mod.FolderName).ToList()));
         }
         catch (Exception exception) when (IsInstallFailure(exception))
@@ -148,11 +148,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped, item.InstallError);
-            item.IsInstalling = false;
-            item.Run = null;
-            item.Progress = 0;
-            item.ProgressStatus = null;
-            item.ProgressDetail = null;
+            EndRowInstall(item, null);
         }
 
         await ReloadInstancesAsync();

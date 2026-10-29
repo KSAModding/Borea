@@ -1,8 +1,5 @@
 ﻿namespace Borea.Storage.Mods;
 
-/// <summary>
-/// Flat, TOML-serializable representation of a LoaderRequirement.
-/// </summary>
 public sealed class LoaderRequirementDto
 {
     public string LoaderId { get; set; } = string.Empty;

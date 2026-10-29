@@ -29,6 +29,30 @@ public sealed class IndexReportTests
     }
 
     [Fact]
+    public void FromIssue_LeaveAPack_NamesThePackAndTheModsThatWhatIsWrongMentions()
+    {
+        const string body = "### Listing id\n\nmy-pack\n\n### Ground\n\nI am the author of a mod and want it out of this pack\n\n### What is wrong\n\nPlease take `MyMod` out of the pack. Other.Mod is fine, and so is mymod.\n\n### Who you are\n\nThe author of MyMod.";
+
+        var report = IndexReport.FromIssue(12, Url, "[Takedown] my-pack", "alice", Created, body, authorId: 5)!;
+
+        Assert.True(report.IsLeavePack);
+        Assert.Equal(("my-pack", 5L), (report.Id, report.AuthorId));
+        Assert.Equal(["MyMod", "Other.Mod"], report.MentionedIds(["MyMod", "Other.Mod", "Other", "my-pack"]));
+        Assert.Empty(report.MentionedIds(["Mod", "Unknown"]));
+    }
+
+    [Fact]
+    public void IsLeavePack_OnlyTheGroundOfTheTakedownForm()
+    {
+        var other = IndexReport.FromIssue(12, Url, "[Takedown] MeasureTools", "alice", Created, TakedownBody)!;
+        var dispute = IndexReport.FromIssue(13, Url, "[Dispute] my-pack", "bob", Created, DisputeBody.Replace("The id is the folder name", IndexReport.LeavePackGround, StringComparison.Ordinal))!;
+
+        Assert.False(other.IsLeavePack);
+        Assert.False(dispute.IsLeavePack);
+        Assert.Null(other.AuthorId);
+    }
+
+    [Fact]
     public void FromIssue_Dispute_ReadsEachSectionOfTheForm_AndAnEmptyOptionalFieldIsNull()
     {
         var report = IndexReport.FromIssue(13, Url, "[Dispute] MeasureTools is mine", "bob", Created, DisputeBody.Replace("\n", "\r\n", StringComparison.Ordinal))!;

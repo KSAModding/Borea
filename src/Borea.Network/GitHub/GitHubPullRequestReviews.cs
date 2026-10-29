@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text.RegularExpressions;
 using Borea.Core.GitHub;
 using Borea.Core.Listings;
@@ -21,7 +22,6 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
     private readonly IListingOwnershipCheck _ownership;
 
     /// <param name="format">Reads the listing and pack documents.</param>
-    /// <param name="ownership">Checks the author of a listing pull request.</param>
     public GitHubPullRequestReviews(IGitHubSession session, HttpClient http, IListingFormat format, IListingOwnershipCheck ownership, TimeProvider? time = null)
     {
         _format = format ?? throw new ArgumentNullException(nameof(format));
@@ -55,6 +55,14 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
                     documents.Add(await DocumentAsync(repository, file.Path, kind, baseBranch, head, author, cancellationToken).ConfigureAwait(false));
             }
 
+            var claims = StewardQueueKinds.FirstClaims(files.Result.Select(file => new StewardQueueFile(file.Path, file.Status, file.PreviousPath)));
+            var ownerRecords = new List<PullRequestOwnerRecord>();
+            foreach (var file in files.Result)
+            {
+                if (StewardQueueKinds.IsOwnerRecord(repository, file.Path) || StewardQueueKinds.IsOwnerRecord(repository, file.PreviousPath))
+                    ownerRecords.Add(await OwnerRecordAsync(repository, file, baseBranch, head, claims.Contains(file.Path), cancellationToken).ConfigureAwait(false));
+            }
+
             var (status, validateFailure) = validate.Result;
             return new PullRequestReview(
                 repository,
@@ -72,7 +80,10 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
                 validateFailure,
                 IndexVerdict.Find(repository, comments.Result),
                 files.Result,
-                documents);
+                documents)
+            {
+                OwnerRecords = ownerRecords,
+            };
         }
         catch (GitHubApiException exception)
         {
@@ -84,7 +95,6 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
         }
     }
 
-    /// <exception cref="ArgumentException">The repository is no index repository.</exception>
     private static string PullsUrlOf(string repository, int number)
     {
         if (!StewardQueue.Repositories.Contains(repository, StringComparer.OrdinalIgnoreCase))
@@ -191,6 +201,50 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
         catch (ReleaseAmendmentRefusedException exception)
         {
             return (null, new StewardException(StewardFailure.UnreadableFile, exception.Message, innerException: exception));
+        }
+    }
+
+    /// <summary>
+    /// The owner record on the tip of the base branch, as the checks read the accepted owner, and at the head commit, with the login
+    /// that GitHub gives the new account id now.
+    /// </summary>
+    private async Task<PullRequestOwnerRecord> OwnerRecordAsync(string repository, PullRequestFile file, string baseBranch, string head, bool isFirstClaim, CancellationToken cancellationToken)
+    {
+        var before = await OwnerTextAsync(repository, file.PreviousPath ?? file.Path, baseBranch, cancellationToken).ConfigureAwait(false);
+        // a record that is removed, or renamed to another path, leaves the pack without a record
+        var after = file.Status == "removed" || !StewardQueueKinds.IsOwnerRecord(repository, file.Path) ? null
+            : await OwnerTextAsync(repository, file.Path, head, cancellationToken).ConfigureAwait(false)
+                ?? throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse, $"{file.Path} is not at {head}");
+        var account = after?.Owner is { } owner ? await AccountAsync(owner, cancellationToken).ConfigureAwait(false) : null;
+        return new PullRequestOwnerRecord(file.Path, before, after, account, isFirstClaim);
+    }
+
+    private async Task<PackOwnerText?> OwnerTextAsync(string repository, string path, string reference, CancellationToken cancellationToken)
+    {
+        if (!StewardQueueKinds.IsOwnerRecord(repository, path))
+            return null;
+
+        var file = await _api.ReadFileAsync(repository, path, reference, cancellationToken).ConfigureAwait(false);
+        return file is null ? null : new PackOwnerText(file.Text, ListingPackOwner.Parse(file.Text));
+    }
+
+    /// <summary>GET /user/{id} names the login that the account id has now. A failed read only leaves the answer unknown.</summary>
+    private async Task<PackOwnerAccount> AccountAsync(ListingPackOwner owner, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var reply = await _api.SendAsync(HttpMethod.Get, $"{GitHubApi.Root}/user/{owner.Id.ToString(CultureInfo.InvariantCulture)}", null, cancellationToken).ConfigureAwait(false);
+            if (reply.Status == HttpStatusCode.NotFound)
+                return PackOwnerAccount.Of(owner, null);
+
+            var user = GitHubApi.Parse<UserDto>(GitHubApi.Ensure(reply));
+            return user.Id == owner.Id && user.Login is { Length: > 0 } login
+                ? PackOwnerAccount.Of(owner, login)
+                : new PackOwnerAccount(PackOwnerAccountState.Unknown);
+        }
+        catch (GitHubApiException exception) when (exception.Failure != GitHubApiFailure.SignedOut)
+        {
+            return new PackOwnerAccount(PackOwnerAccountState.Unknown);
         }
     }
 

@@ -35,9 +35,8 @@ public sealed class DotnetRuntimeNeedTests
     [Fact]
     public void Parse_FrameworkDependentProgram_ReadsTheVersionAndTheDownloadPageOfItsMajorVersion()
     {
-        var need = DotnetRuntimeNeed.Parse(StarMapConfig);
+        var need = DotnetRuntimeNeed.Parse(StarMapConfig)!;
 
-        Assert.NotNull(need);
         Assert.Equal("10.0.0", need.Version.ToString());
         Assert.Equal("10.0", need.Channel);
         Assert.Equal("https://dotnet.microsoft.com/download/dotnet/10.0", need.DownloadPage.AbsoluteUri);
@@ -94,15 +93,9 @@ public sealed class DotnetRuntimeNeedTests
     }
 
     [Theory]
-    [InlineData("10.0.4", "10.0.2", false)]
-    [InlineData("10.0.4", "10.0.4", true)]
-    [InlineData("10.0.4", "10.0.9", true)]
-    public void IsMetBy_APatchBelowTheNeed_DoesNotCount(string needed, string installed, bool met)
-    {
-        Assert.Equal(met, DotnetRuntimeNeed.Parse(Config(needed))!.IsMetBy([installed]));
-    }
-
-    [Theory]
+    [InlineData(null, "10.0.2", false)]
+    [InlineData(null, "10.0.4", true)]
+    [InlineData(null, "10.0.9", true)]
     [InlineData("LatestPatch", "10.0.9", true)]
     [InlineData("LatestPatch", "10.1.0", false)]
     [InlineData("LatestMinor", "10.1.0", true)]
@@ -112,7 +105,7 @@ public sealed class DotnetRuntimeNeedTests
     [InlineData("Disable", "10.0.5", false)]
     [InlineData("Sideways", "10.3.0", true)]
     [InlineData("Sideways", "11.0.0", false)]
-    public void IsMetBy_RollForwardOfTheProgram_DecidesWhichVersionsCount(string rollForward, string installed, bool met)
+    public void IsMetBy_RollForwardOfTheProgram_DecidesWhichVersionsCount(string? rollForward, string installed, bool met)
     {
         Assert.Equal(met, DotnetRuntimeNeed.Parse(Config("10.0.4", rollForward))!.IsMetBy([installed]));
     }

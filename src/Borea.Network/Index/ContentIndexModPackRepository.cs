@@ -30,15 +30,13 @@ public sealed class ContentIndexModPackRepository : IModPackRepository
     {
         var snapshot = await _snapshots.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
         var pack = snapshot.Packs.FirstOrDefault(candidate => ModIds.Equals(candidate.Id, modPackId));
-        if (pack is not null)
-        {
-            if (pack.IndexStatus?.State == IndexStatusState.Delisted)
-                return Result(snapshot, pack.Id, null, null, pack.IndexStatus, null);
+        if (pack is null)
+            return PackDiagnosticIdentity(snapshot, modPackId);
 
-            return LatestResult(snapshot, pack);
-        }
+        if (pack.IndexStatus?.State == IndexStatusState.Delisted)
+            return Result(snapshot, pack.Id, null, null, pack.IndexStatus, null);
 
-        return PackDiagnosticIdentity(snapshot, modPackId);
+        return LatestResult(snapshot, pack);
     }
 
     public async Task<ModPackResult?> GetLatestAsync(string modPackId, CancellationToken cancellationToken = default)
@@ -48,10 +46,7 @@ public sealed class ContentIndexModPackRepository : IModPackRepository
         if (pack is null)
             return null;
 
-        var latest = pack.Versions
-            .Where(IsAvailable)
-            .OrderByDescending(version => version.Metadata.Version)
-            .FirstOrDefault();
+        var latest = LatestAvailableVersion(pack);
         return latest is null ? null : Result(snapshot, pack, latest);
     }
 
@@ -97,12 +92,15 @@ public sealed class ContentIndexModPackRepository : IModPackRepository
     private static bool IsAvailable(ContentIndexPackVersion version) =>
         version.IndexStatus?.State != IndexStatusState.Retracted;
 
-    private static ModPackResult LatestResult(ContentIndexSnapshot snapshot, ContentIndexPack pack)
-    {
-        var latest = pack.Versions
+    private static ContentIndexPackVersion? LatestAvailableVersion(ContentIndexPack pack) =>
+        pack.Versions
             .Where(IsAvailable)
             .OrderByDescending(version => version.Metadata.Version)
             .FirstOrDefault();
+
+    private static ModPackResult LatestResult(ContentIndexSnapshot snapshot, ContentIndexPack pack)
+    {
+        var latest = LatestAvailableVersion(pack);
         return latest is null
             ? Result(snapshot, pack.Id, null, null, pack.IndexStatus, null)
             : Result(snapshot, pack, latest);

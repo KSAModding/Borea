@@ -77,7 +77,7 @@ public sealed class ContentDatesParserTests : IDisposable
     }
 
     [Fact]
-    public void Parse_UpdatedBeforePublished_KeepsListedAt()
+    public void Parse_UpdatedBeforePublished_DropsBothDatesAndKeepsListedAt()
     {
         var dates = "\"published_at\": \"2026-09-02T10:14:05Z\", \"updated_at\": \"2026-08-02T13:18:41Z\", " + ListedAt;
 
@@ -87,7 +87,7 @@ public sealed class ContentDatesParserTests : IDisposable
         Assert.Null(listing.PublishedAt);
         Assert.Null(listing.UpdatedAt);
         Assert.Equal(Listed, listing.ListedAt);
-        Assert.Single(listing.DatesErrors);
+        Assert.Contains("is before the published_at value", Assert.Single(listing.DatesErrors).Reason);
     }
 
     [Fact]
@@ -116,6 +116,7 @@ public sealed class ContentDatesParserTests : IDisposable
     [InlineData("\"yesterday\"", "is not an ISO 8601 UTC timestamp")]
     [InlineData("12", "must be a string, but was Number")]
     [InlineData("null", "must be a string, but was Null")]
+    [InlineData("\"\\ud800\"", "is not valid Unicode text")]
     public void Parse_InvalidUpdatedAt_DropsOnlyThatDate(string rawValue, string reason)
     {
         var dates = $"\"published_at\": \"2026-08-02T13:18:41Z\", \"updated_at\": {rawValue}";
@@ -145,19 +146,6 @@ public sealed class ContentDatesParserTests : IDisposable
         Assert.Null(listing.PublishedAt);
         Assert.Equal(Updated, listing.UpdatedAt);
         Assert.Contains("The published_at value is unreadable.", Assert.Single(listing.DatesErrors).Reason);
-    }
-
-    [Fact]
-    public void Parse_UpdatedBeforePublished_DropsBothDates()
-    {
-        var dates = "\"published_at\": \"2026-09-02T10:14:05Z\", \"updated_at\": \"2026-08-02T13:18:41Z\"";
-
-        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", dates)));
-
-        var listing = Assert.Single(result.ValidListings);
-        Assert.Null(listing.PublishedAt);
-        Assert.Null(listing.UpdatedAt);
-        Assert.Contains("is before the published_at value", Assert.Single(listing.DatesErrors).Reason);
     }
 
     [Fact]

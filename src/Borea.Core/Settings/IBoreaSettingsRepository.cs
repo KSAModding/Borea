@@ -10,8 +10,5 @@ public interface IBoreaSettingsRepository
     /// </summary>
     Task<BoreaSettings?> GetAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Saves the given BoreaSettings to the repository.
-    /// </summary>
     Task SaveAsync(BoreaSettings settings, CancellationToken cancellationToken = default);
 }

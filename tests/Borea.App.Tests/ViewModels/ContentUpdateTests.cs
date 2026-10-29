@@ -356,12 +356,7 @@ public sealed class ContentUpdateTests
     public async Task Update_ReloadWhileItRuns_KeepsTheRowAndBlocksOtherUpdates()
     {
         using var download = new ManualResetEventSlim();
-        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
-        {
-            if (request.RequestUri?.Host == ArchiveHost)
-                download.Wait(TimeSpan.FromSeconds(30));
-            return ServeArchive(request);
-        });
+        using var harness = await ViewModelHarness.CreateAsync(respond: HoldArchive(download));
         harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0")]);
         var viewModel = harness.ViewModel;
         await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
@@ -394,12 +389,7 @@ public sealed class ContentUpdateTests
     public async Task Update_AFolderAddedByHandWhileItRuns_AReopenDoesNotStopTheUpdate()
     {
         using var download = new ManualResetEventSlim();
-        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
-        {
-            if (request.RequestUri?.Host == ArchiveHost)
-                download.Wait(TimeSpan.FromSeconds(30));
-            return ServeArchive(request);
-        });
+        using var harness = await ViewModelHarness.CreateAsync(respond: HoldArchive(download));
         harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0")]);
         var viewModel = harness.ViewModel;
         var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
@@ -431,12 +421,7 @@ public sealed class ContentUpdateTests
     public async Task Update_WhileItRuns_TheFoldersBoreaDidNotInstallStayAsTheyAre()
     {
         using var download = new ManualResetEventSlim();
-        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
-        {
-            if (request.RequestUri?.Host == ArchiveHost)
-                download.Wait(TimeSpan.FromSeconds(30));
-            return ServeArchive(request);
-        });
+        using var harness = await ViewModelHarness.CreateAsync(respond: HoldArchive(download));
         harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0")]);
         var viewModel = harness.ViewModel;
         var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
@@ -487,12 +472,7 @@ public sealed class ContentUpdateTests
     public async Task Manage_ReloadWhileItRuns_KeepsTheRowAndBlocksOtherChanges()
     {
         using var download = new ManualResetEventSlim();
-        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
-        {
-            if (request.RequestUri?.Host == ArchiveHost)
-                download.Wait(TimeSpan.FromSeconds(30));
-            return ServeArchive(request);
-        });
+        using var harness = await ViewModelHarness.CreateAsync(respond: HoldArchive(download));
         harness.SpaceDock.Releases.Add(Release("1.0.0"));
         var viewModel = harness.ViewModel;
         var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, version: "1.0.0");
@@ -634,8 +614,7 @@ public sealed class ContentUpdateTests
 
         await updateAll.UpdateCommand.ExecuteAsync(null);
 
-        var plan = updateAll.PendingPlan;
-        Assert.NotNull(plan);
+        var plan = updateAll.PendingPlan!;
         Assert.NotNull(updateAll.InstallWarning);
         Assert.Equal(
             ["AdvancedFlightComputer 0.7.5", "MeasureTools 1.1.10"],
@@ -939,12 +918,7 @@ public sealed class ContentUpdateTests
     public async Task Pin_WhileAnUpdateOfTheInstanceRuns_ChangesNothing()
     {
         using var download = new ManualResetEventSlim();
-        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
-        {
-            if (request.RequestUri?.Host == ArchiveHost)
-                download.Wait(TimeSpan.FromSeconds(30));
-            return ServeArchive(request);
-        });
+        using var harness = await ViewModelHarness.CreateAsync(respond: HoldArchive(download));
         harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0"), Release("1.0.0", modId: "helper")]);
         var viewModel = harness.ViewModel;
         await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
@@ -1131,7 +1105,7 @@ public sealed class ContentUpdateTests
         Assert.Empty(row.Changelogs);
     }
 
-    private static ModVersionMetadata Release(string version, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyList<ModDependency>? dependencies = null, string? changelog = null, string modId = OwnId) => new(
+    internal static ModVersionMetadata Release(string version, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyList<ModDependency>? dependencies = null, string? changelog = null, string modId = OwnId) => new(
         specVersion: 1,
         modId: modId,
         version: ModVersion.Parse(version),
@@ -1145,7 +1119,7 @@ public sealed class ContentUpdateTests
         changelog: changelog);
 
     /// <summary>Serves a zip with a mod.toml at its root, named for the mod the archive URL names.</summary>
-    private static HttpResponseMessage? ServeArchive(HttpRequestMessage request)
+    internal static HttpResponseMessage? ServeArchive(HttpRequestMessage request)
     {
         if (request.RequestUri?.Host != ArchiveHost)
             return null;
@@ -1160,6 +1134,14 @@ public sealed class ContentUpdateTests
 
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(buffer.ToArray()) };
     }
+
+    /// <summary>Serves archives as <see cref="ServeArchive"/> does, and holds each archive download until <paramref name="download"/> is set.</summary>
+    private static Func<HttpRequestMessage, HttpResponseMessage?> HoldArchive(ManualResetEventSlim download) => request =>
+    {
+        if (request.RequestUri?.Host == ArchiveHost)
+            download.Wait(TimeSpan.FromSeconds(30));
+        return ServeArchive(request);
+    };
 
     private static HttpResponseMessage? FailArchive(HttpRequestMessage request)
         => request.RequestUri?.Host == ArchiveHost ? new HttpResponseMessage(HttpStatusCode.InternalServerError) : null;

@@ -74,14 +74,9 @@ public sealed class ContentIndexReaderTests : IDisposable
     private string IndexPath => _paths.GetIndexPath();
 
     [Fact]
-    public void Constructor_NullPathProvider_ThrowsArgumentNullException()
+    public void Constructor_NullPathProviderOrEmptySource_Throws()
     {
         Assert.Throws<ArgumentNullException>(() => new ContentIndexReader(null!));
-    }
-
-    [Fact]
-    public void Constructor_EmptySource_ThrowsArgumentException()
-    {
         Assert.Throws<ArgumentException>(() => new ContentIndexReader(_paths, ""));
     }
 
@@ -224,49 +219,26 @@ public sealed class ContentIndexReaderTests : IDisposable
         Assert.Equal(ContentIndexDiagnosticScope.GameVersions, Assert.Single(result.Diagnostics).Scope);
     }
 
-    [Fact]
-    public async Task ReadAsync_MalformedIndexStatusTimestamp_KeepsModerationStateAndAddsDiagnostic()
+    [Theory]
+    [InlineData("""{ "state": "disputed", "since": "not-a-date" }""", IndexStatusState.Disputed, "disputed", null, "timestamp")]
+    [InlineData("""{ "state": "delisted", "since": 123, "reason": "The entry was removed." }""", IndexStatusState.Delisted, "delisted", "The entry was removed.", "must be a string")]
+    public async Task ReadAsync_IndexStatusTimestampThatDoesNotParse_KeepsModerationStateAndAddsDiagnostic(
+        string indexStatus, IndexStatusState state, string rawState, string? statusReason, string diagnosticReason)
     {
-        var listing = Listing(
-            "test-mod",
-            ValidAuthoredJson,
-            """, "index_status": { "state": "disputed", "since": "not-a-date" }""");
-        await WriteIndexAsync(Snapshot(listing));
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson, ", \"index_status\": " + indexStatus)));
 
         var result = await _reader.ReadAsync();
 
         var status = Assert.Single(result.Listings).IndexStatus!;
-        Assert.Equal(IndexStatusState.Disputed, status.State);
-        Assert.Equal("disputed", status.RawState);
+        Assert.Equal(state, status.State);
+        Assert.Equal(rawState, status.RawState);
         Assert.Null(status.Since);
+        Assert.Equal(statusReason, status.Reason);
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
         Assert.Equal(ContentIndexDiagnosticScope.IndexStatus, diagnostic.Scope);
         Assert.Equal("test-mod", diagnostic.Id);
-        Assert.Contains("timestamp", diagnostic.Reason);
-    }
-
-    [Fact]
-    public async Task ReadAsync_NonStringIndexStatusTimestamp_KeepsModerationStateAndAddsDiagnostic()
-    {
-        var listing = Listing(
-            "test-mod",
-            ValidAuthoredJson,
-            """, "index_status": { "state": "delisted", "since": 123, "reason": "The entry was removed." }""");
-        await WriteIndexAsync(Snapshot(listing));
-
-        var result = await _reader.ReadAsync();
-
-        var status = Assert.Single(result.Listings).IndexStatus!;
-        Assert.Equal(IndexStatusState.Delisted, status.State);
-        Assert.Equal("delisted", status.RawState);
-        Assert.Null(status.Since);
-        Assert.Equal("The entry was removed.", status.Reason);
-        var diagnostic = Assert.Single(result.Diagnostics);
-        Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
-        Assert.Equal(ContentIndexDiagnosticScope.IndexStatus, diagnostic.Scope);
-        Assert.Equal("test-mod", diagnostic.Id);
-        Assert.Contains("must be a string", diagnostic.Reason);
+        Assert.Contains(diagnosticReason, diagnostic.Reason);
     }
 
     [Fact]

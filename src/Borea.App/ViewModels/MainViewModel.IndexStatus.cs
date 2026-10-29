@@ -162,6 +162,7 @@ public partial class MainViewModel
         await ReloadContentPageAsync();
         EndIconRebuild();
         StartContentUpdateCheck();
+        StartLoaderUpdateCheck();
     }
 
     private void UpdateIndexRefreshStatus()

@@ -1,6 +1,6 @@
-using System.Text;
 using Borea.Core.Instances;
 using Borea.Core.Paths;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Instances;
 
@@ -42,19 +42,7 @@ public sealed class FileGameLogReader : IGameLogReader
     {
         try
         {
-            // shared, because a running game keeps its log open
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            var start = Math.Max(0, stream.Length - MaxBytes);
-            stream.Seek(start, SeekOrigin.Begin);
-            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: start == 0);
-
-            var lines = reader.ReadToEnd().Split('\n').Select(line => line.TrimEnd('\r')).ToList();
-            if (start > 0)
-                lines.RemoveAt(0);
-            if (lines.Count > 0 && lines[^1].Length == 0)
-                lines.RemoveAt(lines.Count - 1);
-
-            return new GameLogTail(path, Exists: true, lines.TakeLast(MaxLines).ToList());
+            return new GameLogTail(path, Exists: true, LogFileTail.ReadLastLines(path, MaxBytes, MaxLines));
         }
         catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
         {

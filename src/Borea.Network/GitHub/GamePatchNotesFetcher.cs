@@ -52,7 +52,7 @@ public sealed class GamePatchNotesFetcher : IGamePatchNotesFetcher
             var candidate = pending[pending.Keys.Max()];
             pending.Remove(candidate.Revision);
             visited.Add(candidate.Revision);
-            if (notes.Any(entry => entry.FromRevision > 0 && entry.FromRevision < candidate.Revision && candidate.Revision < entry.Revision))
+            if (IsCoveredByLoadedNotes(notes, candidate.Revision))
                 continue;
 
             if (looked == maxFiles)
@@ -83,6 +83,10 @@ public sealed class GamePatchNotesFetcher : IGamePatchNotesFetcher
 
         return new GamePatchNotesFetch(notes.OrderByDescending(entry => entry.Revision).ToList(), complete, capped);
     }
+
+    /// <summary>Whether a loaded file already holds the changes of the build, because the build lies between the revision before that file's first change and the revision its notes lead up to.</summary>
+    private static bool IsCoveredByLoadedNotes(List<GamePatchNotes> notes, int revision) =>
+        notes.Any(entry => entry.FromRevision > 0 && entry.FromRevision < revision && revision < entry.Revision);
 
     /// <summary>A build from the chain of a loaded file has no known month, so the month before its successor's is tried as well.</summary>
     private static IReadOnlyList<string> FileNamesOf(Candidate candidate)

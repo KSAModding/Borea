@@ -31,11 +31,9 @@ public sealed class PackAuthoredDto
     [JsonPropertyName("tags")]
     public List<string>? Tags { get; set; }
 
-    // Assumed Mod Packs will also have status
     [JsonPropertyName("status")]
     public string? Status { get; set; }
 
-    // Assumed can be superseded
     [JsonPropertyName("superseded_by")]
     public string? SupersededBy { get; set; }
 

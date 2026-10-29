@@ -154,10 +154,28 @@ public sealed class SpaceDockModRepository : IModRepository
     /// </summary>
     private static bool IsKsaMod(SpaceDockModDto dto) => dto.GameId is null or KsaGameId;
 
+    /// <summary>
+    /// True when a path of the SpaceDock API, put after <see cref="BaseUrl"/>, still leads to SpaceDock itself.
+    /// A path such as "@example.com/a.zip" would make spacedock.info the user info of another host.
+    /// </summary>
+    internal static bool IsSpaceDockPath([NotNullWhen(true)] string? path)
+    {
+        var host = new Uri(BaseUrl);
+        return !string.IsNullOrWhiteSpace(path)
+            && path.StartsWith('/')
+            && Uri.TryCreate(host, path, out var uri)
+            && uri.Scheme == Uri.UriSchemeHttps
+            && uri.IsDefaultPort
+            && uri.UserInfo.Length == 0
+            && string.Equals(uri.Host, host.Host, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ModIdOf(SpaceDockModDto dto) => dto.Id.ToString(CultureInfo.InvariantCulture);
+
     private static ModMetadata MapToListing(SpaceDockModDto dto)
     {
-        var modId = dto.Id.ToString(CultureInfo.InvariantCulture);
-        var pageUrl = !string.IsNullOrWhiteSpace(dto.Url) ? $"{BaseUrl}{dto.Url}" : $"{BaseUrl}/mod/{dto.Id}";
+        var modId = ModIdOf(dto);
+        var pageUrl = IsSpaceDockPath(dto.Url) ? $"{BaseUrl}{dto.Url}" : $"{BaseUrl}/mod/{dto.Id}";
         var website = string.IsNullOrWhiteSpace(dto.Website) ? null : dto.Website;
 
         var links = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -173,10 +191,28 @@ public sealed class SpaceDockModRepository : IModRepository
         if (!string.IsNullOrWhiteSpace(dto.SourceCode))
             links.TryAdd("repository", dto.SourceCode);
 
-        // Oldest game version any release claims, since game_min means
-        // "oldest known to work" and only a too-high bound blocks an install.
-        // With no parseable game version the raw string stays, so
-        // compatibility evaluates to unknown.
+        return new ModMetadata(
+            specVersion: SpecVersions.Highest,
+            modId: modId,
+            source: SourceName,
+            name: string.IsNullOrWhiteSpace(dto.Name) ? $"SpaceDock mod {dto.Id}" : dto.Name,
+            authors: new[] { string.IsNullOrWhiteSpace(dto.Author) ? "Unknown" : dto.Author },
+            abstractText: dto.ShortDescription ?? string.Empty,
+            license: string.IsNullOrWhiteSpace(dto.License) ? "Unknown" : dto.License,
+            links: links,
+            gameMin: GameMinOf(dto),
+            description: string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description,
+            releases: new ReleaseSource(new[] { new ReleaseHost("spacedock", modId) }));
+    }
+
+    /// <summary>
+    /// Oldest game version any release claims, since game_min means
+    /// "oldest known to work" and only a too-high bound blocks an install.
+    /// With no parseable game version the raw string stays, so
+    /// compatibility evaluates to unknown.
+    /// </summary>
+    private static string GameMinOf(SpaceDockModDto dto)
+    {
         string? oldestRaw = null;
         var oldestRevision = int.MaxValue;
         foreach (var candidate in dto.Versions)
@@ -189,23 +225,10 @@ public sealed class SpaceDockModRepository : IModRepository
         }
 
         var defaultVersion = dto.Versions.FirstOrDefault(v => v.Id == dto.DefaultVersionId) ?? dto.Versions.FirstOrDefault();
-        var gameMin = oldestRaw
+        return oldestRaw
             ?? (defaultVersion is not null && !string.IsNullOrWhiteSpace(defaultVersion.RawGameVersion)
                 ? defaultVersion.RawGameVersion
                 : "unknown");
-
-        return new ModMetadata(
-            specVersion: SpecVersions.Highest,
-            modId: modId,
-            source: SourceName,
-            name: string.IsNullOrWhiteSpace(dto.Name) ? $"SpaceDock mod {dto.Id}" : dto.Name,
-            authors: new[] { string.IsNullOrWhiteSpace(dto.Author) ? "Unknown" : dto.Author },
-            abstractText: dto.ShortDescription ?? string.Empty,
-            license: string.IsNullOrWhiteSpace(dto.License) ? "Unknown" : dto.License,
-            links: links,
-            gameMin: gameMin,
-            description: string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description,
-            releases: new ReleaseSource(new[] { new ReleaseHost("spacedock", modId) }));
     }
 
     private static IEnumerable<(ModVersion Parsed, ModVersionMetadata Release, SpaceDockVersionDto Row)> MappableReleases(SpaceDockModDto dto)
@@ -220,11 +243,6 @@ public sealed class SpaceDockModRepository : IModRepository
         }
     }
 
-    /// <summary>
-    /// Maps one SpaceDock version onto a release. An unusable version string,
-    /// game version, release date, or download path yields no release; the
-    /// listing itself stays visible either way.
-    /// </summary>
     private static bool TryMapRelease(SpaceDockModDto dto, SpaceDockVersionDto version, [NotNullWhen(true)] out ModVersionMetadata? release)
     {
         release = null;
@@ -238,7 +256,7 @@ public sealed class SpaceDockModRepository : IModRepository
         if (version.Created is not { } releaseDate)
             return false;
 
-        if (string.IsNullOrWhiteSpace(version.DownloadPath))
+        if (!IsSpaceDockPath(version.DownloadPath))
             return false;
 
         // No checksum and no sizes: the API does not expose them.
@@ -250,7 +268,7 @@ public sealed class SpaceDockModRepository : IModRepository
 
         release = new ModVersionMetadata(
             specVersion: SpecVersions.Highest,
-            modId: dto.Id.ToString(CultureInfo.InvariantCulture),
+            modId: ModIdOf(dto),
             version: modVersion,
             releaseStatus: modVersion.PreRelease is null ? ReleaseStatus.Stable : ReleaseStatus.Testing,
             releaseDate: releaseDate,
@@ -307,11 +325,4 @@ internal sealed class SpaceDockVersionDto
 
     [JsonPropertyName("game_version")]
     public string RawGameVersion { get; set; } = string.Empty;
-}
-
-internal sealed class SpaceDockGameDto
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? Short { get; set; }
 }

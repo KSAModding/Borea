@@ -315,6 +315,9 @@ public sealed partial class StewardReport : ObservableObject
 
     public bool HasVersion => Report.Version is not null;
 
+    /// <summary>A mod author asks to take their mod out of the pack that the report names (RFC 0080).</summary>
+    public bool IsLeavePack => Report.IsLeavePack;
+
     public IReadOnlyList<StewardReportSection> Sections { get; }
 
     /// <summary>One line for each section that the form requires and the body lacks, because somebody edited it by hand.</summary>
@@ -373,6 +376,13 @@ public sealed partial class StewardReport : ObservableObject
     {
         if (Report is { IsClosed: false, Id: { } id })
             _owner.BeginIndexStatusChange(IndexStatusChange.Delist(id, string.Empty), Report);
+    }
+
+    [RelayCommand]
+    private void LeavePack()
+    {
+        if (Report is { IsLeavePack: true, IsClosed: false, Id: not null })
+            _owner.BeginPackLeave(Report);
     }
 
     [RelayCommand]

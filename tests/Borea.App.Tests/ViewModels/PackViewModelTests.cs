@@ -560,11 +560,7 @@ public sealed class PackViewModelTests
     public async Task NewInstance_CreatesTheActiveInstanceWithThePackSourceAndThePinnedMods()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
-            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(
-                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPack());
         var viewModel = harness.ViewModel;
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -607,11 +603,7 @@ public sealed class PackViewModelTests
     public async Task NewInstance_AnotherInstanceIsActive_KeepsItActive()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
-            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(
-                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPack());
         var viewModel = harness.ViewModel;
         var career = await harness.Services.Instances.CreateAsync("Career", InstanceSource.Custom.Value);
         await viewModel.LoadAsync();
@@ -758,15 +750,15 @@ public sealed class PackViewModelTests
         var pack = Assert.Single(viewModel.DiscoverPacks);
         await pack.InstallCommand.ExecuteAsync(null);
         var planning = new TaskCompletionSource();
-        var lookups = 0;
+        var lookingUp = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         harness.SpaceDock.VersionLookup = _ =>
         {
-            Interlocked.Increment(ref lookups);
+            lookingUp.TrySetResult();
             return planning.Task;
         };
 
         var confirm = pack.ConfirmInstallCommand.ExecuteAsync(null);
-        await ViewModelHarness.WaitUntilAsync(() => Volatile.Read(ref lookups) > 0);
+        await lookingUp.Task.WaitAsync(TimeSpan.FromSeconds(30));
         pack.Choices!.Recommended.Single().IsSelected = false;
         planning.SetResult();
         await confirm;
@@ -1021,11 +1013,7 @@ public sealed class PackViewModelTests
     public async Task PackUpdate_NewerVersion_ListsTheChangesAndUpdatesAfterTheConfirmation()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
-            editSnapshot: snapshot => WithPacks(ToolsPackVersions())(
-                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, ToolsPackVersions());
         var viewModel = harness.ViewModel;
         var instance = await OpenToolsPackInstanceAsync(harness);
         var update = viewModel.PackUpdate!;
@@ -1403,11 +1391,15 @@ public sealed class PackViewModelTests
     public async Task UseNewer_ConfirmedWhileTheInstanceUpdates_SaysSoAndKeepsThePlan()
     {
         using var download = new ManualResetEventSlim();
+        var downloading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
         using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPinPack(), request =>
         {
             if (request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true)
+            {
+                downloading.TrySetResult();
                 download.Wait(TimeSpan.FromSeconds(30));
+            }
             return null;
         });
         var viewModel = harness.ViewModel;
@@ -1419,8 +1411,7 @@ public sealed class PackViewModelTests
         var afc = viewModel.ContentGroups.SelectMany(group => group.Items).Single(item => item.ModId == "AdvancedFlightComputer");
         await afc.UpdateCommand.ExecuteAsync(null);
         var update = afc.ConfirmUpdateCommand.ExecuteAsync(null);
-        for (var wait = 0; wait < 300 && !harness.Requests.Any(uri => uri.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal)); wait++)
-            await Task.Delay(100);
+        await downloading.Task.WaitAsync(TimeSpan.FromSeconds(30));
         var row = await OpenMeasureToolsMemberAsync(harness);
         await row.UseNewerCommand.ExecuteAsync(null);
 
@@ -1908,11 +1899,7 @@ public sealed class PackViewModelTests
 
     /// <summary>A pack whose 1.0.0 pins MeasureTools 1.1.9 and whose 1.1.0 pins 1.1.10, with the 1.1.9 archive served.</summary>
     private static Task<ViewModelHarness> CreateWithToolsVersionsAsync(byte[] archive) =>
-        ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri == MeasureTools119Url ? ArchiveResponse(archive) : null,
-            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")), Version("1.1.0", Pin("MeasureTools", "1.1.10"))))(
-                snapshot.Replace(MeasureTools119Sha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41783", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        CreateWithMeasureTools119ArchiveAsync(archive, Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")), Version("1.1.0", Pin("MeasureTools", "1.1.10"))));
 
     /// <summary>Tools Pack 1.0.0 pinning MeasureTools 1.1.9, whose newer release 1.1.10 the snapshot has.</summary>
     private static string MeasureToolsPinPack()

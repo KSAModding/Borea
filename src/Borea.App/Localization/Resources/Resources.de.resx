@@ -262,7 +262,7 @@
     <value>Nachtrag</value>
   </data>
   <data name="StewardQueueKindOwnerRecord" xml:space="preserve">
-    <value>Besitzer-Eintrag</value>
+    <value>Besitzerdatei</value>
   </data>
   <data name="StewardQueueKindIndexStatus" xml:space="preserve">
     <value>Index-Status</value>
@@ -407,6 +407,42 @@
   </data>
   <data name="StewardReviewProofSpaceDockLinkFormat" xml:space="preserve">
     <value>Der Quellcode-Link der SpaceDock-Mod {0} nennt kein GitHub-Repository.</value>
+  </data>
+  <data name="StewardReviewOwnerRecords" xml:space="preserve">
+    <value>Besitzerdateien</value>
+  </data>
+  <data name="StewardOwnerRecordFirstClaim" xml:space="preserve">
+    <value>Der Pull Request fügt diese Besitzerdatei mit der ersten Version ihres Modpacks hinzu. Ein solcher erster Anspruch kann sich selbst mergen, wenn die Prüfungen bestanden sind.</value>
+  </data>
+  <data name="StewardOwnerRecordBeforeFormat" xml:space="preserve">
+    <value>Besitzer im Basis-Branch: {0}, Konto-ID {1}</value>
+  </data>
+  <data name="StewardOwnerRecordNoneBefore" xml:space="preserve">
+    <value>Der Basis-Branch hat keine Besitzerdatei dieses Modpacks.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableBefore" xml:space="preserve">
+    <value>Die Besitzerdatei im Basis-Branch nennt keinen Login und keine Konto-ID.</value>
+  </data>
+  <data name="StewardOwnerRecordAfterFormat" xml:space="preserve">
+    <value>Besitzer nach dem Merge: {0}, Konto-ID {1}</value>
+  </data>
+  <data name="StewardOwnerRecordRemoved" xml:space="preserve">
+    <value>Der Pull Request entfernt die Besitzerdatei, daher hat das Modpack nach dem Merge keinen Besitzer.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableAfter" xml:space="preserve">
+    <value>Die neue Besitzerdatei nennt keinen Login und keine Konto-ID.</value>
+  </data>
+  <data name="StewardOwnerAccountSameFormat" xml:space="preserve">
+    <value>Das GitHub-Konto {0} hat noch den Login {1}.</value>
+  </data>
+  <data name="StewardOwnerAccountOtherLoginFormat" xml:space="preserve">
+    <value>Das GitHub-Konto {0} hat jetzt den Login {1}, nicht {2}. Die Prüfungen vergleichen die Konto-ID, daher besitzt {1} das Modpack nach dem Merge.</value>
+  </data>
+  <data name="StewardOwnerAccountGoneFormat" xml:space="preserve">
+    <value>GitHub hat kein Konto mit der ID {0}, daher kann nach dem Merge niemand eine Version des Modpacks hinzufügen.</value>
+  </data>
+  <data name="StewardOwnerAccountUnknownFormat" xml:space="preserve">
+    <value>Borea konnte GitHub nicht fragen, welchen Login das Konto {0} jetzt hat.</value>
   </data>
   <data name="StewardReviewFilesFormat" xml:space="preserve">
     <value>Geänderte Dateien ({0})</value>
@@ -654,6 +690,39 @@
   <data name="StewardReportNoIssuesPermission" xml:space="preserve">
     <value>GitHub hat die Änderung abgelehnt, vielleicht weil die Borea App noch keine Issues-Berechtigung hat. Antworte stattdessen auf GitHub. Dein Text bleibt hier, damit du ihn kopieren kannst.</value>
   </data>
+  <data name="StewardReportLeavePack" xml:space="preserve">
+    <value>Mod aus dem Modpack nehmen</value>
+  </data>
+  <data name="StewardLeavePackTitleFormat" xml:space="preserve">
+    <value>Eine Mod aus {0} nehmen</value>
+  </data>
+  <data name="StewardLeaveTitleFormat" xml:space="preserve">
+    <value>Jede Version von {0} zurückziehen, die {1} festlegt</value>
+  </data>
+  <data name="StewardLeaveEffect" xml:space="preserve">
+    <value>Jede Version des Modpacks, die die Mod festlegt, wird mit einem eigenen Zustand zurückgezogen, alle in einem Pull Request. Eine zurückgezogene Version bleibt installiert, wo sie ist, und Clients bieten sie nicht mehr an. Der Autor des Modpacks veröffentlicht eine Version ohne die Mod.</value>
+  </data>
+  <data name="StewardLeaveMod" xml:space="preserve">
+    <value>Herauszunehmende Mod</value>
+  </data>
+  <data name="StewardLeaveChooseMod" xml:space="preserve">
+    <value>Wähle die Mod, die laut Meldung aus dem Modpack soll.</value>
+  </data>
+  <data name="StewardLeaveVersionsFormat" xml:space="preserve">
+    <value>Zurückzuziehende Versionen: {0}</value>
+  </data>
+  <data name="StewardLeaveRetractedFormat" xml:space="preserve">
+    <value>Schon zurückgezogen: {0}</value>
+  </data>
+  <data name="StewardLeaveReporterOwnsFormat" xml:space="preserve">
+    <value>{0} besitzt den Eintrag von {1} laut seinem Eigentumsnachweis.</value>
+  </data>
+  <data name="StewardLeaveReporterUnprovenFormat" xml:space="preserve">
+    <value>Der Eigentumsnachweis des Eintrags von {1} nennt {0} nicht. Bestätige über das Forenkonto des Eintrags, dass {0} ihn besitzt, bevor du weitermachst.</value>
+  </data>
+  <data name="StewardLeaveConfirmFormat" xml:space="preserve">
+    <value>Ich habe über das Forenkonto bestätigt, dass {0} {1} besitzt</value>
+  </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>Watcher</value>
   </data>
@@ -836,6 +905,12 @@
   </data>
   <data name="StewardRefusedNotInFile" xml:space="preserve">
     <value>index-status.toml hat diesen Zustand nicht mehr. Lade die Liste neu.</value>
+  </data>
+  <data name="StewardRefusedNotPinnedFormat" xml:space="preserve">
+    <value>Keine Version von {0}, die nicht zurückgezogen ist, legt {1} fest.</value>
+  </data>
+  <data name="StewardRefusedNotConfirmedFormat" xml:space="preserve">
+    <value>Bestätige zuerst über das Forenkonto, dass {0} {1} besitzt.</value>
   </data>
   <data name="StewardErrorSignedOut" xml:space="preserve">
     <value>GitHub hat dich abgemeldet. Melde dich in den Einstellungen wieder an.</value>
@@ -1311,6 +1386,36 @@
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>Ein neuerer KSA-Build ist verfügbar:</value>
   </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} unterstützt KSA {2} nicht. {0} {3} unterstützt es.</value>
+  </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} unterstützt KSA {2} nicht, und noch keine neuere Version von {0} unterstützt es.</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} braucht einen neueren KSA-Build als {2}. Aktualisiere KSA vor dem Spielen.</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} ist verfügbar.</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>{0} auf {1} aktualisieren</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>Schließe zuerst KSA. Borea kann den Mod-Loader nicht aktualisieren, während das Spiel läuft.</value>
+  </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>Die Instanz {2} ist bei {0} {1} angeheftet, und diese Version ist nicht installiert.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>Die Instanz {2} ist bei {0} {1} angeheftet, und diese Version unterstützt KSA {3} nicht.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>{0} {1} installieren</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Mod-Loader ändern</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Herunterladen</value>
   </data>
@@ -1724,6 +1829,9 @@
   </data>
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Die Startargumente von {0} konnten nicht gespeichert werden</value>
+  </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Der Mod-Loader von {0} konnte nicht gespeichert werden</value>
   </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht aktiviert werden</value>
@@ -3181,7 +3289,7 @@
     <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein und öffnest den Pull Request. Eine Version von dem Konto, dem das Pack gehört, wird von selbst gemergt.</value>
   </data>
   <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein. Die erste Version eines neuen Packs fügt demselben Pull Request außerdem {1} hinzu. Ein Steward nimmt einen ersten Anspruch an, wenn die Prüfungen bestanden sind, und bei einem neuen GitHub-Konto können die Prüfungen warten, bis ein Steward sie startet.</value>
+    <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein. Die erste Version eines neuen Packs fügt demselben Pull Request außerdem {1} hinzu, und er kann sich selbst mergen, wenn die Prüfungen bestanden sind. Bei einem neuen GitHub-Konto können die Prüfungen warten, bis ein Steward sie startet.</value>
   </data>
   <data name="ListingOwnerFileTextFormat" xml:space="preserve">
     <value>Die erste Version eines neuen Packs fügt auch {0} hinzu, die dein GitHub-Konto als Besitzer des Packs nennt. Wenn Borea den Pull Request von deinem Konto öffnet, schreibt es diese Datei selbst. Im Browser fügst du sie mit Add file zum Branch desselben Pull Requests hinzu und trägst deinen GitHub-Namen und die numerische ID ein, die https://api.github.com/users/&lt;dein GitHub-Name&gt; zeigt.</value>
@@ -3400,7 +3508,7 @@
     <value>Borea konnte nicht lesen, wem die Pack-ID gehört. Die Prüfungen entscheiden, wenn du den Pull Request öffnest.</value>
   </data>
   <data name="ListingOwnershipFirstClaim" xml:space="preserve">
-    <value>Die Pack-ID ist frei. Der Pull Request beansprucht sie für dein Konto, und ein Steward nimmt einen ersten Anspruch an, wenn die Prüfungen bestanden sind.</value>
+    <value>Die Pack-ID ist frei. Der Pull Request beansprucht sie für dein Konto und kann sich selbst mergen, wenn die Prüfungen bestanden sind.</value>
   </data>
   <data name="ListingProofOwnerFormat" xml:space="preserve">
     <value>{0} gehört dir.</value>
@@ -3993,9 +4101,6 @@
   <data name="InstanceLoaderConflict" xml:space="preserve">
     <value>Die Mods brauchen Versionen, die sich nicht überschneiden</value>
   </data>
-  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
-    <value>Spieleinstellungen</value>
-  </data>
   <data name="InstanceLoaderConflictShort" xml:space="preserve">
     <value>Keine Version passt</value>
   </data>
@@ -4028,6 +4133,48 @@
   </data>
   <data name="InstanceLoaderWrongVersionFormat" xml:space="preserve">
     <value>{0} installiert</value>
+  </data>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}, nicht für diesen KSA-Build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Ändern</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>Der Mod-Loader startet das Spiel mit den Mods dieser Instanz. Automatisch startet die neueste installierte Version, die zum Spiel und zu den Mods passt. Eine angeheftete Version bleibt, bis du sie änderst, auch wenn eine neuere Version passt.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatisch: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Bei {0} angeheftet</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>{0} installieren</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Wähle, welche Version des Mod-Loaders {0} startet. Andere Instanzen behalten ihre eigene Einstellung.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatisch (empfohlen)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Startet {0} {1}, die neueste installierte Version, die zum Spiel und zu den Mods passt.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} passt zum Spiel und zu den Mods, ist aber nicht installiert. Borea installiert die Version beim Speichern.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>Keine Version von {0} passt zu diesem Spiel-Build und zu den Mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Immer diese Version verwenden</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Installieren und speichern</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod-Loader</value>
   </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Anzeigen</value>
@@ -4285,7 +4432,7 @@
     <value>Loader-Verzeichnis</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>Leer lassen, damit Borea beim Installieren einen Ordner wählt.</value>
+    <value>Ein Ordner, der den Mod-Loader schon enthält. Mit Vorhandenen verwenden startet Borea ihn von dort.</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>Installieren</value>
@@ -4308,20 +4455,44 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>{0} {1} nach {2} installiert.</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>{0} installiert</value>
-  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Installiert, Version unbekannt</value>
   </data>
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>Auf {0} aktualisieren</value>
   </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>Neu installieren</value>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>Mod-Loader</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea legt jede installierte Version in einen eigenen Ordner. Jede Instanz startet die Version, die in der Zeile Mod-Loader auf ihrer Seite steht, so kann eine Instanz bei einer älteren Version bleiben.</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>Verwendet von {0}</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>Nicht verwendet</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>Verwendet von {0}. Stelle diese Instanzen zuerst auf eine andere Version um.</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}, dein Ordner</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>Vergessen</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>Weitere Version installieren</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>Diese Version von der Festplatte löschen?</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>{0} {1} entfernt.</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+    <value>Jede Instanz wählt ihre Version des Mod-Loaders in der Zeile Mod-Loader auf ihrer Seite. Die Einstellungen listen die installierten Versionen.</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Forum</value>
@@ -4675,13 +4846,31 @@
     <value>Diese Instanz existiert nicht mehr.</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>Der Mod-Loader {0} ist nicht installiert. Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+    <value>Der Mod-Loader {0} ist nicht installiert. Installiere ihn in der Zeile Mod-Loader auf der Seite der Instanz.</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>Die Mods in dieser Instanz brauchen den Mod-Loader {0}, der nicht installiert ist. Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+    <value>Die Mods in dieser Instanz brauchen den Mod-Loader {0}, der nicht installiert ist. Installiere ihn in der Zeile Mod-Loader auf der Seite der Instanz.</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>Diese Instanz braucht {0}. Jetzt installieren?</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} unterstützt KSA {2} nicht. Vor dem Spielen auf {3} aktualisieren?</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} unterstützt KSA {2} nicht, darum startet das Spiel vielleicht nicht. Trotzdem spielen?</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>Aktualisieren und spielen</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>Trotzdem spielen</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>Diese Instanz ist bei {0} {1} angeheftet. Diese Version ist nicht installiert, und der Index bietet sie nicht mehr an. Automatisch verwenden, um die neueste passende Version zu starten?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Automatisch verwenden</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>Diese Instanz braucht {0}. Richte zuerst den Spielordner ein.</value>
@@ -4722,11 +4911,20 @@
   <data name="LaunchModLikelyBrokeFormat" xml:space="preserve">
     <value>{2} wurde beim Laden von {0} {1} beendet. Wahrscheinlich ist diese Mod die Ursache. Deaktiviere sie und versuche es erneut, oder suche nach einem Update.</value>
   </data>
+  <data name="LaunchOtherModsNeedMissingFormat" xml:space="preserve">
+    <value>Diese Mods brauchen Teile von KSA, die diese Version nicht hat, und schlagen deshalb wahrscheinlich auch fehl: {0}.</value>
+  </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} wurde direkt nach dem Start beendet (Exit-Code {1}). Die Details zeigen, was ausgegeben wurde.</value>
   </data>
   <data name="LaunchStoppedLoadingModsFormat" xml:space="preserve">
     <value>{0} wurde beim Laden der Mods beendet (Exit-Code {1}). Wahrscheinlich ist eine Mod dieser Instanz die Ursache. Die Details zeigen, was ausgegeben wurde.</value>
+  </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} wurde für einen anderen KSA-Build als den installierten {1} gebaut und kann das Spiel nicht laden. Sobald ein Release von {0} für {1} erscheint, installiere es in der Zeile Mod-Loader auf der Seite der Instanz. Ist {1} älter als der Build, für den {0} gebaut wurde, aktualisiere stattdessen KSA.</value>
+  </data>
+  <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
+    <value>Releases von {0}</value>
   </data>
   <data name="LaunchExitCodeFormat" xml:space="preserve">
     <value>Exit-Code {0}</value>
@@ -4794,8 +4992,14 @@
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>{0} deaktivieren</value>
   </data>
+  <data name="LaunchDisableModsFormat" xml:space="preserve">
+    <value>{0} Mods deaktivieren</value>
+  </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
     <value>{0} ist deaktiviert. Starte die Instanz erneut.</value>
+  </data>
+  <data name="LaunchModsDisabledFormat" xml:space="preserve">
+    <value>{0} Mods sind deaktiviert. Starte die Instanz erneut.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Details anzeigen</value>
@@ -4853,5 +5057,14 @@
   </data>
   <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
     <value>{0} wurde ohne die Vorlage erstellt</value>
+  </data>
+  <data name="AboutTranslators" xml:space="preserve">
+    <value>Übersetzer</value>
+  </data>
+  <data name="AboutTranslatorNotListed" xml:space="preserve">
+    <value>Noch nicht in den credits</value>
+  </data>
+  <data name="AboutOriginalRepository" xml:space="preserve">
+    <value>Borea-Repository</value>
   </data>
 </root>

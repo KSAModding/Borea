@@ -800,20 +800,16 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     private ModVersionMetadata? _latestInChannel;
 
-    /// <summary>The release Add installs, which the size and the age on the row belong to.</summary>
+    /// <summary>The release Add installs, which the age on the row belongs to.</summary>
     internal ModVersionMetadata? LatestInChannel
     {
         get => _latestInChannel;
         set
         {
             _latestInChannel = value;
-            OnPropertyChanged(nameof(DownloadSizeText));
             OnPropertyChanged(nameof(GameVersionText));
         }
     }
-
-    /// <summary>The archive size of <see cref="LatestInChannel"/>, or null when the index states none.</summary>
-    public string? DownloadSizeText => LatestInChannel?.Download.SizeBytes is { } size ? MainViewModel.SizeText(size) : null;
 
     public string? Description => _listing.Description;
 
@@ -927,7 +923,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     [ObservableProperty]
     private string? _installError;
 
-    private bool _isOpening;
+    private readonly OpeningGate _opening = new();
 
     /// <summary>True between the Remove menu item and the confirmation.</summary>
     [ObservableProperty]
@@ -1150,24 +1146,10 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     /// <summary>
     /// The whole row is this command, so it stays executable while the page
     /// loads, because a command that cannot execute greys out every control on
-    /// the row. The flag takes over the job of dropping a second click.
+    /// the row. The gate takes over the job of dropping a second click.
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task OpenAsync()
-    {
-        if (_isOpening)
-            return;
-
-        _isOpening = true;
-        try
-        {
-            await _owner.OpenContentAsync(this);
-        }
-        finally
-        {
-            _isOpening = false;
-        }
-    }
+    private Task OpenAsync() => _opening.RunAsync(() => _owner.OpenContentAsync(this));
 
     [RelayCommand]
     private Task ChangeVersionAsync() => _owner.OpenContentVersionsAsync(this);

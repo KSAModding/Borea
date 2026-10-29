@@ -85,6 +85,11 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
                     conflicts.Add(new PlanningMessage(pinned.ModId, PlanningMessageKind.Pinned) { Version = pinned.Version, OtherVersion = item.Release.Version });
                 continue;
             }
+            if (RecordedForeign(request, item.Release.ModId) is { } recorded && item.Release.Version != recorded.Version)
+            {
+                conflicts.Add(Message(recorded.ModId, PlanningMessageKind.ForeignOwned));
+                continue;
+            }
             if (request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, item.Release.ModId)))
                 conflicts.Add(Message(item.Release.ModId, PlanningMessageKind.ForeignOwned));
             if (roots.TryGetValue(item.Release.ModId, out var previous) && previous.Exact && item.Exact && previous.Release.Version != item.Release.Version)
@@ -97,7 +102,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
 
     /// <summary>
     /// The candidates of every reachable mod, newest first, and last the yanked releases and those whose download is gone and that are not installed,
-    /// because an installed copy is never replaced for its gone download. An exact request and a pinned mod have one candidate each,
+    /// because an installed copy is never replaced for its gone download. An exact request, a pinned mod and a recorded foreign mod have one candidate each,
     /// and every other candidate is inside the channel or already installed.
     /// </summary>
     private static async Task<Dictionary<string, IReadOnlyList<RequestedMod?>>> BuildDomainsAsync(InstallPlanningRequest request, Dictionary<string, RequestedMod> roots, ReleaseChannel channel, List<PlanningMessage> conflicts, CancellationToken cancellationToken)
@@ -118,6 +123,8 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
                 values.Add(pinned.Metadata);
             else if (root is { Exact: true })
                 values.Add(root.Release);
+            else if (RecordedForeign(request, id) is { } recorded)
+                values.Add(recorded.Metadata);
             else if (!request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, id)))
             {
                 if (request.Instance.Mods.FirstOrDefault(value => ModIds.Equals(value.ModId, id)) is { } installed && !roots.ContainsKey(id)) values.Add(installed.Metadata);
@@ -254,6 +261,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         if (foreign && dependency.MinVersion is null && dependency.MaxVersion is null) return;
         if (foreign) unresolved.Add(Message(owner, PlanningMessageKind.ForeignVersionUnknown, dependency));
         else if (Pinned(request, dependency.ModId!) is { } pinned) conflicts.Add(new PlanningMessage(owner, PlanningMessageKind.PinnedDependency) { Dependency = dependency, Value = pinned.ModId, Version = pinned.Version });
+        else if (RecordedForeign(request, dependency.ModId!) is { } recorded) conflicts.Add(Message(recorded.ModId, PlanningMessageKind.ForeignOwned, dependency));
         else conflicts.Add(Message(owner, PlanningMessageKind.UnsatisfiedDependency, dependency));
     }
 
@@ -270,6 +278,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         if (AlternativeSatisfied(request, selected, chosen)) return;
         if (request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, chosen.ModId))) unresolved.Add(new PlanningMessage(owner, PlanningMessageKind.ForeignAlternativeUnknown) { Dependency = dependency, Value = chosen.ModId });
         else if (Pinned(request, chosen.ModId) is { } pinned) conflicts.Add(new PlanningMessage(owner, PlanningMessageKind.PinnedDependency) { Dependency = new ModDependency(chosen.ModId, ModDependencyKind.Required, chosen.MinVersion, chosen.MaxVersion), Value = pinned.ModId, Version = pinned.Version });
+        else if (RecordedForeign(request, chosen.ModId) is { } recorded) conflicts.Add(Message(recorded.ModId, PlanningMessageKind.ForeignOwned, dependency));
         else conflicts.Add(new PlanningMessage(owner, PlanningMessageKind.UnsatisfiedAlternative) { Dependency = dependency, Value = chosen.ModId });
     }
 
@@ -388,6 +397,8 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     private static bool IsContent(ModVersionMetadata release) => release.Type.IsVehicleOrSave();
     private static InstalledMod? Pinned(InstallPlanningRequest request, string id) => request.Instance.Mods.FirstOrDefault(value => value.IsPinned && ModIds.Equals(value.ModId, id));
     private static bool IsInstalled(InstallPlanningRequest request, ModVersionMetadata release) => request.Instance.Mods.Any(value => ModIds.Equals(value.ModId, release.ModId) && value.Version == release.Version);
+    // a mod that the player installed keeps its version, because Borea replaces only a folder that it owns
+    private static InstalledMod? RecordedForeign(InstallPlanningRequest request, string id) => request.Instance.Mods.FirstOrDefault(value => value.Ownership == ModInstallOwnership.Foreign && ModIds.Equals(value.ModId, id));
     private static string ChoiceKey(string owner, int index, string kind) => $"{owner}:dependency:{index}:{kind}";
     private static PlanningMessage Message(string id, PlanningMessageKind kind, ModDependency? dependency = null) => new(id, kind) { Dependency = dependency };
     private static IReadOnlyList<PlanningMessage> Sort(List<PlanningMessage> values) => values.DistinctBy(value => (value.ModId, value.Code, value.Message)).OrderBy(value => value.ModId, ModIds.Comparer).ThenBy(value => value.Code, StringComparer.Ordinal).ThenBy(value => value.Message, StringComparer.Ordinal).ToList();

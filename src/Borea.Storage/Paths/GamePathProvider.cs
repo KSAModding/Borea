@@ -92,6 +92,17 @@ public sealed class GamePathProvider : IGamePathProvider
     public string? GetGameDirectoryPath() => _gameDirectory;
     public string GetSharedProfileRoot() => _sharedProfileRoot;
 
+    public string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version)
+    {
+        ModIds.Validate(loaderId, nameof(loaderId));
+
+        var name = version.ToString();
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new ArgumentException($"The version '{name}' cannot be a folder name.", nameof(version));
+
+        return Path.Combine(GetLoadersRoot(), loaderId, name);
+    }
+
     public string? GetLoaderDirectoryPath(string loaderId)
     {
         if (string.IsNullOrWhiteSpace(loaderId))

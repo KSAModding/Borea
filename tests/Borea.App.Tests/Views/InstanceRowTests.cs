@@ -80,8 +80,7 @@ public sealed class InstanceRowTests
         {
             var card = Card(page);
             Click(window, card, new Point(150, card.Bounds.Height / 2));
-            var opening = viewModel.ActiveInstance!.OpenCommand.ExecutionTask;
-            Assert.NotNull(opening);
+            var opening = viewModel.ActiveInstance!.OpenCommand.ExecutionTask!;
             await opening;
         });
 
@@ -99,8 +98,7 @@ public sealed class InstanceRowTests
         {
             var play = Card(page).GetVisualDescendants().OfType<Button>().Single(button => button.Command == item.PlayCommand);
             Click(window, play, new Point(play.Bounds.Width / 2, play.Bounds.Height / 2));
-            var launching = item.PlayCommand.ExecutionTask;
-            Assert.NotNull(launching);
+            var launching = item.PlayCommand.ExecutionTask!;
             await launching;
         });
 
@@ -140,8 +138,7 @@ public sealed class InstanceRowTests
         {
             var toggle = Card(page).GetVisualDescendants().OfType<ToggleSwitch>().Single();
             Click(window, toggle, new Point(toggle.Bounds.Width / 2, toggle.Bounds.Height / 2));
-            var toggling = row.ToggleActiveCommand.ExecutionTask;
-            Assert.NotNull(toggling);
+            var toggling = row.ToggleActiveCommand.ExecutionTask!;
             await toggling;
         });
 

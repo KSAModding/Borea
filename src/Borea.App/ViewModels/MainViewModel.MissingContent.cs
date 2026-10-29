@@ -248,11 +248,7 @@ public partial class MainViewModel
         {
             await RestoreMissingRecordsAsync(services, instanceId, dropped);
             EndInstallRun(run, completed, stopped is not null, error);
-            row.IsInstalling = false;
-            row.Run = null;
-            row.Progress = 0;
-            row.ProgressStatus = stopped;
-            row.ProgressDetail = null;
+            EndRowInstall(row, stopped);
         }
 
         return true;

@@ -51,7 +51,7 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         _ownership = new ListingOwnershipCheck(_api, http, format);
     }
 
-    public Task<IReadOnlyList<string>> ReleasesAsync(string listingId, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<IReadOnlyList<string>> ReleasesAsync(string listingId, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         CheckId(listingId);
         await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -59,7 +59,7 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         return ReleaseAmendment.Select(await StampedAsync(listingId, head, cancellationToken).ConfigureAwait(false), ReleaseSelection.All);
     });
 
-    public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         CheckId(listingId);
         await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -89,14 +89,14 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         return DeclaredAsync(file.Path, file.Text, cancellationToken);
     }
 
-    public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         ArgumentNullException.ThrowIfNull(request);
         var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
         return (await DeriveAsync(request, login, cancellationToken).ConfigureAwait(false)).Preview;
     });
 
-    public Task<ReleaseAmendmentPullRequest> OpenAsync(ReleaseAmendmentPreview preview, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<ReleaseAmendmentPullRequest> OpenAsync(ReleaseAmendmentPreview preview, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         ArgumentNullException.ThrowIfNull(preview);
         var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -179,7 +179,6 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         }
     }
 
-    /// <summary>The text of a release file at the commit.</summary>
     private async Task<string> ReadReleaseAsync(string path, string head, CancellationToken cancellationToken)
     {
         var file = await _api.ReadFileAsync(Repository, path, head, cancellationToken).ConfigureAwait(false)
@@ -200,7 +199,6 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         return reference.Object?.Sha is { Length: > 0 } sha ? sha : throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse);
     }
 
-    /// <summary>The versions of game-versions.json at the commit.</summary>
     private async Task<IReadOnlyList<string>> GameVersionsAsync(string head, CancellationToken cancellationToken)
     {
         var file = await _api.ReadFileAsync(Repository, GameVersionsPath, head, cancellationToken).ConfigureAwait(false)
@@ -259,18 +257,6 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         catch (FormatException)
         {
             return [];
-        }
-    }
-
-    private static async Task<T> GuardAsync<T>(Func<Task<T>> call)
-    {
-        try
-        {
-            return await call().ConfigureAwait(false);
-        }
-        catch (GitHubApiException exception)
-        {
-            throw exception.ToStewardException();
         }
     }
 

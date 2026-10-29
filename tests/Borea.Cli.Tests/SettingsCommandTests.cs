@@ -25,6 +25,7 @@ public sealed class SettingsCommandTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         Assert.Equal(JsonValueKind.Null, run.Json.GetProperty("gameDirectory").ValueKind);
         Assert.Empty(run.Json.GetProperty("loaderDirectories").EnumerateObject());
+        Assert.Empty(run.Json.GetProperty("loaderVersions").EnumerateArray());
     }
 
     [Fact]

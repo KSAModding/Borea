@@ -408,6 +408,42 @@
   <data name="StewardReviewProofSpaceDockLinkFormat" xml:space="preserve">
     <value>The source code link of SpaceDock mod {0} names no GitHub repository.</value>
   </data>
+  <data name="StewardReviewOwnerRecords" xml:space="preserve">
+    <value>Owner records</value>
+  </data>
+  <data name="StewardOwnerRecordFirstClaim" xml:space="preserve">
+    <value>The pull request adds this record with the first version of its pack. Such a first claim merges itself when the checks pass.</value>
+  </data>
+  <data name="StewardOwnerRecordBeforeFormat" xml:space="preserve">
+    <value>Owner on the base branch: {0}, account id {1}</value>
+  </data>
+  <data name="StewardOwnerRecordNoneBefore" xml:space="preserve">
+    <value>The base branch has no owner record of this pack.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableBefore" xml:space="preserve">
+    <value>The record on the base branch names no login and account id.</value>
+  </data>
+  <data name="StewardOwnerRecordAfterFormat" xml:space="preserve">
+    <value>Owner after the merge: {0}, account id {1}</value>
+  </data>
+  <data name="StewardOwnerRecordRemoved" xml:space="preserve">
+    <value>The pull request removes the owner record, so the pack has no owner after the merge.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableAfter" xml:space="preserve">
+    <value>The new record names no login and account id.</value>
+  </data>
+  <data name="StewardOwnerAccountSameFormat" xml:space="preserve">
+    <value>GitHub account {0} still has the login {1}.</value>
+  </data>
+  <data name="StewardOwnerAccountOtherLoginFormat" xml:space="preserve">
+    <value>GitHub account {0} has the login {1} now, not {2}. The checks compare the account id, so {1} owns the pack after the merge.</value>
+  </data>
+  <data name="StewardOwnerAccountGoneFormat" xml:space="preserve">
+    <value>GitHub has no account with the id {0}, so nobody can add a version of the pack after the merge.</value>
+  </data>
+  <data name="StewardOwnerAccountUnknownFormat" xml:space="preserve">
+    <value>Borea could not ask GitHub which login the account {0} has now.</value>
+  </data>
   <data name="StewardReviewFilesFormat" xml:space="preserve">
     <value>Changed files ({0})</value>
   </data>
@@ -654,6 +690,39 @@
   <data name="StewardReportNoIssuesPermission" xml:space="preserve">
     <value>GitHub refused the change, maybe because the Borea App has no Issues permission yet. Answer on GitHub instead. Your text stays here, so you can copy it.</value>
   </data>
+  <data name="StewardReportLeavePack" xml:space="preserve">
+    <value>Take the mod out of the pack</value>
+  </data>
+  <data name="StewardLeavePackTitleFormat" xml:space="preserve">
+    <value>Take a mod out of {0}</value>
+  </data>
+  <data name="StewardLeaveTitleFormat" xml:space="preserve">
+    <value>Retract every version of {0} that pins {1}</value>
+  </data>
+  <data name="StewardLeaveEffect" xml:space="preserve">
+    <value>Each version of the pack that pins the mod gets its own retracted entry, all in one pull request. A retracted version stays installed where it is, and clients stop offering it. The pack author publishes a version without the mod.</value>
+  </data>
+  <data name="StewardLeaveMod" xml:space="preserve">
+    <value>Mod to take out</value>
+  </data>
+  <data name="StewardLeaveChooseMod" xml:space="preserve">
+    <value>Choose the mod that the report asks to take out of the pack.</value>
+  </data>
+  <data name="StewardLeaveVersionsFormat" xml:space="preserve">
+    <value>Versions to retract: {0}</value>
+  </data>
+  <data name="StewardLeaveRetractedFormat" xml:space="preserve">
+    <value>Retracted already: {0}</value>
+  </data>
+  <data name="StewardLeaveReporterOwnsFormat" xml:space="preserve">
+    <value>{0} owns the listing of {1} by its ownership proof.</value>
+  </data>
+  <data name="StewardLeaveReporterUnprovenFormat" xml:space="preserve">
+    <value>The ownership proof of the listing of {1} does not name {0}. Confirm by the forums account of the listing that {0} owns it before you go on.</value>
+  </data>
+  <data name="StewardLeaveConfirmFormat" xml:space="preserve">
+    <value>I confirmed by the forums account that {0} owns {1}</value>
+  </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>Watcher</value>
   </data>
@@ -836,6 +905,12 @@
   </data>
   <data name="StewardRefusedNotInFile" xml:space="preserve">
     <value>index-status.toml no longer has this state. Refresh the list.</value>
+  </data>
+  <data name="StewardRefusedNotPinnedFormat" xml:space="preserve">
+    <value>No version of {0} that is not retracted pins {1}.</value>
+  </data>
+  <data name="StewardRefusedNotConfirmedFormat" xml:space="preserve">
+    <value>Confirm by the forums account that {0} owns {1} first.</value>
   </data>
   <data name="StewardErrorSignedOut" xml:space="preserve">
     <value>GitHub signed you out. Sign in again in Settings.</value>
@@ -1311,6 +1386,36 @@
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>A newer KSA build is available:</value>
   </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}. {0} {3} does.</value>
+  </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}, and no newer release of {0} does yet.</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} needs a newer KSA build than {2}. Update KSA before you play.</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} is available.</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>Update {0} to {1}</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>Close KSA first. Borea cannot update the mod loader while the game runs.</value>
+  </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>The instance {2} is pinned to {0} {1}, and that version is not installed.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>The instance {2} is pinned to {0} {1}, which does not support KSA {3}.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>Install {0} {1}</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Change mod loader</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Download</value>
   </data>
@@ -1724,6 +1829,9 @@
   </data>
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Could not save the launch arguments of {0}</value>
+  </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Could not save the mod loader of {0}</value>
   </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>Could not enable {0}</value>
@@ -3181,7 +3289,7 @@
     <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page and open the pull request. A version from the account that owns the pack merges itself.</value>
   </data>
   <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page. The first version of a new pack also adds {1} to the same pull request. A steward accepts a first claim after the checks pass, and the checks of a new GitHub account can wait for a steward to start them.</value>
+    <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page. The first version of a new pack also adds {1} to the same pull request, which merges itself when the checks pass. The checks of a new GitHub account can wait for a steward to start them.</value>
   </data>
   <data name="ListingOwnerFileTextFormat" xml:space="preserve">
     <value>The first version of a new pack also adds {0}, which names your GitHub account as the owner of the pack. When Borea opens the pull request from your account, it writes this file itself. In the browser, add it to the branch of the same pull request with Add file, and put in your GitHub login and the numeric id that https://api.github.com/users/&lt;your GitHub name&gt; shows.</value>
@@ -3400,7 +3508,7 @@
     <value>Borea could not read who owns the pack id. The checks decide after you open the pull request.</value>
   </data>
   <data name="ListingOwnershipFirstClaim" xml:space="preserve">
-    <value>The pack id is free. The pull request claims it for your account, and a steward accepts a first claim after the checks pass.</value>
+    <value>The pack id is free. The pull request claims it for your account, and it merges itself when the checks pass.</value>
   </data>
   <data name="ListingProofOwnerFormat" xml:space="preserve">
     <value>You own {0}.</value>
@@ -3993,9 +4101,6 @@
   <data name="InstanceLoaderConflict" xml:space="preserve">
     <value>The mods need versions that do not overlap</value>
   </data>
-  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
-    <value>Game settings</value>
-  </data>
   <data name="InstanceLoaderConflictShort" xml:space="preserve">
     <value>No version fits</value>
   </data>
@@ -4028,6 +4133,48 @@
   </data>
   <data name="InstanceLoaderWrongVersionFormat" xml:space="preserve">
     <value>{0} installed</value>
+  </data>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}, not for this KSA build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>The mod loader starts the game with the mods of this instance. Automatic starts the newest installed version that fits the game and the mods. A pinned version stays until you change it, also when a newer version fits.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatic: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Pinned at {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>Install {0}</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Choose which version of the mod loader starts {0}. Other instances keep their own setting.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatic (recommended)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Starts {0} {1}, the newest installed version that fits the game and the mods.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} fits the game and the mods, but it is not installed. Borea installs it when you save.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>No release of {0} fits this game build and the mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Always use this version</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Install and save</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod loader</value>
   </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
@@ -4285,7 +4432,7 @@
     <value>Loader directory</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>Leave empty to let Borea pick a folder when installing.</value>
+    <value>A folder that already holds the mod loader. Use existing makes Borea start it from there.</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>Install</value>
@@ -4308,20 +4455,44 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>Installed {0} {1} to {2}.</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>Installed {0}</value>
-  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Installed, version unknown</value>
   </data>
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>Update to {0}</value>
   </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>Reinstall</value>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>Mod loaders</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea keeps each installed version in its own folder. Every instance starts the version that the Mod loader row of its page names, so one instance can stay on an older version.</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>Used by {0}</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>Not used</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>Used by {0}. Set these instances to another version first.</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}, your folder</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>Forget</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>Install another version</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>Delete this version from the disk?</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>Removed {0} {1}.</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>Mod loaders are set up from the Game settings.</value>
+    <value>Each instance chooses its mod loader version in the Mod loader row of its page. The settings list the installed versions.</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Forum</value>
@@ -4406,6 +4577,15 @@
   </data>
   <data name="AboutCredits" xml:space="preserve">
     <value>Built with</value>
+  </data>
+  <data name="AboutTranslators" xml:space="preserve">
+    <value>Translators</value>
+  </data>
+  <data name="AboutTranslatorNotListed" xml:space="preserve">
+    <value>Not credited yet</value>
+  </data>
+  <data name="AboutOriginalRepository" xml:space="preserve">
+    <value>Borea repository</value>
   </data>
   <data name="AboutCommunity" xml:space="preserve">
     <value>KSA modding on GitHub</value>
@@ -4675,13 +4855,31 @@
     <value>This instance no longer exists.</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The mod loader {0} is not installed. Mod loaders are set up from the Game settings.</value>
+    <value>The mod loader {0} is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The mods in this instance need the mod loader {0}, and it is not installed. Mod loaders are set up from the Game settings.</value>
+    <value>The mods in this instance need the mod loader {0}, and it is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>This instance needs {0}. Install it now?</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}. Update it to {3} before you play?</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}, so the game may not start. Play anyway?</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>Update and play</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>Play anyway</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>This instance is pinned to {0} {1}. That version is not installed, and the index no longer offers it. Use Automatic to start the newest version that fits?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Use Automatic</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This instance needs {0}. Set up the game folder first.</value>
@@ -4722,11 +4920,20 @@
   <data name="LaunchModLikelyBrokeFormat" xml:space="preserve">
     <value>{2} stopped while it loaded {0} {1}. That mod is the likely cause. Disable it and try again, or look for an update.</value>
   </data>
+  <data name="LaunchOtherModsNeedMissingFormat" xml:space="preserve">
+    <value>These mods need parts of KSA that this version does not have, so they will likely fail too: {0}.</value>
+  </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} stopped right after starting (exit code {1}). The details show what it wrote.</value>
   </data>
   <data name="LaunchStoppedLoadingModsFormat" xml:space="preserve">
     <value>{0} stopped while it loaded mods (exit code {1}). A mod of this instance is the likely cause. The details show what it wrote.</value>
+  </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} was made for another KSA build than the installed {1} and cannot load the game. When a {0} release for {1} is out, install it in the Mod loader row of the instance page. If {1} is older than the build that {0} was made for, update KSA instead.</value>
+  </data>
+  <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
+    <value>{0} releases</value>
   </data>
   <data name="LaunchExitCodeFormat" xml:space="preserve">
     <value>Exit code {0}</value>
@@ -4794,8 +5001,14 @@
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>Disable {0}</value>
   </data>
+  <data name="LaunchDisableModsFormat" xml:space="preserve">
+    <value>Disable {0} mods</value>
+  </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
     <value>{0} is disabled. Start the instance again.</value>
+  </data>
+  <data name="LaunchModsDisabledFormat" xml:space="preserve">
+    <value>{0} mods are disabled. Start the instance again.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Show details</value>

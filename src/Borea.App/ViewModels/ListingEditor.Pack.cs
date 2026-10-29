@@ -149,13 +149,13 @@ public sealed partial class ListingEditor
     /// and of the vehicles and saves that Borea installed and the player did not change, named after the instance. Returns
     /// false, and opens nothing, when there is no snapshot to tell which mods a pack can pin.
     /// </summary>
-    internal bool StartPackFromInstance(Instance instance, IReadOnlyList<ModManifestEntry> manifest, IReadOnlyDictionary<string, LoaderInstallation> loaderInstallations, IReadOnlyList<ListingInstalledContent>? content = null)
+    internal bool StartPackFromInstance(Instance instance, IReadOnlyList<ModManifestEntry> manifest, InstalledLoaderVersion? loaderStart, IReadOnlyList<ListingInstalledContent>? content = null)
     {
         StartOver();
         if (_snapshot is not { } snapshot)
             return false;
 
-        var pack = ListingPackFromInstance.Of(snapshot, instance, manifest, loaderInstallations, content);
+        var pack = ListingPackFromInstance.Of(snapshot, instance, manifest, loaderStart, content);
         StartNewPack(
             NewPack() with
             {

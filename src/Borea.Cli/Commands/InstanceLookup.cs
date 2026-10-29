@@ -2,9 +2,6 @@ using Borea.Core.Instances;
 
 namespace Borea.Cli.Commands;
 
-/// <summary>
-/// Finds the instance a command line names.
-/// </summary>
 internal static class InstanceLookup
 {
     /// <summary>
@@ -35,6 +32,13 @@ internal static class InstanceLookup
                 $"More than one instance is named '{nameOrId}' when compared case-insensitively. Name it by id: " +
                 string.Join(", ", named.Select(instance => $"{instance.Name} ({instance.InstanceId})")) + "."),
         };
+    }
+
+    /// <summary>Stops a command before it plans anything when <paramref name="name"/> is taken.</summary>
+    public static async Task RequireFreeNameAsync(IInstanceRepository instances, string name)
+    {
+        if (!await instances.IsNameAvailableAsync(name).ConfigureAwait(false))
+            throw new InvalidOperationException($"Instance name '{name}' is already in use.");
     }
 
     /// <summary>

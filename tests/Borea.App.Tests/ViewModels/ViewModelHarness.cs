@@ -328,6 +328,7 @@ internal sealed class ViewModelHarness : IDisposable
             ("AnnouncementsChecked", viewModel.WhenAnnouncementsCheckedAsync()),
             ("ReleaseChannelSaved", viewModel.WhenReleaseChannelSavedAsync()),
             ("ContentUpdatesChecked", viewModel.WhenContentUpdatesCheckedAsync()),
+            ("LoaderUpdatesChecked", viewModel.WhenLoaderUpdatesCheckedAsync()),
             ("CrashChecked", viewModel.WhenCrashCheckedAsync()),
             ("PlaytimeLoaded", viewModel.WhenPlaytimeLoadedAsync()),
             ("InstanceSizesLoaded", viewModel.WhenInstanceSizesLoadedAsync()),

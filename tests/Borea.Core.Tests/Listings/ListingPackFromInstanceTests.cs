@@ -96,16 +96,13 @@ public sealed class ListingPackFromInstanceTests
     }
 
     [Fact]
-    public void Of_LoaderThatTheModsNeed_IsNamedOnce_WithTheVersionBoreaSetUp()
+    public void Of_LoaderThatTheModsNeed_IsNamedOnce_WithTheVersionThatStartsTheInstance()
     {
         var snapshot = Snapshot(Mod("Alpha", Release("Alpha", "1.0.0")), Mod("Beta", Release("Beta", "2.0.0")), Loader("StarMap"));
         var instance = Instance([Installed("Alpha", "1.0.0", loader: "StarMap"), Installed("Beta", "2.0.0", loader: "starmap")], ["LocalOnly"]);
-        var installations = new Dictionary<string, LoaderInstallation>
-        {
-            ["starmap"] = new(Path.Combine(Path.GetTempPath(), "StarMap"), ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false),
-        };
+        var start = new InstalledLoaderVersion("starmap", ModVersion.Parse("0.4.6"), RawVersion: null, Path.Combine(Path.GetTempPath(), "StarMap", "0.4.6"), IsAdopted: false, IsRecorded: false);
 
-        var pack = ListingPackFromInstance.Of(snapshot, instance, Enabled("Alpha", "Beta"), installations);
+        var pack = ListingPackFromInstance.Of(snapshot, instance, Enabled("Alpha", "Beta"), start);
 
         Assert.Equal([new ListingPackMember("Alpha", "1.0.0"), new ListingPackMember("Beta", "2.0.0")], pack.Members);
         Assert.Equal(

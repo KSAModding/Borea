@@ -11,8 +11,8 @@ public enum ListingOwnershipState
     CouldNotEvaluate,
 
     /// <summary>
-    /// The pack id is free, so the pull request claims it for the signed-in account. It never merges itself, because a steward
-    /// accepts every first claim after the checks pass.
+    /// The pack id is free, so the pull request claims it for the signed-in account, first come, first served. It adds the owner record
+    /// together with the version, and merges itself when the checks pass (RFC 0080).
     /// </summary>
     FirstClaim,
 }

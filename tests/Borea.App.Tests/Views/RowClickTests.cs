@@ -389,12 +389,14 @@ public sealed class RowClickTests
         var item = viewModel.ContentGroups.Single().Items.Single();
         Assert.True(item.CanManage);
 
-        var (buttons, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
+        var (buttons, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             var buttons = row.GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible && button.Classes.Contains("text"));
             ClickCenter(window, MenuEntry(window, row, item.BeginManageCommand));
-            return Task.FromResult((buttons, item.OpenCommand.ExecutionTask, viewModel.SelectedContent));
+            if (item.BeginManageCommand.ExecutionTask is { } running)
+                await running;
+            return (buttons, item.OpenCommand.ExecutionTask, viewModel.SelectedContent);
         });
 
         // the row itself carries no text button, only the switch, the update and the menu

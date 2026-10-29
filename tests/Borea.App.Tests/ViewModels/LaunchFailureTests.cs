@@ -125,6 +125,60 @@ public sealed class LaunchFailureTests
         Assert.False(viewModel.CanDisableBlamedMod);
     }
 
+    [Fact]
+    public async Task Play_LoaderCannotLoadAGameAssembly_SaysTheLoaderNeedsAnUpdate()
+    {
+        string[] starMap5638Crash =
+        [
+            "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+            "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
+            "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+        ];
+        using var harness = await ViewModelHarness.CreateAsync(
+            services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game).WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap")));
+            },
+            processStarter: new CrashingStarter(UnhandledException, starMap5638Crash));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchLoaderTooOld("StarMap", "2026.8.3.5117"), viewModel.LaunchMessage);
+        Assert.Equal("https://github.com/StarMapLoader/StarMap/releases", viewModel.LaunchLoaderReleases?.Url);
+        Assert.False(viewModel.CanDisableBlamedMod);
+    }
+
+    [Fact]
+    public async Task PlayActiveInstance_OtherModsNeedMissingGameParts_NamesThemAndDisablesThemWithTheBlamedMod()
+    {
+        var started = LaunchResult.Success(WrapperPlan, 4244, "Started.");
+        var stopped = LaunchResult.ExitedEarly(WrapperPlan, UnhandledException, ["File name: 'Brutal.Core.Numerics, Version=2026.9.0.0'"], "KSArmory", "English text.", LoaderCrashCause.ModAssembly, otherBlamedModIds: ["MeasureTools"]);
+        using var harness = await CreateWithLauncherAsync(new FixedLauncher(started, stopped));
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "KSArmory", activate: true, ownership: ModInstallOwnership.Borea);
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea, into: instance);
+        await viewModel.LoadAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        var localization = harness.Localization;
+        Assert.Equal(localization.FormatLaunchModBroke("KSArmory", "0.8.44", "StarMap") + " " + localization.FormatLaunchOtherModsNeedMissing("MeasureTools"), viewModel.LaunchMessage);
+        Assert.Equal(localization.FormatLaunchDisableMods(2), viewModel.DisableBlamedModText);
+
+        await viewModel.DisableBlamedModCommand.ExecuteAsync(null);
+
+        Assert.False(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "KSArmory"));
+        Assert.False(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "MeasureTools"));
+        Assert.Equal(localization.FormatLaunchModsDisabled(2), viewModel.LaunchMessage);
+        Assert.Null(viewModel.DisableBlamedModText);
+    }
+
     private const int AccessViolation = -1073741819;
 
     private static readonly string[] ModLoadingCrash =
@@ -496,29 +550,24 @@ public sealed class LaunchFailureTests
         Assert.False(viewModel.CanDisableBlamedMod);
     }
 
-    [Fact]
-    public async Task PlayWithoutModLoader_GameOnNoDriveOfTheWrapper_NamesTheExecutable()
+    [Theory]
+    [InlineData(SharedProfileLaunchOutcome.WrapperBusy)]
+    [InlineData(SharedProfileLaunchOutcome.PathOutsidePrefix)]
+    public async Task PlayWithoutModLoader_WrapperRefusesTheLaunch_SaysWhyInTheDisplayLanguage(SharedProfileLaunchOutcome outcome)
     {
         var executable = Path.Combine(Path.GetTempPath(), "KSA.exe");
-        var launcher = new FixedSharedProfileLauncher(SharedProfileLaunchResult.Failed(SharedProfileLaunchOutcome.PathOutsidePrefix, "English text.", wine: WrapperInstall, unmappedPath: executable));
+        var launcher = new FixedSharedProfileLauncher(SharedProfileLaunchResult.Failed(outcome, "English text.", wine: WrapperInstall, unmappedPath: outcome == SharedProfileLaunchOutcome.PathOutsidePrefix ? executable : null));
         using var harness = await ViewModelHarness.CreateAsync(sharedProfileLauncher: launcher);
         harness.Localization.TrySetCulture("de");
 
         await harness.ViewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatLaunchPathOutsidePrefix(executable, WrapperInstall.PrefixRoot), harness.ViewModel.LaunchMessage);
-    }
-
-    [Fact]
-    public async Task PlayWithoutModLoader_WrapperBusy_SaysWhyInTheDisplayLanguage()
-    {
-        var launcher = new FixedSharedProfileLauncher(SharedProfileLaunchResult.Failed(SharedProfileLaunchOutcome.WrapperBusy, "English text.", wine: WrapperInstall));
-        using var harness = await ViewModelHarness.CreateAsync(sharedProfileLauncher: launcher);
-        harness.Localization.TrySetCulture("de");
-
-        await harness.ViewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
-
-        Assert.Equal(harness.Localization.FormatLaunchWrapperBusy(WrapperBundle), harness.ViewModel.LaunchMessage);
+        var expected = outcome switch
+        {
+            SharedProfileLaunchOutcome.WrapperBusy => harness.Localization.FormatLaunchWrapperBusy(WrapperBundle),
+            _ => harness.Localization.FormatLaunchPathOutsidePrefix(executable, WrapperInstall.PrefixRoot),
+        };
+        Assert.Equal(expected, harness.ViewModel.LaunchMessage);
     }
 
     private static readonly DotnetRuntimeNeed Dotnet10 = DotnetRuntimeNeed.Parse("""{ "runtimeOptions": { "framework": { "name": "Microsoft.NETCore.App", "version": "10.0.0" } } }""")!;
@@ -978,6 +1027,9 @@ public sealed class LaunchFailureTests
             Refreshes.Add((loader.ModId, loaderDirectory, gameDirectory, launcher.Launches));
             return failure is null ? Task.FromResult<string?>(null) : Task.FromException<string?>(failure);
         }
+
+        public Task<string?> PrepareForLaunchAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, bool isAdopted, CancellationToken cancellationToken = default) =>
+            RefreshForWineAsync(loader, loaderDirectory, gameDirectory, cancellationToken);
 
         public string GamePathValue(string gameDirectory) => gameDirectory;
     }

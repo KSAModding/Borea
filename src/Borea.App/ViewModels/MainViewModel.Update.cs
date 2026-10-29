@@ -166,9 +166,7 @@ public partial class MainViewModel
     /// <summary>Starts a release check in the background. Only the answer of the latest check is shown, whichever answers last.</summary>
     private void CheckForUpdateAgain()
     {
-        var previous = _updateCheck;
-        var check = CheckForUpdateAsync(++_updateCheckGeneration);
-        _updateCheck = previous.IsCompleted ? check : Task.WhenAll(previous, check);
+        _updateCheck = Chain(_updateCheck, CheckForUpdateAsync(++_updateCheckGeneration));
     }
 
     /// <summary>Completes when the release checks have finished.</summary>

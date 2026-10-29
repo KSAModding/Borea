@@ -7,8 +7,6 @@ namespace Borea.Storage.Toml;
 
 /// <summary>
 /// Generic helper for reading and writing a single object as a TOML file.
-/// Wraps Tomlyn so every concrete repository shares the same file I/O and
-/// directory-creation behavior instead of reimplementing it per DTO type.
 /// </summary>
 public static class TomlFileStore
 {
@@ -59,10 +57,6 @@ public static class TomlFileStore
         await AtomicFile.WriteAllTextAsync(path, text, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Deletes the TOML file at <paramref name="path"/> if present. No-op if
-    /// it doesn't exist.
-    /// </summary>
     public static void DeleteIfExists(string path)
     {
         if (File.Exists(path))
