@@ -20,6 +20,13 @@ public sealed class LaunchFailureTests
         "Method 'DrawAxes' in type 'KSArmory.RoundFollowable' from assembly 'KSArmory, Version=0.8.44.0, Culture=neutral, PublicKeyToken=null' does not have an implementation.",
     ];
 
+    private static readonly string[] StarMapGameAssemblyCrash =
+    [
+        "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+        "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
+        "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+    ];
+
     /// <summary>A harness with StarMap recorded and a loader process that has already crashed with <see cref="KsArmoryCrash"/>.</summary>
     internal static Task<ViewModelHarness> CreateAsync(int exitCode = UnhandledException) => CreateAsync(new CrashingStarter(exitCode, KsArmoryCrash));
 
@@ -168,24 +175,43 @@ public sealed class LaunchFailureTests
         Assert.Equal("https://github.com/StarMapLoader/StarMap/releases", viewModel.LaunchLoaderReleases?.Url);
     }
 
-    /// <summary>A harness whose game is build 5117 and whose StarMap stops because it cannot load an assembly of the game.</summary>
-    private static Task<ViewModelHarness> CreateWithGameAssemblyCrashAsync()
+    [Fact]
+    public async Task Play_LoaderCannotLoadAKeptBuildWithAnOffer_NamesBothVersionsAndInstallsTheOffer()
     {
-        string[] starMap5638Crash =
-        [
-            "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
-            "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
-            "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
-        ];
-        return ViewModelHarness.CreateAsync(
+        // only StarMap 0.4.6 fits the kept build of this fixture, and the recorded 0.4.7 stops on it
+        using var harness = await LoaderUpdateTests.CreateAsync(installed: "0.4.7", starter: new CrashingStarter(UnhandledException, StarMapGameAssemblyCrash), keptBuild: true);
+        await LoaderUpdateTests.KeepBuildActiveAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+        await viewModel.PlayAnywayCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchLoaderTooOldForKeptBuildOffer("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), viewModel.LaunchMessage);
+        Assert.Null(viewModel.LaunchLoaderReleases);
+        Assert.Equal(harness.Localization.FormatLoaderInstallAction("StarMap", "0.4.6"), viewModel.LaunchLoaderInstallText);
+        Assert.False(viewModel.ShowsLaunchFailureClose);
+
+        await viewModel.InstallLaunchLoaderOfferCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsLaunchFailureOpen);
+        Assert.Null(viewModel.SetupError);
+        Assert.Null(viewModel.LaunchLoaderInstallText);
+        var versions = (await harness.Services.LoaderVersions.ListAsync()).Select(version => version.Version?.ToString()).Order(StringComparer.Ordinal);
+        Assert.Equal(["0.4.6", "0.4.7"], versions);
+    }
+
+    /// <summary>A harness whose game is build 5117 and whose StarMap stops because it cannot load an assembly of the game.</summary>
+    private static Task<ViewModelHarness> CreateWithGameAssemblyCrashAsync() =>
+        ViewModelHarness.CreateAsync(
             services =>
             {
                 var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
                 File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
                 return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game).WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap")));
             },
-            processStarter: new CrashingStarter(UnhandledException, starMap5638Crash));
-    }
+            processStarter: new CrashingStarter(UnhandledException, StarMapGameAssemblyCrash));
 
     [Fact]
     public async Task PlayActiveInstance_OtherModsNeedMissingGameParts_NamesThemAndDisablesThemWithTheBlamedMod()

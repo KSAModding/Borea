@@ -3632,6 +3632,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchLoaderTooOldForKeptBuild(string loader, string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldForKeptBuildFormat, loader, build);
 
+    public string FormatLaunchLoaderTooOldForKeptBuildOffer(string loader, string failed, string build, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldForKeptBuildOfferFormat, loader, failed, build, offer);
+
     public string FormatLaunchLoaderReleases(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderReleasesFormat, loader);
 

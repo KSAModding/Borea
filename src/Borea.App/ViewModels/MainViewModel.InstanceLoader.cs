@@ -120,15 +120,18 @@ public partial class MainViewModel
     internal bool IsRowInstalling(string loaderId, ModVersionMetadata? release) =>
         _rowLoaderInstall is { } running && release is not null && ModIds.Equals(running.LoaderId, loaderId) && running.Version == release.Version;
 
-    /// <summary>Installs <paramref name="release"/> for a Mod loader row, and the rows show the install until it ends.</summary>
+    /// <summary>
+    /// Installs <paramref name="release"/> for a Mod loader row, and the rows show the install until it ends. False when
+    /// it did not install.
+    /// </summary>
     /// <param name="replaced">The version that an update replaces, or null for an install.</param>
-    internal async Task InstallLoaderFromRowAsync(string loaderId, ModVersionMetadata release, ModVersion? replaced)
+    internal async Task<bool> InstallLoaderFromRowAsync(string loaderId, ModVersionMetadata release, ModVersion? replaced)
     {
         _rowLoaderInstall = (loaderId, release.Version);
         RefreshInstanceLoader();
         try
         {
-            await InstallLoaderVersionAsync(loaderId, release, replaced);
+            return await InstallLoaderVersionAsync(loaderId, release, replaced);
         }
         finally
         {

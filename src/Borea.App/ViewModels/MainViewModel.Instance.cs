@@ -141,6 +141,16 @@ public partial class MainViewModel
     [ObservableProperty]
     private ContentLink? _launchLoaderReleases;
 
+    /// <summary>The loader release that fits the kept build, offered when the loader was made for another KSA build.</summary>
+    private (string LoaderId, ModVersionMetadata Release)? _launchLoaderOffer;
+
+    public string? LaunchLoaderInstallText => _launchLoaderOffer is { } offer
+        ? Localization.FormatLoaderInstallAction(_launchLoaderName ?? string.Empty, offer.Release.Version.ToString())
+        : null;
+
+    /// <summary>False while the modal leads with an action, because the X closes it too.</summary>
+    public bool ShowsLaunchFailureClose => !CanDisableBlamedMod && _launchLoaderOffer is null;
+
     [RelayCommand]
     internal async Task OpenInstanceAsync(InstanceItem item)
     {
@@ -748,8 +758,9 @@ public partial class MainViewModel
                 result = await services.Launcher.WatchStartAsync(instance, result);
             }
 
+            // an install cannot change the version of a pinned instance, so only an Automatic one on a kept build gets an offer
             if (result.Outcome == LaunchOutcome.ExitedEarly)
-                await ShowLaunchFailureAsync(result, instance, loader);
+                await ShowLaunchFailureAsync(result, instance, loader, instance.GameBuild is null || version.IsPinned ? null : recorded);
             else
                 LaunchMessage = LaunchResultText(result, loader, instance.Name);
 
@@ -815,7 +826,8 @@ public partial class MainViewModel
         : InstalledVersionText is { } build ? Localization.FormatLaunchLoaderTooOld(loaderName, build)
         : null;
 
-    private async Task ShowLaunchFailureAsync(LaunchResult result, Instance instance, ModMetadata? loader)
+    /// <param name="keptRating">The loader that started rated against the kept build of the instance, whose offer the modal installs, or null.</param>
+    private async Task ShowLaunchFailureAsync(LaunchResult result, Instance instance, ModMetadata? loader, LoaderUpdate? keptRating)
     {
         var loaderName = _launchLoaderName = loader?.Name ?? string.Empty;
         var blamed = result.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, result.BlamedModId));
@@ -824,6 +836,12 @@ public partial class MainViewModel
         if (result.Wine?.Wrapper is { } wrapper)
         {
             LaunchMessage = Localization.FormatLaunchWrapperStopped(wrapper.BundlePath, loaderName);
+        }
+        else if (result.CrashCause == LoaderCrashCause.GameAssembly && blamed is null && loader is not null
+            && keptRating is { InstalledVersion: { } failed, Offer: { } offer } && KeptBuildTextOf(instance) is { } kept)
+        {
+            LaunchMessage = Localization.FormatLaunchLoaderTooOldForKeptBuildOffer(loaderName, failed.ToString(), kept, offer.Version.ToString());
+            _launchLoaderOffer = (loader.ModId, offer);
         }
         else if (result.CrashCause == LoaderCrashCause.GameAssembly && blamed is null && LoaderTooOldText(instance, loaderName) is { } tooOld && loader is not null)
         {
@@ -860,8 +878,7 @@ public partial class MainViewModel
             ? string.Join(Environment.NewLine, [Localization.FormatLaunchExitCode(LoaderExitCode.Describe(exitCode, OperatingSystem.IsWindows())), string.Empty, .. output])
             : string.Join(Environment.NewLine, output);
         LaunchBlamedModId = blamed?.ModId;
-        OnPropertyChanged(nameof(DisableBlamedModText));
-        OnPropertyChanged(nameof(LaunchFailureTitle));
+        RefreshLaunchFailureActions();
         LaunchFailureError = null;
         IsLaunchFailureOpen = true;
     }
@@ -877,8 +894,16 @@ public partial class MainViewModel
         _launchBlamedModName = null;
         _launchOtherModIds = [];
         _launchLoaderName = null;
+        _launchLoaderOffer = null;
+        RefreshLaunchFailureActions();
+    }
+
+    private void RefreshLaunchFailureActions()
+    {
         OnPropertyChanged(nameof(DisableBlamedModText));
         OnPropertyChanged(nameof(LaunchFailureTitle));
+        OnPropertyChanged(nameof(LaunchLoaderInstallText));
+        OnPropertyChanged(nameof(ShowsLaunchFailureClose));
     }
 
     [RelayCommand]
@@ -916,6 +941,28 @@ public partial class MainViewModel
             await OpenInstanceAsync(shown);
         ClearLaunchFailure();
         LaunchMessage = modIds.Length > 1 ? Localization.FormatLaunchModsDisabled(modIds.Length) : Localization.FormatLaunchModDisabled(name);
+    }
+
+    /// <summary>
+    /// Installs the offered loader release beside the installed ones, through the Mod loader row so that the row shows
+    /// the install too. The modal closes first, so the install shows in Tasks and a failure shows as a toast. A good
+    /// install clears the launch line, because the line names the problem that the install fixed. Play stays live during
+    /// the download, so a newer launch can replace the line or the failure before the install ends, and then they stay.
+    /// </summary>
+    [RelayCommand]
+    private async Task InstallLaunchLoaderOfferAsync()
+    {
+        if (_launchLoaderOffer is not { } offer)
+            return;
+
+        var line = LaunchMessage;
+        IsLaunchFailureOpen = false;
+        if (await InstallLoaderFromRowAsync(offer.LoaderId, offer.Release, replaced: null)
+            && _launchLoaderOffer == offer && ReferenceEquals(LaunchMessage, line))
+        {
+            ClearLaunchFailure();
+            LaunchMessage = null;
+        }
     }
 
     [RelayCommand]
