@@ -227,8 +227,10 @@ public static class DtoMapper
         // A share host names the listing id (RFC 0094). Without an authority it counts only alone, because an id can look like
         // a version, and a key such as until = "2.0" next to github must not make two hosts without an authority.
         var shares = entries
-            .Where(kvp => ReleaseHost.IsShareKey(kvp.Key) && kvp.Value.ValueKind == JsonValueKind.String && ModIds.IsValid(kvp.Value.GetString()))
-            .Select(kvp => new ReleaseHost(kvp.Key, kvp.Value.GetString()!))
+            .Where(kvp => ReleaseHost.IsShareKey(kvp.Key) && kvp.Value.ValueKind == JsonValueKind.String)
+            .Select(kvp => (kvp.Key, Id: IndexJsonHelpers.TryReadText(kvp.Value)))
+            .Where(share => ModIds.IsValid(share.Id))
+            .Select(share => new ReleaseHost(share.Key, share.Id!))
             .ToList();
         if (dto.Authority is not null || (hosts.Count == 0 && shares.Count == 1))
             hosts.AddRange(shares);

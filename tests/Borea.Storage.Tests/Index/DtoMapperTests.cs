@@ -429,6 +429,7 @@ public sealed class DtoMapperTests
     [InlineData("\"-x\"")]
     [InlineData("\"CON\"")]
     [InlineData("\"\"")]
+    [InlineData("\"\\ud800\"")]
     [InlineData("{ \"id\": \"ExampleRover\" }")]
     public void MapAuthored_ReleaseSource_ShareKeyWithoutAValidId_IsDropped(string value)
     {
