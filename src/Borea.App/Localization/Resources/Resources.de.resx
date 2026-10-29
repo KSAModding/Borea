@@ -1315,7 +1315,7 @@
     <value>{0} auf {1} aktualisieren</value>
   </data>
   <data name="LoaderUpdateGameRunning" xml:space="preserve">
-    <value>Schließe zuerst KSA. Borea kann den Mod-Loader nicht aktualisieren, während das Spiel läuft.</value>
+    <value>Schließe zuerst das Spiel und versuche es dann erneut. Borea kann den Mod-Loader nicht ändern, während das Spiel läuft.</value>
   </data>
   <data name="LoaderPinnedMissingFormat" xml:space="preserve">
     <value>Die Instanz {2} ist bei {0} {1} angeheftet, und diese Version ist nicht installiert.</value>
@@ -4678,7 +4678,7 @@
     <value>Diese Instanz läuft auf einem behaltenen KSA-Build, und der Ordner dieses Builds fehlt oder enthält einen anderen Build. Borea startet nichts, damit die Instanz nicht auf einem anderen Build startet. Um stattdessen den Spielordner der Einstellungen zu verwenden, wähle „Aktuellen Spiel-Build verwenden“ im Menü der Instanz.</value>
   </data>
   <data name="LaunchOtherBuildRunningFormat" xml:space="preserve">
-    <value>Ein Spiel läuft, und {0} liest dafür einen anderen Spielordner. Wenn Borea diesen Ordner jetzt ändert, würde ein Neustart des laufenden Spiels den falschen Build laden. Borea startet nichts. Schließe das Spiel zuerst.</value>
+    <value>Schließe zuerst das laufende Spiel. Um diese Instanz zu starten, muss Borea {0} auf einen anderen Spielordner umstellen, und das tut Borea nur, wenn kein Spiel läuft.</value>
   </data>
   <data name="LaunchLoaderTakesNoGamePathFormat" xml:space="preserve">
     <value>Diese Instanz läuft auf einem behaltenen KSA-Build, und das Listing von {0} nennt keinen Spielpfad, den Borea schreiben kann. Borea startet nichts. Der Autor des Loaders kann dem Listing eine Tabelle [provides.configure] hinzufügen.</value>

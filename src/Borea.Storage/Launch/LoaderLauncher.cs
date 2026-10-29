@@ -402,7 +402,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         {
             return LaunchResult.Failed(
                 LaunchOutcome.OtherBuildRunning,
-                $"A game is running, and {loader.Name} reads the game folder '{held}' for it. If Borea wrote the game folder of instance '{instance.Name}' now, a restart of the running game would load the wrong build. Borea starts nothing. Close the game first.",
+                $"Close the running game first. To start instance '{instance.Name}', Borea must point {loader.Name} from '{held}' to another game folder, and it does that only while no game runs.",
                 plan);
         }
 

@@ -158,7 +158,7 @@ public sealed class LaunchCommandTests : IDisposable
         var run = await _host.RunAsync("launch", "Current", "StarMap");
 
         Assert.Equal(1, run.ExitCode);
-        Assert.Contains("A game is running", run.Error);
+        Assert.Contains("Close the running game first", run.Error);
         Assert.Equal(before, await File.ReadAllBytesAsync(file));
         Assert.Single(_host.ProcessStarter.Plans);
     }
