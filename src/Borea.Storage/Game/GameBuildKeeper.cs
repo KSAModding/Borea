@@ -645,10 +645,9 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
 
     private static bool IsSameOrInside(string path, string folder)
     {
-        var comparison = OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         path = Path.TrimEndingDirectorySeparator(path);
         var prefix = Path.EndsInDirectorySeparator(folder) ? folder : folder + Path.DirectorySeparatorChar;
-        return string.Equals(path, folder, comparison) || path.StartsWith(prefix, comparison);
+        return string.Equals(path, folder, FileSystemPaths.PathComparison) || path.StartsWith(prefix, FileSystemPaths.PathComparison);
     }
 
     private sealed record GameFile(string SourcePath, string RelativePath, long Length, DateTime LastWriteTimeUtc);
