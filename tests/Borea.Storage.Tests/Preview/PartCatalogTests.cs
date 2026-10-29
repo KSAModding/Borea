@@ -110,7 +110,7 @@ public sealed class PartCatalogTests : IDisposable
     public void Materials_ResolveAcrossMods_InlineOnesGetAStableKey_AndModelFlagsAndPatchesAreRead()
     {
         const string coreAssets = """
-            <PbrMaterial Id="Hull"><Diffuse Path="Textures/hull.ktx2" /><AoRoughMetal Path="Textures\hull_pbr.ktx2" /></PbrMaterial>
+            <PbrMaterial Id="Hull"><Diffuse Path="Textures/hull.ktx2" /><Normal Path="Textures/hull_n.ktx2" /><AoRoughMetal Path="Textures\hull_pbr.ktx2" /></PbrMaterial>
             """;
         const string modAssets = """
             <Part Id="P">
@@ -131,7 +131,7 @@ public sealed class PartCatalogTests : IDisposable
         Assert.True(catalog.TryGetTemplate("P", out var part));
         var (reference, inline, glass) = (part.RenderModels[0], part.RenderModels[1], part.RenderModels[2]);
         Assert.True(catalog.TryGetMaterial(reference.MaterialKey!, out var hull));
-        Assert.Equal(new MaterialData("Hull", new PreviewAssetRef("Core", "Textures/hull.ktx2"), new PreviewAssetRef("Core", "Textures/hull_pbr.ktx2")), hull);
+        Assert.Equal(new MaterialData("Hull", new PreviewAssetRef("Core", "Textures/hull.ktx2"), new PreviewAssetRef("Core", "Textures/hull_pbr.ktx2"), new PreviewAssetRef("Core", "Textures/hull_n.ktx2")), hull);
         Assert.Equal((true, false), (reference.Internal, reference.ShadowProxy));
         Assert.True(catalog.TryGetMaterial(inline.MaterialKey!, out var own));
         Assert.Equal(new PreviewAssetRef("Mod", "Textures/own.png"), own.Diffuse);

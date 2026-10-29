@@ -422,6 +422,26 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         ShowNotices();
         SetState(result.MissingMods.Count > 0 ? VehiclePreviewState.NeedsMods : VehiclePreviewState.Ready);
         await StoreStillAsync(textured, result, textureNotices.Any(notice => notice.Kind == PreviewNoticeKind.AssetFailed), token);
+        await AddNormalsAsync(textured, result.Vehicle, result.Assets, token);
+    }
+
+    /// <summary>
+    /// Gives the scene its normal maps. Only the High frame of a view at rest reads them, so the Standard frames and
+    /// the still do not wait for them. A failure or a cancel keeps the scene without normal maps and never changes
+    /// the panel.
+    /// </summary>
+    private async Task AddNormalsAsync(PreviewScene textured, ResolvedVehicle vehicle, IPreviewAssetSource assets, CancellationToken token)
+    {
+        try
+        {
+            var scene = await _builder.AddNormalsAsync(textured, vehicle, assets, _options, token);
+            if (!_disposed && !token.IsCancellationRequested && ReferenceEquals(Scene, textured) && !ReferenceEquals(scene, textured))
+                Scene = scene;
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // A Standard frame does not read a normal map, and a High frame without one shows the same pixels.
+        }
     }
 
     /// <summary>

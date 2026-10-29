@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
 using PreviewRenderOptions = Borea.Preview.Rendering.RenderOptions;
@@ -16,17 +17,34 @@ using PreviewRenderOptions = Borea.Preview.Rendering.RenderOptions;
 namespace Borea.App.Views.Preview;
 
 /// <summary>
-/// Shows a <see cref="PreviewScene"/> that the player can turn with a drag or the arrow keys and zoom
-/// with the wheel. The software renderer draws each frame on a background task into a bitmap that this
-/// control stretches over its bounds, and it draws only when the scene, the size or the camera changes.
+/// Shows a <see cref="PreviewScene"/> with the controls of the orbit camera of the game editor. A left or a
+/// right drag turns the view, with or without Shift, and so do the arrow keys. A middle drag zooms, away from
+/// the vehicle for a drag down and closer for a drag up. The wheel moves the target up and down the vehicle
+/// axis, and the wheel with Shift zooms. Q and E move the target up and down the axis too, and W and S zoom.
+/// A move of the target scales with the height that the view shows at the target, so it feels the same for a
+/// small capsule and a tall rocket. F, Home and a double click with the left button frame the whole vehicle
+/// again. The software renderer draws each frame on a background task into a bitmap that this control stretches
+/// over its bounds, and it draws only when the scene, the size or the camera changes.
 /// While a drag holds the pointer, the frames render at <see cref="PreviewRenderOptions.DragScale"/> of the
 /// full resolution, or at <see cref="PreviewRenderOptions.SlowDragScale"/> when <see cref="DragScaleController"/>
-/// finds the drag frames too slow. Each new drag starts at the normal drag scale again.
+/// finds the drag frames too slow. Each new drag starts at the normal drag scale again. When a full frame shows
+/// and no input follows for <see cref="RefineDelay"/>, the view renders the same camera once more at
+/// <see cref="RenderQuality.High"/>, and any input cancels that frame at once.
 /// </summary>
 public sealed class VehiclePreviewView : Control
 {
     /// <summary>How far one arrow key press turns the camera, 10 degrees.</summary>
     internal const float KeyStepPixels = 10f * MathF.PI / 180f / OrbitCamera.RadiansPerPixel;
+
+    /// <summary>How far one wheel notch or one press of Q or E moves the target, as a fraction of the height that the view shows at the target.</summary>
+    internal const float AxisStepFraction = 0.1f;
+
+    /// <summary>
+    /// The zoom steps for each pixel that a middle drag moves down. The game multiplies the distance by 1.1 to the
+    /// power of 0.1 for each pixel, and these steps give the same factor, so the value is negative and a drag down
+    /// moves away.
+    /// </summary>
+    internal static readonly float ZoomStepsPerDragPixel = 0.1f * MathF.Log(1.1f) / MathF.Log(OrbitCamera.ZoomStepFactor);
 
     public static readonly StyledProperty<PreviewScene?> SceneProperty =
         AvaloniaProperty.Register<VehiclePreviewView, PreviewScene?>(nameof(Scene));
@@ -44,13 +62,16 @@ public sealed class VehiclePreviewView : Control
     // A drag frame shows for a short time only, so it leaves out the parts that are smaller than one of its pixels.
     private static readonly PreviewRenderOptions DragOptions = Options with { SkipSubPixelDraws = true };
 
+    // The view renders this level only for a camera at rest, because a frame costs more for each covered pixel.
+    private static readonly PreviewRenderOptions HighOptions = Options with { Quality = RenderQuality.High };
+
     // The pitch in drag pixels stays inside the clamp of OrbitCamera.Orbit, so a drag back responds at once.
     private static readonly float MinOrbitY = (-OrbitCamera.MaxPitch - OrbitCamera.DefaultPitch) / OrbitCamera.RadiansPerPixel;
     private static readonly float MaxOrbitY = (OrbitCamera.MaxPitch - OrbitCamera.DefaultPitch) / OrbitCamera.RadiansPerPixel;
 
-    // The zoom steps stay inside the 0.15 to 4 times distance clamp of OrbitCamera.Zoom for the same reason.
-    private static readonly float MinZoomSteps = MathF.Log(4f) / MathF.Log(OrbitCamera.ZoomStepFactor);
-    private static readonly float MaxZoomSteps = MathF.Log(0.15f) / MathF.Log(OrbitCamera.ZoomStepFactor);
+    // The zoom steps stay inside the distance clamp of OrbitCamera.Zoom for the same reason.
+    private static readonly float MinZoomSteps = MathF.Log(OrbitCamera.MaxZoomFactor) / MathF.Log(OrbitCamera.ZoomStepFactor);
+    private static readonly float MaxZoomSteps = MathF.Log(OrbitCamera.MinZoomFactor) / MathF.Log(OrbitCamera.ZoomStepFactor);
 
     // The renderer keeps the vertices of the scene between frames, and only one frame renders at a time.
     private readonly SoftwareRenderer _renderer = new();
@@ -61,12 +82,19 @@ public sealed class VehiclePreviewView : Control
     private float _orbitX;
     private float _orbitY;
     private float _zoomSteps;
+
+    // The target offset along +X from the framed center. RequestRender keeps it inside the reach of the camera.
+    private float _axisOffset;
     private Point? _dragFrom;
+    private bool _dragZooms;
+    private int _leftClicks;
     private WriteableBitmap? _bitmap;
     private RenderRequest? _queued;
     private bool _rendering;
     private int _generation;
     private CancellationTokenSource _cancellation = new();
+    private IDisposable? _refineTimer;
+    private CancellationTokenSource? _refine;
 
     static VehiclePreviewView()
     {
@@ -96,7 +124,25 @@ public sealed class VehiclePreviewView : Control
 
     internal float CameraYaw => _camera.Yaw;
 
+    internal float CameraAxisOffset => _camera.AxisOffset;
+
+    internal float CameraAxisReach => _camera.AxisReach;
+
+    /// <summary>
+    /// The number of Standard frames that showed. A High frame only refines the frame that shows, so it counts in
+    /// <see cref="HighFramesShown"/> and not here.
+    /// </summary>
     internal int FramesShown { get; private set; }
+
+    internal int HighFramesShown { get; private set; }
+
+    internal RenderQuality ShownQuality { get; private set; }
+
+    /// <summary>The number of drag frames whose time went to the <see cref="DragScaleController"/>.</summary>
+    internal int DragFramesRecorded { get; private set; }
+
+    /// <summary>How long a full frame shows without input before the view renders it again at High quality.</summary>
+    internal TimeSpan RefineDelay { get; set; } = TimeSpan.FromMilliseconds(180);
 
     /// <summary>The scene of the frame that shows now, or null when only the background shows.</summary>
     internal PreviewScene? ShownScene { get; private set; }
@@ -114,6 +160,7 @@ public sealed class VehiclePreviewView : Control
         _orbitX = 0;
         _orbitY = 0;
         _zoomSteps = 0;
+        _axisOffset = 0;
         RequestRender(full: true);
     }
 
@@ -135,7 +182,7 @@ public sealed class VehiclePreviewView : Control
             var old = change.GetOldValue<PreviewScene?>();
             var scene = change.GetNewValue<PreviewScene?>();
 
-            // The wheel zooms only a scene, so without one a page that scrolls around the view gets the wheel.
+            // The wheel moves the camera only for a scene, so without one a page that scrolls around the view gets the wheel.
             SmoothScroll.SetOwnsWheel(this, scene is not null);
             StartGeneration();
             ReleaseRenderState();
@@ -150,9 +197,13 @@ public sealed class VehiclePreviewView : Control
                 _orbitX = 0;
                 _orbitY = 0;
                 _zoomSteps = 0;
+                _axisOffset = 0;
             }
 
-            RequestRender(full: _dragFrom is null);
+            // When a High frame of the same vehicle shows, the new scene renders at High at once. The old High frame
+            // then stays until the new one replaces it, and the view does not step back to Standard and refine again.
+            var keepHigh = ShownQuality == RenderQuality.High && _dragFrom is null;
+            RequestRender(full: _dragFrom is null, high: keepHigh);
         }
         else if (change.Property == ResetCountProperty)
         {
@@ -185,12 +236,22 @@ public sealed class VehiclePreviewView : Control
     {
         base.OnPointerPressed(e);
         var point = e.GetCurrentPoint(this);
-        if (!point.Properties.IsLeftButtonPressed)
+        var properties = point.Properties;
+        var left = properties.IsLeftButtonPressed;
+
+        // Avalonia counts the presses of all buttons in one click count, so a left press right after a right click
+        // has a count of 2. The view counts the left presses in a run itself, and a press of another button ends the run.
+        _leftClicks = !left ? 0 : e.ClickCount > 1 && _leftClicks > 0 ? _leftClicks + 1 : 1;
+
+        // A right or a middle press without a scene goes on to the page, which scrolls with a middle press.
+        if (!left && (Scene is null || (!properties.IsRightButtonPressed && !properties.IsMiddleButtonPressed)))
             return;
 
+        // A press can start a drag that moves the camera, so the High frame of the old camera stops before it.
+        CancelRefine();
         Focus(NavigationMethod.Pointer);
         e.Handled = true;
-        if (e.ClickCount == 2)
+        if (_leftClicks == 2)
         {
             _dragFrom = null;
             ResetView();
@@ -198,8 +259,13 @@ public sealed class VehiclePreviewView : Control
         }
 
         _dragFrom = point.Position;
+        _dragZooms = !left && !properties.IsRightButtonPressed;
         _dragScales.Reset();
         e.Pointer.Capture(this);
+
+        // The press can stop the High frame of a new scene, which then needs a frame of its own before the drag moves.
+        if (Scene is not null && ShownScene is not null && ShownScene != Scene)
+            RequestRender(full: false);
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -210,21 +276,32 @@ public sealed class VehiclePreviewView : Control
 
         var position = e.GetPosition(this);
         _dragFrom = position;
-        Orbit((float)(position.X - from.X), (float)(position.Y - from.Y), full: false);
+        var (dx, dy) = ((float)(position.X - from.X), (float)(position.Y - from.Y));
+        if (_dragZooms)
+            Zoom(dy * ZoomStepsPerDragPixel);
+        else
+            Orbit(dx, dy, full: false);
+
         e.Handled = true;
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnPointerReleased(e);
-        if (_dragFrom is null)
-            return;
+        // The base raises a context request for a right release that is not handled, so the release is handled first.
+        if (_dragFrom is not null)
+        {
+            // Clearing the drag first lets the capture-lost handler see that the drag already ended.
+            _dragFrom = null;
+            e.Pointer.Capture(null);
+            e.Handled = true;
+            RequestRender(full: true);
+        }
+        else if (e.InitialPressMouseButton == MouseButton.Right && Scene is not null)
+        {
+            e.Handled = true;
+        }
 
-        // Clearing the drag first lets the capture-lost handler see that the drag already ended.
-        _dragFrom = null;
-        e.Pointer.Capture(null);
-        e.Handled = true;
-        RequestRender(full: true);
+        base.OnPointerReleased(e);
     }
 
     protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
@@ -243,14 +320,27 @@ public sealed class VehiclePreviewView : Control
         if (Scene is null)
             return;
 
-        _zoomSteps = Math.Clamp(_zoomSteps + (float)e.Delta.Y, MinZoomSteps, MaxZoomSteps);
         e.Handled = true;
-        RequestRender(full: _dragFrom is null);
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+        {
+            // Some systems turn the wheel with Shift into a sideways wheel, so a delta only on X counts too.
+            Zoom((float)(e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X));
+        }
+        else
+        {
+            MoveAlongAxis((float)e.Delta.Y);
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        if (Scene is not null && e.KeyModifiers == KeyModifiers.None && MoveByKey(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         var (dx, dy) = e.Key switch
         {
             Key.Left => (-KeyStepPixels, 0f),
@@ -266,11 +356,74 @@ public sealed class VehiclePreviewView : Control
         Orbit(dx, dy, full: true);
     }
 
+    /// <summary>
+    /// Applies Home and the letter keys of the camera. The letters are physical keys, as in the game, so they keep
+    /// their place on any keyboard layout. Returns false for any other key.
+    /// </summary>
+    private bool MoveByKey(KeyEventArgs e)
+    {
+        if (e.Key == Key.Home)
+        {
+            ResetView();
+            return true;
+        }
+
+        switch (e.PhysicalKey)
+        {
+            case PhysicalKey.W:
+                Zoom(1f);
+                return true;
+            case PhysicalKey.S:
+                Zoom(-1f);
+                return true;
+            case PhysicalKey.Q:
+                MoveAlongAxis(1f);
+                return true;
+            case PhysicalKey.E:
+                MoveAlongAxis(-1f);
+                return true;
+            case PhysicalKey.F:
+                ResetView();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // An input that leaves the pose as it is, such as a step past a limit or a sideways wheel, renders nothing,
+    // so a High frame that shows stays and is not replaced by a Standard frame of the same camera.
+
+    /// <summary>Moves the target up the vehicle axis by <paramref name="steps"/> of <see cref="AxisStepFraction"/>, or down for negative steps.</summary>
+    private void MoveAlongAxis(float steps)
+    {
+        var offset = _axisOffset + steps * _camera.ViewHeight * AxisStepFraction;
+        offset = Math.Clamp(offset, -_camera.AxisReach, _camera.AxisReach);
+        if (offset == _axisOffset)
+            return;
+
+        _axisOffset = offset;
+        RequestRender(full: _dragFrom is null);
+    }
+
+    private void Zoom(float steps)
+    {
+        var zoomSteps = Math.Clamp(_zoomSteps + steps, MinZoomSteps, MaxZoomSteps);
+        if (zoomSteps == _zoomSteps)
+            return;
+
+        _zoomSteps = zoomSteps;
+        RequestRender(full: _dragFrom is null);
+    }
+
     private void Orbit(float dx, float dy, bool full)
     {
         var turn = 2f * MathF.PI / OrbitCamera.RadiansPerPixel;
-        _orbitX = MathF.IEEERemainder(_orbitX + dx, turn);
-        _orbitY = Math.Clamp(_orbitY + dy, MinOrbitY, MaxOrbitY);
+        var orbitX = MathF.IEEERemainder(_orbitX + dx, turn);
+        var orbitY = Math.Clamp(_orbitY + dy, MinOrbitY, MaxOrbitY);
+        if (orbitX == _orbitX && orbitY == _orbitY)
+            return;
+
+        (_orbitX, _orbitY) = (orbitX, orbitY);
         RequestRender(full);
     }
 
@@ -278,9 +431,11 @@ public sealed class VehiclePreviewView : Control
     /// Builds a new camera for the current scene, size and pose, and queues a frame for it. A frame that
     /// waits in the queue is replaced, so only the newest camera renders. Each camera is new and is not
     /// changed after this, so the background task can read it while the player keeps turning the view.
+    /// With <paramref name="high"/>, the full frame renders at High quality without a Standard frame first.
     /// </summary>
-    private void RequestRender(bool full)
+    private void RequestRender(bool full, bool high = false)
     {
+        CancelRefine();
         var size = Bounds.Size;
         var aspect = size.Width > 0 && size.Height > 0 ? (float)(size.Width / size.Height) : 1f;
         var scene = Scene;
@@ -288,6 +443,10 @@ public sealed class VehiclePreviewView : Control
         camera.Frame(scene?.Bounds ?? PreviewBounds.Empty, aspect);
         camera.Orbit(_orbitX, _orbitY);
         camera.Zoom(_zoomSteps);
+        camera.SetAxisOffset(_axisOffset);
+
+        // An offset past an end of the vehicle stopped at that end, so a move back responds at once.
+        _axisOffset = camera.AxisOffset;
         _camera = camera;
 
         if (VisualRoot is null || scene is null || size.Width <= 0 || size.Height <= 0)
@@ -297,7 +456,16 @@ public sealed class VehiclePreviewView : Control
         var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * frameScale;
         var width = Math.Clamp((int)Math.Ceiling(size.Width * scale), 1, FrameBuffer.MaxSize);
         var height = Math.Clamp((int)Math.Ceiling(size.Height * scale), 1, FrameBuffer.MaxSize);
-        _queued = new RenderRequest(scene, camera, width, height, full ? null : frameScale, _generation, _cancellation);
+        var request = new RenderRequest(scene, camera, width, height, full ? null : frameScale, _generation, _cancellation);
+        if (high && full)
+            QueueRefine(request);
+        else
+            Queue(request);
+    }
+
+    private void Queue(RenderRequest request)
+    {
+        _queued = request;
         if (!_rendering)
             _ = RenderQueuedAsync();
     }
@@ -314,9 +482,11 @@ public sealed class VehiclePreviewView : Control
                 var elapsedMs = double.NaN;
                 try
                 {
-                    var token = request.Cancellation.Token;
+                    // A High frame stops on its own token, which a new generation also cancels because it is linked to it.
+                    var high = request.Quality == RenderQuality.High;
+                    var token = high ? request.RefineToken : request.Cancellation.Token;
                     var reused = TakeFrameBuffer(request);
-                    var options = request.DragScale is null ? Options : DragOptions;
+                    var options = high ? HighOptions : request.DragScale is null ? Options : DragOptions;
                     (frame, elapsedMs) = await Task.Run(() =>
                     {
                         var buffer = reused ?? new FrameBuffer(request.Width, request.Height);
@@ -337,12 +507,21 @@ public sealed class VehiclePreviewView : Control
                 if (request.Cancellation != _cancellation)
                     request.Cancellation.Dispose();
 
-                if (frame is not null && request.Generation == _generation)
+                // A Standard frame of an older camera still shows, so a drag that keeps moving keeps showing frames. A
+                // High frame only refines the frame that shows, so it shows only while no input followed it.
+                if (frame is not null && request.Generation == _generation && (request.Quality != RenderQuality.High || IsRefineCurrent(request)))
                 {
-                    Show(frame, request.Scene);
+                    Show(frame, request.Scene, request.Quality);
                     KeepFrameBuffer(request, frame);
                     if (request.DragScale is { } dragScale)
+                    {
                         _dragScales.Record(dragScale, elapsedMs);
+                        DragFramesRecorded++;
+                    }
+                    else if (request.Quality == RenderQuality.Standard && _queued is null && _dragFrom is null)
+                    {
+                        StartRefine(request);
+                    }
                 }
             }
         }
@@ -388,7 +567,55 @@ public sealed class VehiclePreviewView : Control
         _dragFrame = null;
     }
 
-    private void Show(FrameBuffer frame, PreviewScene scene)
+    private bool IsRefineCurrent(RenderRequest request) =>
+        request.Camera == _camera && _refine is { } refine && refine.Token == request.RefineToken && !refine.IsCancellationRequested;
+
+    /// <summary>Waits <see cref="RefineDelay"/> after the full frame of <paramref name="shown"/> and then queues it at High quality.</summary>
+    private void StartRefine(RenderRequest shown)
+    {
+        CancelRefine();
+        if (VisualRoot is null)
+            return;
+
+        _refineTimer = DispatcherTimer.RunOnce(
+            () =>
+            {
+                _refineTimer = null;
+                if (VisualRoot is null || shown.Generation != _generation || shown.Camera != _camera)
+                    return;
+
+                QueueRefine(shown);
+            },
+            RefineDelay);
+    }
+
+    /// <summary>Queues <paramref name="request"/> at High quality with a new refine source.</summary>
+    private void QueueRefine(RenderRequest request)
+    {
+        // The refine source is linked to the generation source, so a scene change or a detach also stops it.
+        _refine = CancellationTokenSource.CreateLinkedTokenSource(_cancellation.Token);
+        Queue(request with { Quality = RenderQuality.High, RefineToken = _refine.Token });
+    }
+
+    /// <summary>
+    /// Stops the timer and the High frame. The view is the only owner of the refine source, and only this method
+    /// cancels and disposes it, so a render that still holds its token sees a cancelled token and never a call on a
+    /// disposed source.
+    /// </summary>
+    private void CancelRefine()
+    {
+        _refineTimer?.Dispose();
+        _refineTimer = null;
+        var refine = _refine;
+        _refine = null;
+        if (refine is not null)
+        {
+            refine.Cancel();
+            refine.Dispose();
+        }
+    }
+
+    private void Show(FrameBuffer frame, PreviewScene scene, RenderQuality quality)
     {
         var size = new PixelSize(frame.Width, frame.Height);
         if (_bitmap is null || _bitmap.PixelSize != size)
@@ -405,13 +632,18 @@ public sealed class VehiclePreviewView : Control
         }
 
         ShownScene = scene;
-        FramesShown++;
+        ShownQuality = quality;
+        if (quality == RenderQuality.High)
+            HighFramesShown++;
+        else
+            FramesShown++;
         InvalidateVisual();
     }
 
     /// <summary>Makes every running and queued frame stale, so a frame of the old scene or of a detached view never shows.</summary>
     private void StartGeneration()
     {
+        CancelRefine();
         _generation++;
         _queued = null;
         _cancellation.Cancel();
@@ -426,9 +658,21 @@ public sealed class VehiclePreviewView : Control
         _bitmap?.Dispose();
         _bitmap = null;
         ShownScene = null;
+        ShownQuality = RenderQuality.Standard;
         InvalidateVisual();
     }
 
     /// <param name="DragScale">The scale of a drag frame, or null for a frame at the full resolution.</param>
-    private sealed record RenderRequest(PreviewScene Scene, OrbitCamera Camera, int Width, int Height, double? DragScale, int Generation, CancellationTokenSource Cancellation);
+    /// <param name="Cancellation">The source of the generation. A render of an older generation disposes it.</param>
+    /// <param name="RefineToken">The token of the refine source that a High frame stops on. The render never disposes that source.</param>
+    private sealed record RenderRequest(
+        PreviewScene Scene,
+        OrbitCamera Camera,
+        int Width,
+        int Height,
+        double? DragScale,
+        int Generation,
+        CancellationTokenSource Cancellation,
+        RenderQuality Quality = RenderQuality.Standard,
+        CancellationToken RefineToken = default);
 }

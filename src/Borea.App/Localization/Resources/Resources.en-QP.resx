@@ -2991,6 +2991,51 @@
   <data name="PreviewStageLoadingTextures" xml:space="preserve">
     <value>Paintin' the hull</value>
   </data>
+  <data name="PreviewControlsTitle" xml:space="preserve">
+    <value>Workin' the spyglass</value>
+  </data>
+  <data name="PreviewControlTurn" xml:space="preserve">
+    <value>Bring her about</value>
+  </data>
+  <data name="PreviewControlZoom" xml:space="preserve">
+    <value>Work the glass</value>
+  </data>
+  <data name="PreviewControlMove" xml:space="preserve">
+    <value>Climb up and down the vessel</value>
+  </data>
+  <data name="PreviewControlFrame" xml:space="preserve">
+    <value>Show the whole vessel</value>
+  </data>
+  <data name="PreviewInputLeftRightDrag" xml:space="preserve">
+    <value>Port or starboard haul</value>
+  </data>
+  <data name="PreviewInputArrowKeys" xml:space="preserve">
+    <value>Compass keys</value>
+  </data>
+  <data name="PreviewInputMiddleDrag" xml:space="preserve">
+    <value>Middle haul</value>
+  </data>
+  <data name="PreviewInputShiftWheel" xml:space="preserve">
+    <value>Shift + wheel</value>
+  </data>
+  <data name="PreviewInputZoomKeys" xml:space="preserve">
+    <value>W / S</value>
+  </data>
+  <data name="PreviewInputWheel" xml:space="preserve">
+    <value>Wheel</value>
+  </data>
+  <data name="PreviewInputMoveKeys" xml:space="preserve">
+    <value>Q / E</value>
+  </data>
+  <data name="PreviewInputFrameKey" xml:space="preserve">
+    <value>F</value>
+  </data>
+  <data name="PreviewInputHome" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="PreviewInputDoubleClick" xml:space="preserve">
+    <value>Two quick clicks</value>
+  </data>
   <data name="PreviewResetView" xml:space="preserve">
     <value>Right the spyglass</value>
   </data>
