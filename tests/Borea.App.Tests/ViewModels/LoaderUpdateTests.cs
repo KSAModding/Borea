@@ -488,6 +488,7 @@ public sealed class LoaderUpdateTests
         Assert.Equal(harness.Localization.FormatSettingsLoaderUsedBy(pinned.Name), used.UsedByText);
         Assert.True(unused.CanRemove);
         Assert.Equal(harness.Localization.SettingsLoaderUnused, unused.UsedByText);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRatedForGameFolder(GameBuild), unused.CompatibilityToolTip);
 
         await unused.RemoveCommand.ExecuteAsync(null);
         Assert.True(unused.IsConfirmingRemove);
@@ -833,6 +834,53 @@ public sealed class LoaderUpdateTests
                 ? harness.Localization.FormatInstanceLoaderAutomaticTargetIncompatible("StarMap", "0.4.7", "0.4.6.0", "0.4.6")
                 : harness.Localization.FormatInstanceLoaderAutomaticTargetIncompatibleNoOffer("StarMap", "0.4.7", "0.4.6.0"),
             viewModel.LoaderSettingAutomaticText);
+    }
+
+    [Fact]
+    public async Task GameSettings_AVersionThatAKeptBuildStarts_IsRatedForThatBuildAndListsItsUsersByName()
+    {
+        using var harness = await CreateAsync(installed: "0.4.7", keptBuild: true);
+        await KeepBuildActiveAsync(harness);
+        // an ordinal sort puts "Kept" before "base"
+        await harness.Services.Instances.CreateAsync("base", InstanceSource.Custom.Value);
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        var row = Assert.Single(viewModel.LoaderVersionItems);
+        Assert.True(row.IsIncompatible);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRatedForKept("0.4.6.0", "Kept"), row.CompatibilityToolTip);
+        Assert.Equal(["Alpha", "base", "Kept"], row.Users);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    // Settings that were closed on the Game tab open on it again
+    [InlineData(true)]
+    public async Task GameSettings_AKeepThatEndsWhileShownOrBeforeTheyOpenAgain_RatesTheVersionForTheKeptBuild(bool closedDuringKeep)
+    {
+        using var harness = await CreateAsync(installed: "0.4.7");
+        var instance = (await harness.Services.Instances.CreateAsync("Kept", InstanceSource.Custom.Value)).Instance;
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        viewModel.SetMainWindowSettings();
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRatedForGameFolder(GameBuild), Assert.Single(viewModel.LoaderVersionItems).CompatibilityToolTip);
+        if (closedDuringKeep)
+            viewModel.CloseSettingsCommand.Execute(null);
+
+        // a keep and not a use-current, because a keep waits for the static gate of the keeper while a keep test of
+        // another class copies, and a use-current is refused as busy
+        await viewModel.BeginKeepGameBuildAsync(viewModel.Instances.Single(item => item.InstanceId == instance.InstanceId));
+        await viewModel.ConfirmKeepGameBuildCommand.ExecuteAsync(null);
+        if (closedDuringKeep)
+        {
+            viewModel.SetMainWindowSettings();
+            await viewModel.WhenGameTabReopenRefreshedAsync();
+        }
+
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRatedForKept(GameBuild, "Kept"), Assert.Single(viewModel.LoaderVersionItems).CompatibilityToolTip);
     }
 
     [Fact]

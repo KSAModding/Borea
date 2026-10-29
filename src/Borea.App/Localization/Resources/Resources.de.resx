@@ -4215,6 +4215,12 @@
   <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
     <value>Verwendet von {0}</value>
   </data>
+  <data name="SettingsLoaderRatedForGameFolderFormat" xml:space="preserve">
+    <value>Bewertet für KSA {0} im Spielordner</value>
+  </data>
+  <data name="SettingsLoaderRatedForKeptFormat" xml:space="preserve">
+    <value>Bewertet für den KSA-Build {0}, den {1} behält</value>
+  </data>
   <data name="SettingsLoaderUnused" xml:space="preserve">
     <value>Nicht verwendet</value>
   </data>

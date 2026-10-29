@@ -3017,6 +3017,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatSettingsLoaderUsedBy(string instances)
         => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderUsedByFormat, instances);
 
+    public string FormatSettingsLoaderRatedForGameFolder(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRatedForGameFolderFormat, build);
+
+    public string FormatSettingsLoaderRatedForKept(string build, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRatedForKeptFormat, build, instance);
+
     public string FormatSettingsLoaderInUse(string instances)
         => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderInUseFormat, instances);
 

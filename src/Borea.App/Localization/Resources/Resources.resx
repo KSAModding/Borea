@@ -4215,6 +4215,12 @@
   <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
     <value>Used by {0}</value>
   </data>
+  <data name="SettingsLoaderRatedForGameFolderFormat" xml:space="preserve">
+    <value>Rated for KSA {0} in the game folder</value>
+  </data>
+  <data name="SettingsLoaderRatedForKeptFormat" xml:space="preserve">
+    <value>Rated for KSA {0}, which {1} keeps</value>
+  </data>
   <data name="SettingsLoaderUnused" xml:space="preserve">
     <value>Not used</value>
   </data>
