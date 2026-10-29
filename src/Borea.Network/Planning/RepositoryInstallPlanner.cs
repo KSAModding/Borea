@@ -239,7 +239,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         foreach (var (messages, target) in new[] { (dependencyUnresolved, unresolved), (dependencyConflicts, conflicts) })
             foreach (var message in messages)
             {
-                if (message.Kind is PlanningMessageKind.UnsatisfiedDependency or PlanningMessageKind.PinnedDependency or PlanningMessageKind.ForeignVersionUnknown or PlanningMessageKind.UnsatisfiedAlternative or PlanningMessageKind.ForeignAlternativeUnknown)
+                if (message.Kind is PlanningMessageKind.UnsatisfiedDependency or PlanningMessageKind.PinnedDependency or PlanningMessageKind.ForeignOwned or PlanningMessageKind.ForeignVersionUnknown or PlanningMessageKind.UnsatisfiedAlternative or PlanningMessageKind.ForeignAlternativeUnknown)
                     warnings.Add(new PlanningMessage(release.ModId, release.Type == ContentType.Save ? PlanningMessageKind.MissingForSave : PlanningMessageKind.MissingForVehicle) { Dependency = dependency, Value = message.Code });
                 else
                     target.Add(message);

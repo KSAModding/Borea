@@ -1053,6 +1053,18 @@ public sealed class RepositoryInstallPlannerTests
     }
 
     [Fact]
+    public async Task PlanAsync_RequiredModOfVehicleRecordedForeignOutsideItsBounds_IsMissing()
+    {
+        var vehicle = Content("rover", ContentType.Vehicle, [Required("B", "2.0.0")]);
+
+        var plan = await PlanAsync(new InstallPlanningRequest(InstanceWith([Foreign("B", [])]), [new RequestedMod(vehicle, InstallReason.Manual)], new FakeRepository([Release("B", "2.0.0")])));
+
+        Assert.True(plan.IsReady);
+        Assert.Empty(plan.Operations);
+        Assert.Equal("foreign-owned", Assert.Single(plan.Warnings, value => value.Kind == PlanningMessageKind.MissingForVehicle).Value);
+    }
+
+    [Fact]
     public async Task PlanAsync_RequiredModOfVehicleWithWarnings_IsStillInstalled()
     {
         var vehicle = Content("rover", ContentType.Vehicle, [Required("B")]);
