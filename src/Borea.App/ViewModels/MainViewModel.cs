@@ -510,6 +510,7 @@ public partial class MainViewModel : ViewModelBase
             Instances.Add(row);
         RefreshOtherInstances();
         _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
+        var activeGame = _services is null || _activeInstanceEntity is null ? null : _services.InstanceGames.Resolve(_activeInstanceEntity);
 
         // the link of the launch line follows its instance to the new row, and a deleted instance takes the line with it
         if (LaunchGameBuildMissingItem is { } linked)
@@ -523,6 +524,8 @@ public partial class MainViewModel : ViewModelBase
         }
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
+        if (ActiveInstance is not null && activeGame is not null)
+            ActiveInstance.GameBuildProblem = activeGame.Problem;
         var kept = CurrentWindowHome ? Instances.FirstOrDefault(instance => instance.InstanceId == HomeInstance?.InstanceId) : null;
         HomeInstance = kept ?? ActiveInstance;
         RefreshInstanceHint();
@@ -531,7 +534,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(InstalledInText));
 
         // the chips follow the build of the active instance, so they are checked again only when that build changes
-        var game = _services is null ? null : GameVersionOf(_services, _activeInstanceEntity);
+        var game = _services is null ? null : GameVersionOf(_services, activeGame);
         if (game != _compatibilityGame)
             await RefreshCompatibilityAsync(game);
 
@@ -1131,9 +1134,12 @@ public sealed partial class InstanceItem : ObservableObject
         ? _owner.Localization.FormatInstanceGameBuildToolTip(build.ToString()) + Environment.NewLine + _owner.Localization.ModalKeepGameBuildPopupNote
         : null;
 
-    /// <summary>Whether the kept build is there, read when the instance page opens and when a launch reads it. None on a row where neither happened.</summary>
+    /// <summary>
+    /// Whether the kept build is there, read when the instance page opens, when a launch reads it, and for the active
+    /// instance when the instances load. None on a row where none of these happened.
+    /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowsGameBuildChip), nameof(GameBuildNotFoundText), nameof(GameBuildMissingText))]
+    [NotifyPropertyChangedFor(nameof(ShowsGameBuildChip), nameof(GameBuildNotFoundText), nameof(GameBuildMissingText), nameof(AddRefusalText))]
     private KeptBuildProblem _gameBuildProblem;
 
     /// <summary>The pin chip of the page, which the chip of a kept build that is not found replaces.</summary>
@@ -1147,6 +1153,18 @@ public sealed partial class InstanceItem : ObservableObject
     public string? GameBuildMissingText => GameBuildProblem != KeptBuildProblem.None && Instance.GameBuild is { } build
         ? _owner.GameBuildMissingText(build)
         : null;
+
+    /// <summary>Why Add puts nothing into this instance while it is active, or null when it can.</summary>
+    public string? AddRefusalText => GameBuildProblem != KeptBuildProblem.None && Instance.GameBuild is { } build
+        ? _owner.Localization.FormatDiscoverKeptBuildUnavailable(Name, build.ToString())
+        : null;
+
+    // the add buttons of Discover and the content pages follow the active row, also when the instance page or a launch reads its build again
+    partial void OnGameBuildProblemChanged(KeptBuildProblem value)
+    {
+        if (ReferenceEquals(_owner.ActiveInstance, this))
+            _owner.RefreshInstanceHint();
+    }
 
     private bool _isOpening;
 
@@ -1177,6 +1195,7 @@ public sealed partial class InstanceItem : ObservableObject
         OnPropertyChanged(nameof(GameBuildToolTip));
         OnPropertyChanged(nameof(GameBuildNotFoundText));
         OnPropertyChanged(nameof(GameBuildMissingText));
+        OnPropertyChanged(nameof(AddRefusalText));
     }
 
     internal ModVersion? InstalledVersionOf(string modId)

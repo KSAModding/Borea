@@ -3099,6 +3099,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <summary>The text before and after the instance name of <see cref="FormatDiscoverAddingTo"/>, so a page can style the name.</summary>
     public (string Before, string After) SplitDiscoverAddingTo() => SplitAroundValue(Resources.DiscoverAddingToFormat);
 
+    public string FormatDiscoverKeptBuildUnavailable(string instance, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverKeptBuildUnavailableFormat, instance, build);
+
     /// <summary>The text before and after the names of <see cref="FormatContentByAuthor"/>, so a row can show each name as a link.</summary>
     public (string Before, string After) SplitContentByAuthor() => SplitAroundValue(Resources.ContentByAuthorFormat);
 

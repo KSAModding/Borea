@@ -15,6 +15,7 @@ using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Paths;
 using Borea.Core.Preferences;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -815,13 +816,14 @@ public partial class MainViewModel
         LaunchGameBuildMissingItem = missingBuild;
     }
 
-    /// <summary>
-    /// Names the kept build and its folder relative to the library, because the full path alone takes a German line at
-    /// 1000 px. Null without services.
-    /// </summary>
+    /// <summary>Names the kept build and its folder. Null without services.</summary>
     internal string? GameBuildMissingText(GameVersion build) => _services is { Paths: var paths }
-        ? Localization.FormatLaunchGameBuildMissing(build.ToString(), Path.Combine(Path.GetFileName(paths.GetGameBuildsRoot()), Path.GetFileName(paths.GetGameBuildFolder(build))))
+        ? Localization.FormatLaunchGameBuildMissing(build.ToString(), KeptBuildFolderText(paths, build))
         : null;
+
+    /// <summary>The folder of a kept build relative to the library, because the full path alone takes a German line at 1000 px.</summary>
+    internal static string KeptBuildFolderText(IGamePathProvider paths, GameVersion build)
+        => Path.Combine(Path.GetFileName(paths.GetGameBuildsRoot()), Path.GetFileName(paths.GetGameBuildFolder(build)));
 
     /// <summary>
     /// Shows on the row of the instance and on its page whether the kept build is there, and returns the row for the

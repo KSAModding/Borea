@@ -67,8 +67,49 @@ public sealed class InstanceGameBuildTests
 
         await harness.ViewModel.PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(newest), exactVersion: null, instance.InstanceId, confirm: true);
 
-        Assert.Equal(harness.Localization.FormatInstallKeptBuildUnavailable("2026.10.13.5602", harness.Services.Paths.GetGameBuildFolder(gone)), row.InstallError);
+        Assert.Equal(harness.Localization.FormatInstallKeptBuildUnavailable("2026.10.13.5602", MainViewModel.KeptBuildFolderText(harness.Services.Paths, gone)), row.InstallError);
         Assert.Null(row.PendingPlan);
+    }
+
+    [Fact]
+    public async Task Discover_ActiveInstanceWithAKeptBuildThatIsGone_RefusesAddAndSaysWhy()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var gone = await CreateInstanceAsync(harness, "Gone", GameVersion.Parse("2026.10.13.5602"));
+        var current = await CreateInstanceAsync(harness, "Current", null);
+        await harness.Services.Instances.SetActiveInstanceAsync(gone.InstanceId);
+        await harness.ViewModel.LoadAsync();
+
+        Assert.False(harness.ViewModel.CanAddToActiveInstance);
+        Assert.Equal(harness.Localization.FormatDiscoverKeptBuildUnavailable("Gone", "2026.10.13.5602"), harness.ViewModel.AddToText);
+        Assert.Equal(harness.ViewModel.AddToText, harness.ViewModel.ReplaceVersionText("1.1.9"));
+
+        await harness.ViewModel.ActivateInstanceAsync(current.InstanceId);
+
+        Assert.True(harness.ViewModel.CanAddToActiveInstance);
+        Assert.Equal(harness.Localization.FormatDiscoverAddTo("Current"), harness.ViewModel.AddToText);
+    }
+
+    [Fact]
+    public async Task Discover_KeptBuildOfTheActiveInstanceThatGoesAway_DisablesAddWhenTheInstancePageReadsIt()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        await harness.Services.Instances.SetActiveInstanceAsync(kept.InstanceId);
+        await viewModel.LoadAsync();
+        // the loader check of the start reads KSA.dll of the kept build after LoadAsync returns, and Windows refuses to delete a file while that read maps it
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        Assert.True(viewModel.CanAddToActiveInstance);
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        Directory.Delete(harness.Services.Paths.GetGameBuildFolder(KeptBuild), recursive: true);
+
+        await viewModel.OpenInstanceAsync(viewModel.ActiveInstance!);
+
+        Assert.Contains(nameof(MainViewModel.CanAddToActiveInstance), changed);
+        Assert.False(viewModel.CanAddToActiveInstance);
+        Assert.Equal(harness.Localization.FormatDiscoverKeptBuildUnavailable("Kept", KeptBuild.ToString()), viewModel.AddToText);
     }
 
     [Fact]
