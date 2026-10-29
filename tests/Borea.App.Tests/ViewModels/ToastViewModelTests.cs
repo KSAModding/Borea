@@ -235,6 +235,27 @@ public sealed class ToastViewModelTests
     }
 
     [Fact]
+    public void FourthToast_KeepsAProblemUntilOnlyProblemsAreLeft()
+    {
+        var viewModel = ViewModel();
+
+        var failed1 = End(viewModel, TaskKind.ModRemoval, TaskState.Failed, "Mod1", failureReason: "Disk full");
+        End(viewModel, TaskKind.ModRemoval, TaskState.Finished, "Mod2");
+        var finished3 = End(viewModel, TaskKind.ModRemoval, TaskState.Finished, "Mod3");
+        var finished4 = End(viewModel, TaskKind.ModRemoval, TaskState.Finished, "Mod4");
+        Assert.Equal([failed1, finished3, finished4], viewModel.Toasts.Items);
+
+        var failed5 = End(viewModel, TaskKind.ModRemoval, TaskState.Failed, "Mod5", failureReason: "Disk full");
+        Assert.Equal([failed1, finished4, failed5], viewModel.Toasts.Items);
+
+        var failed6 = End(viewModel, TaskKind.ModRemoval, TaskState.Failed, "Mod6", failureReason: "Disk full");
+        Assert.Equal([failed1, failed5, failed6], viewModel.Toasts.Items);
+
+        var failed7 = End(viewModel, TaskKind.ModRemoval, TaskState.Failed, "Mod7", failureReason: "Disk full");
+        Assert.Equal([failed5, failed6, failed7], viewModel.Toasts.Items);
+    }
+
+    [Fact]
     public void Close_RemovesTheToastAndItsAnnouncement()
     {
         var viewModel = ViewModel();
