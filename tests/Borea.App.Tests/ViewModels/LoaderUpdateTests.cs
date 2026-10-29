@@ -321,6 +321,27 @@ public sealed class LoaderUpdateTests
     }
 
     [Fact]
+    public async Task InstancePage_NewGameBuild_RatesTheOpenRowAgain()
+    {
+        using var harness = await CreateAsync(withGame: false);
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        Assert.NotEqual(InstanceLoaderState.GameIncompatible, Assert.Single(viewModel.InstanceLoader!.Rows).State);
+
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(harness.Services.Settings.GameDirectoryPath!, "KSA.dll"));
+        await viewModel.RefreshInstalledGameAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        Assert.Equal(InstanceLoaderState.GameIncompatible, row.State);
+        Assert.True(row.CanUpdate);
+        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.7"), row.UpdateText);
+    }
+
+    [Fact]
     public async Task GameSettings_LoaderDoesNotSupportTheGame_MarksTheRowAndOffersTheReleaseThatDoes()
     {
         using var harness = await CreateAsync();
