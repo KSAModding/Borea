@@ -2574,6 +2574,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstanceLoaderAutomaticTarget(string loader, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetFormat, loader, version);
 
+    public string FormatInstanceLoaderAutomaticTargetIncompatible(string loader, string version, string build, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetIncompatibleFormat, loader, version, build, offer);
+
+    public string FormatInstanceLoaderAutomaticTargetIncompatibleNoOffer(string loader, string version, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetIncompatibleNoOfferFormat, loader, version, build);
+
     public string FormatInstanceLoaderAutomaticNotInstalled(string loader, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticNotInstalledFormat, loader, version);
 

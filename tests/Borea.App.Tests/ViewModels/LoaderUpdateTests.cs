@@ -811,6 +811,30 @@ public sealed class LoaderUpdateTests
         Assert.Equal(harness.Localization.FormatInstanceLoaderInstall("0.4.6"), row.UpdateText);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    // a pin gives the Mod loader row no offer, so the text names none
+    [InlineData(true, true)]
+    public async Task LoaderSetting_OnAKeptBuildThatTheAutomaticStartDoesNotSupport_NamesTheBuildAndTheOfferThatTheRowShows(bool keptBuildFits, bool pinned)
+    {
+        using var harness = await CreateAsync(installed: "0.4.7", keptBuild: true, keptBuildFits: keptBuildFits);
+        var instance = await KeepBuildActiveAsync(harness);
+        if (pinned)
+            await PinAsync(harness, instance, "0.4.7");
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.BeginEditLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLoaderSettingModalOpen);
+        Assert.Equal(
+            keptBuildFits && !pinned
+                ? harness.Localization.FormatInstanceLoaderAutomaticTargetIncompatible("StarMap", "0.4.7", "0.4.6.0", "0.4.6")
+                : harness.Localization.FormatInstanceLoaderAutomaticTargetIncompatibleNoOffer("StarMap", "0.4.7", "0.4.6.0"),
+            viewModel.LoaderSettingAutomaticText);
+    }
+
     [Fact]
     public async Task InstancePage_RowInstall_StaysOnTheRowThatThePageBuildsAgain()
     {
