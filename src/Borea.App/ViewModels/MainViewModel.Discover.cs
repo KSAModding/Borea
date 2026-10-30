@@ -481,7 +481,7 @@ public partial class MainViewModel
             item.LatestInChannel = latest;
         }
 
-        // the Required by card reads the releases set here, and a page without a release in the channel has nothing else that refreshes it
+        // the Required by and Conflicts with cards read the releases set here, and a page without a release in the channel has nothing else that refreshes it
         RefreshContentDependencies();
 
         foreach (var release in _contentReleases)

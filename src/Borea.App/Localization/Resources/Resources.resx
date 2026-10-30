@@ -3616,10 +3616,10 @@
     <value>One of each set is installed with this mod</value>
   </data>
   <data name="ContentDependencyConflicts" xml:space="preserve">
-    <value>Conflicts</value>
+    <value>Conflicts with</value>
   </data>
   <data name="ContentDependencyConflictsHint" xml:space="preserve">
-    <value>Not installed together</value>
+    <value>These mods do not work together with this one</value>
   </data>
   <data name="ContentDependencyRecommended" xml:space="preserve">
     <value>Recommended</value>
@@ -3650,6 +3650,15 @@
   </data>
   <data name="ContentDependencyRequiredByHint" xml:space="preserve">
     <value>Mods whose newest release needs this mod</value>
+  </data>
+  <data name="ContentDependencyRequiredByShowAllFormat" xml:space="preserve">
+    <value>Show all {0}</value>
+  </data>
+  <data name="ContentDependencyRequiredByShowInstalled" xml:space="preserve">
+    <value>Show only installed</value>
+  </data>
+  <data name="ContentDependencyRequiredByNoneInstalled" xml:space="preserve">
+    <value>No installed mod needs this mod.</value>
   </data>
   <data name="ContentDependencyOneOf" xml:space="preserve">
     <value>One of:</value>
