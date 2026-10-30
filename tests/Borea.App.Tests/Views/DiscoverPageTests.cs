@@ -302,6 +302,22 @@ public sealed class DiscoverPageTests
             }
         });
 
+    [Fact]
+    public async Task CategoryTabs_StayOnOneLine_InGermanAt1000Px()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        Assert.True(harness.Localization.TrySetCulture("de"));
+
+        var tabTops = await RenderAsync(harness, 1000, page =>
+            page.GetVisualDescendants().OfType<Button>()
+                .Where(button => button.Classes.Contains("tab"))
+                .Select(button => Corner(button, page).Y)
+                .ToList());
+
+        Assert.Equal(5, tabTops.Count);
+        Assert.Single(tabTops.Distinct());
+    }
+
     private static GameVersionControls ReadGameVersionControls(MainViewModel viewModel, Control page)
     {
         page.UpdateLayout();
