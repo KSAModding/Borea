@@ -519,6 +519,55 @@ public sealed class StewardViewsTests
     }
 
     [Fact]
+    public async Task PackLeaveModal_FromAReport_ShowsTheVersionsAndTheForumsConfirmation_AndOpensThePullRequestOnAClick()
+    {
+        _reports.Reports.Add(FakeIndexReports.LeavePack(12, "tools-pack", "MeasureTools"));
+        _editor.AddToolsPack();
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.OpenStewardPageCommand.Execute(null);
+        await viewModel.StewardPage.ShowReportsCommand.ExecuteAsync(null);
+        await viewModel.StewardPage.Reports.WhenLoadedAsync();
+        viewModel.StewardPage.Reports.Reports[0].LeavePackCommand.Execute(null);
+        var dialog = viewModel.StewardLeave!;
+        await dialog.WhenDoneAsync();
+
+        var texts = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var modal = new PackLeaveModal();
+            var window = new Window { Width = 1280, Height = 832, Content = modal, DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var shown = modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+                var confirm = modal.GetVisualDescendants().OfType<CheckBox>().Single(box => box.IsEffectivelyVisible);
+                confirm.IsChecked = true;
+                window.UpdateLayout();
+                var open = modal.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && (button.Content as TextBlock)?.Text == harness.Localization.ListingPublish);
+                var point = open.TranslatePoint(new Point(open.Bounds.Width / 2, open.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(point, MouseButton.Left);
+                window.MouseUp(point, MouseButton.Left);
+                await dialog.WhenDoneAsync();
+                window.UpdateLayout();
+                shown.AddRange(modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text));
+                return shown;
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains("Retract every version of tools-pack that pins MeasureTools", texts);
+        Assert.Contains("Versions to retract: 1.0.0, 1.2.0", texts);
+        Assert.Contains("I confirmed by the forums account that alice owns MeasureTools", texts);
+        Assert.Contains("The pull request says Closes #12, so its merge closes report #12.", texts);
+        Assert.Contains(harness.Localization.FormatStewardOpened("1"), texts);
+        Assert.True(Assert.Single(_editor.LeaveOpened).ConfirmedByForums);
+    }
+
+    [Fact]
     public async Task IndexStatusModal_NamesTheChangeAndOpensThePullRequestOnAClick()
     {
         _editor.Check = _ => new IndexStatusCheck(null, [new IndexStatusPullRequest(4, new Uri("https://github.com/KSAModding/content-index/pull/4"), "Dispute Other", "bob")], ["alice"], IsOwner: false);

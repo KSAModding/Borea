@@ -363,7 +363,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 // The caller refuses a folder with entries, so only an empty folder can be in the way here.
                 if (Directory.Exists(folder))
                     Directory.Delete(folder);
-                Directory.Move(stagingDirectory, folder);
+                DirectoryRename.Move(stagingDirectory, folder);
                 activated = true;
             }
 
@@ -430,11 +430,11 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
     {
         var backedUp = Directory.Exists(destination);
         if (backedUp)
-            Directory.Move(destination, backupDirectory);
+            DirectoryRename.Move(destination, backupDirectory);
 
         try
         {
-            Directory.Move(stagingDirectory, destination);
+            DirectoryRename.Move(stagingDirectory, destination);
             return backedUp;
         }
         catch (Exception activationError)
@@ -444,7 +444,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
 
             try
             {
-                Directory.Move(backupDirectory, destination);
+                DirectoryRename.Move(backupDirectory, destination);
             }
             catch (Exception rollbackError)
             {
@@ -464,10 +464,10 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         try
         {
             if (Directory.Exists(destination))
-                Directory.Move(destination, failedDirectory);
+                DirectoryRename.Move(destination, failedDirectory);
 
             if (backedUp)
-                Directory.Move(backupDirectory, destination);
+                DirectoryRename.Move(backupDirectory, destination);
 
             TryDeleteDirectory(failedDirectory);
         }

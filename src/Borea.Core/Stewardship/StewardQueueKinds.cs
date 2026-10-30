@@ -23,6 +23,26 @@ public static partial class StewardQueueKinds
         ["amendment"] = StewardQueueKind.Amendment,
     };
 
+    /// <summary>
+    /// The owner records of content-index that a pull request adds together with a version of their own pack, as claims in
+    /// tools/check_scope.py of content-index finds them. Such a first pack claim merges itself (RFC 0080), so only a change of an
+    /// accepted owner record, such as a handover, is a steward file.
+    /// </summary>
+    /// <param name="files">Every changed file of a pull request of content-index.</param>
+    public static IReadOnlySet<string> FirstClaims(IEnumerable<StewardQueueFile> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        var added = files.Where(file => file.Status == "added").Select(file => file.Path).ToList();
+        var folders = added.Where(path => PackDocument().IsMatch(path)).Select(FolderOf).ToHashSet(StringComparer.Ordinal);
+        return added.Where(path => OwnerRecord().IsMatch(path) && folders.Contains(FolderOf(path))).ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>Whether the path is packs/&lt;id&gt;/owner.json of content-index.</summary>
+    public static bool IsOwnerRecord(string repository, string? path) =>
+        string.Equals(repository, ListingPullRequestLinks.Repository, StringComparison.OrdinalIgnoreCase) && path is not null && OwnerRecord().IsMatch(path);
+
+    private static string FolderOf(string path) => path[..path.LastIndexOf('/')];
+
     /// <param name="labels">The label names of the pull request.</param>
     /// <param name="files">Every changed file with the status GitHub gives it.</param>
     /// <returns>The kinds in the order of <see cref="StewardQueueKind"/>, and whether a file is none of them.</returns>
@@ -38,8 +58,14 @@ public static partial class StewardQueueKinds
         var byLabel = isContentIndex ? ContentIndexLabels : ReleasesLabels;
         var kinds = new HashSet<StewardQueueKind>(labels.Where(byLabel.ContainsKey).Select(label => byLabel[label]));
         var hasOtherFiles = false;
-        foreach (var file in files)
+        var changed = files.ToList();
+        IReadOnlySet<string> claims = isContentIndex ? FirstClaims(changed) : new HashSet<string>();
+        foreach (var file in changed)
         {
+            // the owner record of a first claim is part of its pack document, whose kind comes from its label
+            if (claims.Contains(file.Path))
+                continue;
+
             // the checks take a document only when it is added or changed, so a removed or renamed one goes to a steward on GitHub
             var writes = file.Status is "added" or "modified";
             foreach (var path in new[] { file.Path, file.PreviousPath }.OfType<string>())

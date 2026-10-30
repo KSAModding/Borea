@@ -1,4 +1,6 @@
 using Borea.App.ViewModels;
+using Borea.Core.GitHub;
+using Borea.Core.Listings;
 using Borea.Core.Stewardship;
 
 namespace Borea.App.Tests.ViewModels;
@@ -356,6 +358,209 @@ public sealed class StewardReportsViewModelTests
         Assert.True(report.IsOwner);
         Assert.Single(_editor.OwnedAsked);
         Assert.Equal(1, _reports.Reads);
+    }
+
+    [Fact]
+    public async Task LeavePack_ReporterWhoOwnsTheListing_RetractsEveryVersionThatPinsTheModInOnePullRequest()
+    {
+        _reports.Reports.Add(FakeIndexReports.LeavePack(12, "tools-pack", "MeasureTools"));
+        _editor.AddToolsPack();
+        _editor.ReporterOwns.Add("MeasureTools");
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var report = Assert.Single((await OpenAsync(viewModel)).Reports);
+
+        report.LeavePackCommand.Execute(null);
+        var dialog = viewModel.StewardLeave!;
+        await dialog.WhenDoneAsync();
+
+        Assert.True(report.IsLeavePack);
+        Assert.True(viewModel.IsStewardLeaveOpen);
+        Assert.Equal(["MeasureTools", "Other"], dialog.Members);
+        Assert.Equal("MeasureTools", dialog.ModId);
+        Assert.Equal("Retract every version of tools-pack that pins MeasureTools", dialog.Title);
+        Assert.Equal(("Versions to retract: 1.0.0, 1.2.0", (string?)null), (dialog.VersionsText, dialog.RetractedText));
+        Assert.Equal(("alice owns the listing of MeasureTools by its ownership proof.", "alice owns alice/MeasureTools.", true, false), (dialog.OwnershipText, dialog.OwnershipDetail, dialog.IsProven, dialog.NeedsConfirmation));
+        Assert.Equal("The author of MeasureTools asked to take it out of this pack in https://github.com/KSAModding/content-index/issues/12", dialog.Reason);
+        Assert.Equal("The pull request says Closes #12, so its merge closes report #12.", dialog.ReportText);
+        Assert.True(dialog.CanOpen);
+
+        await dialog.OpenPullRequestCommand.ExecuteAsync(null);
+
+        var leave = Assert.Single(_editor.LeaveOpened);
+        Assert.Equal(("tools-pack", "MeasureTools", 12, new GitHubAccount("alice", 5), false), (leave.PackId, leave.ModId, leave.Report, leave.Reporter, leave.ConfirmedByForums));
+        Assert.Equal([("tools-pack", "1.0.0"), ("tools-pack", "1.2.0")], _editor.Opened.Select(change => (change.Id, change.Version)));
+        Assert.Equal((harness.Localization.FormatStewardOpened("1"), false), (dialog.OpenedText, dialog.CanOpen));
+    }
+
+    [Fact]
+    public async Task LeavePack_ReporterWhoDoesNotOwnTheListing_OpensOnlyAfterTheStewardConfirmsItByTheForumsAccount()
+    {
+        _reports.Reports.Add(FakeIndexReports.LeavePack(12, "tools-pack", "MeasureTools"));
+        _editor.AddToolsPack();
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var opened = new List<string>();
+        viewModel.OpenWithSystem = opened.Add;
+        var report = Assert.Single((await OpenAsync(viewModel)).Reports);
+
+        report.LeavePackCommand.Execute(null);
+        var dialog = viewModel.StewardLeave!;
+        await dialog.WhenDoneAsync();
+
+        Assert.Equal(
+            ("The ownership proof of the listing of MeasureTools does not name alice. Confirm by the forums account of the listing that alice owns it before you go on.", false, true, true, false),
+            (dialog.OwnershipText, dialog.IsProven, dialog.NeedsConfirmation, dialog.CanOpenForums, dialog.CanOpen));
+        Assert.Equal(
+            ("alice does not own someone/MeasureTools, and someone/MeasureTools has neither the topic ksa-index-alice nor a marker file that names alice.", false),
+            (dialog.OwnershipDetail, dialog.CanRetry));
+        Assert.Equal("I confirmed by the forums account that alice owns MeasureTools", dialog.ConfirmText);
+        dialog.OpenForumsCommand.Execute(null);
+        Assert.Equal(["https://forums.ahwoo.com/threads/my-mod.42/"], opened);
+
+        dialog.ConfirmedByForums = true;
+        Assert.True(dialog.CanOpen);
+
+        // another mod needs its own check and its own confirmation
+        dialog.ModId = "Other";
+        await dialog.WhenDoneAsync();
+        Assert.Equal((false, false, "Versions to retract: 1.0.0, 1.1.0"), (dialog.ConfirmedByForums, dialog.CanOpen, dialog.VersionsText));
+
+        dialog.ModId = "MeasureTools";
+        await dialog.WhenDoneAsync();
+        dialog.ConfirmedByForums = true;
+        await dialog.OpenPullRequestCommand.ExecuteAsync(null);
+
+        Assert.True(Assert.Single(_editor.LeaveOpened).ConfirmedByForums);
+        Assert.Equal(3, _editor.LeaveChecked.Count);
+    }
+
+    [Fact]
+    public async Task LeavePack_CheckOfTheModChosenBeforeThatEndsLast_DoesNotReplaceTheCheckOfTheModChosenNow()
+    {
+        _reports.Reports.Add(FakeIndexReports.LeavePack(12, "tools-pack", "MeasureTools"));
+        _editor.AddToolsPack();
+        var hold = new TaskCompletionSource();
+        _editor.HoldLeaveCheck = hold;
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var report = Assert.Single((await OpenAsync(viewModel)).Reports);
+
+        report.LeavePackCommand.Execute(null);
+        var dialog = viewModel.StewardLeave!;
+        var first = dialog.WhenDoneAsync();
+        dialog.ModId = "Other";
+        await dialog.WhenDoneAsync();
+        hold.SetResult();
+        await first;
+
+        Assert.Equal(("Other", "Versions to retract: 1.0.0, 1.1.0", false), (dialog.ModId, dialog.VersionsText, dialog.IsChecking));
+        Assert.Equal(["MeasureTools", "Other"], _editor.LeaveChecked.Select(leave => leave.ModId));
+    }
+
+    [Fact]
+    public async Task LeavePack_ProofThatHeldAtTheCheckButNotAtTheOpen_AsksTheStewardToConfirmItByTheForumsAccount()
+    {
+        _reports.Reports.Add(FakeIndexReports.LeavePack(12, "tools-pack", "MeasureTools"));
+        _editor.AddToolsPack();
+        _editor.ReporterOwns.Add("MeasureTools");
+        _editor.OwnershipAtOpen = ListingOwnership.Unknown;
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var report = Assert.Single((await OpenAsync(viewModel)).Reports);
+
+        report.LeavePackCommand.Execute(null);
+        var dialog = viewModel.StewardLeave!;
+        await dialog.WhenDoneAsync();
+        Assert.True(dialog.IsProven);
+        await dialog.OpenPullRequestCommand.ExecuteAsync(null);
+
+        Assert.Empty(_editor.LeaveOpened);
+        Assert.Equal("Confirm by the forums account that alice owns MeasureTools first.", dialog.Refusal);
+        Assert.Equal(
+            ("Borea could not check the ownership proof of alice.", false, true, false),
+            (dialog.OwnershipText, dialog.IsProven, dialog.NeedsConfirmation, dialog.CanOpen));
+
+        dialog.ConfirmedByForums = true;
+        Assert.Equal(((string?)null, true), (dialog.Refusal, dialog.CanOpen));
+        await dialog.OpenPullRequestCommand.ExecuteAsync(null);
+
+        Assert.True(Assert.Single(_editor.LeaveOpened).ConfirmedByForums);
+        Assert.True(dialog.IsOpened);
+    }
+
+    [Fact]
+    public async Task LeavePack_MembersThatCouldNotBeRead_SayNothingAboutThePack_AndAreReadAgain()
+    {
+        _reports.Reports.Add(FakeIndexReports.LeavePack(12, "tools-pack", "MeasureTools"));
+        _editor.AddToolsPack();
+        _editor.ReporterOwns.Add("MeasureTools");
+        _editor.MembersFailure = new StewardException(StewardFailure.NetworkError);
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var report = Assert.Single((await OpenAsync(viewModel)).Reports);
+
+        report.LeavePackCommand.Execute(null);
+        var dialog = viewModel.StewardLeave!;
+        await dialog.WhenDoneAsync();
+
+        Assert.NotNull(dialog.Error);
+        Assert.Equal(((string?)null, false, true), (dialog.MembersText, dialog.HasMembers, dialog.CanRetry));
+
+        await dialog.RetryCommand.ExecuteAsync(null);
+
+        Assert.Equal(((string?)null, "MeasureTools", "Choose the mod that the report asks to take out of the pack.", false), (dialog.Error, dialog.ModId, dialog.MembersText, dialog.CanRetry));
+        Assert.True(dialog.CanOpen);
+    }
+
+    [Fact]
+    public async Task LeavePack_PackThatNoLongerPinsTheMod_SaysSo_AndOpensNothing()
+    {
+        _reports.Reports.Add(FakeIndexReports.LeavePack(12, "tools-pack", "MeasureTools"));
+        _editor.Packs["tools-pack"] = [new("1.0.0", ["MeasureTools"]), new("1.1.0", ["Other"])];
+        _editor.Entries.Add(new IndexStatusEntry("tools-pack", IndexStatusEntry.Retracted, "1.0.0", "2026-09-25T12:00:00Z", "Broken."));
+        _editor.ReporterOwns.Add("MeasureTools");
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var report = Assert.Single((await OpenAsync(viewModel)).Reports);
+
+        report.LeavePackCommand.Execute(null);
+        var dialog = viewModel.StewardLeave!;
+        await dialog.WhenDoneAsync();
+        await dialog.OpenPullRequestCommand.ExecuteAsync(null);
+
+        Assert.Equal("No version of tools-pack that is not retracted pins MeasureTools.", dialog.Refusal);
+        Assert.Equal(((string?)null, "Retracted already: 1.0.0", false), (dialog.VersionsText, dialog.RetractedText, dialog.CanOpen));
+        Assert.Empty(_editor.LeaveOpened);
+    }
+
+    [Fact]
+    public async Task LeavePack_ReportThatNamesNoMemberOrAnotherGroundOrIsClosed_LetsTheStewardChooseOrOffersNothing()
+    {
+        _reports.Reports.Add(FakeIndexReports.LeavePack(12, "tools-pack", "the flight mod"));
+        _reports.Reports.Add(FakeIndexReports.Takedown(13, "tools-pack"));
+        _reports.Reports.Add(FakeIndexReports.ClosedReport(FakeIndexReports.LeavePack(14, "tools-pack", "MeasureTools"), IndexReportCloseReason.Completed));
+        _editor.AddToolsPack();
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var tab = await OpenAsync(viewModel);
+        var other = tab.Reports.Single(report => report.Report.Number == 13);
+        var closed = tab.Reports.Single(report => report.Report.Number == 14);
+
+        other.LeavePackCommand.Execute(null);
+        closed.LeavePackCommand.Execute(null);
+        Assert.Null(viewModel.StewardLeave);
+        tab.Reports.Single(report => report.Report.Number == 12).LeavePackCommand.Execute(null);
+        var dialog = viewModel.StewardLeave!;
+        await dialog.WhenDoneAsync();
+
+        Assert.False(other.IsLeavePack);
+        Assert.Equal(((string?)null, "Take a mod out of tools-pack", "Choose the mod that the report asks to take out of the pack."), (dialog.ModId, dialog.Title, dialog.MembersText));
+        Assert.Empty(_editor.LeaveChecked);
+        Assert.False(dialog.CanOpen);
+
+        dialog.CloseCommand.Execute(null);
+        Assert.False(viewModel.IsStewardLeaveOpen);
     }
 
     private static async Task OpenChangeAsync(MainViewModel viewModel, CommunityToolkit.Mvvm.Input.IRelayCommand command, string reason)

@@ -564,6 +564,36 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatStewardReviewProofSpaceDockLink(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewProofSpaceDockLinkFormat, mod);
 
+    public string StewardReviewOwnerRecords => Resources.StewardReviewOwnerRecords;
+
+    public string StewardOwnerRecordFirstClaim => Resources.StewardOwnerRecordFirstClaim;
+
+    public string FormatStewardOwnerRecordBefore(string login, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerRecordBeforeFormat, login, id);
+
+    public string StewardOwnerRecordNoneBefore => Resources.StewardOwnerRecordNoneBefore;
+
+    public string StewardOwnerRecordUnreadableBefore => Resources.StewardOwnerRecordUnreadableBefore;
+
+    public string FormatStewardOwnerRecordAfter(string login, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerRecordAfterFormat, login, id);
+
+    public string StewardOwnerRecordRemoved => Resources.StewardOwnerRecordRemoved;
+
+    public string StewardOwnerRecordUnreadableAfter => Resources.StewardOwnerRecordUnreadableAfter;
+
+    public string FormatStewardOwnerAccountSame(string id, string login)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountSameFormat, id, login);
+
+    public string FormatStewardOwnerAccountOtherLogin(string id, string login, string recorded)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountOtherLoginFormat, id, login, recorded);
+
+    public string FormatStewardOwnerAccountGone(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountGoneFormat, id);
+
+    public string FormatStewardOwnerAccountUnknown(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountUnknownFormat, id);
+
     public string FormatStewardReviewFiles(string count)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewFilesFormat, count);
 
@@ -750,6 +780,35 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardReportNoIssuesPermission => Resources.StewardReportNoIssuesPermission;
 
+    public string StewardReportLeavePack => Resources.StewardReportLeavePack;
+
+    public string FormatStewardLeavePackTitle(string pack)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeavePackTitleFormat, pack);
+
+    public string FormatStewardLeaveTitle(string pack, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveTitleFormat, pack, mod);
+
+    public string StewardLeaveEffect => Resources.StewardLeaveEffect;
+
+    public string StewardLeaveMod => Resources.StewardLeaveMod;
+
+    public string StewardLeaveChooseMod => Resources.StewardLeaveChooseMod;
+
+    public string FormatStewardLeaveVersions(string versions)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveVersionsFormat, versions);
+
+    public string FormatStewardLeaveRetracted(string versions)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveRetractedFormat, versions);
+
+    public string FormatStewardLeaveReporterOwns(string reporter, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveReporterOwnsFormat, reporter, mod);
+
+    public string FormatStewardLeaveReporterUnproven(string reporter, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveReporterUnprovenFormat, reporter, mod);
+
+    public string FormatStewardLeaveConfirm(string reporter, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveConfirmFormat, reporter, mod);
+
     public string StewardTabWatcher => Resources.StewardTabWatcher;
 
     public string StewardWatcherHint => Resources.StewardWatcherHint;
@@ -889,6 +948,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardRefusedUnknownVersionFormat, id, version);
 
     public string StewardRefusedNotInFile => Resources.StewardRefusedNotInFile;
+
+    public string FormatStewardRefusedNotPinned(string pack, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardRefusedNotPinnedFormat, pack, mod);
+
+    public string FormatStewardRefusedNotConfirmed(string reporter, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardRefusedNotConfirmedFormat, reporter, mod);
 
     public string StewardErrorSignedOut => Resources.StewardErrorSignedOut;
 

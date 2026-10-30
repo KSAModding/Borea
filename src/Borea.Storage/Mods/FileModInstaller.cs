@@ -120,7 +120,7 @@ public sealed class FileModInstaller : IModInstaller
                         throw new InvalidOperationException($"The instance received a foreign folder for '{release.ModId}' while the archive downloaded.");
 
                     Directory.CreateDirectory(modsFolder);
-                    Directory.Move(stagingFolder, modFolder);
+                    DirectoryRename.Move(stagingFolder, modFolder);
                     current.AddMod(installed);
                     resultingState = InstallPlanningState.Capture(current);
                     return true;

@@ -1253,11 +1253,11 @@ public partial class MainViewModel
         if (dependencies.Plan is not { } plan)
             return text;
 
-        if (!plan.IsReady)
-            return $"{text} {Localization.FormatContentManageCannotInstall(Describe(plan.Conflicts.Concat(plan.UnresolvedChoices)))}";
-
         if (dependencies.NotOwned.Count > 0)
             return $"{text} {Localization.FormatContentManageNotOwned(string.Join(", ", dependencies.NotOwned.Select(ContentName)))}";
+
+        if (!plan.IsReady)
+            return $"{text} {Localization.FormatContentManageCannotInstall(Describe(plan.Conflicts.Concat(plan.UnresolvedChoices)))}";
 
         return plan.Warnings.Count > 0 ? $"{text} {Describe(plan.Warnings)}" : text;
     }

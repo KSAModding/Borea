@@ -415,6 +415,20 @@ public sealed class FileLoaderInstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallAsync_RecordedFlatFolderWithoutItsLaunchFile_MovesItAndInstallsBesideIt()
+    {
+        await InstallFlatAsync("0.4.7");
+        File.Delete(Path.Combine(DefaultDirectory, "StarMap.exe"));
+        _downloader.Bytes = StarMapZip("0.4.8");
+
+        await InstallAsync(release: StarMapRelease("0.4.8"));
+
+        Assert.True(File.Exists(Path.Combine(VersionDirectory("0.4.7"), "StarMap.dll")));
+        Assert.True(File.Exists(Path.Combine(VersionDirectory("0.4.8"), "StarMap.exe")));
+        Assert.Equal(VersionDirectory("0.4.8"), await RecordedDirectoryAsync());
+    }
+
+    [Fact]
     public async Task InstallAsync_AdoptedFlatFolder_IsMovedAndBecomesBoreaOwned()
     {
         await InstallFlatAsync("0.4.7");

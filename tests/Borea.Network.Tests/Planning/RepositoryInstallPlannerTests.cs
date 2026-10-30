@@ -752,6 +752,52 @@ public sealed class RepositoryInstallPlannerTests
         Assert.Equal(["A"], plan.Operations.Select(value => value.Release.ModId));
     }
 
+    [Theory]
+    [InlineData("A")]
+    [InlineData("B")]
+    public async Task PlanAsync_AnotherVersionOfARecordedForeignMod_IsAConflictThatNamesIt(string requestedId)
+    {
+        var a = Release("A", dependencies: [Required("B", "2.0.0")]);
+        var b2 = Release("B", "2.0.0");
+        var instance = InstanceWith([Foreign("B", [])]);
+        var requested = new[] { a, b2 }.Single(value => value.ModId == requestedId);
+
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(requested, InstallReason.Manual)], new FakeRepository([a, b2])));
+
+        Assert.False(plan.IsReady);
+        Assert.Contains(plan.Conflicts, value => value.ModId == "B" && value.Code == "foreign-owned");
+        Assert.DoesNotContain(plan.Operations, value => value.Release.ModId == "B");
+    }
+
+    [Fact]
+    public async Task PlanAsync_DependencyThatTheRecordedForeignVersionSatisfies_KeepsThatVersion()
+    {
+        var recorded = Foreign("B", []);
+        var a = Release("A", dependencies: [Required("B")]);
+        var instance = InstanceWith([recorded]);
+
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, recorded.Metadata, Release("B", "2.0.0")])));
+
+        Assert.True(plan.IsReady);
+        Assert.Equal(["A"], plan.Operations.Select(value => value.Release.ModId));
+    }
+
+    [Fact]
+    public async Task PlanAsync_AlternativeThatNeedsANewerRecordedForeignMod_StopsAndNamesIt()
+    {
+        var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B", minVersion: ModVersion.Parse("2.0.0")), new ModDependencyAlternative("C")]);
+        var a = Release("A", dependencies: [dependency]);
+        var alternatives = new Dictionary<string, string> { ["A:dependency:0:alternative"] = "B" };
+
+        var plan = await PlanAsync(new InstallPlanningRequest(InstanceWith([Foreign("B", [])]), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B", "2.0.0"), Release("C")]), Alternatives: alternatives));
+
+        Assert.False(plan.IsReady);
+        Assert.DoesNotContain(plan.Operations, value => value.Release.ModId == "B");
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal("B", conflict.ModId);
+        Assert.Equal("foreign-owned", conflict.Code);
+    }
+
     [Fact]
     public async Task PlanAsync_StableChannel_SkipsANewerDevReleaseOfARequestedMod()
     {
@@ -934,6 +980,18 @@ public sealed class RepositoryInstallPlannerTests
         Assert.Equal(["B"], check.Missing.Select(value => value.ModId));
         Assert.False(check.CanInstallMissing);
         Assert.Contains(check.Plan!.Conflicts, value => value.Code == "unsatisfied-dependency");
+    }
+
+    [Fact]
+    public async Task CheckHandover_DependencyThatNeedsANewerVersionOfTheMod_DoesNotNameTheModAsNotOwned()
+    {
+        var owner = Foreign("X", [Required("B")]);
+        var instance = InstanceWith([owner]);
+
+        var check = await CheckHandoverAsync(instance, owner, [owner.Metadata, Release("B", dependencies: [Required("X", "2.0.0")])]);
+
+        Assert.Empty(check.NotOwned);
+        Assert.False(check.CanInstallMissing);
     }
 
     [Fact]
