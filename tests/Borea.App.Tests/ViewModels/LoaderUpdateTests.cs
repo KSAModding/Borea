@@ -141,6 +141,25 @@ public sealed class LoaderUpdateTests
     }
 
     [Fact]
+    public async Task InstancePage_UpdateWhileTheGameRuns_ShowsOneErrorToast()
+    {
+        using var harness = await CreateAsync();
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        harness.IsGameProcessRunning = () => true;
+
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        var toast = Assert.Single(viewModel.Toasts.Items, item => item.IsFailed);
+        Assert.Equal(harness.Localization.LoaderUpdateGameRunning, toast.Message);
+        Assert.Equal(ModVersion.Parse("0.4.6"), harness.Services.Settings.LoaderInstallations["StarMap"].Version);
+    }
+
+    [Fact]
     public async Task NewerReleaseWhileTheInstalledOneFits_ShowsABannerThatStaysClosed()
     {
         using var harness = await CreateAsync(installedFitsTheGame: true);
@@ -299,6 +318,27 @@ public sealed class LoaderUpdateTests
         var updated = Assert.Single(viewModel.InstanceLoader!.Rows);
         Assert.Equal(InstanceLoaderState.Installed, updated.State);
         Assert.False(updated.CanUpdate);
+    }
+
+    [Fact]
+    public async Task InstancePage_NewGameBuild_RatesTheOpenRowAgain()
+    {
+        using var harness = await CreateAsync(withGame: false);
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        Assert.NotEqual(InstanceLoaderState.GameIncompatible, Assert.Single(viewModel.InstanceLoader!.Rows).State);
+
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(harness.Services.Settings.GameDirectoryPath!, "KSA.dll"));
+        await viewModel.RefreshInstalledGameAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        Assert.Equal(InstanceLoaderState.GameIncompatible, row.State);
+        Assert.True(row.CanUpdate);
+        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.7"), row.UpdateText);
     }
 
     [Fact]
