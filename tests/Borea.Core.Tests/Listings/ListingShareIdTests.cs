@@ -14,15 +14,27 @@ public sealed class ListingShareIdTests
         Assert.Equal(id, ListingShareId.From(name));
     }
 
-    [Fact]
-    public void From_LetterOutsideAscii_IsLeftOut()
+    [Theory]
+    [InlineData("Rakete \x00DCber 2", "RaketeUeber2")]
+    [InlineData("\x00C4rger \x00D6l \x00FCbel", "AergerOeluebel")]
+    [InlineData("Gr\x00F6\x00DFe Fl\x00E4che", "GroesseFlaeche")]
+    [InlineData("GRO\x1E9E", "GROSS")]
+    [InlineData("Caf\x00E9 Fa\x00E7ade", "CafeFacade")]
+    [InlineData("Cafe\x0301", "Cafe")]
+    [InlineData("\x0414\x043E\x043C", "")]
+    public void From_MapsGermanLettersAndKeepsTheBaseLetterOfAnAccent(string name, string id)
     {
-        Assert.Equal("Raketeber2", ListingShareId.From($"Rakete {(char)0xDC}ber 2"));
+        Assert.Equal(id, ListingShareId.From(name));
     }
 
-    [Fact]
-    public void From_LongName_IsCutAtTheLongestId()
+    [Theory]
+    [InlineData("a", 80)]
+    [InlineData("\x00E4", 40)]
+    public void From_LongName_IsCutAtTheLongestIdAfterTheMapping(string letter, int count)
     {
-        Assert.Equal(new string('a', ListingShareId.MaxLength), ListingShareId.From(new string('a', 80)));
+        var id = ListingShareId.From(string.Concat(Enumerable.Repeat(letter, count)));
+
+        Assert.Equal(ListingShareId.MaxLength, id.Length);
+        Assert.True(id.All(char.IsAsciiLetterOrDigit));
     }
 }
