@@ -25,6 +25,9 @@ public partial class MainViewModel
     /// <summary>The kept build of the prompted instance, which the modal names in place of the build of the settings. Null on the settings build.</summary>
     private string? _promptedKeptBuild;
 
+    /// <summary>The build that the prompt rates the loader against, the kept build or else the build of the settings.</summary>
+    private string PromptedGameText => _promptedKeptBuild ?? InstalledVersionText ?? string.Empty;
+
     /// <summary>The update a launch skipped with "Play anyway", which no later launch of that instance asks about again.</summary>
     private string? _playedAnywayLoaderUpdate;
 
@@ -66,15 +69,22 @@ public partial class MainViewModel
         ? null
         : PromptedLoaderUpdate switch
         {
-            { InstalledVersion: { } installed, Offer: { } offer } => Localization.FormatLaunchLoaderUpdate(loader.Name, installed.ToString(), _promptedKeptBuild ?? InstalledVersionText ?? string.Empty, offer.Version.ToString()),
-            { InstalledVersion: { } installed } => Localization.FormatLaunchLoaderIncompatible(loader.Name, installed.ToString(), _promptedKeptBuild ?? InstalledVersionText ?? string.Empty),
+            { InstalledVersion: { } installed, Offer: { } offer } when IsOlderOffer(offer, installed) => Localization.FormatLaunchLoaderInstallOlder(loader.Name, installed.ToString(), PromptedGameText, offer.Version.ToString()),
+            { InstalledVersion: { } installed, Offer: { } offer } => Localization.FormatLaunchLoaderUpdate(loader.Name, installed.ToString(), PromptedGameText, offer.Version.ToString()),
+            { InstalledVersion: { } installed } => Localization.FormatLaunchLoaderIncompatible(loader.Name, installed.ToString(), PromptedGameText),
             _ when PromptedLoaderPin is { } pin => Localization.FormatLaunchPinnedLoaderNotInstallable(loader.Name, pin.ToString()),
             _ => NeedsGameSetup
                 ? Localization.FormatLaunchSetUpGameFirst(loader.Name)
                 : Localization.FormatLaunchInstallLoader(_promptedLoaderRelease is { } release ? $"{loader.Name} {release.Version}" : loader.Name),
         };
 
-    public string LoaderPromptActionText => IsLoaderUpdatePrompt ? Localization.LaunchUpdateAndPlay : Localization.SetupInstallLoader;
+    /// <summary>
+    /// The main action also starts the game, so it says "Install and play" for a missing version and for an older
+    /// release, which goes beside the installed one, and "Update and play" for a newer release.
+    /// </summary>
+    public string LoaderPromptActionText => PromptedLoaderUpdate is { Offer: { } offer } update && !IsOlderOffer(offer, update.InstalledVersion)
+        ? Localization.LaunchUpdateAndPlay
+        : Localization.LaunchInstallAndPlay;
 
     partial void OnPromptedLoaderChanged(ModMetadata? value)
     {

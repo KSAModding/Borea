@@ -1372,10 +1372,13 @@
     <value>Deine Mods brauchen für den neuen Build vielleicht Updates. Damit du {0} nach dem Update weiter mit KSA {1} spielen kannst, behalte diesen Build, bevor du das Spiel aktualisierst.</value>
   </data>
   <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
-    <value>{0} {1} unterstützt KSA {2} nicht. {0} {3} unterstützt es.</value>
+    <value>{0} {1} unterstützt den KSA-Build {2} nicht. {0} {3} unterstützt ihn.</value>
+  </data>
+  <data name="LoaderUpdateUrgentKeptFormat" xml:space="preserve">
+    <value>{0} behält den KSA-Build {1}, den {2} {3} nicht unterstützt. {2} {4} unterstützt ihn.</value>
   </data>
   <data name="LoaderUpdateNoneFormat" xml:space="preserve">
-    <value>{0} {1} unterstützt KSA {2} nicht, und noch keine neuere Version von {0} unterstützt es.</value>
+    <value>{0} {1} unterstützt den KSA-Build {2} nicht, und noch keine neuere Version von {0} unterstützt ihn.</value>
   </data>
   <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
     <value>{0} {1} braucht einen neueren KSA-Build als {2}. Aktualisiere KSA vor dem Spielen.</value>
@@ -3969,6 +3972,9 @@
   <data name="InstanceLoaderInstallFormat" xml:space="preserve">
     <value>{0} installieren</value>
   </data>
+  <data name="InstanceLoaderInstallingFormat" xml:space="preserve">
+    <value>{0} wird installiert...</value>
+  </data>
   <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
     <value>Wähle, welche Version des Mod-Loaders {0} startet. Andere Instanzen behalten ihre eigene Einstellung.</value>
   </data>
@@ -4620,11 +4626,17 @@
   <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
     <value>{0} {1} unterstützt KSA {2} nicht. Vor dem Spielen auf {3} aktualisieren?</value>
   </data>
+  <data name="LaunchLoaderInstallOlderFormat" xml:space="preserve">
+    <value>{0} {1} unterstützt KSA {2} nicht. Vor dem Spielen {0} {3} für diese Instanz installieren? {0} {1} bleibt installiert.</value>
+  </data>
   <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0} {1} unterstützt KSA {2} nicht, darum startet das Spiel vielleicht nicht. Trotzdem spielen?</value>
   </data>
   <data name="LaunchUpdateAndPlay" xml:space="preserve">
     <value>Aktualisieren und spielen</value>
+  </data>
+  <data name="LaunchInstallAndPlay" xml:space="preserve">
+    <value>Installieren und spielen</value>
   </data>
   <data name="LaunchPlayAnyway" xml:space="preserve">
     <value>Trotzdem spielen</value>

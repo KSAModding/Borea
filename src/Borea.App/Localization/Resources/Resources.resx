@@ -1374,6 +1374,9 @@
   <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
     <value>{0} {1} does not support KSA {2}. {0} {3} does.</value>
   </data>
+  <data name="LoaderUpdateUrgentKeptFormat" xml:space="preserve">
+    <value>{0} keeps KSA {1}, which {2} {3} does not support. {2} {4} does.</value>
+  </data>
   <data name="LoaderUpdateNoneFormat" xml:space="preserve">
     <value>{0} {1} does not support KSA {2}, and no newer release of {0} does yet.</value>
   </data>
@@ -3969,6 +3972,9 @@
   <data name="InstanceLoaderInstallFormat" xml:space="preserve">
     <value>Install {0}</value>
   </data>
+  <data name="InstanceLoaderInstallingFormat" xml:space="preserve">
+    <value>Installing {0}...</value>
+  </data>
   <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
     <value>Choose which version of the mod loader starts {0}. Other instances keep their own setting.</value>
   </data>
@@ -4629,11 +4635,17 @@
   <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
     <value>{0} {1} does not support KSA {2}. Update it to {3} before you play?</value>
   </data>
+  <data name="LaunchLoaderInstallOlderFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}. Install {0} {3} for this instance before you play? {0} {1} stays installed.</value>
+  </data>
   <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0} {1} does not support KSA {2}, so the game may not start. Play anyway?</value>
   </data>
   <data name="LaunchUpdateAndPlay" xml:space="preserve">
     <value>Update and play</value>
+  </data>
+  <data name="LaunchInstallAndPlay" xml:space="preserve">
+    <value>Install and play</value>
   </data>
   <data name="LaunchPlayAnyway" xml:space="preserve">
     <value>Play anyway</value>

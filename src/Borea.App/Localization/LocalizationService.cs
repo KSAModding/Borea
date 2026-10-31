@@ -1316,6 +1316,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLoaderUpdateUrgent(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentFormat, loader, installed, game, offer);
 
+    public string FormatLoaderUpdateUrgentKept(string instance, string build, string loader, string installed, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentKeptFormat, instance, build, loader, installed, offer);
+
     public string FormatLoaderUpdateNone(string loader, string installed, string game)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateNoneFormat, loader, installed, game);
 
@@ -2627,6 +2630,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstanceLoaderInstall(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstallFormat, version);
 
+    public string FormatInstanceLoaderInstalling(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstallingFormat, loader);
+
     public string FormatInstanceLoaderModalHint(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderModalHintFormat, instanceName);
 
@@ -2977,10 +2983,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchLoaderUpdate(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderUpdateFormat, loader, installed, game, offer);
 
+    public string FormatLaunchLoaderInstallOlder(string loader, string installed, string game, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderInstallOlderFormat, loader, installed, game, offer);
+
     public string FormatLaunchLoaderIncompatible(string loader, string installed, string game)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderIncompatibleFormat, loader, installed, game);
 
     public string LaunchUpdateAndPlay => Resources.LaunchUpdateAndPlay;
+
+    public string LaunchInstallAndPlay => Resources.LaunchInstallAndPlay;
 
     public string LaunchPlayAnyway => Resources.LaunchPlayAnyway;
 

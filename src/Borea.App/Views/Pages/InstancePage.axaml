@@ -171,7 +171,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:InstanceLoaderRow">
                                 <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
-                                    <Grid>
+                                    <Grid RowDefinitions="Auto,Auto">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="48" />
                                             <ColumnDefinition Width="16" />
@@ -205,7 +205,6 @@
                                             <TextBlock Classes="body-sm secondary" Text="{Binding RangeText}" TextWrapping="Wrap" IsVisible="{Binding RangeText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                             <TextBlock Classes="body-sm secondary" Text="{Binding NeededByText}" TextWrapping="Wrap" IsVisible="{Binding NeededByText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                             <TextBlock Classes="body-sm secondary" Text="{Binding NoneText}" TextWrapping="Wrap" IsVisible="{Binding NoneText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                            <ProgressBar Height="6" Margin="0,6,0,0" Value="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" IsVisible="{Binding IsInstalling}" />
                                         </StackPanel>
                                         <Border Grid.Column="3" Classes="chip" Classes.compatible="{Binding IsInstalled}" Classes.untested="{Binding IsWarning}" Classes.incompatible="{Binding IsDanger}" Margin="16,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" ToolTip.Tip="{Binding StatusToolTip}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -219,6 +218,23 @@
                                         <Button Grid.Column="4" Classes="link" Margin="12,0,0,0" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsSetupBusy}" HorizontalAlignment="Left" VerticalAlignment="Center">
                                             <TextBlock Classes="action-md" Text="{Binding UpdateText}" />
                                         </Button>
+                                        <!-- Stop takes the place of the button while this row installs -->
+                                        <Panel Grid.Column="4" Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                                            <Button Classes="link" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).LoaderInstallRun.StopCommand}" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).LoaderInstallRun, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).LoaderInstallRun.StopText}" />
+                                            </Button>
+                                        </Panel>
+                                        <!-- the install shows below the row over its whole width, so the bar ends at the same place in each language -->
+                                        <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Spacing="4" Margin="0,8,0,0" IsVisible="{Binding IsInstalling}">
+                                            <Panel>
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding InstallingText}" TextTrimming="CharacterEllipsis" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetupProgressStatus, Converter={x:Static ObjectConverters.IsNull}}" />
+                                                <WrapPanel ItemSpacing="8" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetupProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                    <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetupProgressStatus}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetupProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetupProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                </WrapPanel>
+                                            </Panel>
+                                            <ProgressBar Height="6" Value="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

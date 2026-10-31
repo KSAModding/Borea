@@ -29,6 +29,9 @@ public partial class MainViewModel
 
     private int _instanceLoaderGeneration;
 
+    /// <summary>The release that a Mod loader row installs, so a row that the page builds again during the install still shows it. Null while no row installs.</summary>
+    private (string LoaderId, ModVersion Version)? _rowLoaderInstall;
+
     /// <summary>
     /// Chooses the loader version of the shown instance the way Play does, then builds the section again.
     /// A later call wins over an earlier one that is still reading.
@@ -111,6 +114,27 @@ public partial class MainViewModel
         if (SetupError is { } error && !IsLoaderSettingModalOpen && !IsLoaderPromptOpen)
             ShowErrorToast(() => Localization.FormatToastInstallFailed($"{loaderId} {release.Version}"), error);
         return false;
+    }
+
+    /// <summary>True while a Mod loader row installs <paramref name="release"/> of the loader.</summary>
+    internal bool IsRowInstalling(string loaderId, ModVersionMetadata? release) =>
+        _rowLoaderInstall is { } running && release is not null && ModIds.Equals(running.LoaderId, loaderId) && running.Version == release.Version;
+
+    /// <summary>Installs <paramref name="release"/> for a Mod loader row, and the rows show the install until it ends.</summary>
+    /// <param name="replaced">The version that an update replaces, or null for an install.</param>
+    internal async Task InstallLoaderFromRowAsync(string loaderId, ModVersionMetadata release, ModVersion? replaced)
+    {
+        _rowLoaderInstall = (loaderId, release.Version);
+        RefreshInstanceLoader();
+        try
+        {
+            await InstallLoaderVersionAsync(loaderId, release, replaced);
+        }
+        finally
+        {
+            _rowLoaderInstall = null;
+            RefreshInstanceLoader();
+        }
     }
 }
 
@@ -339,45 +363,47 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     /// <summary>A conflict or a release that does not support the game shows as a danger.</summary>
     public bool IsDanger => State is InstanceLoaderState.Conflict or InstanceLoaderState.GameIncompatible;
 
-    /// <summary>"Update to 0.4.8" when a release that fits the game and the mods is offered, newer or for a kept build also older, else null.</summary>
-    public string? UpdateText => _offer is { } offer ? _owner.Localization.FormatSetupUpdateLoader(offer.Version.ToString()) : null;
+    /// <summary>
+    /// "Update to 0.4.8" when a newer release that fits the game and the mods is offered, or "Install 0.4.6" for an
+    /// older release that a kept build needs, which goes beside the installed one. Else null.
+    /// </summary>
+    public string? UpdateText => _offer is not { } offer
+        ? null
+        : MainViewModel.IsOlderOffer(offer, _version)
+            ? _owner.Localization.FormatInstanceLoaderInstall(offer.Version.ToString())
+            : _owner.Localization.FormatSetupUpdateLoader(offer.Version.ToString());
 
-    public bool CanUpdate => _offer is not null;
+    /// <summary>The button hides while the row installs, because Stop takes its place.</summary>
+    public bool CanUpdate => _offer is not null && !IsInstalling;
 
     /// <summary>"Install 0.4.8" when the version that would start the instance is not installed and the index offers it, else null.</summary>
     public string? InstallText => _missing is { } missing ? _owner.Localization.FormatInstanceLoaderInstall(missing.Version.ToString()) : null;
 
-    public bool CanInstall => _missing is not null;
+    public bool CanInstall => _missing is not null && !IsInstalling;
 
-    /// <summary>True while this row installs a release, so the row shows the progress of the install.</summary>
-    [ObservableProperty]
-    private bool _isInstalling;
+    /// <summary>True while a row of this loader installs the release that this row offers, so the row shows the progress of the install.</summary>
+    public bool IsInstalling => _owner.IsRowInstalling(_loaderId, _missing ?? _offer);
+
+    /// <summary>
+    /// "Installing StarMap 0.4.7..." while this row installs, until the install reports its own progress text. A row
+    /// offers either an update or a missing version, never both, so the text names the release that it installs.
+    /// </summary>
+    public string? InstallingText => IsInstalling && (_missing ?? _offer) is { } release
+        ? _owner.Localization.FormatInstanceLoaderInstalling($"{Name} {release.Version}")
+        : null;
 
     [RelayCommand]
     private async Task UpdateAsync()
     {
         if (_offer is { } offer)
-            await InstallAsync(offer, _version);
+            await _owner.InstallLoaderFromRowAsync(_loaderId, offer, _version);
     }
 
     [RelayCommand]
     private async Task InstallMissingAsync()
     {
         if (_missing is { } missing)
-            await InstallAsync(missing, replaced: null);
-    }
-
-    private async Task InstallAsync(ModVersionMetadata release, ModVersion? replaced)
-    {
-        IsInstalling = true;
-        try
-        {
-            await _owner.InstallLoaderVersionAsync(_loaderId, release, replaced);
-        }
-        finally
-        {
-            IsInstalling = false;
-        }
+            await _owner.InstallLoaderFromRowAsync(_loaderId, missing, replaced: null);
     }
 
     private static InstanceLoaderState StateOf(NeededLoader? loader, bool isInstalled, ModVersion? version, GameCompatibility compatibility)

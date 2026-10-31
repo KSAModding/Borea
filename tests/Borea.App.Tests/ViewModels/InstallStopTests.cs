@@ -553,7 +553,7 @@ public sealed class InstallStopTests
     }
 
     /// <summary>A response body that sends nothing until its read is cancelled, or with <paramref name="hang"/> until that completes.</summary>
-    private sealed class StalledBody(TaskCompletionSource reading, Task? hang = null) : Stream
+    internal sealed class StalledBody(TaskCompletionSource reading, Task? hang = null) : Stream
     {
         public override bool CanRead => true;
 

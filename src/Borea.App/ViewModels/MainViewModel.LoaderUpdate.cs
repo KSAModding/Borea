@@ -34,13 +34,24 @@ public partial class MainViewModel
     /// <summary>The kept build of the instance that the banners rate, which they name in place of the build of the settings. Null on the settings build.</summary>
     private string? _loaderUpdateKeptBuild;
 
+    /// <summary>The instance that the banners rate, which the banner for a kept build names.</summary>
+    private (Guid Id, string Name) _loaderUpdateInstance = (Guid.Empty, string.Empty);
+
+    /// <summary>The current name of the rated instance, because a rename does not change the rating and starts no check.</summary>
+    private string LoaderUpdateInstanceName => _activeInstanceEntity is { } active && active.InstanceId == _loaderUpdateInstance.Id
+        ? active.Name
+        : _loaderUpdateInstance.Name;
+
     private string? _dismissedLoaderUpdate;
 
     /// <summary>The pinned version of the active instance that is missing or does not support the game, or null.</summary>
     private PinnedLoaderProblem? _pinnedLoaderProblem;
 
-    /// <summary>The active instance and its loader setting when the last check started, so a change rates again.</summary>
-    private (Guid? InstanceId, LoaderSetting? Setting) _loaderUpdateRated;
+    /// <summary>The active instance, its loader setting and its kept build when the last check started, so a change of any of them rates again.</summary>
+    private (Guid? InstanceId, LoaderSetting? Setting, GameVersion? GameBuild) _loaderUpdateRated;
+
+    private (Guid? InstanceId, LoaderSetting? Setting, GameVersion? GameBuild) ActiveLoaderRating =>
+        (_activeInstanceEntity?.InstanceId, _activeInstanceEntity?.Loader, _activeInstanceEntity?.GameBuild);
 
     /// <summary>
     /// The update the Home banner shows for an active instance that chooses its version automatically: the version
@@ -62,6 +73,8 @@ public partial class MainViewModel
     {
         ({ IsIncompatible: true } pin, _) => Localization.FormatLoaderPinnedIncompatible(_loaderUpdateName, pin.Version.ToString(), pin.InstanceName, _loaderUpdateKeptBuild ?? InstalledVersionText ?? string.Empty),
         ({ } pin, _) => Localization.FormatLoaderPinnedMissing(_loaderUpdateName, pin.Version.ToString(), pin.InstanceName),
+        (null, { InstalledVersion: { } installed, Offer: { } offer } update) when IsBroken(update) && _loaderUpdateKeptBuild is { } kept =>
+            Localization.FormatLoaderUpdateUrgentKept(LoaderUpdateInstanceName, kept, _loaderUpdateName, installed.ToString(), offer.Version.ToString()),
         (null, { } update) when IsBroken(update) => LoaderIncompatibleText(_loaderUpdateName, update, _loaderUpdateKeptBuild),
         (null, { InstalledVersion: not null, Offer: { } offer }) => Localization.FormatLoaderUpdateAvailable(_loaderUpdateName, offer.Version.ToString()),
         _ => null,
@@ -71,8 +84,10 @@ public partial class MainViewModel
         ? pinned.Install is { } install
             ? Localization.FormatLoaderInstallAction(_loaderUpdateName, install.Version.ToString())
             : Localization.LoaderChangeAction
-        : LoaderUpdate?.Offer is { } release
-            ? Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
+        : LoaderUpdate is { Offer: { } release } update
+            ? IsOlderOffer(release, update.InstalledVersion)
+                ? Localization.FormatLoaderInstallAction(_loaderUpdateName, release.Version.ToString())
+                : Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
             : null;
 
     partial void OnLoaderUpdateChanged(LoaderUpdate? value) => RefreshLoaderUpdateText();
@@ -82,6 +97,12 @@ public partial class MainViewModel
     /// <summary>True when the index says the installed release does not support the game, with or without a release to update to.</summary>
     private static bool IsBroken(LoaderUpdate? update) =>
         update is { InstalledCompatibility: GameCompatibility.Incompatible, InstalledVersion: not null };
+
+    /// <summary>
+    /// True when <paramref name="offer"/> is older than the installed version, which only a kept build asks for. It
+    /// installs beside the installed version, so the texts say Install, not Update.
+    /// </summary>
+    internal static bool IsOlderOffer(ModVersionMetadata offer, ModVersion? installed) => installed is { } known && offer.Version < known;
 
     /// <summary>
     /// Why the installed release does not fit the game, and the next step: the
@@ -144,12 +165,13 @@ public partial class MainViewModel
             return;
 
         // also a check that fails counts, so a reload without the index does not start the next one
-        _loaderUpdateRated = (_activeInstanceEntity?.InstanceId, _activeInstanceEntity?.Loader);
+        _loaderUpdateRated = ActiveLoaderRating;
         var found = new Dictionary<string, LoaderUpdate>(ModIds.Comparer);
         LoaderUpdate? shown = null;
         PinnedLoaderProblem? pinned = null;
         var name = string.Empty;
         string? keptBuild = null;
+        var ratedInstance = (Guid.Empty, string.Empty);
         try
         {
             foreach (var (loaderId, installation) in services.Settings.LoaderInstallations.OrderBy(entry => entry.Key, ModIds.Comparer))
@@ -160,6 +182,7 @@ public partial class MainViewModel
             var active = await services.Instances.GetActiveInstanceIdAsync() is { } activeId ? await services.Instances.GetByIdAsync(activeId) : null;
             var instance = active ?? new Instance(nameof(Instance), InstanceSource.Custom.Value);
             keptBuild = KeptBuildTextOf(instance);
+            ratedInstance = (instance.InstanceId, instance.Name);
             var resolution = await ResolveLaunchLoaderAsync(services, instance);
             if (resolution.Version is { IsPinned: true } pin)
                 pinned = PinnedLoaderProblemOf(instance, pin, resolution.Start);
@@ -180,18 +203,22 @@ public partial class MainViewModel
         _loaderUpdates = found;
         _loaderUpdateName = name;
         _loaderUpdateKeptBuild = keptBuild;
+        _loaderUpdateInstance = ratedInstance;
         _pinnedLoaderProblem = pinned;
         LoaderUpdate = shown;
         RefreshLoaderUpdateText();
         RefreshInstanceLoader();
     }
 
-    /// <summary>The banners follow the active instance, so another active instance or a new loader setting rates again.</summary>
+    /// <summary>The banners follow the active instance, so another active instance, a new loader setting or another kept build rates again.</summary>
     partial void OnActiveInstanceChanged(InstanceItem? value)
     {
         // the first check waits until the start has refreshed the index
-        if (_loaderUpdateCheckGeneration > 0 && _loaderUpdateRated != (_activeInstanceEntity?.InstanceId, _activeInstanceEntity?.Loader))
+        if (_loaderUpdateCheckGeneration > 0 && _loaderUpdateRated != ActiveLoaderRating)
             StartLoaderUpdateCheck();
+
+        // a rename rates nothing again, but the banner for a kept build names the instance
+        OnPropertyChanged(nameof(LoaderUpdateBannerText));
     }
 
     /// <summary>The Error banner for a pinned version that is missing or that the index rates incompatible with the game, else null.</summary>
