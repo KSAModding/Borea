@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Localization;
@@ -34,14 +35,28 @@ public partial class MainViewModel
     /// <summary>How many mods of the row of the open modal do not support the build to keep, and how many it has.</summary>
     private (int Incompatible, int Total) _keepGameBuildModFit;
 
-    /// <summary>What keeping the build would do for the row or the folder of the open modal. Null while the modal is closed.</summary>
+    /// <summary>What keeping the build would do for the row or the folder of the open modal. Null while the modal is closed or while its check runs.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsKeepGameBuildModalOpen), nameof(KeepGameBuildTitle), nameof(KeepGameBuildText), nameof(KeepGameBuildIncompatibleText), nameof(KeepGameBuildSourceText), nameof(KeepGameBuildFolderText), nameof(KeepGameBuildFreeSpaceText), nameof(KeepGameBuildRefusalText))]
     [NotifyPropertyChangedFor(nameof(IsKeepGameBuildRefusalDanger), nameof(ShowsKeepGameBuildSetup), nameof(CanConfirmKeepGameBuild), nameof(KeepGameBuildDismissText))]
     [NotifyCanExecuteChangedFor(nameof(ConfirmKeepGameBuildCommand))]
     private GameBuildKeepCheck? _keepGameBuildCheck;
 
-    public bool IsKeepGameBuildModalOpen => KeepGameBuildCheck is not null;
+    /// <summary>The modal opens at once and shows that the check runs, because the check walks every file of the build.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsKeepGameBuildModalOpen), nameof(KeepGameBuildTitle), nameof(KeepGameBuildDismissText))]
+    private bool _isKeepGameBuildChecking;
+
+    /// <summary>
+    /// Counts the opens and closes of the keep and use-current modals, so that a check which a Cancel or a newer open
+    /// overtook drops its result.
+    /// </summary>
+    private int _gameBuildModalLoadCount;
+
+    /// <summary>Stops the walk of the files of a keep check that a Cancel or a newer open overtook.</summary>
+    private CancellationTokenSource? _keepGameBuildCheckCancellation;
+
+    public bool IsKeepGameBuildModalOpen => KeepGameBuildCheck is not null || IsKeepGameBuildChecking;
 
     public string KeepGameBuildTitle => _keepGameBuildFolder is not null ? Localization.ModalAddGameBuildTitle : Localization.ModalKeepGameBuildTitle;
 
@@ -49,7 +64,8 @@ public partial class MainViewModel
     public bool CanConfirmKeepGameBuild => KeepGameBuildCheck is { Refusal: GameBuildKeepRefusal.None } check
         && (check.BytesToCopy > 0 || _keepGameBuildFolder is null);
 
-    public string KeepGameBuildDismissText => CanConfirmKeepGameBuild ? Localization.LibraryCancel : Localization.ModalClose;
+    // a running check has no result to close yet, so the player cancels it
+    public string KeepGameBuildDismissText => IsKeepGameBuildChecking || CanConfirmKeepGameBuild ? Localization.LibraryCancel : Localization.ModalClose;
 
     public string? KeepGameBuildText
     {
@@ -113,24 +129,73 @@ public partial class MainViewModel
             return;
         }
 
+        var (load, cancellation) = StartKeepGameBuildCheck(item, folder: null);
+        var name = item.Name;
         GameBuildKeepCheck check;
         try
         {
-            check = await Task.Run(() => services.GameBuilds.Check(item.Instance));
+            check = await Task.Run(() => services.GameBuilds.Check(item.Instance, cancellation));
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            return;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            ShowErrorToast(() => Localization.InstanceKeepGameBuild, exception.Message);
+            if (load != _gameBuildModalLoadCount)
+                return;
+
+            CancelKeepGameBuild();
+            ShowErrorToast(() => Localization.FormatToastKeepGameBuildCheckFailed(name), exception.Message);
             return;
         }
+        catch
+        {
+            CloseKeepGameBuildAfterUnexpectedError(load);
+            throw;
+        }
+
+        if (load != _gameBuildModalLoadCount)
+            return;
 
         var mods = item.Instance.Mods;
-        _keepGameBuildFolder = null;
-        _keepGameBuildItem = item;
         _keepGameBuildModFit = check.Version is { } version
             ? (mods.Count(mod => Compatibility.Evaluate(mod.Metadata, version) == GameCompatibility.Incompatible), mods.Count + item.Instance.ForeignMods.Count)
             : default;
+        ShowKeepGameBuildCheck(check);
+    }
+
+    /// <summary>
+    /// Opens the keep modal in its checking state for <paramref name="item"/> or <paramref name="folder"/>, and
+    /// returns the number of this open for the drop of a stale result, with the token that a Cancel or a newer open
+    /// cancels to stop the walk of the files.
+    /// </summary>
+    private (int Load, CancellationToken Cancellation) StartKeepGameBuildCheck(InstanceItem? item, string? folder)
+    {
+        _keepGameBuildItem = item;
+        _keepGameBuildFolder = folder;
+        _keepGameBuildModFit = default;
+
+        // the flag goes true before the check goes null, so the modal does not close between two opens
+        IsKeepGameBuildChecking = true;
+        KeepGameBuildCheck = null;
+        _keepGameBuildCheckCancellation?.Cancel();
+        _keepGameBuildCheckCancellation = new CancellationTokenSource();
+        return (++_gameBuildModalLoadCount, _keepGameBuildCheckCancellation.Token);
+    }
+
+    // the check is set before the flag goes false, so the modal stays open through the switch
+    private void ShowKeepGameBuildCheck(GameBuildKeepCheck check)
+    {
         KeepGameBuildCheck = check;
+        IsKeepGameBuildChecking = false;
+    }
+
+    // the error bar draws under the modals, so a check that fails with no known cause must not leave the modal checking over it
+    private void CloseKeepGameBuildAfterUnexpectedError(int load)
+    {
+        if (load == _gameBuildModalLoadCount)
+            CancelKeepGameBuild();
     }
 
     /// <summary>Why Borea could not read the folder the player chose in the Game settings, or null.</summary>
@@ -145,28 +210,45 @@ public partial class MainViewModel
 
         AddGameBuildError = null;
         KeptGameBuildMessage = null;
+        var (load, cancellation) = StartKeepGameBuildCheck(item: null, folder);
         GameBuildKeepCheck check;
         try
         {
-            check = await Task.Run(() => services.GameBuilds.CheckFolder(folder));
+            check = await Task.Run(() => services.GameBuilds.CheckFolder(folder, cancellation));
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            return;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            // a toast would be under the Settings modal, so the reason shows under the button
+            if (load != _gameBuildModalLoadCount)
+                return;
+
+            // a toast would be under the Settings modal, so the reason shows under the button once the modal is closed
+            CancelKeepGameBuild();
             AddGameBuildError = exception.Message;
             services.Log.Write($"Game build folder {folder}: {exception.Message}");
             return;
         }
+        catch
+        {
+            CloseKeepGameBuildAfterUnexpectedError(load);
+            throw;
+        }
 
-        _keepGameBuildItem = null;
-        _keepGameBuildFolder = folder;
-        _keepGameBuildModFit = default;
-        KeepGameBuildCheck = check;
+        if (load != _gameBuildModalLoadCount)
+            return;
+
+        ShowKeepGameBuildCheck(check);
     }
 
     [RelayCommand]
     private void CancelKeepGameBuild()
     {
+        _keepGameBuildCheckCancellation?.Cancel();
+        _gameBuildModalLoadCount++;
+        IsKeepGameBuildChecking = false;
         KeepGameBuildCheck = null;
         _keepGameBuildItem = null;
         _keepGameBuildFolder = null;
@@ -395,13 +477,21 @@ public partial class MainViewModel
 
     private InstanceItem? _useCurrentGameBuildItem;
 
-    /// <summary>How the mods of the row of the open modal fit the build of the settings. Null while the modal is closed.</summary>
+    /// <summary>How the mods of the row of the open modal fit the build of the settings. Null while the modal is closed or while its check runs.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsUseCurrentGameBuildModalOpen), nameof(UseCurrentGameBuildText), nameof(UseCurrentGameBuildFitText), nameof(UseCurrentGameBuildIncompatibleText), nameof(UseCurrentGameBuildUnknownText), nameof(ShowsUseCurrentGameBuildModNames), nameof(UseCurrentGameBuildOlderText), nameof(UseCurrentGameBuildNoGameText), nameof(CanConfirmUseCurrentGameBuild))]
     [NotifyPropertyChangedFor(nameof(UseCurrentGameBuildDismissText), nameof(UseCurrentGameBuildIncompatibleNoteText), nameof(IsUseCurrentGameBuildToOlder), nameof(ShowsUseCurrentGameBuildPrimaryConfirm))]
     [NotifyPropertyChangedFor(nameof(IsBackingUpUseCurrentGameBuildSaves), nameof(UseCurrentGameBuildBackupText))]
     [NotifyCanExecuteChangedFor(nameof(ConfirmUseCurrentGameBuildCommand))]
     private UseCurrentGameBuildPreview? _useCurrentGameBuildPreview;
+
+    /// <summary>The modal opens at once and shows that the check runs, because the check reads the release of each mod.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsUseCurrentGameBuildModalOpen), nameof(UseCurrentGameBuildDismissText))]
+    private bool _isUseCurrentGameBuildChecking;
+
+    /// <summary>Stops the release reads of a check that a Cancel or a newer open overtook.</summary>
+    private CancellationTokenSource? _useCurrentGameBuildCheck;
 
     // the modal that started the backup, so a modal that opens again while it runs does not show it as its own
     private UseCurrentGameBuildPreview? _useCurrentGameBuildBackupPreview;
@@ -421,7 +511,7 @@ public partial class MainViewModel
     [ObservableProperty]
     private bool _isUseCurrentGameBuildBackupFailed;
 
-    public bool IsUseCurrentGameBuildModalOpen => UseCurrentGameBuildPreview is not null;
+    public bool IsUseCurrentGameBuildModalOpen => UseCurrentGameBuildPreview is not null || IsUseCurrentGameBuildChecking;
 
     public bool CanConfirmUseCurrentGameBuild => UseCurrentGameBuildPreview?.Current is not null;
 
@@ -433,7 +523,7 @@ public partial class MainViewModel
     /// <summary>A move to an older build asks with a danger confirm instead, next to the backup of the saves.</summary>
     public bool ShowsUseCurrentGameBuildPrimaryConfirm => CanConfirmUseCurrentGameBuild && !IsUseCurrentGameBuildToOlder;
 
-    public string UseCurrentGameBuildDismissText => CanConfirmUseCurrentGameBuild ? Localization.LibraryCancel : Localization.ModalClose;
+    public string UseCurrentGameBuildDismissText => IsUseCurrentGameBuildChecking || CanConfirmUseCurrentGameBuild ? Localization.LibraryCancel : Localization.ModalClose;
 
     public string? UseCurrentGameBuildText => UseCurrentGameBuildPreview is { Current: { } current } preview && _useCurrentGameBuildItem is { } item
         ? preview.KeptProblem == KeptBuildProblem.None
@@ -480,51 +570,84 @@ public partial class MainViewModel
         if (_services is not { } services || item.Instance.GameBuild is not { } kept)
             return;
 
+        _useCurrentGameBuildItem = item;
+        IsUseCurrentGameBuildChecking = true;
+        UseCurrentGameBuildPreview = null;
+        _useCurrentGameBuildCheck?.Cancel();
+        var cancellation = _useCurrentGameBuildCheck = new CancellationTokenSource();
+        var load = ++_gameBuildModalLoadCount;
+        var name = item.Name;
         UseCurrentGameBuildPreview preview;
         try
         {
-            preview = await Task.Run(() => PreviewUseCurrentGameBuildAsync(services, item.Instance, kept));
+            preview = await Task.Run(() => PreviewUseCurrentGameBuildAsync(services, item.Instance, kept, cancellation.Token));
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            return;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            ShowErrorToast(() => Localization.InstanceUseCurrentGameBuild, exception.Message);
+            if (load != _gameBuildModalLoadCount)
+                return;
+
+            CancelUseCurrentGameBuild();
+            ShowErrorToast(() => Localization.FormatToastUseCurrentGameBuildFailed(name), exception.Message);
             return;
         }
+        catch
+        {
+            // the error bar draws under the modals, as for the keep modal
+            if (load == _gameBuildModalLoadCount)
+                CancelUseCurrentGameBuild();
 
-        _useCurrentGameBuildItem = item;
+            throw;
+        }
+
+        if (load != _gameBuildModalLoadCount)
+            return;
+
         UseCurrentGameBuildPreview = preview;
+        IsUseCurrentGameBuildChecking = false;
     }
 
     /// <summary>
     /// Checks each mod against the build of the settings with the release from the index, because an amendment can
     /// narrow the bounds of an installed release, and with the installed copy of the release when the index has none.
     /// </summary>
-    private static async Task<UseCurrentGameBuildPreview> PreviewUseCurrentGameBuildAsync(BoreaServices services, Instance instance, GameVersion kept)
+    private static async Task<UseCurrentGameBuildPreview> PreviewUseCurrentGameBuildAsync(BoreaServices services, Instance instance, GameVersion kept, CancellationToken cancellationToken)
     {
         var current = services.InstalledVersion.GetInstalledVersion()?.Version;
-        var incompatible = new List<string>();
-        var unknown = new List<string>();
-        foreach (var mod in instance.Mods)
+
+        // a release read can go to SpaceDock over the network, so the reads overlap, and the gate keeps them from a burst at the host
+        const int ParallelReads = 4;
+        using var gate = new SemaphoreSlim(ParallelReads);
+        var rated = await Task.WhenAll(instance.Mods.Select(async mod =>
         {
-            ModVersionMetadata? release = null;
+            await gate.WaitAsync(cancellationToken);
             try
             {
-                release = await services.Mods.GetReleaseAsync(mod.ModId, mod.Version);
+                ModVersionMetadata? release = null;
+                try
+                {
+                    release = await services.Mods.GetReleaseAsync(mod.ModId, mod.Version, cancellationToken);
+                }
+                catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException or JsonException)
+                {
+                }
+
+                var metadata = release ?? mod.Metadata;
+                return (Name: metadata.Listing?.Name ?? mod.Metadata.Listing?.Name ?? mod.ModId, Compatibility: Compatibility.Evaluate(metadata, current));
             }
-            catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+            finally
             {
+                gate.Release();
             }
+        }));
 
-            var metadata = release ?? mod.Metadata;
-            var name = metadata.Listing?.Name ?? mod.Metadata.Listing?.Name ?? mod.ModId;
-            var compatibility = Compatibility.Evaluate(metadata, current);
-            if (compatibility == GameCompatibility.Incompatible)
-                incompatible.Add(name);
-            else if (compatibility == GameCompatibility.Unknown)
-                unknown.Add(name);
-        }
-
-        unknown.AddRange(instance.ForeignMods.Select(mod => mod.FolderName));
+        var incompatible = rated.Where(mod => mod.Compatibility == GameCompatibility.Incompatible).Select(mod => mod.Name);
+        var unknown = rated.Where(mod => mod.Compatibility == GameCompatibility.Unknown).Select(mod => mod.Name)
+            .Concat(instance.ForeignMods.Select(mod => mod.FolderName));
         return new UseCurrentGameBuildPreview(
             current,
             kept,
@@ -537,6 +660,9 @@ public partial class MainViewModel
     [RelayCommand]
     private void CancelUseCurrentGameBuild()
     {
+        _useCurrentGameBuildCheck?.Cancel();
+        _gameBuildModalLoadCount++;
+        IsUseCurrentGameBuildChecking = false;
         UseCurrentGameBuildPreview = null;
         _useCurrentGameBuildItem = null;
     }
@@ -597,7 +723,7 @@ public partial class MainViewModel
         {
             if (libraryUse is null)
             {
-                ShowErrorToast(() => Localization.InstanceUseCurrentGameBuild, Localization.LibraryFolderBusy);
+                ShowErrorToast(() => Localization.FormatToastUseCurrentGameBuildFailed(name), Localization.LibraryFolderBusy);
                 return;
             }
 
@@ -618,13 +744,13 @@ public partial class MainViewModel
                 }
                 else
                 {
-                    ShowErrorToast(() => Localization.InstanceUseCurrentGameBuild, refusal == GameBuildChangeRefusal.Busy ? Localization.KeptGameBuildBusy : Localization.GameSaveCloseGame);
+                    ShowErrorToast(() => Localization.FormatToastUseCurrentGameBuildFailed(name), refusal == GameBuildChangeRefusal.Busy ? Localization.KeptGameBuildBusy : Localization.GameSaveCloseGame);
                     logText = $"Instance {item.InstanceId}: still on the kept KSA {preview.Kept}, refused as {refusal}.";
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
-                ShowErrorToast(() => Localization.InstanceUseCurrentGameBuild, exception.Message);
+                ShowErrorToast(() => Localization.FormatToastUseCurrentGameBuildFailed(name), exception.Message);
                 logText = $"Instance {item.InstanceId}: still on the kept KSA {preview.Kept}. {exception.Message}";
             }
         }

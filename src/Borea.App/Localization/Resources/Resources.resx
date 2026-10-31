@@ -1815,6 +1815,12 @@
   <data name="ToastGameBuildKeepFailedFormat" xml:space="preserve">
     <value>Could not keep KSA {0}</value>
   </data>
+  <data name="ToastKeepGameBuildCheckFailedFormat" xml:space="preserve">
+    <value>Could not check the game build of {0}</value>
+  </data>
+  <data name="ToastUseCurrentGameBuildFailedFormat" xml:space="preserve">
+    <value>Could not move {0} to the current game build</value>
+  </data>
   <data name="ToastActivateFailedFormat" xml:space="preserve">
     <value>Could not activate {0}</value>
   </data>
@@ -3624,6 +3630,9 @@
   <data name="ModalKeepGameBuildConfirm" xml:space="preserve">
     <value>Keep build</value>
   </data>
+  <data name="ModalKeepGameBuildChecking" xml:space="preserve">
+    <value>Borea checks the build and the free space...</value>
+  </data>
   <data name="KeepGameBuildAlreadyKeptFormat" xml:space="preserve">
     <value>This instance already keeps KSA {0}.</value>
   </data>
@@ -3686,6 +3695,9 @@
   </data>
   <data name="ModalUseCurrentGameBuildConfirm" xml:space="preserve">
     <value>Use current build</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildChecking" xml:space="preserve">
+    <value>Borea checks whether your mods are compatible with the current game build...</value>
   </data>
   <data name="ToastUsesCurrentGameBuildFormat" xml:space="preserve">
     <value>{0} now starts on KSA {1}</value>

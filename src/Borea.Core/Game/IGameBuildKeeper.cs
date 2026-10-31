@@ -9,8 +9,11 @@ namespace Borea.Core.Game;
 /// </summary>
 public interface IGameBuildKeeper
 {
-    /// <summary>What keeping the build would do for the instance, or why it is refused. It only reads.</summary>
-    GameBuildKeepCheck Check(Instance instance);
+    /// <summary>
+    /// What keeping the build would do for the instance, or why it is refused. It only reads, and a cancel stops its
+    /// walk of the files with an <see cref="OperationCanceledException"/>.
+    /// </summary>
+    GameBuildKeepCheck Check(Instance instance, CancellationToken cancellationToken);
 
     /// <summary>
     /// Copies the build once and sets it as the build of the instance. A refused check copies nothing and is
@@ -36,8 +39,8 @@ public interface IGameBuildKeeper
     /// </summary>
     Task<GameBuildChangeRefusal> RemoveAsync(GameVersion build, CancellationToken cancellationToken);
 
-    /// <summary>What keeping the build in <paramref name="folder"/> would do, or why it is refused. It only reads.</summary>
-    GameBuildKeepCheck CheckFolder(string folder);
+    /// <summary>What keeping the build in <paramref name="folder"/> would do, or why it is refused. It reads and cancels as <see cref="Check"/> does.</summary>
+    GameBuildKeepCheck CheckFolder(string folder, CancellationToken cancellationToken);
 
     /// <summary>
     /// Why a keep of the game folder of the settings is refused before any scan: <see cref="GameBuildKeepRefusal.WineWrapper"/>

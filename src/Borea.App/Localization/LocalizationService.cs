@@ -244,6 +244,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastGameBuildKeepFailed(string build)
         => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildKeepFailedFormat), build);
 
+    public string FormatToastKeepGameBuildCheckFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastKeepGameBuildCheckFailedFormat, instanceName);
+
+    public string FormatToastUseCurrentGameBuildFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUseCurrentGameBuildFailedFormat, instanceName);
+
     public string FormatToastActivateFailed(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastActivateFailedFormat, instanceName);
 
@@ -2292,6 +2298,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ModalKeepGameBuildConfirm => Resources.ModalKeepGameBuildConfirm;
 
+    public string ModalKeepGameBuildChecking => Resources.ModalKeepGameBuildChecking;
+
     public string FormatKeepGameBuildAlreadyKept(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildAlreadyKeptFormat, build);
 
@@ -2345,6 +2353,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildBackupFailedFormat, reason);
 
     public string ModalUseCurrentGameBuildConfirm => Resources.ModalUseCurrentGameBuildConfirm;
+
+    public string ModalUseCurrentGameBuildChecking => Resources.ModalUseCurrentGameBuildChecking;
 
     public string FormatToastUsesCurrentGameBuild(string instanceName, string build)
         => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastUsesCurrentGameBuildFormat), instanceName, build);
