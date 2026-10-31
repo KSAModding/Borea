@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
+using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
@@ -210,6 +211,88 @@ public sealed class InstanceGameBuildTests
 
         Assert.True(harness.Services.Launcher.IsRunning(created.InstanceId));
         Assert.Equal(["KeptContent"], (await harness.Services.ModState.GetEntriesAsync(created.InstanceId)).Select(entry => entry.ModId));
+    }
+
+    [Theory]
+    [InlineData("1.1.10", true)]
+    [InlineData("1.1.9", false)]
+    public async Task KeepModal_CountsTheModsThatDoNotSupportTheBuild(string version, bool incompatible)
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var folder = harness.Services.Paths.GetGameBuildFolder(KeptBuild);
+        // a folder the player chooses must hold the executable of the host
+        File.WriteAllBytes(Path.Combine(folder, "KSA.exe"), []);
+        File.WriteAllBytes(Path.Combine(folder, "KSA"), []);
+        viewModel.SetMainWindowSettings();
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        viewModel.GameDirectoryInput = folder;
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+        var instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, version: version);
+        await viewModel.LoadAsync();
+
+        await viewModel.BeginKeepGameBuildAsync(viewModel.Instances.Single(item => item.InstanceId == instance.InstanceId));
+
+        Assert.True(viewModel.CanConfirmKeepGameBuild);
+        Assert.Equal(incompatible ? harness.Localization.FormatModalKeepGameBuildIncompatible(1, 1, KeptBuild.ToString()) : null, viewModel.KeepGameBuildIncompatibleText);
+
+        viewModel.CancelKeepGameBuildCommand.Execute(null);
+        await viewModel.BeginAddGameBuildAsync(folder);
+
+        Assert.Equal(harness.Localization.FormatModalAddGameBuildShared(KeptBuild.ToString(), folder), viewModel.KeepGameBuildText);
+        Assert.Null(viewModel.KeepGameBuildIncompatibleText);
+        Assert.False(viewModel.CanConfirmKeepGameBuild);
+        Assert.Equal(harness.Localization.ModalClose, viewModel.KeepGameBuildDismissText);
+    }
+
+    [Fact]
+    public async Task KeepGameBuild_PutsTheCopyInViewAndASecondKeepShowsTheRunningTask()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var first = await CreateInstanceAsync(harness, "First", null);
+        var second = await CreateInstanceAsync(harness, "Second", null);
+        await viewModel.LoadAsync();
+
+        await viewModel.BeginKeepGameBuildAsync(viewModel.Instances.Single(item => item.InstanceId == first.InstanceId));
+        await viewModel.ConfirmKeepGameBuildCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsTasksOpen);
+        Assert.Equal((TaskKind.GameBuildKeep, first.InstanceId, TaskState.Finished), (viewModel.TaskInView!.Kind, viewModel.TaskInView.InstanceId, viewModel.TaskInView.State));
+
+        var running = viewModel.Tasks.Start(TaskKind.GameBuildKeep, "2026.8.3.5117", second.InstanceId, second.Name, null, null, TaskState.Running);
+        viewModel.IsTasksOpen = false;
+        await viewModel.BeginKeepGameBuildAsync(viewModel.Instances.Single(item => item.InstanceId == second.InstanceId));
+
+        Assert.False(viewModel.IsKeepGameBuildModalOpen);
+        Assert.True(viewModel.IsTasksOpen);
+        Assert.Same(running, viewModel.TaskInView);
+        viewModel.Tasks.Discard(running);
+    }
+
+    [Fact]
+    public async Task CloseNow_WithKeepCopies_WarnsWithTheBuildOfAnInstanceAndNotAsAnInstall()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var folderTask = viewModel.Tasks.Start(TaskKind.GameBuildKeep, "2026.7.6.4939", null, null, null, null, TaskState.Running);
+        folderTask.Run = new InstallRun(harness.Localization, folderTask);
+        var instanceTask = viewModel.Tasks.Start(TaskKind.GameBuildKeep, "2026.8.3.5117", Guid.NewGuid(), "Kept", null, null, TaskState.Running);
+        instanceTask.Run = new InstallRun(harness.Localization, instanceTask);
+
+        viewModel.CloseWaitsFor = [folderTask];
+
+        Assert.Null(viewModel.CloseNowGameBuildKeepWarningText);
+        Assert.False(viewModel.CloseStopsInstall);
+
+        viewModel.CloseWaitsFor = [folderTask, instanceTask];
+
+        Assert.Equal(harness.Localization.FormatCloseNowGameBuildKeepWarning("2026.8.3.5117"), viewModel.CloseNowGameBuildKeepWarningText);
+        Assert.False(viewModel.CloseStopsInstall);
+        Assert.True(instanceTask.CanStop);
+        Assert.False(instanceTask.CanPause);
+        viewModel.Tasks.Discard(folderTask);
+        viewModel.Tasks.Discard(instanceTask);
     }
 
     private static async Task<Instance> CreateInstanceAsync(ViewModelHarness harness, string name, GameVersion? build)

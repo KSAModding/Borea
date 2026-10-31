@@ -1215,6 +1215,9 @@
   <data name="LibraryFolderCopyingFormat" xml:space="preserve">
     <value>Copying {0} of {1} files ({2} of {3} MB)</value>
   </data>
+  <data name="GameBuildCopyingFormat" xml:space="preserve">
+    <value>{2} of {3} copied, file {0} of {1}</value>
+  </data>
   <data name="LibraryFolderRemovingOldFiles" xml:space="preserve">
     <value>Deleting the old files...</value>
   </data>
@@ -1670,6 +1673,9 @@
   </data>
   <data name="TaskKeepGameBuildFormat" xml:space="preserve">
     <value>Keep KSA {0}</value>
+  </data>
+  <data name="TaskGameBuildWaitingFormat" xml:space="preserve">
+    <value>Waiting for the copy of KSA {0}</value>
   </data>
   <data name="TaskWaiting" xml:space="preserve">
     <value>Waiting</value>
@@ -3577,16 +3583,25 @@
     <value>Keep this game build</value>
   </data>
   <data name="ModalKeepGameBuildTextFormat" xml:space="preserve">
-    <value>Borea copies KSA {0} ({1}) to {2} once. The instance {3} then always starts on this build. Do this before the game client updates, because an update changes the game folder to the new build.</value>
+    <value>After this, the instance {3} always starts on KSA {0}, even after the next game update, so its mods stay on the build they work with. KSA {0} is the build in the game folder now, and Borea can keep only that build. Borea copies it once ({1}) to Game Builds in the library. The copy runs in Tasks, and closing Borea stops it.</value>
   </data>
   <data name="ModalKeepGameBuildSharedFormat" xml:space="preserve">
-    <value>KSA {0} is already kept in {1}. The instance {2} uses that copy, so Borea copies nothing.</value>
+    <value>After this, the instance {2} always starts on KSA {0}, even after the next game update. Borea already has this build in Game Builds in the library, so it copies nothing.</value>
   </data>
   <data name="ModalAddGameBuildTextFormat" xml:space="preserve">
-    <value>Borea copies KSA {0} ({1}) from {2} to {3} once. New instances can then start on this build.</value>
+    <value>After this, new instances can start on KSA {0}. Borea copies the build once ({1}) from the folder you chose to Game Builds in the library.</value>
   </data>
   <data name="ModalAddGameBuildSharedFormat" xml:space="preserve">
-    <value>KSA {0} is already kept in {1}, so Borea copies nothing.</value>
+    <value>Borea already has KSA {0} in Game Builds in the library, so it copies nothing. New instances can already start on it.</value>
+  </data>
+  <data name="ModalKeepGameBuildFolderFormat" xml:space="preserve">
+    <value>Folder: {0}</value>
+  </data>
+  <data name="ModalAddGameBuildSourceFormat" xml:space="preserve">
+    <value>Source folder: {0}</value>
+  </data>
+  <data name="ModalKeepGameBuildIncompatibleFormat" xml:space="preserve">
+    <value>Mods of this instance that do not support KSA {2}: {0} of {1}. Keeping KSA {2} does not bring back an earlier build.</value>
   </data>
   <data name="ModalKeepGameBuildFreeSpaceFormat" xml:space="preserve">
     <value>{0} free on the drive of the library</value>
@@ -3607,7 +3622,7 @@
     <value>Borea cannot read the game build in the game folder. Set the game folder in the settings first.</value>
   </data>
   <data name="KeepGameBuildNotAGame" xml:space="preserve">
-    <value>This folder holds no game that Borea can start on this system, or Borea cannot read the version of its KSA.dll. Borea starts KSA.exe on Windows and the app host KSA on Linux.</value>
+    <value>The folder you chose holds no KSA that Borea can start on this system. Choose another folder, one that holds KSA.exe on Windows or the file KSA on Linux.</value>
   </data>
   <data name="KeepGameBuildWineWrapper" xml:space="preserve">
     <value>The game is in a Wine wrapper app, which cannot start a copy outside the wrapper. Borea does not keep this build.</value>
@@ -3616,10 +3631,10 @@
     <value>The game folder holds the Windows build of KSA, which Borea cannot start on this system yet, so Borea does not keep it.</value>
   </data>
   <data name="KeepGameBuildFolderTakenFormat" xml:space="preserve">
-    <value>{0} already holds another build or no build. Borea does not change that folder.</value>
+    <value>The folder for this build in Game Builds already exists and holds another build or no build, so Borea does not change it. Move or delete that folder, then try again: {0}</value>
   </data>
   <data name="KeepGameBuildLibraryInsideGame" xml:space="preserve">
-    <value>The library folder is inside the game folder, so a copy of the game would hold the library. Move the library folder first.</value>
+    <value>The library folder is inside the game folder, so a copy of the game would hold the library. First move the library to another folder on the General tab of Settings.</value>
   </data>
   <data name="KeepGameBuildNotEnoughSpaceFormat" xml:space="preserve">
     <value>The copy needs {0}, and {1} must stay free on top of it, but the drive of the library has {2} free. Free up space, or move the library to another drive on the General tab of Settings.</value>
@@ -4583,6 +4598,9 @@
   </data>
   <data name="CloseNowInstallWarning" xml:space="preserve">
     <value>If you close now, a mod that Borea is installing may be incomplete, and you can install it again.</value>
+  </data>
+  <data name="CloseNowGameBuildKeepWarningFormat" xml:space="preserve">
+    <value>Borea stops the copy of KSA {0}, so the instance keeps no build. Keep the build again after you start Borea, before the game updates.</value>
   </data>
   <data name="CloseNowKeepWaiting" xml:space="preserve">
     <value>Keep waiting</value>

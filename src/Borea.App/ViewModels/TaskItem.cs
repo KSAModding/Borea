@@ -75,6 +75,7 @@ public sealed partial class TaskItem : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStop))]
+    [NotifyPropertyChangedFor(nameof(CanPause))]
     private InstallRun? _run;
 
     internal TaskItem(TaskRegistry registry, TaskKind kind, TaskState state, string? subject, Guid? instanceId, string? instanceName, string? contentId, string? version, DateTimeOffset startedAt)
@@ -155,6 +156,9 @@ public sealed partial class TaskItem : ObservableObject
 
     /// <summary>The rows that start a mod list import or a replace of a manual install have no Stop.</summary>
     public bool CanStop => Run is not null && Kind is not (TaskKind.ModListImport or TaskKind.ManualReplace);
+
+    /// <summary>A build copy downloads nothing, so it has no Pause.</summary>
+    public bool CanPause => CanStop && Kind is not TaskKind.GameBuildKeep;
 
     public bool HasRetry => State == TaskState.Failed && Kind switch
     {

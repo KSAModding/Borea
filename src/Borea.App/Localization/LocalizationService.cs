@@ -118,6 +118,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatTaskKeepGameBuild(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskKeepGameBuildFormat, build);
 
+    public string FormatTaskGameBuildWaiting(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskGameBuildWaitingFormat, build);
+
     public string TaskWaiting => Resources.TaskWaiting;
 
     public string TaskRunning => Resources.TaskRunning;
@@ -1181,6 +1184,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLibraryFolderCopying(int files, int totalFiles, string megabytes, string totalMegabytes)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderCopyingFormat, files, totalFiles, megabytes, totalMegabytes);
+
+    public string FormatGameBuildCopying(int files, int totalFiles, string size, string totalSize)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameBuildCopyingFormat, files, totalFiles, size, totalSize);
 
     public string LibraryFolderRemovingOldFiles => Resources.LibraryFolderRemovingOldFiles;
 
@@ -2258,6 +2264,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatModalAddGameBuildShared(string build, string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildSharedFormat, build, folder);
+
+    public string FormatModalKeepGameBuildFolder(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFolderFormat, folder);
+
+    public string FormatModalAddGameBuildSource(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildSourceFormat, folder);
+
+    public string FormatModalKeepGameBuildIncompatible(int count, int total, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildIncompatibleFormat, count, total, build);
 
     public string FormatModalKeepGameBuildFreeSpace(string size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFreeSpaceFormat, size);
@@ -3604,6 +3619,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string CloseNowSavingHistory => Resources.CloseNowSavingHistory;
 
     public string CloseNowInstallWarning => Resources.CloseNowInstallWarning;
+
+    public string FormatCloseNowGameBuildKeepWarning(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.CloseNowGameBuildKeepWarningFormat, build);
 
     public string CloseNowKeepWaiting => Resources.CloseNowKeepWaiting;
 

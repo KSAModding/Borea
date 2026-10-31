@@ -31,15 +31,23 @@ public partial class MainViewModel
 
     private string? _keepGameBuildFolder;
 
+    /// <summary>How many mods of the row of the open modal do not support the build to keep, and how many it has.</summary>
+    private (int Incompatible, int Total) _keepGameBuildModFit;
+
     /// <summary>What keeping the build would do for the row or the folder of the open modal. Null while the modal is closed.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsKeepGameBuildModalOpen), nameof(KeepGameBuildText), nameof(KeepGameBuildFreeSpaceText), nameof(KeepGameBuildRefusalText), nameof(CanConfirmKeepGameBuild))]
+    [NotifyPropertyChangedFor(nameof(IsKeepGameBuildModalOpen), nameof(KeepGameBuildText), nameof(KeepGameBuildIncompatibleText), nameof(KeepGameBuildSourceText), nameof(KeepGameBuildFolderText), nameof(KeepGameBuildFreeSpaceText), nameof(KeepGameBuildRefusalText))]
+    [NotifyPropertyChangedFor(nameof(IsKeepGameBuildRefusalDanger), nameof(ShowsKeepGameBuildSetup), nameof(CanConfirmKeepGameBuild), nameof(KeepGameBuildDismissText))]
     [NotifyCanExecuteChangedFor(nameof(ConfirmKeepGameBuildCommand))]
     private GameBuildKeepCheck? _keepGameBuildCheck;
 
     public bool IsKeepGameBuildModalOpen => KeepGameBuildCheck is not null;
 
-    public bool CanConfirmKeepGameBuild => KeepGameBuildCheck?.Refusal == GameBuildKeepRefusal.None;
+    // a folder whose build Game Builds already holds adds nothing, so its modal only informs
+    public bool CanConfirmKeepGameBuild => KeepGameBuildCheck is { Refusal: GameBuildKeepRefusal.None } check
+        && (check.BytesToCopy > 0 || _keepGameBuildFolder is null);
+
+    public string KeepGameBuildDismissText => CanConfirmKeepGameBuild ? Localization.LibraryCancel : Localization.ModalClose;
 
     public string? KeepGameBuildText
     {
@@ -66,6 +74,18 @@ public partial class MainViewModel
         }
     }
 
+    public string? KeepGameBuildIncompatibleText => KeepGameBuildCheck is { Refusal: GameBuildKeepRefusal.None, Version: { } version } && _keepGameBuildModFit.Incompatible > 0
+        ? Localization.FormatModalKeepGameBuildIncompatible(_keepGameBuildModFit.Incompatible, _keepGameBuildModFit.Total, version.ToString())
+        : null;
+
+    public string? KeepGameBuildSourceText => KeepGameBuildText is not null && _keepGameBuildFolder is { } source
+        ? Localization.FormatModalAddGameBuildSource(source)
+        : null;
+
+    public string? KeepGameBuildFolderText => KeepGameBuildText is not null && KeepGameBuildCheck?.Folder is { } folder
+        ? Localization.FormatModalKeepGameBuildFolder(folder)
+        : null;
+
     public string? KeepGameBuildFreeSpaceText => KeepGameBuildCheck is { Refusal: GameBuildKeepRefusal.None, BytesToCopy: > 0, FreeBytes: { } free } check
         ? WindowsDrive(check.VolumeName) is { } drive
             ? Localization.FormatModalKeepGameBuildFreeSpaceDrive(KeepSizeText(free), drive)
@@ -74,10 +94,22 @@ public partial class MainViewModel
 
     public string? KeepGameBuildRefusalText => KeepGameBuildCheck is { } check ? KeepGameBuildRefusal(check, _keepGameBuildFolder is not null) : null;
 
+    /// <summary>An instance that already keeps a build needs nothing fixed, so that line is no warning.</summary>
+    public bool IsKeepGameBuildRefusalDanger => KeepGameBuildCheck is { Refusal: not (GameBuildKeepRefusal.None or GameBuildKeepRefusal.AlreadyKept) };
+
+    public bool ShowsKeepGameBuildSetup => KeepGameBuildCheck is { Refusal: GameBuildKeepRefusal.NoGame };
+
     internal async Task BeginKeepGameBuildAsync(InstanceItem item)
     {
         if (_services is not { } services)
             return;
+
+        // a second keep of the same instance during the copy shows that copy instead of offering it again
+        if (Tasks.Running.FirstOrDefault(task => task.Kind == TaskKind.GameBuildKeep && task.InstanceId == item.InstanceId) is { } running)
+        {
+            ShowTaskDetails(running);
+            return;
+        }
 
         GameBuildKeepCheck check;
         try
@@ -90,8 +122,12 @@ public partial class MainViewModel
             return;
         }
 
+        var mods = item.Instance.Mods;
         _keepGameBuildFolder = null;
         _keepGameBuildItem = item;
+        _keepGameBuildModFit = check.Version is { } version
+            ? (mods.Count(mod => Compatibility.Evaluate(mod.Metadata, version) == GameCompatibility.Incompatible), mods.Count + item.Instance.ForeignMods.Count)
+            : default;
         KeepGameBuildCheck = check;
     }
 
@@ -121,6 +157,7 @@ public partial class MainViewModel
 
         _keepGameBuildItem = null;
         _keepGameBuildFolder = folder;
+        _keepGameBuildModFit = default;
         KeepGameBuildCheck = check;
     }
 
@@ -130,6 +167,16 @@ public partial class MainViewModel
         KeepGameBuildCheck = null;
         _keepGameBuildItem = null;
         _keepGameBuildFolder = null;
+        _keepGameBuildModFit = default;
+    }
+
+    /// <summary>"Set up game" of the keep modal and of the use-current modal, which both need a readable game folder.</summary>
+    [RelayCommand]
+    private Task SetUpGameForGameBuildAsync()
+    {
+        CancelKeepGameBuild();
+        CancelUseCurrentGameBuild();
+        return OpenGameSetupAsync();
     }
 
     // a keep for another instance can start while a copy runs, and the keeper runs the keeps one at a time
@@ -157,12 +204,23 @@ public partial class MainViewModel
 
         var run = StartInstallRun(StartTask(TaskKind.GameBuildKeep, build, item?.InstanceId));
         var task = run.TaskItem;
-        if (folder is not null)
-            ShowTaskDetails(task);
+        ShowTaskDetails(task);
 
-        var progress = new Progress<LibraryMoveProgress>(value => run.ShowReport(() => task.Report(
-            Localization.FormatLibraryFolderCopying(value.Files, value.TotalFiles, InstallProgressText.Number(value.Bytes), InstallProgressText.Number(value.TotalBytes)),
-            value.PercentComplete)));
+        // the keeper copies one build at a time, so this keep waits for that copy and then reuses it when the build is the same
+        if (Tasks.Running.FirstOrDefault(other => other != task && other.Kind == TaskKind.GameBuildKeep) is { } copying)
+        {
+            void ShowWaiting() => task.Report(Localization.FormatTaskGameBuildWaiting(copying.Subject ?? string.Empty), null);
+            ShowWaiting();
+            run.RepeatPausedReport = () => run.ShowReport(ShowWaiting);
+        }
+
+        var progress = new Progress<LibraryMoveProgress>(value =>
+        {
+            run.RepeatPausedReport = null;
+            run.ShowReport(() => task.Report(
+                Localization.FormatGameBuildCopying(value.Files, value.TotalFiles, KeepSizeText(value.Bytes), KeepSizeText(value.TotalBytes)),
+                value.PercentComplete));
+        });
         var completed = false;
         var stopped = false;
         string? error = null;
@@ -309,8 +367,14 @@ public partial class MainViewModel
     private void RefreshKeepGameBuildText()
     {
         OnPropertyChanged(nameof(KeepGameBuildText));
+        OnPropertyChanged(nameof(KeepGameBuildIncompatibleText));
+        OnPropertyChanged(nameof(KeepGameBuildSourceText));
+        OnPropertyChanged(nameof(KeepGameBuildFolderText));
         OnPropertyChanged(nameof(KeepGameBuildFreeSpaceText));
         OnPropertyChanged(nameof(KeepGameBuildRefusalText));
+        OnPropertyChanged(nameof(KeepGameBuildDismissText));
+        OnPropertyChanged(nameof(UseCurrentGameBuildDismissText));
+        OnPropertyChanged(nameof(CloseNowGameBuildKeepWarningText));
         OnPropertyChanged(nameof(GameFolderKeepRefusalText));
         OnPropertyChanged(nameof(UseCurrentGameBuildText));
         OnPropertyChanged(nameof(UseCurrentGameBuildFitText));
@@ -327,12 +391,15 @@ public partial class MainViewModel
     /// <summary>How the mods of the row of the open modal fit the build of the settings. Null while the modal is closed.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsUseCurrentGameBuildModalOpen), nameof(UseCurrentGameBuildText), nameof(UseCurrentGameBuildFitText), nameof(UseCurrentGameBuildIncompatibleText), nameof(UseCurrentGameBuildUnknownText), nameof(ShowsUseCurrentGameBuildModNames), nameof(UseCurrentGameBuildOlderText), nameof(UseCurrentGameBuildNoGameText), nameof(CanConfirmUseCurrentGameBuild))]
+    [NotifyPropertyChangedFor(nameof(UseCurrentGameBuildDismissText))]
     [NotifyCanExecuteChangedFor(nameof(ConfirmUseCurrentGameBuildCommand))]
     private UseCurrentGameBuildPreview? _useCurrentGameBuildPreview;
 
     public bool IsUseCurrentGameBuildModalOpen => UseCurrentGameBuildPreview is not null;
 
     public bool CanConfirmUseCurrentGameBuild => UseCurrentGameBuildPreview?.Current is not null;
+
+    public string UseCurrentGameBuildDismissText => CanConfirmUseCurrentGameBuild ? Localization.LibraryCancel : Localization.ModalClose;
 
     public string? UseCurrentGameBuildText => UseCurrentGameBuildPreview is { Current: { } current } preview && _useCurrentGameBuildItem is { } item
         ? Localization.FormatModalUseCurrentGameBuildText(item.Name, current.ToString(), preview.Kept.ToString())
