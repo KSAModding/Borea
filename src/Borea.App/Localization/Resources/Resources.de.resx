@@ -3616,10 +3616,10 @@
     <value>Aus jeder Gruppe wird eine mit dieser Mod installiert</value>
   </data>
   <data name="ContentDependencyConflicts" xml:space="preserve">
-    <value>Konflikte</value>
+    <value>Konflikte mit</value>
   </data>
   <data name="ContentDependencyConflictsHint" xml:space="preserve">
-    <value>Nicht zusammen installiert</value>
+    <value>Diese Mods funktionieren nicht mit dieser Mod zusammen</value>
   </data>
   <data name="ContentDependencyRecommended" xml:space="preserve">
     <value>Empfohlen</value>
@@ -3644,6 +3644,21 @@
   </data>
   <data name="ContentDependencyOtherHint" xml:space="preserve">
     <value>Eine Art, die diese Borea-Version nicht kennt</value>
+  </data>
+  <data name="ContentDependencyRequiredBy" xml:space="preserve">
+    <value>Benötigt von</value>
+  </data>
+  <data name="ContentDependencyRequiredByHint" xml:space="preserve">
+    <value>Mods, deren neueste Version diese Mod braucht</value>
+  </data>
+  <data name="ContentDependencyRequiredByShowAllFormat" xml:space="preserve">
+    <value>Alle {0} anzeigen</value>
+  </data>
+  <data name="ContentDependencyRequiredByShowInstalled" xml:space="preserve">
+    <value>Nur installierte anzeigen</value>
+  </data>
+  <data name="ContentDependencyRequiredByNoneInstalled" xml:space="preserve">
+    <value>Keine installierte Mod braucht diese Mod.</value>
   </data>
   <data name="ContentDependencyOneOf" xml:space="preserve">
     <value>Eine davon:</value>

@@ -327,11 +327,15 @@ public partial class MainViewModel
     /// <summary>The Loaders tab has no Sort by dropdown, so it keeps the name order.</summary>
     private IEnumerable<DiscoverItem> SortDiscover(IEnumerable<DiscoverItem> items) => (IsLoadersTab ? DiscoverSortOrder.Name : DiscoverSort) switch
     {
-        DiscoverSortOrder.Popularity => items.OrderBy(item => item.Downloads is null).ThenByDescending(item => item.Downloads).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
+        DiscoverSortOrder.Popularity => MostDownloadedFirst(items),
         DiscoverSortOrder.RecentlyUpdated => items.OrderBy(item => item.UpdatedAt is null).ThenByDescending(item => item.UpdatedAt).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
         DiscoverSortOrder.RecentlyListed => items.OrderBy(item => item.ListedAt is null).ThenByDescending(item => item.ListedAt).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
         _ => items.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
     };
+
+    /// <summary>A listing without a download count comes after every listing with one, and the name breaks a tie.</summary>
+    private static IOrderedEnumerable<DiscoverItem> MostDownloadedFirst(IEnumerable<DiscoverItem> items)
+        => items.OrderBy(item => item.Downloads is null).ThenByDescending(item => item.Downloads).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase);
 
     /// <summary>A reload keeps a chosen bound while its build is still listed.</summary>
     private void LoadGameVersionOptions(ContentIndexGameVersions? gameVersions)
@@ -476,6 +480,9 @@ public partial class MainViewModel
             item.UpdatedAt = latest?.ReleaseDate;
             item.LatestInChannel = latest;
         }
+
+        // the Required by and Conflicts with cards read the releases set here, and a page without a release in the channel has nothing else that refreshes it
+        RefreshContentDependencies();
 
         foreach (var release in _contentReleases)
             release.RefreshCompatibility(installed);

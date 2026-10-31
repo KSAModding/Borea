@@ -2364,6 +2364,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDependencyOtherHint => Resources.ContentDependencyOtherHint;
 
+    public string ContentDependencyRequiredBy => Resources.ContentDependencyRequiredBy;
+
+    public string ContentDependencyRequiredByHint => Resources.ContentDependencyRequiredByHint;
+
+    public string FormatContentDependencyRequiredByShowAll(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyRequiredByShowAllFormat, count);
+
+    public string ContentDependencyRequiredByShowInstalled => Resources.ContentDependencyRequiredByShowInstalled;
+
+    public string ContentDependencyRequiredByNoneInstalled => Resources.ContentDependencyRequiredByNoneInstalled;
+
     public string ContentDependencyOneOf => Resources.ContentDependencyOneOf;
 
     public string FormatContentDependencyMin(string low)
