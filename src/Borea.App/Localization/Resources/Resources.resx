@@ -3585,6 +3585,9 @@
   <data name="ModalKeepGameBuildTitle" xml:space="preserve">
     <value>Keep this game build</value>
   </data>
+  <data name="ModalAddGameBuildTitle" xml:space="preserve">
+    <value>Add a game build</value>
+  </data>
   <data name="ModalKeepGameBuildTextFormat" xml:space="preserve">
     <value>After this, the instance {3} always starts on KSA {0}, even after the next game update, so its mods stay on the build they work with. KSA {0} is the build in the game folder now, and Borea can keep only that build. Borea copies it once ({1}) to Game Builds in the library. The copy runs in Tasks, and closing Borea stops it.</value>
   </data>
@@ -4213,7 +4216,7 @@
     <value>Game</value>
   </data>
   <data name="SetupGameDirectory" xml:space="preserve">
-    <value>Game directory</value>
+    <value>Game folder</value>
   </data>
   <data name="SetupGameDirectoryHint" xml:space="preserve">
     <value>The folder that holds the game executable.</value>
@@ -4867,25 +4870,31 @@
     <value>Kept game builds</value>
   </data>
   <data name="SettingsGameBuildsHint" xml:space="preserve">
-    <value>Copies of KSA that instances start on. Borea deletes a build only when no instance uses it.</value>
+    <value>Copies of KSA that instances start on. You can delete a build when no instance uses it.</value>
   </data>
   <data name="SettingsGameBuildUsedByFormat" xml:space="preserve">
-    <value>Used by {0}</value>
+    <value>Used by {0}. To delete this build, first select "Use the current game build" in the instance menu.</value>
   </data>
   <data name="SettingsGameBuildUnused" xml:space="preserve">
     <value>No instance uses this build.</value>
   </data>
-  <data name="SettingsGameBuildRemoveConfirm" xml:space="preserve">
-    <value>Delete this build from the disk?</value>
+  <data name="SettingsGameBuildRemoveConfirmFormat" xml:space="preserve">
+    <value>Delete the copy of KSA {0} ({1})? Borea cannot download a game build, so only a game folder that is still on this build can give it back. Your game folder and the saves of your instances stay.</value>
+  </data>
+  <data name="SettingsGameBuildRemovingFormat" xml:space="preserve">
+    <value>Deleting KSA {0}...</value>
+  </data>
+  <data name="SettingsGameBuildRemovedFormat" xml:space="preserve">
+    <value>KSA {0} was deleted. {1} are free again.</value>
   </data>
   <data name="SettingsGameBuildInUse" xml:space="preserve">
-    <value>An instance uses this build, so Borea keeps it.</value>
+    <value>An instance uses this build, so you cannot delete it.</value>
   </data>
   <data name="SettingsGameBuildInstanceUnreadable" xml:space="preserve">
     <value>Borea cannot read every instance, so it cannot tell whether one uses this build.</value>
   </data>
   <data name="SettingsGameBuildIsGameFolder" xml:space="preserve">
-    <value>The game folder in the settings is this build, so Borea keeps it.</value>
+    <value>This build is the game folder in Settings, so you cannot delete it. To delete it, first select another game folder above.</value>
   </data>
   <data name="KeptGameBuildBusy" xml:space="preserve">
     <value>Borea is copying or deleting a game build. Try again when that is done.</value>

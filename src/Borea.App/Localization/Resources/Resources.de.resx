@@ -3585,6 +3585,9 @@
   <data name="ModalKeepGameBuildTitle" xml:space="preserve">
     <value>Diesen Spiel-Build behalten</value>
   </data>
+  <data name="ModalAddGameBuildTitle" xml:space="preserve">
+    <value>Spiel-Build hinzufügen</value>
+  </data>
   <data name="ModalKeepGameBuildTextFormat" xml:space="preserve">
     <value>Danach startet die Instanz {3} immer mit KSA {0}, auch nach dem nächsten Spiel-Update, damit ihre Mods auf dem Build bleiben, mit dem sie funktionieren. KSA {0} liegt jetzt im Spielordner, und Borea kann nur diesen Build behalten. Borea kopiert ihn einmal ({1}) nach Game Builds in der Bibliothek. Die Kopie läuft unter Aufgaben, und wenn du Borea schließt, stoppt sie.</value>
   </data>
@@ -4213,7 +4216,7 @@
     <value>Spiel</value>
   </data>
   <data name="SetupGameDirectory" xml:space="preserve">
-    <value>Spielverzeichnis</value>
+    <value>Spielordner</value>
   </data>
   <data name="SetupGameDirectoryHint" xml:space="preserve">
     <value>Der Ordner mit der Spiel-Programmdatei.</value>
@@ -4858,25 +4861,31 @@
     <value>Behaltene Spiel-Builds</value>
   </data>
   <data name="SettingsGameBuildsHint" xml:space="preserve">
-    <value>Kopien von KSA, mit denen Instanzen starten. Borea löscht einen Build nur, wenn keine Instanz ihn nutzt.</value>
+    <value>Kopien von KSA, mit denen Instanzen starten. Einen Build kannst du löschen, wenn keine Instanz ihn verwendet.</value>
   </data>
   <data name="SettingsGameBuildUsedByFormat" xml:space="preserve">
-    <value>Genutzt von {0}</value>
+    <value>Verwendet von {0}. Um diesen Build zu löschen, wähle zuerst „Aktuellen Spiel-Build verwenden“ im Menü der Instanz.</value>
   </data>
   <data name="SettingsGameBuildUnused" xml:space="preserve">
-    <value>Keine Instanz nutzt diesen Build.</value>
+    <value>Keine Instanz verwendet diesen Build.</value>
   </data>
-  <data name="SettingsGameBuildRemoveConfirm" xml:space="preserve">
-    <value>Diesen Build von der Festplatte löschen?</value>
+  <data name="SettingsGameBuildRemoveConfirmFormat" xml:space="preserve">
+    <value>Die Kopie von KSA {0} ({1}) löschen? Borea kann keinen Spiel-Build herunterladen, also bekommst du sie nur aus einem Spielordner zurück, der noch auf diesem Build ist. Dein Spielordner und die Spielstände deiner Instanzen bleiben.</value>
+  </data>
+  <data name="SettingsGameBuildRemovingFormat" xml:space="preserve">
+    <value>KSA {0} wird gelöscht...</value>
+  </data>
+  <data name="SettingsGameBuildRemovedFormat" xml:space="preserve">
+    <value>KSA {0} wurde gelöscht. {1} sind wieder frei.</value>
   </data>
   <data name="SettingsGameBuildInUse" xml:space="preserve">
-    <value>Eine Instanz nutzt diesen Build, also behält Borea ihn.</value>
+    <value>Eine Instanz verwendet diesen Build, darum kannst du ihn nicht löschen.</value>
   </data>
   <data name="SettingsGameBuildInstanceUnreadable" xml:space="preserve">
-    <value>Borea kann nicht jede Instanz lesen und weiß darum nicht, ob eine diesen Build nutzt.</value>
+    <value>Borea kann nicht jede Instanz lesen und weiß darum nicht, ob eine Instanz diesen Build verwendet.</value>
   </data>
   <data name="SettingsGameBuildIsGameFolder" xml:space="preserve">
-    <value>Der Spielordner in den Einstellungen ist dieser Build, also behält Borea ihn.</value>
+    <value>Dieser Build ist der Spielordner in den Einstellungen, darum kannst du ihn nicht löschen. Um ihn zu löschen, wähle oben zuerst einen anderen Spielordner.</value>
   </data>
   <data name="KeptGameBuildBusy" xml:space="preserve">
     <value>Borea kopiert oder löscht gerade einen Spiel-Build. Versuche es erneut, wenn das fertig ist.</value>

@@ -588,7 +588,8 @@ public sealed class BoreaServices : IDisposable
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
             InstanceGames = instanceGames,
-            GameBuilds = new GameBuildKeeper(paths, instances, offlineMods, loaderVersions, isGameProcessRunning, launcher.IsRunning),
+            // the index lists every loader, and the offline SpaceDock throws on a list of all mods, so the keeper reads only the cached index
+            GameBuilds = new GameBuildKeeper(paths, instances, offlineContentIndex, loaderVersions, isGameProcessRunning, launcher.IsRunning),
             GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
             GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),
