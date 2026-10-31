@@ -13,6 +13,19 @@
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceSaveSettingsPreset}" Command="{Binding SaveSettingsPresetCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceKeepGameBuild}" Command="{Binding BeginKeepGameBuildCommand}" IsVisible="{Binding GameBuildText, Converter={x:Static ObjectConverters.IsNull}}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText, Converter={x:Static ObjectConverters.IsNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText}" />
+                <MenuItem IsEnabled="False">
+                    <MenuItem.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="GameBuildText" Converter="{x:Static ObjectConverters.IsNull}" />
+                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                        </MultiBinding>
+                    </MenuItem.IsVisible>
+                    <MenuItem.Header>
+                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText}" TextWrapping="Wrap" MaxWidth="260" />
+                    </MenuItem.Header>
+                </MenuItem>
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceUseCurrentGameBuild}" Command="{Binding BeginUseCurrentGameBuildCommand}" IsVisible="{Binding GameBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDuplicate}" Command="{Binding DuplicateCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryExportModList}" Command="{Binding ExportModListCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCopyModList}" Command="{Binding CopyModListCommand}" />

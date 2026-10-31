@@ -623,6 +623,10 @@
             <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
             <Setter Property="StrokeThickness" Value="2" />
         </Style>
+        <Style Selector="Button.add:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceHeader}" />
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
         <Style Selector="Button.add.installed">
             <Setter Property="Background" Value="{StaticResource Brush.Compatible}" />
         </Style>

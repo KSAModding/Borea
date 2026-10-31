@@ -44,6 +44,7 @@ public sealed class LoaderPromptTests
 
         Assert.True(viewModel.IsLoaderPromptOpen);
         Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap 0.4.6"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.LaunchInstallAndPlay, viewModel.LoaderPromptActionText);
         Assert.Null(viewModel.LaunchMessage);
         Assert.False(viewModel.IsSettingsOpen);
         Assert.False(starter.Started);

@@ -16,19 +16,33 @@ public interface ILauncher
     /// the instance only through the variable of the handover, because the
     /// wrapper passes no arguments. It refuses launch arguments there, and it
     /// refuses a loader whose runtimeconfig.json names a .NET runtime that
-    /// the prefix does not have.
+    /// the prefix does not have. Right before the start, it writes the game
+    /// folder of the instance to the game path of the loader's configuration
+    /// when the file holds another value. While a game runs and the file names
+    /// another folder, it refuses the start, because the loader reads the file
+    /// again when it restarts that game. A configuration that it cannot read
+    /// or parse refuses the start.
     /// </summary>
+    /// <exception cref="InvalidOperationException">The loader's configuration cannot be written.</exception>
+    /// <exception cref="IOException">The loader's configuration cannot be replaced.</exception>
     LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null);
 
     /// <summary>
     /// Starts the loader from <paramref name="loaderDirectory"/>, the folder of
     /// the loader version that the instance uses, and otherwise does what
     /// <see cref="Launch(Instance, ModMetadata?, IReadOnlyList{string}?)"/> does.
-    /// Null starts the folder that the settings record for the loader. This
-    /// default ignores the folder, so every launcher that starts a process or
-    /// passes a launch on must implement it.
+    /// Null starts the folder that the settings record for the loader.
+    /// <paramref name="isAdopted"/> says that the player made the folder, so
+    /// a game path that the player set there stays while it names a KSA.dll
+    /// that exists. A value that names a kept build does not stay, and
+    /// neither does a host path of the game of the instance that a loader in
+    /// a Wine prefix cannot open. An instance on a kept build
+    /// still gets the folder of its build, and the game path of the player
+    /// comes back when that game ends. This default ignores the
+    /// folder, so every launcher that starts a process or passes a launch on
+    /// must implement it.
     /// </summary>
-    LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments) =>
+    LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments, bool isAdopted = false) =>
         Launch(instance, loader, arguments);
 
     /// <summary>
@@ -40,7 +54,9 @@ public interface ILauncher
     /// log decides, because the exit code of the wrapper says nothing about the
     /// game. A wrapper that stops before the log appears gives
     /// <see cref="LaunchOutcome.ExitedEarly"/> with <see cref="LaunchResult.Wine"/>
-    /// set and no mod blamed. Any other result is returned as it is.
+    /// set and no mod blamed. Any other result is returned as it is. A start
+    /// that stopped early writes the game path back the way
+    /// <see cref="WatchExitAsync"/> does.
     /// </summary>
     Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default);
 
@@ -50,7 +66,13 @@ public interface ILauncher
     /// ends with an error can be <see cref="GameExitKind.Crashed"/>, and only
     /// with a crash log of its own run, so a quit and a restart that exit with
     /// 0 are <see cref="GameExitKind.Closed"/>, and so is the crash of a new
-    /// process that a restart started.
+    /// process that a restart started. When the launch started a kept build,
+    /// no KSA or StarMap process runs any more, and the loader's game path
+    /// still names the kept folder, it writes the game folder of the settings
+    /// back, or in a folder that the player made the game path that the
+    /// player had set there, so a Borea that does not write the file before each start does
+    /// not start the kept build. A write that fails is logged and changes no
+    /// result.
     /// </summary>
     Task<GameExit> WatchExitAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default);
 

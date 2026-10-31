@@ -44,6 +44,22 @@ public sealed class LoaderVersionChoiceTests
         Assert.Null(outsideRange.Offer);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Automatic_OnlyANewerVersionIsInstalled_OffersAnOlderReleaseOnlyForAKeptBuild(bool kept)
+    {
+        var mods = new FakeRepository(Release("0.4.7", max: "2026.10.13.5602"), Release("0.4.8", min: "2026.10.19.5638"));
+        var installed = Installed(("0.4.8", true));
+
+        var resolution = await ResolveAsync(LoaderSetting.Automatic, installed, mods, Build5602, gameIsKept: kept);
+
+        Assert.Same(installed[0], resolution.Start);
+        Assert.Equal(LoaderVersionProblem.GameIncompatible, resolution.Problem);
+        Assert.Equal(kept ? ModVersion.Parse("0.4.7") : null, resolution.Offer?.Version);
+        Assert.Equal(kept, resolution.IsUrgent);
+    }
+
     [Fact]
     public async Task NothingInstalled_MissesTheNewestReleaseThatFits()
     {
@@ -144,6 +160,6 @@ public sealed class LoaderVersionChoiceTests
 
     private static NeededLoader Need(string max) => NeededLoader.From("StarMap", [NeedsStarMap("flight-tools", "0.4.0", max)]);
 
-    private static Task<LoaderVersionResolution> ResolveAsync(LoaderSetting setting, IReadOnlyList<InstalledLoaderVersion> installed, IModRepository? mods, GameVersion game, NeededLoader? need = null) =>
-        LoaderVersionChoice.ResolveAsync(setting, "StarMap", need, installed, [Listing()], mods, ReleaseChannel.Stable, game);
+    private static Task<LoaderVersionResolution> ResolveAsync(LoaderSetting setting, IReadOnlyList<InstalledLoaderVersion> installed, IModRepository? mods, GameVersion game, NeededLoader? need = null, bool gameIsKept = false) =>
+        LoaderVersionChoice.ResolveAsync(setting, "StarMap", need, installed, [Listing()], mods, ReleaseChannel.Stable, game, gameIsKept);
 }

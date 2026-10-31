@@ -4,7 +4,6 @@ using Borea.Core.Paths;
 
 namespace Borea.Storage.Game;
 
-/// <summary>Gives every instance the game folder of the settings and the version installed there.</summary>
 public sealed class InstanceGameResolver : IInstanceGameResolver
 {
     private readonly IGamePathProvider _paths;
@@ -19,6 +18,17 @@ public sealed class InstanceGameResolver : IInstanceGameResolver
     public InstanceGame Resolve(Instance instance)
     {
         ArgumentNullException.ThrowIfNull(instance);
-        return new InstanceGame(null, _paths.GetGameDirectoryPath(), _installedVersion.GetInstalledVersion(), KeptBuildProblem.None);
+
+        if (instance.GameBuild is not { } build)
+            return new InstanceGame(null, _paths.GetGameDirectoryPath(), _installedVersion.GetInstalledVersion(), KeptBuildProblem.None);
+
+        var folder = _paths.GetGameBuildFolder(build);
+        if (!Directory.Exists(folder))
+            return new InstanceGame(build, null, null, KeptBuildProblem.Missing);
+
+        var installed = InstalledGameVersionProvider.Read(folder);
+        return installed?.Version == build
+            ? new InstanceGame(build, folder, installed, KeptBuildProblem.None)
+            : new InstanceGame(build, null, null, KeptBuildProblem.WrongVersion);
     }
 }

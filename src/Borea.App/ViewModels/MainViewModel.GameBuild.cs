@@ -58,6 +58,21 @@ public partial class MainViewModel
 
     public string? GameBuildBannerText => NewerGameBuild is { } build ? $"{Localization.GameBuildAvailable} {build}" : null;
 
+    /// <summary>
+    /// The Home instance and the installed build while that instance has mods and plays on the game folder of the settings.
+    /// A game update replaces that folder in place, so the newer-build banner is the last place where a keep still gets this build.
+    /// It offers no keep that the instance menu refuses.
+    /// </summary>
+    private (string Instance, string Build)? GameBuildKeepOffer =>
+        HomeInstance is { ModCount: > 0, Instance.GameBuild: null } home && GameFolderKeepRefusal == GameBuildKeepRefusal.None
+            && GameVersion.TryParse(InstalledVersionText, out var installed)
+            ? (home.Name, installed.ToString())
+            : null;
+
+    public string? GameBuildKeepHintText => GameBuildKeepOffer is { } offer ? Localization.FormatGameBuildKeepHint(offer.Instance, offer.Build) : null;
+
+    public string? GameBuildKeepActionText => GameBuildKeepOffer is { } offer ? Localization.FormatTaskKeepGameBuild(offer.Build) : null;
+
     /// <summary>The page the game itself names when the master server gives it none (VersionInfo).</summary>
     private const string GameDownloadPage = "https://ksa.ahwoo.com/";
 
@@ -102,6 +117,8 @@ public partial class MainViewModel
     {
         OnPropertyChanged(nameof(NewerGameBuild));
         OnPropertyChanged(nameof(GameBuildBannerText));
+        OnPropertyChanged(nameof(GameBuildKeepHintText));
+        OnPropertyChanged(nameof(GameBuildKeepActionText));
         OnPropertyChanged(nameof(GameBuildDownloadUrl));
         OnPropertyChanged(nameof(ShowGameBuildBanner));
         StartGameBuildCheck();

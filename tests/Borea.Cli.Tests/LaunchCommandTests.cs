@@ -90,6 +90,136 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.Equal(new[] { "Core", "KSArmory" }, entries.Select(entry => entry.ModId));
     }
 
+    [Theory]
+    [InlineData(true, "KeptContent")]
+    [InlineData(false, "SettingsContent")]
+    public async Task Launch_PutsTheContentOfTheBuildTheInstanceStartsFirst(bool kept, string expected)
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        var game = Path.Combine(_host.Root, "Game");
+        await WriteContentAsync(game, "SettingsContent");
+        await _host.RunAsync("settings", "set", "game", game);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        if (kept)
+        {
+            await _host.KeepGameBuildAsync("Flight Test");
+            await WriteContentAsync(_host.Paths.GetGameBuildFolder(CliHost.KeptBuild), "KeptContent");
+        }
+
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        await File.WriteAllTextAsync(_host.Paths.GetInstanceManifestPath(instance.InstanceId), "[[mods]]\nid = \"KSArmory\"\nenabled = true\n");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        var entries = await new FileModStateRepository(_host.Paths).GetEntriesAsync(instance.InstanceId);
+        Assert.Equal(new[] { expected, "KSArmory" }, entries.Select(entry => entry.ModId));
+    }
+
+    [Fact]
+    public async Task Launch_KeptBuildIsGone_StartsNothingAndUsesNoOtherGameFolder()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        var game = Path.Combine(_host.Root, "Game");
+        await WriteContentAsync(game, "SettingsContent");
+        await _host.RunAsync("settings", "set", "game", game);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        await _host.KeepGameBuildAsync("Flight Test", withFolder: false);
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        await File.WriteAllTextAsync(_host.Paths.GetInstanceManifestPath(instance.InstanceId), "[[mods]]\nid = \"KSArmory\"\nenabled = true\n");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains(CliHost.KeptBuild.ToString(), run.Error);
+        Assert.Contains("\"Use the current game build\"", run.Error);
+        Assert.Contains("remove GameBuild from the instance.toml", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+        var entries = await new FileModStateRepository(_host.Paths).GetEntriesAsync(instance.InstanceId);
+        Assert.Equal(new[] { "KSArmory" }, entries.Select(entry => entry.ModId));
+    }
+
+    [Fact]
+    public async Task Launch_WhileAKeptBuildRunsFromTheSameFolder_FailsAndLeavesTheFile()
+    {
+        var file = await SetUpStarMapFolderAsync();
+        await _host.RunAsync("instance", "create", "Kept");
+        await _host.RunAsync("instance", "create", "Current");
+        await _host.KeepGameBuildAsync("Kept");
+        // both instances start the one StarMap folder, so the start of the kept build leaves its folder in the file
+        Assert.Equal(0, (await _host.RunAsync("launch", "Kept", "StarMap")).ExitCode);
+        _host.GameRunning = true;
+        var before = await File.ReadAllBytesAsync(file);
+
+        var run = await _host.RunAsync("launch", "Current", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Close the running game first", run.Error);
+        Assert.Equal(before, await File.ReadAllBytesAsync(file));
+        Assert.Single(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_LoaderFileThatCannotBeRead_FailsAndLeavesTheFile()
+    {
+        var file = await SetUpStarMapFolderAsync();
+        await _host.RunAsync("instance", "create", "Current");
+        await File.WriteAllTextAsync(file, "{");
+
+        var run = await _host.RunAsync("launch", "Current", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Repair or delete the file", run.Error);
+        Assert.Equal("{", await File.ReadAllTextAsync(file));
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_KeptBuildIsGoneAndNoLoaderIsInstalled_NamesTheBuildAndNoLoader()
+    {
+        _host.IndexReader.Snapshot = StarMapIndex();
+        await _host.RunAsync("instance", "create", "Flight Test");
+        await _host.KeepGameBuildAsync("Flight Test", withFolder: false);
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains($"runs on KSA {CliHost.KeptBuild}", run.Error);
+        Assert.DoesNotContain("borea loader install", run.Error);
+    }
+
+    [Fact]
+    public async Task Launch_KeptBuildWithOnlyANewerLoader_WarnsWithTheVersionThatFitsIt()
+    {
+        var versions = Path.Combine(_host.Paths.GetLoadersRoot(), "StarMap");
+        var recorded = LoaderCommandTests.CreateLoaderDirectory("0.4.8", "not a program", versions);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"""
+            [LoaderInstallations.StarMap]
+            DirectoryPath = '{recorded}'
+            Version = '0.4.8'
+            IsAdopted = false
+            """);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        await _host.KeepGameBuildAsync("Flight Test");
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        _host.IndexReader.Snapshot = new ContentIndexSnapshot(
+            1,
+            [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.6", gameMin: CliHost.KeptBuild.ToString(), gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638")], null)],
+            [],
+            null,
+            []);
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains($"warning: StarMap 0.4.8 does not support KSA {CliHost.KeptBuild}. Run 'borea loader install StarMap --version 0.4.6' to install 0.4.6.", run.Error);
+        Assert.Single(_host.ProcessStarter.Plans);
+    }
+
     [Fact]
     public async Task Launch_LoaderStopsRightAway_FailsWithWhatItWrote()
     {
@@ -498,46 +628,6 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task Launch_RefreshesTheGamePathOfTheLoaderBeforeItStarts()
-    {
-        var configurator = new RefreshRecorder(_host.ProcessStarter);
-        _host.LoaderConfiguration = configurator;
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        var game = Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName;
-        await _host.RunAsync("settings", "set", "game", game);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
-        await _host.RunAsync("instance", "create", "Flight Test");
-
-        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
-
-        Assert.Equal(0, run.ExitCode);
-        var refresh = Assert.Single(configurator.Refreshes);
-        Assert.Equal("StarMap", refresh.LoaderId);
-        Assert.Equal(Path.GetFullPath(loaderDirectory), Path.GetFullPath(refresh.LoaderDirectory));
-        Assert.Equal(game, Path.GetFullPath(refresh.GameDirectory));
-        Assert.Equal(0, refresh.PlansBefore);
-        Assert.Single(_host.ProcessStarter.Plans);
-    }
-
-    [Fact]
-    public async Task Launch_GamePathCannotBeRefreshed_StartsNothing()
-    {
-        _host.LoaderConfiguration = new RefreshRecorder(_host.ProcessStarter, new InvalidOperationException("No drive of the Wine prefix holds the game."));
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "game", Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
-        await _host.RunAsync("instance", "create", "Flight Test");
-
-        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
-
-        Assert.Equal(1, run.ExitCode);
-        Assert.Contains("No drive of the Wine prefix holds the game.", run.Error);
-        Assert.Empty(_host.ProcessStarter.Plans);
-    }
-
-    [Fact]
     public async Task Launch_RecordedFolderWasDeleted_ReportsItAndMakesNoFolder()
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
@@ -642,24 +732,14 @@ public sealed class LaunchCommandTests : IDisposable
         await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
     }
 
-    /// <summary>Records each refresh with the number of processes started before it, and throws <paramref name="failure"/> when set.</summary>
-    private sealed class RefreshRecorder(FakeProcessStarter starter, Exception? failure = null) : ILoaderConfigurator
+    /// <summary>Sets a game folder and a recorded StarMap folder, and gives the file that holds its game path.</summary>
+    private async Task<string> SetUpStarMapFolderAsync()
     {
-        public List<(string LoaderId, string LoaderDirectory, string GameDirectory, int PlansBefore)> Refreshes { get; } = [];
-
-        public Task<string?> ConfigureAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>(null);
-
-        public Task<string?> RefreshForWineAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, CancellationToken cancellationToken = default)
-        {
-            Refreshes.Add((loader.ModId, loaderDirectory, gameDirectory, starter.Plans.Count));
-            return failure is null ? Task.FromResult<string?>(null) : Task.FromException<string?>(failure);
-        }
-
-        public Task<string?> PrepareForLaunchAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, bool isAdopted, CancellationToken cancellationToken = default) =>
-            RefreshForWineAsync(loader, loaderDirectory, gameDirectory, cancellationToken);
-
-        public string GamePathValue(string gameDirectory) => gameDirectory;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "game", Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        return Path.Combine(loaderDirectory, "StarMapConfig.json");
     }
 
     private async Task SaveInstanceAsync(params ModVersionMetadata[] releases)
@@ -669,6 +749,12 @@ public sealed class LaunchCommandTests : IDisposable
             .ToList();
         var instance = Instance.FromExisting(Guid.NewGuid(), "Flight Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, isFavorite: false);
         await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
+    }
+
+    private static Task WriteContentAsync(string gameDirectory, string contentId)
+    {
+        var content = Directory.CreateDirectory(Path.Combine(gameDirectory, "Content")).FullName;
+        return File.WriteAllTextAsync(Path.Combine(content, "manifest.toml"), $"[[mods]]\nid = \"{contentId}\"\nenabled = true\n");
     }
 
     private static ModVersionMetadata NeedsLoader(string id, string loaderId) =>

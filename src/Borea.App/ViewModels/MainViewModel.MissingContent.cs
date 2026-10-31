@@ -346,7 +346,8 @@ public partial class MainViewModel
             instance.ForeignMods,
             instance.IsFavorite,
             instance.LastPlayedAt,
-            instance.LaunchArguments);
+            instance.LaunchArguments,
+            instance.GameBuild);
 }
 
 /// <summary>

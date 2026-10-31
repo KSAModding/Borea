@@ -674,6 +674,48 @@ public sealed class ModInstallCommandTests : IDisposable
         Assert.Contains("Requires game 2026.1.1.9000", run.Output);
     }
 
+    [Theory]
+    [InlineData(true, "1.0.0")]
+    [InlineData(false, "2.0.0")]
+    public async Task InstallDryRun_KeptBuild_PicksTheNewestReleaseThatSupportsTheBuildOfTheInstance(bool kept, string expected)
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "1.0.0", gameMinRevision: 5000));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0"));
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider
+        {
+            Installed = new InstalledGameVersion(new GameVersion(2026, 9, 7, 5402), "2026.9.7.5402"),
+        };
+        await _host.RunAsync("instance", "create", "Alpha");
+        if (kept)
+            await _host.KeepGameBuildAsync("Alpha");
+
+        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains($"Install flight-tools {expected}.", run.Output);
+        Assert.DoesNotContain("warning:", run.Output + run.Error);
+    }
+
+    [Fact]
+    public async Task InstallDryRun_KeptBuildIsGone_FailsAndNamesTheBuild()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "1.0.0", gameMinRevision: 5000));
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider
+        {
+            Installed = new InstalledGameVersion(new GameVersion(2026, 9, 7, 5402), "2026.9.7.5402"),
+        };
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.KeepGameBuildAsync("Alpha", withFolder: false);
+
+        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("2026.8.3.5117", run.Error);
+        Assert.Contains("is gone", run.Error);
+        Assert.Contains("\"Use the current game build\"", run.Error);
+        Assert.DoesNotContain("Install flight-tools", run.Output);
+    }
+
     [Fact]
     public async Task Install_ExternalChangeBetweenOperations_StopsTheSecondWrite()
     {

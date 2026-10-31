@@ -78,7 +78,7 @@ public static class InstanceLoaderResolver
 
         // a loader that the choice did not find installed has no version to start, so only the missing release is resolved
         var versions = choice.Succeeded ? installed : [];
-        var version = await LoaderVersionChoice.ResolveAsync(instance.Loader, chosenId, need, versions, listings, channelMods, channel, game, cancellationToken).ConfigureAwait(false);
+        var version = await LoaderVersionChoice.ResolveAsync(instance.Loader, chosenId, need, versions, listings, channelMods, channel, game, instance.GameBuild is not null, cancellationToken).ConfigureAwait(false);
         return new InstanceLoaderResolution(choice, listings, fromSetting, version);
     }
 

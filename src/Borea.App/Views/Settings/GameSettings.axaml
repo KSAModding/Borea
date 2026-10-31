@@ -40,7 +40,57 @@
                 </Panel>
             </Border>
 
-            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
+            <!-- on macOS a chosen folder never holds a build that Borea can start, so the section shows there only while it has rows or the line of a done delete -->
+            <StackPanel Spacing="6">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                        <Binding Path="ShowsAddGameBuild" />
+                        <Binding Path="ShowsKeptGameBuilds" />
+                        <Binding Path="KeptGameBuildMessage" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
+                <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsGameBuildsTitle}" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsGameBuildsHint}" TextWrapping="Wrap" />
+                <StackPanel Spacing="6" IsVisible="{Binding ShowsKeptGameBuilds}">
+                    <ItemsControl ItemsSource="{Binding KeptGameBuilds}" Margin="0,12,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:KeptGameBuildItem">
+                                <!-- the question gets a row of its own, so a long translation does not squeeze the version -->
+                                <Grid ColumnDefinitions="*,16,Auto" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,8">
+                                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="16">
+                                            <TextBlock Classes="heading-sm" Text="{Binding VersionText}" ToolTip.Tip="{Binding Folder}" VerticalAlignment="Center" />
+                                            <TextBlock Classes="label-md" Text="{Binding SizeText}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding UsedByText}" TextWrapping="Wrap" IsVisible="{Binding UsedByText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding GameFolderText}" TextWrapping="Wrap" IsVisible="{Binding GameFolderText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding RemoveCommand}" IsEnabled="{Binding CanRemove}" IsVisible="{Binding !IsConfirmingRemove}" ToolTip.Tip="{Binding RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding RemoveToolTip}" VerticalAlignment="Center" />
+                                    <!-- Cancel ends the question line, at the right end where the Delete of the row was -->
+                                    <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,4,0,0" IsVisible="{Binding IsConfirmingRemove}">
+                                        <TextBlock Classes="body-sm danger" Text="{Binding RemoveConfirmText}" TextWrapping="Wrap" IsVisible="{Binding !IsRemoving}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding RemovingText}" TextWrapping="Wrap" IsVisible="{Binding IsRemoving}" />
+                                        <Button Grid.Column="2" Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding ConfirmRemoveCommand}" VerticalAlignment="Top" />
+                                        <Button Grid.Column="4" Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" IsVisible="{Binding !IsRemoving}" VerticalAlignment="Top" />
+                                    </Grid>
+                                    <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Classes="body-sm danger" Text="{Binding RemoveError}" TextWrapping="Wrap" Margin="0,4,0,0" IsVisible="{Binding RemoveError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="body-md danger" Text="{Binding KeptGameBuildError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding KeptGameBuildError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </StackPanel>
+                <!-- outside the list, because the delete of the last build hides the list -->
+                <TextBlock Classes="body-md secondary" Text="{Binding KeptGameBuildMessage}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding KeptGameBuildMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <StackPanel Spacing="6" IsVisible="{Binding ShowsAddGameBuild}">
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupAddGameBuildHint}" TextWrapping="Wrap" Margin="0,12,0,0" />
+                    <Button Classes="text" HorizontalAlignment="Left" Content="{Binding Localization.SetupAddGameBuild}" Click="BrowseGameBuildFolder" />
+                </StackPanel>
+                <TextBlock Classes="body-md danger" Text="{Binding AddGameBuildError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding AddGameBuildError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
+
+            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,24,0,16" />
 
             <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsLoadersTitle}" />
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsLoadersHint}" TextWrapping="Wrap" />
@@ -52,7 +102,7 @@
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <WrapPanel ItemSpacing="8" LineSpacing="4">
                                     <TextBlock Classes="heading-sm" Text="{Binding Title}" VerticalAlignment="Center" />
-                                    <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
+                                    <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center" ToolTip.Tip="{Binding CompatibilityToolTip}" AutomationProperties.HelpText="{Binding CompatibilityToolTip}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <Ellipse />
                                             <TextBlock Text="{Binding CompatibilityText}" />

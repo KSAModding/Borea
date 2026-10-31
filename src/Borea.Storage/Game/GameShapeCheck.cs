@@ -1,4 +1,5 @@
 using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Storage.Instances;
@@ -20,48 +21,58 @@ public sealed class GameShapeCheck : IGameShapeCheck
 
     private readonly IGamePathProvider _paths;
     private readonly IInstalledGameVersionProvider _version;
+    private readonly IInstanceRepository _instances;
+    private readonly IInstanceGameResolver _games;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    private IReadOnlyList<GameAssumptionResult>? _installResults;
-    private InstalledGameVersion? _installVersion;
-    private string? _checkedBuild;
+    // keyed by folder and build, so the folder of the settings and a kept build do not replace each other
+    private readonly Dictionary<(string? Directory, string? RawVersion), IReadOnlyList<GameAssumptionResult>> _installResults = new();
 
-    public GameShapeCheck(IGamePathProvider paths, IInstalledGameVersionProvider version)
+    public GameShapeCheck(IGamePathProvider paths, IInstalledGameVersionProvider version, IInstanceRepository instances, IInstanceGameResolver games)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _version = version ?? throw new ArgumentNullException(nameof(version));
+        _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+        _games = games ?? throw new ArgumentNullException(nameof(games));
     }
 
     public async Task<GameShape> GetAsync(CancellationToken cancellationToken = default)
     {
-        var (version, install) = await InstallAsync(cancellationToken).ConfigureAwait(false);
+        var version = _version.GetInstalledVersion();
+        var install = await InstallAsync(_paths.GetGameDirectoryPath(), version, cancellationToken).ConfigureAwait(false);
         var profile = await ProfileAsync(SharedProfile(), cancellationToken).ConfigureAwait(false);
         return new GameShape(version, VerifiedGameBuilds.Current, [.. install, .. profile]);
     }
 
+    /// <summary>
+    /// Checks the installation the instance starts, which is its kept build when it keeps one. An instance that has no
+    /// record yet, such as the instance of a pack that is being installed, starts the game folder of the settings.
+    /// A kept build with a problem has no folder and no version, so nothing is checked in its place.
+    /// </summary>
     public async Task<GameShape> GetForInstanceAsync(Guid instanceId, CancellationToken cancellationToken = default)
     {
-        var (version, install) = await InstallAsync(cancellationToken).ConfigureAwait(false);
+        var game = await _instances.GetByIdAsync(instanceId).ConfigureAwait(false) is { } instance
+            ? _games.Resolve(instance)
+            : new InstanceGame(null, _paths.GetGameDirectoryPath(), _version.GetInstalledVersion(), KeptBuildProblem.None);
+        var install = await InstallAsync(game.GameDirectory, game.Version, cancellationToken).ConfigureAwait(false);
         var profile = await ProfileAsync(Instance(instanceId), cancellationToken).ConfigureAwait(false);
-        return new GameShape(version, VerifiedGameBuilds.Current, [.. install, .. profile]);
+        return new GameShape(game.Version, VerifiedGameBuilds.Current, [.. install, .. profile]);
     }
 
     /// <summary>
-    /// The installation, checked again only after the installed build changed.
+    /// The installation in <paramref name="directory"/>, checked again only after its build changed.
     /// A build that cannot be read is a state of its own, so a game directory
     /// that is set later is checked then.
     /// </summary>
-    private async Task<(InstalledGameVersion? Version, IReadOnlyList<GameAssumptionResult> Results)> InstallAsync(CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<GameAssumptionResult>> InstallAsync(string? directory, InstalledGameVersion? version, CancellationToken cancellationToken)
     {
-        var version = _version.GetInstalledVersion();
-
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (_installResults is { } cached && string.Equals(_checkedBuild, version?.RawVersion, StringComparison.Ordinal))
-                return (_installVersion, cached);
+            var key = (directory, version?.RawVersion);
+            if (_installResults.TryGetValue(key, out var cached))
+                return cached;
 
-            var directory = _paths.GetGameDirectoryPath();
             var results = new List<GameAssumptionResult>
             {
                 CheckGameAssembly(directory, version),
@@ -69,10 +80,8 @@ public sealed class GameShapeCheck : IGameShapeCheck
                 CheckPatchNotes(directory),
             };
 
-            _installResults = results;
-            _installVersion = version;
-            _checkedBuild = version?.RawVersion;
-            return (version, results);
+            _installResults[key] = results;
+            return results;
         }
         finally
         {

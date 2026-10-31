@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Mods;
 
 namespace Borea.Core.Paths;
@@ -42,6 +43,17 @@ public interface IGamePathProvider
     /// Root of the mod releases that instances share, one folder per release below the folder of its mod.
     /// </summary>
     string GetStaticModFilesRoot();
+
+    /// <summary>
+    /// The Game Builds folder of the library, which holds one folder per kept game build.
+    /// </summary>
+    string GetGameBuildsRoot();
+
+    /// <summary>
+    /// Folder of one kept game build, below the Game Builds folder of the library.
+    /// Only Year.Month.BuildNumber.Revision name the folder, without the suffix, so two builds that differ only by their suffix share one folder.
+    /// </summary>
+    string GetGameBuildFolder(GameVersion version);
 
     /// <summary>
     /// Root for loaders installed standalone (RFC 0035). Each loader has a folder here, and it holds a folder for each installed version.

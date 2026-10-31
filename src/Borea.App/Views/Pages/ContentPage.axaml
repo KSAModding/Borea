@@ -144,7 +144,7 @@
                         <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Top">
                             <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
                             <Panel VerticalAlignment="Center" IsVisible="{Binding CanActOnSelectedContent}">
-                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
+                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" IsEnabled="{Binding CanAddToActiveInstance}" ToolTip.Tip="{Binding AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding AddToText}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
                                         <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
@@ -260,6 +260,15 @@
                                 <Binding Path="!HasActiveInstance" />
                                 <Binding Path="!IsContentFromInstance" />
                                 <Binding Path="SelectedContent.CanInstall" />
+                            </MultiBinding>
+                        </ContentControl.IsVisible>
+                    </ContentControl>
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ActiveKeptBuildUnavailable}" Margin="0,16,0,0">
+                        <ContentControl.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="!CanAddToActiveInstance" />
+                                <Binding Path="CanActOnSelectedContent" />
+                                <Binding Path="!IsLoaderContent" />
                             </MultiBinding>
                         </ContentControl.IsVisible>
                     </ContentControl>
@@ -452,7 +461,13 @@
                                                         <Button Classes="icon" Command="{Binding ToggleChangelogCommand}" IsVisible="{Binding Changelog, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" />
                                                         </Button>
-                                                        <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" ToolTip.Tip="{Binding InstallToolTip}" AutomationProperties.Name="{Binding InstallToolTip}">
+                                                        <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" ToolTip.Tip="{Binding InstallToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding InstallToolTip}">
+                                                            <Button.IsEnabled>
+                                                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                                    <Binding Path="!IsInstalling" />
+                                                                    <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).CanAddToActiveInstance" />
+                                                                </MultiBinding>
+                                                            </Button.IsEnabled>
                                                             <Button.IsVisible>
                                                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                                     <Binding Path="CanInstall" />

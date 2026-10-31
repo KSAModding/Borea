@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Globalization;
 using System.Net;
@@ -7,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.Preferences;
 using Borea.Core.Updates;
 
@@ -17,6 +19,8 @@ public sealed class GameBuildBannerTests
     private const string MasterServerHost = "ksa-master1.rocketwerkz.com";
 
     private const string InstalledBuild = "2026.8.3.5117";
+
+    private const string HomeInstanceName = "Main";
 
     private const string VersionsHost = "raw.githubusercontent.com";
 
@@ -118,6 +122,26 @@ public sealed class GameBuildBannerTests
         return harness;
     }
 
+    /// <summary>Makes <see cref="HomeInstanceName"/> the active instance, with MeasureTools when <paramref name="hasMods"/> is set and on <paramref name="keptBuild"/> when one is given, and loads it.</summary>
+    private static async Task<Instance> CreateHomeInstanceAsync(ViewModelHarness harness, bool hasMods, string? keptBuild)
+    {
+        var instance = (await harness.Services.Instances.CreateAsync(HomeInstanceName, InstanceSource.Custom.Value)).Instance;
+        if (hasMods)
+            await InstalledContent.AddAsync(harness, "MeasureTools", activate: false, into: instance);
+        if (keptBuild is not null)
+            await KeepBuildAsync(harness, instance, keptBuild);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.ViewModel.LoadAsync();
+        return instance;
+    }
+
+    private static Task KeepBuildAsync(ViewModelHarness harness, Instance instance, string build) =>
+        harness.Services.Instances.UpdateAsync(instance.InstanceId, record =>
+        {
+            record.SetGameBuild(GameVersion.Parse(build));
+            return true;
+        });
+
     private static void WriteVersionFile(string game, string name, string json)
     {
         var folder = Path.Combine(game, "Content", "Versions");
@@ -176,6 +200,61 @@ public sealed class GameBuildBannerTests
         Assert.False(viewModel.ShowGameBuildBanner);
         Assert.Null(viewModel.GameBuildBannerText);
         Assert.Null(viewModel.UnexpectedError);
+    }
+
+    [Theory]
+    [InlineData(true, null, true)]
+    [InlineData(true, InstalledBuild, false)]
+    [InlineData(false, null, false)]
+    public async Task Load_NewerBuild_OffersTheKeepOnlyForAHomeInstanceWithModsOnTheCurrentBuild(bool hasMods, string? keptBuild, bool offered)
+    {
+        using var harness = await CreateAsync(MasterServer("2026.9.10.5438"));
+        await CreateHomeInstanceAsync(harness, hasMods, keptBuild);
+        var viewModel = harness.ViewModel;
+
+        Assert.True(viewModel.ShowGameBuildBanner);
+        Assert.Equal(offered, viewModel.GameBuildKeepHintText is not null);
+        Assert.Equal(offered, viewModel.GameBuildKeepActionText is not null);
+    }
+
+    // the harness cannot make a Wine wrapper on Windows, and GameBuildKeeperTests covers the read of the game folder
+    [Fact]
+    public async Task KeepRefusedForTheGameFolder_GivesTheMenuReasonAndHidesTheBannerKeep()
+    {
+        using var harness = await CreateAsync(MasterServer("2026.9.10.5438"));
+        await CreateHomeInstanceAsync(harness, hasMods: true, keptBuild: null);
+        var viewModel = harness.ViewModel;
+        Assert.Null(viewModel.GameFolderKeepRefusalText);
+        Assert.NotNull(viewModel.GameBuildKeepHintText);
+
+        viewModel.GameFolderKeepRefusal = GameBuildKeepRefusal.WineWrapper;
+
+        Assert.Equal(viewModel.Localization.KeepGameBuildWineWrapper, viewModel.GameFolderKeepRefusalText);
+        Assert.Null(viewModel.GameBuildKeepHintText);
+        Assert.Null(viewModel.GameBuildKeepActionText);
+    }
+
+    [Fact]
+    public async Task KeepOfTheHomeInstance_RemovesTheKeepOffer()
+    {
+        using var harness = await CreateAsync(MasterServer("2026.9.10.5438"));
+        var instance = await CreateHomeInstanceAsync(harness, hasMods: true, keptBuild: null);
+        var viewModel = harness.ViewModel;
+        Assert.Equal($"Your mods may need updates for the new build. To keep playing {HomeInstanceName} on KSA {InstalledBuild} after the update, keep this build before you update the game.", viewModel.GameBuildKeepHintText);
+        Assert.Equal($"Keep KSA {InstalledBuild}", viewModel.GameBuildKeepActionText);
+        // the load starts background checks that set view model properties on pool threads, so the events can come from two threads at once
+        var changed = new ConcurrentQueue<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Enqueue(e.PropertyName);
+
+        // a keep records the build on the instance and then loads the instances again
+        await KeepBuildAsync(harness, instance, InstalledBuild);
+        await viewModel.LoadAsync();
+        await harness.WhenIdleAsync();
+
+        Assert.Null(viewModel.GameBuildKeepHintText);
+        Assert.Null(viewModel.GameBuildKeepActionText);
+        Assert.Contains(nameof(MainViewModel.GameBuildKeepHintText), changed);
+        Assert.Contains(nameof(MainViewModel.GameBuildKeepActionText), changed);
     }
 
     [Fact]
