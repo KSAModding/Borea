@@ -26,7 +26,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task GatedSchema_OffersNoShare()
     {
-        using var harness = await ViewModelHarness.CreateAsync();
+        using var harness = await ViewModelHarness.CreateAsync(respond: Gated);
         await CreateInstanceAsync(harness, "Example Rover");
 
         await OpenAsync(harness);
@@ -41,7 +41,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task SchemaWithoutTheGate_OffersShareOnVehiclesAndSaves()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example Rover");
 
         await OpenAsync(harness);
@@ -54,7 +54,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task NameWithTwoSpaces_AsksForARenameFirst()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example  Rover");
         await OpenAsync(harness);
         var viewModel = harness.ViewModel;
@@ -77,7 +77,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task CutOffVehicleFile_NamesTheFileFirstInTheToast()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example Rover");
         await OpenAsync(harness);
         var item = Assert.Single(harness.ViewModel.VehiclesSection.Items);
@@ -96,7 +96,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task UnreadableModFile_IsNamedRelativeToTheInstance()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         var instance = await CreateInstanceAsync(harness, "Example Rover");
         var mods = harness.Services.Paths.GetInstanceModsFolder(instance);
         File.WriteAllText(Path.Combine(mods, "ExamplePartsMod", "Parts.xml"), "<Assets><Part");
@@ -112,7 +112,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task NameChangedToAnInvalidNameAfterTheListLoaded_AsksForARenameFirst()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example Rover");
         await OpenAsync(harness);
         var viewModel = harness.ViewModel;
@@ -135,7 +135,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task Share_OpensTheEditorWithTheProposalAndKeepsAKindTheAuthorChanged()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example Rover");
         await OpenAsync(harness);
         var viewModel = harness.ViewModel;
@@ -171,7 +171,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task ShareOfASave_NamesTheFilesTheGameDoesNotWrite()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         var instance = await CreateInstanceAsync(harness, "Example Rover");
         var save = WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance), "Moon Base", "universe.xml", "<UniverseData><System><Id Id=\"Sol\" /></System></UniverseData>");
         File.WriteAllText(Path.Combine(save, "unscience.json"), "{}");
@@ -188,7 +188,7 @@ public sealed class GameSaveShareTests
     [Fact]
     public async Task SaveArchive_WritesTheZipAndShowsItsHash()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example Rover");
         await OpenAsync(harness);
         var window = new ArchiveWindow();
@@ -211,7 +211,7 @@ public sealed class GameSaveShareTests
         using var harness = await ViewModelHarness.CreateAsync(respond: request =>
             request.RequestUri?.AbsoluteUri == "https://raw.githubusercontent.com/KSAModding/content-index/main/vehicles/ExampleRover.toml"
                 ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(listed) }
-                : Ungated(request));
+                : null);
         await harness.ViewModel.OpenListingAsync();
         var editor = harness.ViewModel.ListingEditor;
         editor.SelectedListed = new ListedListing("ExampleRover", "Example Rover", string.Empty, IsOwn: false, Type: "vehicle");
@@ -231,7 +231,7 @@ public sealed class GameSaveShareTests
         using var harness = await ViewModelHarness.CreateAsync(respond: request =>
             request.RequestUri?.AbsoluteUri == "https://raw.githubusercontent.com/KSAModding/content-index/main/vehicles/ExampleRover.toml"
                 ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(listed) }
-                : Ungated(request));
+                : null);
         await harness.ViewModel.OpenListingAsync();
         var editor = harness.ViewModel.ListingEditor;
         editor.SelectedListed = new ListedListing("ExampleRover", "Example Rover", string.Empty, IsOwn: false, Type: "vehicle");
@@ -255,7 +255,7 @@ public sealed class GameSaveShareTests
             respond: request => request.RequestUri?.AbsoluteUri switch
             {
                 "https://raw.githubusercontent.com/KSAModding/content-index/main/vehicles/ExampleRover.toml" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(listed) },
-                _ => Ungated(request),
+                _ => null,
             });
         await harness.ViewModel.OpenListingAsync();
         var editor = harness.ViewModel.ListingEditor;
@@ -298,14 +298,14 @@ public sealed class GameSaveShareTests
         return folder;
     }
 
-    /// <summary>Serves the schema of content-index without its rollout gate, as it reads once a steward lifts it.</summary>
-    internal static HttpResponseMessage? Ungated(HttpRequestMessage request)
+    /// <summary>Serves the schema of content-index with a rollout gate that holds vehicles and saves.</summary>
+    internal static HttpResponseMessage? Gated(HttpRequestMessage request)
     {
         if (request.RequestUri?.AbsoluteUri != SchemaUrl)
             return null;
 
         var schema = JsonNode.Parse(ListingSchemaStore.EmbeddedText)!;
-        schema["properties"]!["type"]!.AsObject().Remove("not");
+        schema["properties"]!["type"]!["not"] = new JsonObject { ["title"] = "a type that the index does not accept yet", ["enum"] = new JsonArray("vehicle", "save") };
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(schema.ToJsonString()) };
     }
 

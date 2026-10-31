@@ -13,8 +13,8 @@ public sealed class GameSaveShareViewTests
     [Fact]
     public async Task VehicleMenu_ShowsShareOnlyOnceTheIndexAcceptsVehicles()
     {
-        using var gated = await ViewModelHarness.CreateAsync();
-        using var ungated = await ViewModelHarness.CreateAsync(respond: GameSaveShareTests.Ungated);
+        using var gated = await ViewModelHarness.CreateAsync(respond: GameSaveShareTests.Gated);
+        using var ungated = await ViewModelHarness.CreateAsync();
         foreach (var harness in new[] { gated, ungated })
         {
             await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
@@ -28,7 +28,7 @@ public sealed class GameSaveShareViewTests
     [Fact]
     public async Task ListingPage_AfterShare_ShowsTheShareCardAndTheOptionalHints()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: GameSaveShareTests.Ungated);
+        using var harness = await ViewModelHarness.CreateAsync();
         await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
         await GameSaveShareTests.OpenAsync(harness);
         await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);

@@ -530,29 +530,30 @@ public sealed class ListingValidatorTests
     [Fact]
     public async Task AcceptedTypes_AreTheTypesOfTheSchemaOutsideTheGate()
     {
-        var ungated = new ListingValidator(new UngatedSchema());
-        await ungated.LoadSchemaAsync();
+        var gated = new ListingValidator(new GatedSchema());
+        await gated.LoadSchemaAsync();
 
-        Assert.Equal(["mod", "mod-loader", "modpack"], _validator.AcceptedTypes);
-        Assert.Equal(["mod", "mod-loader", "modpack", "vehicle", "save"], ungated.AcceptedTypes);
+        Assert.Equal(["mod", "mod-loader", "modpack"], gated.AcceptedTypes);
+        Assert.Equal(["mod", "mod-loader", "modpack", "vehicle", "save"], _validator.AcceptedTypes);
     }
 
     [Fact]
-    public void Validate_VehicleDraftWithTheGatedSchema_IsRefusedWithTheTitleOfTheGate()
+    public async Task Validate_VehicleDraftWithTheGatedSchema_IsRefusedWithTheTitleOfTheGate()
     {
-        var errors = _validator.Validate(Vehicle().ToDocument(), new ListingCheckContext(null)).Issues;
+        var gated = new ListingValidator(new GatedSchema());
+        await gated.LoadSchemaAsync();
 
-        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "type", $"'vehicle' is {UngatedSchema.GateTitle}"), errors);
+        var errors = gated.Validate(Vehicle().ToDocument(), new ListingCheckContext(null)).Issues;
+
+        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "type", $"'vehicle' is {GatedSchema.Title}"), errors);
     }
 
     [Fact]
-    public async Task Validate_WrittenVehicleDraftWithoutForumsAndCompatibility_PassesTheSchemaWithoutTheGate()
+    public void Validate_WrittenVehicleDraftWithoutForumsAndCompatibility_PassesTheSchema()
     {
-        var validator = new ListingValidator(new UngatedSchema());
-        await validator.LoadSchemaAsync();
         var text = _format.Write(Vehicle().ToDocument());
 
-        var result = validator.Validate(_format.Read(text), new ListingCheckContext(SnapshotWithVehiclesAndSaves()));
+        var result = _validator.Validate(_format.Read(text), new ListingCheckContext(SnapshotWithVehiclesAndSaves()));
 
         Assert.Empty(result.Issues);
         Assert.DoesNotContain("[links]", text, StringComparison.Ordinal);
