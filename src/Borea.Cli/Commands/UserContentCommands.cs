@@ -125,7 +125,7 @@ internal static class UserContentCommands
 
     private static async Task<UserContentPlan> PlanAsync(CliServices cli, Instance instance, ModVersionMetadata release, Options options, Func<UserContentRequest, Task<UserContentPlan>> plan)
     {
-        var request = new UserContentRequest(instance, release, options.DryRun ? cli.ReadOnlyMods : cli.Mods, cli.InstalledVersion.GetInstalledVersion()?.Version, cli.GamePlatform.Current, Alternatives: options.Alternatives, Channel: options.Channel, Name: options.Name);
+        var request = new UserContentRequest(instance, release, options.DryRun ? cli.ReadOnlyMods : cli.Mods, InstanceLookup.GameVersionOf(cli, instance), cli.GamePlatform.Current, Alternatives: options.Alternatives, Channel: options.Channel, Name: options.Name);
         var result = await plan(request).ConfigureAwait(false);
         if (!options.WithRecommended)
             return result;

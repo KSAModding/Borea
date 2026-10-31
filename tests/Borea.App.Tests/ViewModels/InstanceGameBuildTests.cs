@@ -2,12 +2,14 @@ using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.History;
+using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Storage.Launch;
+using static Borea.App.Tests.ViewModels.UserContentFixtures;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -69,6 +71,57 @@ public sealed class InstanceGameBuildTests
 
         Assert.Equal(harness.Localization.FormatInstallKeptBuildUnavailable("2026.10.13.5602", MainViewModel.KeptBuildFolderText(harness.Services.Paths, gone)), row.InstallError);
         Assert.Null(row.PendingPlan);
+    }
+
+    [Fact]
+    public async Task InstallVehicle_IntoAKeptBuild_PlansTheNeededModThatFitsIt()
+    {
+        using var harness = await CreateWithKeptBuildAsync(typeFiles: RoverNeedingMeasureTools());
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        var current = await CreateInstanceAsync(harness, "Current", null);
+        await harness.ViewModel.LoadAsync();
+        var rover = (await harness.Services.UserContent.GetLatestReleaseAsync("ExampleRover", harness.Services.Settings.ReleaseChannel))!;
+        var intoKept = new VersionItem(harness.ViewModel, rover);
+        var intoCurrent = new VersionItem(harness.ViewModel, rover);
+
+        await harness.ViewModel.PlanContentAsync(intoKept, kept.InstanceId, rover);
+        await harness.ViewModel.PlanContentAsync(intoCurrent, current.InstanceId, rover);
+
+        Assert.Equal("1.1.9", intoKept.PendingContentPlan!.Mods.Operations.Single(operation => operation.Release.ModId == "MeasureTools").Release.Version.ToString());
+        Assert.Equal("1.1.10", intoCurrent.PendingContentPlan!.Mods.Operations.Single(operation => operation.Release.ModId == "MeasureTools").Release.Version.ToString());
+    }
+
+    [Fact]
+    public async Task InstallVehicle_NewerThanTheKeptBuild_IsRefusedAndNamesTheBuildItNeeds()
+    {
+        var entry = Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, RoverArchive(), "1.0.0")
+            .Replace("\"game_min\": \"2026.8.19.5261\", \"game_min_revision\": 5261", "\"game_min\": \"2026.7.1.5000\", \"game_min_revision\": 5000", StringComparison.Ordinal);
+        using var harness = await CreateWithKeptBuildAsync(typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, entry));
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        await harness.ViewModel.LoadAsync();
+        var rover = (await harness.Services.UserContent.GetLatestReleaseAsync("ExampleRover", harness.Services.Settings.ReleaseChannel))!;
+        var row = new VersionItem(harness.ViewModel, rover);
+
+        await harness.ViewModel.PlanContentAsync(row, kept.InstanceId, rover);
+
+        Assert.Contains("2026.7.1.5000", row.InstallError);
+        Assert.Null(row.PendingContentPlan);
+    }
+
+    [Fact]
+    public async Task InstallVehicle_IntoAKeptBuildThatIsGone_IsRefusedWithTheBuild()
+    {
+        using var harness = await CreateWithKeptBuildAsync(typeFiles: RoverNeedingMeasureTools());
+        var gone = GameVersion.Parse("2026.10.13.5602");
+        var instance = await CreateInstanceAsync(harness, "Gone", gone);
+        await harness.ViewModel.LoadAsync();
+        var rover = (await harness.Services.UserContent.GetLatestReleaseAsync("ExampleRover", harness.Services.Settings.ReleaseChannel))!;
+        var row = new VersionItem(harness.ViewModel, rover);
+
+        await harness.ViewModel.PlanContentAsync(row, instance.InstanceId, rover);
+
+        Assert.Equal(harness.Localization.FormatInstallKeptBuildUnavailable("2026.10.13.5602", MainViewModel.KeptBuildFolderText(harness.Services.Paths, gone)), row.InstallError);
+        Assert.Null(row.PendingContentPlan);
     }
 
     [Fact]
@@ -691,7 +744,13 @@ public sealed class InstanceGameBuildTests
     /// The settings point at build 5117 and the library keeps build 0.4.6.0, and each build lists its own content.
     /// The newest MeasureTools release needs 5117, and the one before it fits every build. StarMap 0.4.6 is installed and fits every build.
     /// </summary>
-    private static Task<ViewModelHarness> CreateWithKeptBuildAsync(IProcessStarter? processStarter = null, ILauncher? loaderLauncher = null, Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null) =>
+    /// <summary>A vehicle that the kept build can load and that needs MeasureTools.</summary>
+    private static Dictionary<string, string> RoverNeedingMeasureTools() => TypeFiles(
+        ContentIndexTypeFiles.Vehicles,
+        EntryNeeding("ExampleRover", "vehicle", "Example Rover", RoverUrl, RoverArchive(), Required("MeasureTools"), ["1.0.0"])
+            .Replace("\"game_min\": \"2026.8.19.5261\", \"game_min_revision\": 5261", "\"game_min\": \"0.4.6.0\", \"game_min_revision\": 0", StringComparison.Ordinal));
+
+    internal static Task<ViewModelHarness> CreateWithKeptBuildAsync(IProcessStarter? processStarter = null, ILauncher? loaderLauncher = null, Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null, IReadOnlyDictionary<string, string>? typeFiles = null) =>
         ViewModelHarness.CreateAsync(
             services =>
             {
@@ -711,6 +770,7 @@ public sealed class InstanceGameBuildTests
             processStarter: processStarter,
             loaderLauncher: loaderLauncher,
             wrapGameBuilds: wrapGameBuilds,
+            typeFiles: typeFiles,
             editSnapshot: json =>
             {
                 var root = JsonNode.Parse(json)!;

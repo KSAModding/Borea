@@ -158,6 +158,40 @@ public sealed class UserContentViewModelTests
     }
 
     [Fact]
+    public async Task Page_VehicleThatNamesADisabledModAsAConflict_SaysTheModIsDisabled()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: """{ "id": "MeasureTools", "kind": "conflict", "source": "authored" }""");
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await harness.Services.ModState.SetInactiveAsync(instance.InstanceId, "MeasureTools");
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+
+        Assert.Empty(viewModel.ContentDependencyGroups);
+        var member = Assert.Single(viewModel.ContentConflicts);
+        Assert.Equal(harness.Localization.FormatContentDependencyDisabled(Assert.Single(instance.Mods).Version.ToString()), member.StateText);
+    }
+
+    [Fact]
+    public async Task ModPage_OfAModThatAHeldVehicleNeeds_ListsTheVehicleInRequiredBy()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: Required("MeasureTools"));
+        var viewModel = harness.ViewModel;
+        await ActiveInstanceWithRoverAsync(harness);
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "MeasureTools").OpenCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasContentRequiredBy);
+        var member = Assert.Single(viewModel.ContentRequiredBy);
+        Assert.Equal("ExampleRover", member.ModId);
+        Assert.Equal(harness.Localization.FormatContentDependencyInstalled("1.0.0"), member.StateText);
+        Assert.Equal(harness.Localization.ContentTabDependencies, viewModel.ContentDependenciesTabText);
+    }
+
+    [Fact]
     public async Task Page_VehicleNeedingADisabledMod_SaysTheModIsDisabled()
     {
         using var harness = await VehicleHarnessAsync(dependencies: Required("MeasureTools"));
