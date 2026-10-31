@@ -152,8 +152,7 @@ public sealed class ShareHostClient : IShareHostClient
         if (upload?.Id is not { Length: > 0 } id)
             throw Unexpected(host, reply);
 
-        var checks = upload.Checks?.Where(check => check.Name is { Length: > 0 }).Select(check => new ShareCheck(check.Name!, check.Passed, check.Message)).ToList() ?? [];
-        return new ShareUpload(id, checks, upload.Version, upload.Listing);
+        return new ShareUpload(id, ToChecks(upload.Checks ?? []), upload.Version, upload.Listing);
     }
 
     public async Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
@@ -357,13 +356,47 @@ public sealed class ShareHostClient : IShareHostClient
     private static ShareHostException Refused(ShareHost host, Reply reply) =>
         Parse<ShareHostJson.Error>(reply.Body) is { Message.Length: > 0 } error
             ? new ShareHostException(ShareHostFailure.Host, error.Message, error.Code)
+            {
+                Checks = ReadChecks(error.Checks),
+                RetryAfter = error.RetryAfter.ValueKind == JsonValueKind.Number && error.RetryAfter.TryGetInt32(out var seconds) && seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
+                FieldErrors = ReadFieldErrors(error.FieldErrors),
+            }
             : Unexpected(host, reply);
+
+    private static IReadOnlyList<ShareCheck>? ReadChecks(JsonElement checks) =>
+        checks.ValueKind == JsonValueKind.Array && Parse<List<ShareHostJson.Check>>(checks.GetRawText()) is { } list ? ToChecks(list) : null;
+
+    // A JSON null in the list reads as a null entry, which OfType leaves out.
+    private static List<ShareCheck> ToChecks(List<ShareHostJson.Check> checks) =>
+        [.. checks.OfType<ShareHostJson.Check>().Where(check => check.Name is { Length: > 0 }).Select(check => new ShareCheck(check.Name!, check.Passed, check.Message))];
+
+    /// <summary>Takes a string or a list of strings for each field and skips anything else, because the API names no exact shape.</summary>
+    private static Dictionary<string, IReadOnlyList<string>>? ReadFieldErrors(JsonElement errors)
+    {
+        if (errors.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var fields = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (var field in errors.EnumerateObject())
+        {
+            List<string> lines = field.Value.ValueKind switch
+            {
+                JsonValueKind.String => [field.Value.GetString()!],
+                JsonValueKind.Array => [.. field.Value.EnumerateArray().Where(line => line.ValueKind == JsonValueKind.String).Select(line => line.GetString()!)],
+                _ => [],
+            };
+            if (lines.Count > 0)
+                fields[field.Name] = lines;
+        }
+
+        return fields;
+    }
 
     private static ShareHostException SignInError(ShareHost host, string error, string? description) =>
         new(ShareHostFailure.Host, description ?? $"{host.Name} refused the sign-in with {error}.", error);
 
     private static ShareHostException Unexpected(ShareHost host, Reply reply) =>
-        new(ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.");
+        new((int)reply.Status >= 500 ? ShareHostFailure.Unavailable : ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.");
 
     private static ShareHostException Network() => new(ShareHostFailure.NetworkError, "The share host could not be reached.");
 

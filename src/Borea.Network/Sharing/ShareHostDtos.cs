@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Borea.Network.Sharing;
@@ -129,5 +130,15 @@ internal static class ShareHostJson
 
         [JsonPropertyName("message")]
         public string? Message { get; set; }
+
+        // These three take any JSON value, so a malformed one costs neither the message nor the others.
+        [JsonPropertyName("checks")]
+        public JsonElement Checks { get; set; }
+
+        [JsonPropertyName("retry_after")]
+        public JsonElement RetryAfter { get; set; }
+
+        [JsonPropertyName("errors")]
+        public JsonElement FieldErrors { get; set; }
     }
 }

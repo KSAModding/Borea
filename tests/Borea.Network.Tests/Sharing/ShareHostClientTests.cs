@@ -15,7 +15,7 @@ public sealed class ShareHostClientTests
     private const string Api = "https://ksamods.gg/api/share/v1/";
     private const string DeviceJson = """{"device_code":"dc1","user_code":"ROVR-1234","verification_uri":"https://ksamods.gg/device","expires_in":900,"interval":5}""";
     private const string TokenJson = """{"access_token":"at1","token_type":"Bearer","refresh_token":"rt1"}""";
-    private const string UploadJson = """{"upload":"u42","checks":[{"name":"meta.toml","passed":true},{"name":"install.folder","passed":false,"message":"Taken by OtherRover."}],"version":"1.0.0","listing":"id = \"ExampleRover\"\n"}""";
+    private const string UploadJson = """{"upload":"u42","checks":[{"name":"meta.toml","passed":true},{"name":"folder","passed":false,"message":"Taken by OtherRover."}],"version":"1.0.0","listing":"id = \"ExampleRover\"\n"}""";
     private const string PublishedJson = """{"id":"ExampleRover","version":"1.0.0","pull_request":"https://github.com/KSAModding/content-index/pull/250"}""";
 
     private static readonly ShareHost Host = new("ksamods", "ksamods.gg", new Uri(Api), ["vehicle", "save"], new Dictionary<string, long> { ["vehicle"] = 1024 });
@@ -172,7 +172,7 @@ public sealed class ShareHostClientTests
             [new ListingDependency("ExamplePartsMod", "required", "1.4.0"), new ListingDependency(string.Empty, string.Empty) { Preserved = preserved }],
             "ExampleRover");
 
-        Assert.Equal(new ShareCheck("install.folder", false, "Taken by OtherRover."), upload.Checks[1]);
+        Assert.Equal(new ShareCheck("folder", false, "Taken by OtherRover."), upload.Checks[1]);
         Assert.Equal(("u42", "1.0.0", "id = \"ExampleRover\"\n"), (upload.Id, upload.ProposedVersion, upload.ListingText));
         var request = _sent.Last();
         Assert.Equal(Api + "uploads", request.Url);
@@ -197,6 +197,35 @@ public sealed class ShareHostClientTests
 
         Assert.Equal(["archive", "dependencies"], _sent.Last().Parts.Select(part => part.Name));
         Assert.Empty(Assert.Single(_format.Written).Entries);
+    }
+
+    [Fact]
+    public async Task UploadAsync_LiveAnswer_ReadsEveryCheck()
+    {
+        _apiAnswer = _ => Json(ShareHostReplies.Upload, HttpStatusCode.Created);
+        var client = await SignedInAsync();
+
+        var upload = await client.UploadAsync(Host, new MemoryStream([1]), "a.zip", [], null);
+
+        Assert.Equal(("01M69W4FDJX6ZHS6XEER5V8468", "1.0.0", "type = \"vehicle\"\n"), (upload.Id, upload.ProposedVersion, upload.ListingText));
+        Assert.Equal(["archive", "root", "type", "size", "meta.toml", "name", "version", "game file", "folder"], upload.Checks.Select(check => check.Name));
+        Assert.All(upload.Checks, check => Assert.True(check.Passed));
+    }
+
+    [Theory]
+    [MemberData(nameof(ShareHostReplies.Errors), MemberType = typeof(ShareHostReplies))]
+    [MemberData(nameof(ShareHostReplies.MalformedExtras), MemberType = typeof(ShareHostReplies))]
+    public async Task UploadAsync_ErrorOfTheHost_GivesItsMessageAndExtras(ShareHostReplies.ErrorReply reply)
+    {
+        _apiAnswer = _ => Json(reply.Body, reply.Status);
+        var client = await SignedInAsync();
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.UploadAsync(Host, new MemoryStream([1]), "a.zip", [], null));
+
+        Assert.Equal((ShareHostFailure.Host, reply.Code, reply.Message), (exception.Failure, exception.Error, exception.Message));
+        Assert.Equal(reply.Checks, exception.Checks);
+        Assert.Equal(reply.RetryAfter, exception.RetryAfter);
+        Assert.Equal(reply.FieldErrors, exception.FieldErrors);
     }
 
     [Fact]
@@ -242,11 +271,13 @@ public sealed class ShareHostClientTests
     }
 
     [Theory]
-    [InlineData("""{"error":"id_taken","message":"ExampleRover belongs to another account."}""", ShareHostFailure.Host, "ExampleRover belongs to another account.")]
-    [InlineData("<html>Bad gateway</html>", ShareHostFailure.UnexpectedResponse, null)]
-    public async Task PublishAsync_HostError_GivesItsMessage(string body, ShareHostFailure failure, string? message)
+    [InlineData(HttpStatusCode.Conflict, """{"error":"id_taken","message":"ExampleRover belongs to another account."}""", ShareHostFailure.Host, "ExampleRover belongs to another account.")]
+    [InlineData(HttpStatusCode.BadGateway, """{"error":"maintenance","message":"Back in five minutes."}""", ShareHostFailure.Host, "Back in five minutes.")]
+    [InlineData(HttpStatusCode.Conflict, "<html>Conflict</html>", ShareHostFailure.UnexpectedResponse, null)]
+    [InlineData(HttpStatusCode.BadGateway, "<html>Bad gateway</html>", ShareHostFailure.Unavailable, null)]
+    public async Task PublishAsync_HostError_GivesItsMessage(HttpStatusCode status, string body, ShareHostFailure failure, string? message)
     {
-        _apiAnswer = _ => Json(body, HttpStatusCode.Conflict);
+        _apiAnswer = _ => Json(body, status);
         var client = await SignedInAsync();
 
         var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.PublishAsync(Host, "u42", "1.0.0", "stable", null));
@@ -295,7 +326,7 @@ public sealed class ShareHostClientTests
     [Fact]
     public async Task UploadAsync_TokenRefused_SignsOutAndDeletesTheKeptToken()
     {
-        _apiAnswer = _ => Json("{}", HttpStatusCode.Unauthorized);
+        _apiAnswer = _ => Json(ShareHostReplies.Unauthorized, HttpStatusCode.Unauthorized);
         var client = await SignedInAsync(keep: true);
 
         var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.UploadAsync(Host, new MemoryStream([1]), "a.zip", [], null));

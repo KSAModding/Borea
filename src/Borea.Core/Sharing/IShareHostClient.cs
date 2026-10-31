@@ -61,6 +61,9 @@ public enum ShareHostFailure
 
     /// <summary>The host answered with something that does not follow the API.</summary>
     UnexpectedResponse,
+
+    /// <summary>The host answered with a 5xx and no message for the player, so it has a problem right now.</summary>
+    Unavailable,
 }
 
 public sealed class ShareHostException : Exception
@@ -76,4 +79,13 @@ public sealed class ShareHostException : Exception
 
     /// <summary>The machine-readable error of the host, or null.</summary>
     public string? Error { get; }
+
+    /// <summary>What the host checked in a refused archive, or null when the answer names no checks.</summary>
+    public IReadOnlyList<ShareCheck>? Checks { get; init; }
+
+    /// <summary>How long the host asks the player to wait, or null when the answer names no time.</summary>
+    public TimeSpan? RetryAfter { get; init; }
+
+    /// <summary>The lines of the host for each field of a refused request, or null when the answer has none.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>>? FieldErrors { get; init; }
 }

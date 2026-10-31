@@ -135,7 +135,7 @@ public sealed partial class ListingEditor
         var rows = _share is null ? [] : _shareHosts.Where(host => host.Accepts(Type)).Select(host => new ShareHostRow(host, Localization.FormatListingShareOnHost(host.Name))).ToList();
         MainViewModel.Arrange(ShareHostRows, rows);
         if (_shareUpload is { } shared)
-            MainViewModel.Arrange(ShareHostChecks, shared.Upload.Checks.Select(CheckRow).ToList());
+            MainViewModel.Arrange(ShareHostChecks, CheckRows(shared.Upload.Checks));
         OnPropertyChanged(nameof(HasShareHosts));
         OnPropertyChanged(nameof(ShareHostCodeText));
         OnPropertyChanged(nameof(ShareHostUserCode));
@@ -242,7 +242,7 @@ public sealed partial class ListingEditor
             if (_shareHostRun != cancel)
                 return;
 
-            MainViewModel.Arrange(ShareHostChecks, upload.Checks.Select(CheckRow).ToList());
+            MainViewModel.Arrange(ShareHostChecks, CheckRows(upload.Checks));
             ShareHostListingText = upload.ListingText;
             if (upload.Checks.All(check => check.Passed))
             {
@@ -263,6 +263,8 @@ public sealed partial class ListingEditor
         catch (ShareHostException exception) when (_shareHostRun == cancel)
         {
             ShareHostError = ShareHostErrorText(host, exception);
+            if (exception.Checks is { Count: > 0 } checks)
+                MainViewModel.Arrange(ShareHostChecks, CheckRows(checks));
         }
         catch (IOException exception) when (_shareHostRun == cancel)
         {
@@ -375,6 +377,9 @@ public sealed partial class ListingEditor
         return listings?.FirstOrDefault(listing => ModIds.Equals(listing.Id, Id.Trim()))?.Authored?.Releases?.Hosts
             .FirstOrDefault(entry => entry.Kind == ReleaseHostKind.Share && entry.Host == host.Key)?.Reference;
     }
+
+    // The API allows two checks that read the same, and Arrange takes each row only once.
+    private List<ShareCheckRow> CheckRows(IEnumerable<ShareCheck> checks) => [.. checks.Select(CheckRow).Distinct()];
 
     private ShareCheckRow CheckRow(ShareCheck check) => new(
         check.Passed ? Localization.FormatListingShareCheckPassed(check.Name) : Localization.FormatListingShareCheckFailed(check.Name, check.Message ?? string.Empty),
