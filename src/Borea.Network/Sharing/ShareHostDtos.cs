@@ -65,6 +65,10 @@ internal static class ShareHostJson
         [JsonPropertyName("verification_uri")]
         public string? VerificationUri { get; set; }
 
+        // This takes any JSON value, because a bad value must not stop a sign-in that the plain page can finish.
+        [JsonPropertyName("verification_uri_complete")]
+        public JsonElement VerificationUriComplete { get; set; }
+
         [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
 

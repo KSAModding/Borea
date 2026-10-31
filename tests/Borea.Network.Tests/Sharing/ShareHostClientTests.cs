@@ -156,6 +156,22 @@ public sealed class ShareHostClientTests
         Assert.Single(_sent);
     }
 
+    [Theory]
+    [InlineData("\"https://ksamods.gg/oauth/device?user_code=ROVR-1234\"", "https://ksamods.gg/oauth/device?user_code=ROVR-1234")]
+    [InlineData("\"http://ksamods.gg/oauth/device?user_code=ROVR-1234\"", null)]
+    [InlineData("\"https://evil.example/oauth/device?user_code=ROVR-1234\"", null)]
+    [InlineData("5", null)]
+    public async Task SignInAsync_CompleteLink_IsReportedOnlyOnTheHost(string link, string? reported)
+    {
+        _deviceJson = DeviceJson.Replace("\"expires_in\"", $"\"verification_uri_complete\":{link},\"expires_in\"", StringComparison.Ordinal);
+        _tokenAnswers.Enqueue(Json(TokenJson));
+        var codes = new List<GitHubDeviceCode>();
+
+        await Client().SignInAsync(Host, new ListProgress<GitHubDeviceCode>(codes));
+
+        Assert.Equal([new GitHubDeviceCode("ROVR-1234", "https://ksamods.gg/device", reported)], codes);
+    }
+
     [Fact]
     public async Task UploadAsync_SendsTheArchiveTheDependenciesAndTheListing_AndReadsTheChecks()
     {

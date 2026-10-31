@@ -360,12 +360,12 @@ public sealed class ShareHostClient : IShareHostClient
 
     // A verification page outside the host would send the player somewhere the host does not control.
     private static GitHubDeviceCode? ToDeviceCode(ShareHost host, ShareHostJson.DeviceCode code) =>
-        !string.IsNullOrWhiteSpace(code.UserCode)
-        && Uri.TryCreate(code.VerificationUri, UriKind.Absolute, out var page)
-        && page.Scheme == Uri.UriSchemeHttps
-        && string.Equals(page.Host, host.Api.Host, StringComparison.OrdinalIgnoreCase)
-            ? new GitHubDeviceCode(code.UserCode, page.AbsoluteUri)
+        !string.IsNullOrWhiteSpace(code.UserCode) && OnApiHost(host, code.VerificationUri) is { } page
+            ? new GitHubDeviceCode(code.UserCode, page.AbsoluteUri, OnApiHost(host, ShareHostJson.Text(code.VerificationUriComplete))?.AbsoluteUri)
             : null;
+
+    private static Uri? OnApiHost(ShareHost host, string? address) =>
+        Https(address) is { } page && string.Equals(page.Host, host.Api.Host, StringComparison.OrdinalIgnoreCase) ? page : null;
 
     private static ShareHostException Refused(ShareHost host, Reply reply) =>
         Parse<ShareHostJson.Error>(reply.Body) is { Message.Length: > 0 } error
