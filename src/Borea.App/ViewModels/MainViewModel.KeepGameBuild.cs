@@ -875,6 +875,8 @@ public partial class MainViewModel
                 return;
             }
 
+            // a preview that closed can still read the parts of this build
+            await WhenVehiclePreviewReadsEndedAsync();
             try
             {
                 var refusal = await Task.Run(() => services.GameBuilds.RemoveAsync(item.Version, CancellationToken.None));

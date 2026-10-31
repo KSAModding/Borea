@@ -23,8 +23,9 @@ namespace Borea.Storage.Preview;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The game folder is the one of the settings (<see cref="IGamePathProvider.GetGameDirectoryPath"/>). When Borea can
-/// hold several game builds, IInstanceGameResolver gives the folder of the target instance instead.
+/// The parts come from the game of the target instance (<see cref="IInstanceGameResolver"/>), which is its kept build
+/// when it keeps one. A kept build that is missing or reads another version stops the preview, so the build of the
+/// settings never stands in for it.
 /// </para>
 /// <para>
 /// The catalog and the mesh index of the last few mod sets stay in memory, keyed by the game build and the source of
@@ -47,9 +48,7 @@ public sealed class VehiclePreview : IVehiclePreview
     private readonly PreviewSources _sources;
     private readonly PreviewArchiveCache _archives;
     private readonly PreviewThumbnailCache? _thumbnails;
-    private readonly IGamePathProvider _paths;
     private readonly IInstanceRepository _instances;
-    private readonly IInstalledGameVersionProvider _gameVersion;
     private readonly IModDownloader _downloader;
     private readonly IFreeSpaceProbe _freeSpace;
     private readonly IBoreaLog _log;
@@ -72,7 +71,7 @@ public sealed class VehiclePreview : IVehiclePreview
         IInstalledContentRecords records,
         ModStore store,
         PreviewArchiveCache archives,
-        IInstalledGameVersionProvider gameVersion,
+        IInstanceGameResolver games,
         IGamePlatform platform,
         IModDownloader downloader,
         IFreeSpaceProbe freeSpace,
@@ -80,14 +79,14 @@ public sealed class VehiclePreview : IVehiclePreview
         PreviewThumbnailCache? thumbnails = null)
     {
         _thumbnails = thumbnails;
-        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
+        ArgumentNullException.ThrowIfNull(paths);
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _archives = archives ?? throw new ArgumentNullException(nameof(archives));
-        _gameVersion = gameVersion ?? throw new ArgumentNullException(nameof(gameVersion));
+        ArgumentNullException.ThrowIfNull(games);
         _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
         _freeSpace = freeSpace ?? throw new ArgumentNullException(nameof(freeSpace));
         _log = log ?? throw new ArgumentNullException(nameof(log));
-        _sources = new PreviewSources(paths, planner, offlineMods, instances, modState, records, store, archives, gameVersion, platform);
+        _sources = new PreviewSources(paths, planner, offlineMods, instances, modState, records, store, archives, games, platform);
     }
 
     /// <summary>How many times a catalog was read from the mod files, so a test can show that a second load reuses it.</summary>
@@ -102,21 +101,26 @@ public sealed class VehiclePreview : IVehiclePreview
         // resolve would run on the thread of the caller, which is the UI thread of the vehicle page.
         await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
-        var gameBuild = GameBuild();
+        string? gameBuild = null;
         VehiclePreviewPlan Plan(VehiclePreviewPlanState state, IReadOnlyList<VehiclePreviewMissingMod>? missing = null, string? message = null) =>
             new(state, release, targetInstanceId, release.Download.SizeBytes, missing ?? [], gameBuild, message);
-
-        switch (GameCoreFiles.Open(_paths.GetGameDirectoryPath()).Status)
-        {
-            case GameCoreStatus.NoGame:
-                return Plan(VehiclePreviewPlanState.NoGameFolder);
-            case GameCoreStatus.GameInvalid:
-                return Plan(VehiclePreviewPlanState.GameFolderInvalid, message: "The game folder holds no Content/Core.");
-        }
 
         try
         {
             var target = await TargetAsync(targetInstanceId).ConfigureAwait(false);
+            var game = _sources.GameOf(target);
+            gameBuild = PreviewGameBuild.Of(game.Version);
+            if (game.Problem != KeptBuildProblem.None)
+                return Plan(VehiclePreviewPlanState.Failed, message: KeptBuildMessage(game));
+
+            switch (GameCoreFiles.Open(game.GameDirectory).Status)
+            {
+                case GameCoreStatus.NoGame:
+                    return Plan(VehiclePreviewPlanState.NoGameFolder);
+                case GameCoreStatus.GameInvalid:
+                    return Plan(VehiclePreviewPlanState.GameFolderInvalid, message: "The game folder holds no Content/Core.");
+            }
+
             var (vehicle, damaged) = await FindVehicleAsync(release, target, cancellationToken).ConfigureAwait(false);
             if (vehicle is null)
                 return Plan(VehiclePreviewPlanState.VehicleDamaged, message: damaged);
@@ -155,24 +159,29 @@ public sealed class VehiclePreview : IVehiclePreview
         // The same yield as in PrepareAsync, because a load of a local vehicle can also complete every await at once.
         await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
-        var gameBuild = GameBuild();
+        string? gameBuild = null;
         var sha256 = release.Download.Sha256?.Trim().ToLowerInvariant();
         VehiclePreviewResult Result(VehiclePreviewLoadState state, string? message = null) =>
             new(state, null, null, [], [], null, sha256, gameBuild, message);
-
-        switch (GameCoreFiles.Open(_paths.GetGameDirectoryPath()).Status)
-        {
-            case GameCoreStatus.NoGame:
-                return Result(VehiclePreviewLoadState.NoGameFolder);
-            case GameCoreStatus.GameInvalid:
-                return Result(VehiclePreviewLoadState.GameFolderInvalid, "The game folder holds no Content/Core.");
-        }
 
         PreviewVehicleSource? vehicle = null;
         PreviewModSources? mods = null;
         try
         {
             var target = await TargetAsync(plan.TargetInstanceId).ConfigureAwait(false);
+            var game = _sources.GameOf(target);
+            gameBuild = PreviewGameBuild.Of(game.Version);
+            if (game.Problem != KeptBuildProblem.None)
+                return Result(VehiclePreviewLoadState.Failed, KeptBuildMessage(game));
+
+            switch (GameCoreFiles.Open(game.GameDirectory).Status)
+            {
+                case GameCoreStatus.NoGame:
+                    return Result(VehiclePreviewLoadState.NoGameFolder);
+                case GameCoreStatus.GameInvalid:
+                    return Result(VehiclePreviewLoadState.GameFolderInvalid, "The game folder holds no Content/Core.");
+            }
+
             (vehicle, var damaged) = await FindVehicleAsync(release, target, cancellationToken).ConfigureAwait(false);
             if (vehicle?.Location == PreviewVehicleLocation.NeedsFetch)
             {
@@ -300,8 +309,6 @@ public sealed class VehiclePreview : IVehiclePreview
             ObjectDisposedException.ThrowIf(_disposed, this);
     }
 
-    private string? GameBuild() => PreviewGameBuild.Of(_gameVersion.GetInstalledVersion());
-
     private async Task<Instance?> TargetAsync(Guid? instanceId) =>
         instanceId is { } id ? await _instances.GetByIdAsync(id).ConfigureAwait(false) : null;
 
@@ -317,6 +324,9 @@ public sealed class VehiclePreview : IVehiclePreview
             return (null, exception.Message);
         }
     }
+
+    private static string KeptBuildMessage(InstanceGame game) =>
+        $"KSA {game.KeptBuild}, which this instance keeps, is not in its folder of the library, or that folder holds another build.";
 
     private static string NoHashMessage(ModVersionMetadata release) =>
         $"The release {release.ModId} {release.Version} names no SHA-256, so Borea cannot keep its file for a preview.";

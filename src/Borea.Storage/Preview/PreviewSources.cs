@@ -46,7 +46,7 @@ internal sealed class PreviewSources
     private readonly IInstalledContentRecords _records;
     private readonly ModStore _store;
     private readonly PreviewArchiveCache _archives;
-    private readonly IInstalledGameVersionProvider _gameVersion;
+    private readonly IInstanceGameResolver _games;
     private readonly IGamePlatform _platform;
 
     /// <param name="offlineMods">The repository over the index snapshots on disk, which never fetches. The composition passes its OfflineMods.</param>
@@ -59,7 +59,7 @@ internal sealed class PreviewSources
         IInstalledContentRecords records,
         ModStore store,
         PreviewArchiveCache archives,
-        IInstalledGameVersionProvider gameVersion,
+        IInstanceGameResolver games,
         IGamePlatform platform)
     {
         _paths = paths;
@@ -70,9 +70,15 @@ internal sealed class PreviewSources
         _records = records ?? throw new ArgumentNullException(nameof(records));
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _archives = archives;
-        _gameVersion = gameVersion;
+        _games = games ?? throw new ArgumentNullException(nameof(games));
         _platform = platform ?? throw new ArgumentNullException(nameof(platform));
     }
+
+    /// <summary>
+    /// The game whose parts a preview for <paramref name="target"/> reads, which is the kept build of the instance, or
+    /// the game folder of the settings when it keeps none or when there is no target.
+    /// </summary>
+    public InstanceGame GameOf(Instance? target) => _games.Resolve(target ?? Draft());
 
     /// <summary>
     /// The files of the vehicle release: the installed folder in <paramref name="target"/> when it holds this release
@@ -137,7 +143,8 @@ internal sealed class PreviewSources
     /// <param name="target">The instance the player installs into, or null when there is none.</param>
     public async Task<PreviewModSources> PlanModsAsync(ModVersionMetadata release, Instance? target, CancellationToken cancellationToken = default)
     {
-        var instance = target ?? new Instance(DraftName, InstanceSource.Custom.Value);
+        var instance = target ?? Draft();
+        var game = _games.Resolve(instance);
         var others = await OtherInstancesAsync(instance.InstanceId).ConfigureAwait(false);
         var notices = new List<PreviewNotice>();
         var unsatisfied = new List<ModDependency>();
@@ -145,7 +152,7 @@ internal sealed class PreviewSources
         IReadOnlyList<string> needed;
         try
         {
-            plan = await PlanAsync(release, instance, others, cancellationToken).ConfigureAwait(false);
+            plan = await PlanAsync(release, instance, game.Version?.Version, others, cancellationToken).ConfigureAwait(false);
             needed = UserContentMods.Needed(instance, [release], plan, unsatisfied);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -163,7 +170,7 @@ internal sealed class PreviewSources
         var found = new List<Found>();
         try
         {
-            var core = GameCoreFiles.Open(_paths.GetGameDirectoryPath());
+            var core = GameCoreFiles.Open(game.GameDirectory);
             foreach (var (id, files) in core.Mods)
             {
                 mods.Add(new CatalogMod(id, files));
@@ -216,13 +223,13 @@ internal sealed class PreviewSources
     /// Plans once, and once more when an any_of is left open, with the alternative that an instance already holds, or
     /// else the first one, so that the preview reads a mod that is on disk where it can.
     /// </summary>
-    private async Task<InstallPlan> PlanAsync(ModVersionMetadata release, Instance instance, IReadOnlyList<Instance> others, CancellationToken cancellationToken)
+    private async Task<InstallPlan> PlanAsync(ModVersionMetadata release, Instance instance, GameVersion? gameVersion, IReadOnlyList<Instance> others, CancellationToken cancellationToken)
     {
         var request = new InstallPlanningRequest(
             instance,
             [new RequestedMod(release, InstallReason.Manual, Exact: true)],
             _offlineMods,
-            _gameVersion.GetInstalledVersion()?.Version,
+            gameVersion,
             _platform.Current,
             NoRecommendations);
         var plan = await _planner.PlanAsync(request, cancellationToken).ConfigureAwait(false);
@@ -242,6 +249,8 @@ internal sealed class PreviewSources
             ? plan
             : await _planner.PlanAsync(request with { Alternatives = alternatives }, cancellationToken).ConfigureAwait(false);
     }
+
+    private static Instance Draft() => new(DraftName, InstanceSource.Custom.Value);
 
     private static string? PreferredAlternative(PlanningChoice choice, Instance target, IReadOnlyList<Instance> others)
     {

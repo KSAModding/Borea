@@ -487,6 +487,88 @@ public sealed class VehiclePreviewViewModelTests
     }
 
     [Fact]
+    public async Task Loading_AlsoCoversARunThatANewerRunCancelled()
+    {
+        var held = new TaskCompletionSource<VehiclePreviewResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taken = 0;
+        var service = new FakeVehiclePreview { HoldLoad = _ => Interlocked.Exchange(ref taken, 1) == 0 ? held.Task : null };
+        using var preview = Start(service);
+
+        await preview.Start();
+
+        Assert.Equal(VehiclePreviewState.Ready, preview.State);
+        Assert.False(preview.Loading.IsCompleted);
+
+        var late = new FakeAssets();
+        held.SetResult(service.Ready(late));
+        await preview.Loading;
+        Assert.True(late.Disposed);
+    }
+
+    [Fact]
+    public async Task DeletingAnInstance_WaitsForTheLoadOfAPreviewThatClosed()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        var (service, held) = await OpenRoverWithHeldLoadAsync(viewModel);
+        var root = harness.Services.Paths.GetInstanceRoot(instance.InstanceId);
+        Directory.CreateDirectory(root);
+
+        viewModel.SetMainWindowLibrary();
+
+        Assert.Null(viewModel.VehiclePreview);
+        Assert.True(Assert.Single(service.LoadTokens).Token.IsCancellationRequested);
+        Assert.False(viewModel.WhenVehiclePreviewReadsEndedAsync().IsCompleted);
+
+        viewModel.BeginDeleteInstance(Assert.Single(viewModel.Instances));
+        var delete = viewModel.ConfirmDeleteModalCommand.ExecuteAsync(null);
+
+        Assert.True(Directory.Exists(root));
+        Assert.False(delete.IsCompleted);
+
+        held.SetResult(service.Ready(new FakeAssets()));
+        await delete;
+
+        Assert.False(Directory.Exists(root));
+        Assert.True(viewModel.WhenVehiclePreviewReadsEndedAsync().IsCompleted);
+    }
+
+    [Fact]
+    public async Task RemovingTheVehicleOnItsPage_StopsAPreviewThatStillReads_AndMakesItAgainAfterwards()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        var release = (await harness.Services.UserContent.GetReleaseAsync("ExampleRover", ModVersion.Parse("1.0.0")))!;
+        Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, release, name: null)).IsDone);
+        await viewModel.LoadAsync();
+        var (service, held) = await OpenRoverWithHeldLoadAsync(viewModel);
+        var first = viewModel.VehiclePreview!;
+        var record = Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), record.FolderName);
+
+        var remove = viewModel.RemoveAsync(viewModel.SelectedContent!);
+
+        Assert.Null(viewModel.VehiclePreview);
+        Assert.True(Assert.Single(service.LoadTokens).Token.IsCancellationRequested);
+        Assert.True(Directory.Exists(folder));
+        Assert.False(remove.IsCompleted);
+
+        held.SetResult(service.Ready(new FakeAssets()));
+        await remove;
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.False(Directory.Exists(folder));
+        Assert.Empty(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+        Assert.NotNull(viewModel.VehiclePreview);
+        Assert.NotSame(first, viewModel.VehiclePreview);
+    }
+
+    [Fact]
     public async Task AServiceException_LeavesThePageUsable()
     {
         var service = new FakeVehiclePreview { PrepareFailure = new IOException("The disk is gone.") };
@@ -572,6 +654,21 @@ public sealed class VehiclePreviewViewModelTests
         await viewModel.EnsureDiscoverLoadedAsync();
         viewModel.ShowDiscoverVehiclesCommand.Execute(null);
         await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>
+    /// Opens the rover page with a first load that the returned source holds, as a slow read of a part file does. The
+    /// test completes the source, because the load holds on to it after a cancel too.
+    /// </summary>
+    internal static async Task<(FakeVehiclePreview Service, TaskCompletionSource<VehiclePreviewResult> Held)> OpenRoverWithHeldLoadAsync(MainViewModel viewModel)
+    {
+        var held = new TaskCompletionSource<VehiclePreviewResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taken = 0;
+        var service = new FakeVehiclePreview { HoldLoad = _ => Interlocked.Exchange(ref taken, 1) == 0 ? held.Task : null };
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        await OpenRoverPageAsync(viewModel);
+        Assert.False(viewModel.WhenVehiclePreviewReadsEndedAsync().IsCompleted);
+        return (service, held);
     }
 
     private static VehiclePreviewViewModel Start(

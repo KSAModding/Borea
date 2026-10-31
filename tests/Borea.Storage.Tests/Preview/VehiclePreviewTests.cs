@@ -3,9 +3,12 @@ using System.Security.Cryptography;
 using System.Text;
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Core.Preview;
 using Borea.Storage.Files;
+using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Mods;
 using Borea.Storage.Preview;
@@ -22,6 +25,9 @@ public sealed class VehiclePreviewTests : IDisposable
 {
     private const string Build = "2026.10.19.5638";
 
+    /// <summary>The file version of the KSA.dll in GameVersionFixture.dll.</summary>
+    private static readonly GameVersion KeptBuild = GameVersion.Parse("2026.8.3.5117");
+
     private const string Rover = """
         <VehicleSaveData Id="Rover">
           <RootPartRef InstanceOf="Body" LocalInstanceId="1">
@@ -33,6 +39,7 @@ public sealed class VehiclePreviewTests : IDisposable
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
+    private readonly Guid _targetId = Guid.NewGuid();
     private readonly FakeModDownloader _downloader = new();
     private readonly byte[] _wingsZip = Zip(("mod.toml", "name = \"Wings\"\nassets = [\"Wings.xml\"]"), ("Wings.xml", Assets("""<Part Id="Wing"><PartModel Id="m"><Mesh Id="BodyMesh" /></PartModel></Part>""")));
 
@@ -249,23 +256,89 @@ public sealed class VehiclePreviewTests : IDisposable
         await Assert.ThrowsAsync<ObjectDisposedException>(() => preview.PrepareAsync(plan.Release, null));
     }
 
+    [Fact]
+    public async Task ATargetOnAKeptBuild_ReadsThePartsOfThatBuild_PlansAgainstIt_AndKeysTheSceneByIt()
+    {
+        // only the kept build gives a Wing, so a part that resolves can only come from its folder
+        var kept = _paths.GetGameBuildFolder(KeptBuild);
+        Directory.CreateDirectory(kept);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(kept, "KSA.dll"));
+        var content = Path.Combine(kept, "Content");
+        Write(Path.Combine(content, "manifest.toml"), "[[mods]]\nid = \"Core\"\nenabled = true\n");
+        Write(Path.Combine(content, "Core", "mod.toml"), "name = \"Core\"\nassets = [\"Parts.xml\"]\n");
+        Write(Path.Combine(content, "Core", "Parts.xml"), Assets("""<MeshAtlas Path="Meshes/All.glb" /><Part Id="Body"><PartModel Id="m"><Mesh Id="BodyMesh" /></PartModel></Part><Part Id="Wing"><PartModel Id="m"><Mesh Id="BodyMesh" /></PartModel></Part>"""));
+        Directory.CreateDirectory(Path.Combine(content, "Core", "Meshes"));
+        File.WriteAllBytes(Path.Combine(content, "Core", "Meshes", "All.glb"), PreviewFilesTests.Glb("""{"asset":{"version":"2.0"},"meshes":[{"name":"BodyMesh"}]}""", []));
+
+        var zip = VehicleZip();
+        CacheArchive(zip);
+        var planner = new GameVersionPlanner();
+        using var preview = Preview(instances: new MemoryInstanceRepository(Keeping(KeptBuild)), planner: planner);
+
+        var plan = await preview.PrepareAsync(Vehicle(zip), _targetId);
+        using var onKept = await preview.LoadAsync(plan, fetchVehicle: false, fetchMods: false);
+        using var onSettings = await preview.LoadAsync(await preview.PrepareAsync(Vehicle(zip), null), fetchVehicle: false, fetchMods: false);
+
+        Assert.Equal((VehiclePreviewPlanState.CanBuildLocally, KeptBuild.ToString()), (plan.State, plan.GameBuild));
+        Assert.True(onKept.IsReady);
+        Assert.Empty(onKept.Vehicle.Placeholders);
+        Assert.Equal(2, onKept.Vehicle.Draws.Count);
+        Assert.Equal(KeptBuild.ToString(), onKept.GameBuild);
+        Assert.Equal(KeptBuild, planner.GameVersions.First());
+
+        Assert.Equal(("Wing", Build), (Assert.Single(onSettings.Vehicle!.Placeholders).MissingId, onSettings.GameBuild));
+        Assert.NotEqual(onSettings.SceneKey, onKept.SceneKey);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AKeptBuildThatCannotBeUsed_StopsThePreview_AndTheGameOfTheSettingsNeverStandsInForIt(bool folderExists)
+    {
+        if (folderExists)
+            Directory.CreateDirectory(_paths.GetGameBuildFolder(KeptBuild));
+
+        var zip = VehicleZip();
+        CacheArchive(zip);
+        var planner = new GameVersionPlanner();
+        using var preview = Preview(instances: new MemoryInstanceRepository(Keeping(KeptBuild)), planner: planner);
+
+        var plan = await preview.PrepareAsync(Vehicle(zip), _targetId);
+        using var result = await preview.LoadAsync(plan, fetchVehicle: true, fetchMods: true);
+
+        Assert.Equal((VehiclePreviewPlanState.Failed, VehiclePreviewLoadState.Failed), (plan.State, result.State));
+        Assert.Contains(KeptBuild.ToString(), plan.Message, StringComparison.Ordinal);
+        Assert.Contains(KeptBuild.ToString(), result.Message, StringComparison.Ordinal);
+        Assert.Empty(planner.GameVersions);
+        Assert.Empty(_downloader.ArchivePaths);
+    }
+
+    private Instance Keeping(GameVersion build)
+    {
+        var instance = Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, [], false);
+        instance.SetGameBuild(build);
+        return instance;
+    }
+
     private VehiclePreview Preview(
         TestGamePathProvider? paths = null,
         IModRepository? offline = null,
         PreviewArchiveCache? archives = null,
-        IInstalledGameVersionProvider? gameVersion = null)
+        IInstalledGameVersionProvider? gameVersion = null,
+        IInstanceRepository? instances = null,
+        IInstallPlanner? planner = null)
     {
         paths ??= _paths;
         return new VehiclePreview(
             paths,
-            new FakePlanner(),
+            planner ?? new FakePlanner(),
             offline ?? new FakeModRepository([]),
-            new MemoryInstanceRepository(),
+            instances ?? new MemoryInstanceRepository(),
             new FileModStateRepository(paths),
             new FileInstalledContentRecords(paths),
             new ModStore(paths, new DirectoryLinker(), linksReleases: true),
             archives ?? new PreviewArchiveCache(paths, new RecordingLog()),
-            gameVersion ?? new FixedGameVersion(),
+            new InstanceGameResolver(paths, gameVersion ?? new FixedGameVersion()),
             new WindowsPlatform(),
             _downloader,
             new PlentyOfSpace(),
@@ -321,6 +394,22 @@ public sealed class VehiclePreviewTests : IDisposable
         {
             LastReadThreadId = Environment.CurrentManagedThreadId;
             return new(null, Build);
+        }
+    }
+
+    /// <summary>Records the game version of each plan.</summary>
+    private sealed class GameVersionPlanner : IInstallPlanner
+    {
+        private readonly FakePlanner _inner = new();
+
+        public List<GameVersion?> GameVersions { get; } = [];
+
+        public Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
+        {
+            lock (GameVersions)
+                GameVersions.Add(request.GameVersion);
+
+            return _inner.PlanAsync(request, cancellationToken);
         }
     }
 

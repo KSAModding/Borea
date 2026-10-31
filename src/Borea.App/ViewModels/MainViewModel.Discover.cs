@@ -498,7 +498,7 @@ public partial class MainViewModel
             return;
 
         _compatibilityGame = installed;
-        var previewBuild = PreviewGameBuild.Of(_services.InstalledVersion.GetInstalledVersion());
+        var previewBuild = PreviewStillBuild(_services);
         foreach (var item in _listings)
         {
             var latest = item.Source != "index" ? null
@@ -538,13 +538,17 @@ public partial class MainViewModel
         ApplyDiscoverFilters();
     }
 
+    /// <summary>The build whose stills the rows show, which is the build of the active instance, the same as for their chips.</summary>
+    private string? PreviewStillBuild(BoreaServices services) =>
+        PreviewGameBuild.Of(_activeInstanceEntity is { } active ? services.InstanceGames.Resolve(active).Version : services.InstalledVersion.GetInstalledVersion());
+
     /// <summary>Shows the still that the vehicle page just stored on every Discover row of that vehicle archive.</summary>
     private void ShowPreviewStill(string vehicleSha256)
     {
         if (_services is not { } services)
             return;
 
-        var path = services.PreviewThumbnails.TryGetPath(vehicleSha256, PreviewGameBuild.Of(services.InstalledVersion.GetInstalledVersion()));
+        var path = services.PreviewThumbnails.TryGetPath(vehicleSha256, PreviewStillBuild(services));
         foreach (var item in _listings)
         {
             if (item.Type != ContentType.Vehicle || !string.Equals(item.LatestInChannel?.Download.Sha256, vehicleSha256, StringComparison.OrdinalIgnoreCase))

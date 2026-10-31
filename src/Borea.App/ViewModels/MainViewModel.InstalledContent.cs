@@ -166,6 +166,8 @@ public partial class MainViewModel
         var asksAgain = false;
         var removed = await RunGameSaveActionAsync([item.InstanceId], () => Localization.FormatToastDeleteFailed(item.Name), async services =>
         {
+            // a preview that closed can still read this folder
+            await WhenVehiclePreviewReadsEndedAsync();
             var result = await services.UserContentInstaller.RemoveAsync(item.InstanceId, record, discardChanges: item.Changes is not null);
             if (result.Outcome == UserContentOutcome.Changed && result.Changes is { } changes)
             {

@@ -7,6 +7,7 @@ using Borea.Core.Planning;
 using Borea.Core.Preview;
 using Borea.Core.State;
 using Borea.Storage.Files;
+using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Mods;
 using Borea.Storage.Preview;
@@ -163,7 +164,7 @@ public sealed class PreviewSourcesTests : IDisposable
     }
 
     private PreviewSources Sources(IInstallPlanner? planner = null, IModRepository? offline = null, IInstanceRepository? instances = null, IModStateRepository? modState = null) =>
-        new(_paths, planner ?? new FakePlanner(), offline ?? new FakeModRepository([]), instances ?? new MemoryInstanceRepository(), modState ?? new FileModStateRepository(_paths), _records, _store, _archives, new NoGameVersion(), new WindowsPlatform());
+        new(_paths, planner ?? new FakePlanner(), offline ?? new FakeModRepository([]), instances ?? new MemoryInstanceRepository(), modState ?? new FileModStateRepository(_paths), _records, _store, _archives, new InstanceGameResolver(_paths, new NoGameVersion()), new WindowsPlatform());
 
     private Instance Target(params InstalledMod[] mods) =>
         Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, mods, false);

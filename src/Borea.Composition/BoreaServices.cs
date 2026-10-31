@@ -583,7 +583,7 @@ public sealed class BoreaServices : IDisposable
 
         // The preview plans over the offline repository only, so opening a vehicle page never sends a request.
         var previewThumbnails = new PreviewThumbnailCache(paths, log);
-        var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, installedVersion, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log, previewThumbnails);
+        var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, instanceGames, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log, previewThumbnails);
         var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning, instanceGames, log), instances), log);
         // the index lists every loader, and the offline SpaceDock throws on a list of all mods, so the keeper reads only the cached index

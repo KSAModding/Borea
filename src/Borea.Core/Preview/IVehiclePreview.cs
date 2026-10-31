@@ -69,7 +69,7 @@ public enum VehiclePreviewPlanState
 /// <param name="TargetInstanceId">The instance the plan was made against.</param>
 /// <param name="VehicleSizeBytes">The download size of the vehicle archive that the release states.</param>
 /// <param name="MissingMods">The needed mods that are not on disk. The part counts are unknown until a load.</param>
-/// <param name="GameBuild">The installed game build, or null when Borea cannot read it.</param>
+/// <param name="GameBuild">The game build of the target instance, or null when Borea cannot read it.</param>
 /// <param name="Message">Why the state is not a good one, for the player, or null.</param>
 public sealed record VehiclePreviewPlan(
     VehiclePreviewPlanState State,

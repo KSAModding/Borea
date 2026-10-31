@@ -1463,6 +1463,8 @@ public partial class MainViewModel
         if (!check.CanUninstall)
             return Localization.FormatContentRemoveRequired(installed.ModId, string.Join(", ", check.DependentModIds));
 
+        // a preview that closed can still read this mod
+        await WhenVehiclePreviewReadsEndedAsync();
         await services.Uninstaller.UninstallAsync(instanceId, installed.ModId);
         return null;
     }

@@ -278,6 +278,8 @@ public partial class MainViewModel
         string? error = null;
         try
         {
+            // the page of this vehicle can be open, and its preview can read this folder
+            await StopVehiclePreviewReadsAsync();
             var result = await services.UserContentInstaller.RemoveAsync(instance.InstanceId, record, discardChanges: item.RemoveChanges is not null);
             if (result.Outcome == UserContentOutcome.Changed && result.Changes is { } changes)
             {
@@ -306,6 +308,7 @@ public partial class MainViewModel
             EndTask(task, completed, stopped: false, error);
         }
 
+        RestoreVehiclePreview();
         if (completed)
             await ReloadInstancesAsync();
         item.InstallError = error;

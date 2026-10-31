@@ -294,10 +294,10 @@ public partial class MainViewModel
         var stopped = false;
         try
         {
-            // the update check and the size walk of the instance page read the mod folders without
-            // being awaited, and Windows does not move a folder while a file or folder below it is open,
-            // so the take-over waits for the ones in flight, also for one that starts while it waits
-            while (Task.WhenAll(_contentUpdateCheck, _instanceSizeLoad) is { IsCompleted: false } reads)
+            // the update check, the size walk of the instance page and the vehicle preview read the mod
+            // folders without being awaited, and Windows does not move a folder while a file or folder below
+            // it is open, so the take-over waits for the ones in flight, also for one that starts while it waits
+            while (Task.WhenAll(_contentUpdateCheck, _instanceSizeLoad, WhenVehiclePreviewReadsEndedAsync()) is { IsCompleted: false } reads)
                 await reads.WaitAsync(run.InstallStop.Token);
 
             var instance = await services.Instances.GetByIdAsync(row.InstanceId)

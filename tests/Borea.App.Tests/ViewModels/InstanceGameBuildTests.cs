@@ -7,6 +7,7 @@ using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Core.Preview;
 using Borea.Core.Settings;
 using Borea.Storage.Launch;
 using static Borea.App.Tests.ViewModels.UserContentFixtures;
@@ -398,6 +399,78 @@ public sealed class InstanceGameBuildTests
         Assert.Empty(viewModel.KeptGameBuilds);
         Assert.False(Directory.Exists(folder));
         Assert.Equal(harness.Localization.FormatSettingsGameBuildRemoved(KeptBuild.ToString(), size), viewModel.KeptGameBuildMessage);
+    }
+
+    [Fact]
+    public async Task RemoveKeptBuild_WaitsForTheLoadOfAPreviewThatClosed()
+    {
+        using var harness = await CreateWithKeptBuildAsync(typeFiles: RoverNeedingMeasureTools());
+        var viewModel = harness.ViewModel;
+        var folder = harness.Services.Paths.GetGameBuildFolder(KeptBuild);
+        var (service, held) = await VehiclePreviewViewModelTests.OpenRoverWithHeldLoadAsync(viewModel);
+        viewModel.SetMainWindowSettings();
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        await viewModel.WhenKeptGameBuildsLoadedAsync();
+        var row = Assert.Single(viewModel.KeptGameBuilds);
+        row.RemoveCommand.Execute(null);
+
+        var remove = row.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.True(Directory.Exists(folder));
+        Assert.False(remove.IsCompleted);
+
+        held.SetResult(service.Ready(new FakeAssets()));
+        await remove;
+
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task Discover_ShowsTheStillOfTheBuildOfTheActiveInstance()
+    {
+        using var harness = await CreateWithKeptBuildAsync(typeFiles: RoverNeedingMeasureTools());
+        var viewModel = harness.ViewModel;
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        var current = await CreateInstanceAsync(harness, "Current", null);
+        var keptBuild = PreviewGameBuild.Of(harness.Services.InstanceGames.Resolve((await harness.Services.Instances.GetByIdAsync(kept.InstanceId))!).Version)!;
+        var settingsBuild = PreviewGameBuild.Of(harness.Services.InstalledVersion.GetInstalledVersion())!;
+        Assert.NotEqual(keptBuild, settingsBuild);
+        var sha256 = (await harness.Services.UserContent.GetLatestReleaseAsync("ExampleRover", harness.Services.Settings.ReleaseChannel))!.Download.Sha256!;
+        harness.Services.PreviewThumbnails.Store(sha256, keptBuild, "scene", [1]);
+        harness.Services.PreviewThumbnails.Store(sha256, settingsBuild, "scene", [1]);
+        await harness.Services.Instances.SetActiveInstanceAsync(kept.InstanceId);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var row = Assert.Single(viewModel.DiscoverItems);
+
+        Assert.Equal(harness.Services.PreviewThumbnails.TryGetPath(sha256, keptBuild), row.PreviewStillPath);
+
+        await viewModel.ActivateInstanceAsync(current.InstanceId);
+
+        Assert.Equal(harness.Services.PreviewThumbnails.TryGetPath(sha256, settingsBuild), row.PreviewStillPath);
+    }
+
+    [Fact]
+    public async Task VehiclePage_AnInstanceThatLeavesItsKeptBuild_MakesThePreviewAgain()
+    {
+        using var harness = await CreateWithKeptBuildAsync(typeFiles: RoverNeedingMeasureTools());
+        var viewModel = harness.ViewModel;
+        var service = new FakeVehiclePreview();
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        await harness.Services.Instances.SetActiveInstanceAsync(kept.InstanceId);
+        await viewModel.LoadAsync();
+        await VehiclePreviewViewModelTests.OpenRoverAsync(viewModel);
+        var first = viewModel.VehiclePreview!;
+
+        await viewModel.LoadAsync();
+        Assert.Same(first, viewModel.VehiclePreview);
+
+        Assert.Equal(GameBuildChangeRefusal.None, await harness.Services.GameBuilds.UseCurrentBuildAsync(kept.InstanceId, CancellationToken.None));
+        await viewModel.LoadAsync();
+
+        Assert.NotSame(first, viewModel.VehiclePreview);
     }
 
     [Fact]

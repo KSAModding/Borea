@@ -207,6 +207,12 @@ public partial class MainViewModel
     private string? _vehiclePreviewTarget;
 
     /// <summary>
+    /// The loads of the previews that closed. A closed preview stops at its next check, so until then it can still hold
+    /// a file open below the folders of the library.
+    /// </summary>
+    private Task _closedVehiclePreviewLoads = Task.CompletedTask;
+
+    /// <summary>
     /// The releases whose fetch the player cancelled, or whose fetch failed, since Borea started. Every later preview
     /// of one of them waits for the click, also on a page that the player opens again. The list lives in memory only,
     /// so the next start of Borea loads a small vehicle file on its own again.
@@ -221,6 +227,12 @@ public partial class MainViewModel
 
     /// <summary>Completes when the preview of the open vehicle page has prepared or built what it can without a click.</summary>
     internal Task WhenVehiclePreviewLoadedAsync() => VehiclePreview?.Loading ?? Task.CompletedTask;
+
+    /// <summary>
+    /// Completes when no preview reads a file, also not one that closed. Windows does not move or delete a folder while
+    /// a file below it is open, so anything that moves or deletes the mods, the vehicles or the kept builds waits for it.
+    /// </summary>
+    internal Task WhenVehiclePreviewReadsEndedAsync() => Chain(_closedVehiclePreviewLoads, WhenVehiclePreviewLoadedAsync());
 
     /// <summary>
     /// The instance whose files the preview reads. A page opened from an instance reads that instance, where the
@@ -242,7 +254,7 @@ public partial class MainViewModel
         var old = VehiclePreview;
         RememberDeclinedPreview(old);
         VehiclePreviewViewModel? next = null;
-        if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
+        if (_services is { } services && !IsChangingLibraryFolder && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
         {
             var target = VehiclePreviewTarget;
             var installing = _contentInstallReleases.Any(release => SameRelease(release, latest.Release)) || HoldsContentPlan(latest.Release);
@@ -265,7 +277,7 @@ public partial class MainViewModel
         }
 
         VehiclePreview = next;
-        old?.Dispose();
+        Close(old);
         next?.Start();
     }
 
@@ -325,6 +337,7 @@ public partial class MainViewModel
         ? null
         : string.Join('|', [
             instance.InstanceId.ToString(),
+            instance.Instance.GameBuild?.ToString() ?? string.Empty,
             .. instance.Mods.Select(mod => $"{mod.ModId}@{mod.Version}"),
             .. instance.Content.Select(record => $"{record.ListingId}@{record.Metadata.Version}"),
         ]);
@@ -334,7 +347,34 @@ public partial class MainViewModel
         var old = VehiclePreview;
         RememberDeclinedPreview(old);
         VehiclePreview = null;
-        old?.Dispose();
+        Close(old);
+    }
+
+    private void Close(VehiclePreviewViewModel? preview)
+    {
+        if (preview is null)
+            return;
+
+        preview.Dispose();
+        _closedVehiclePreviewLoads = Chain(_closedVehiclePreviewLoads, preview.Loading);
+    }
+
+    /// <summary>
+    /// Closes a preview on the open page that still works, so the caller can move or delete files once the returned
+    /// task completes, and makes it again with <see cref="RestoreVehiclePreview"/> after that.
+    /// </summary>
+    private Task StopVehiclePreviewReadsAsync()
+    {
+        if (VehiclePreview is { Loading.IsCompleted: false })
+            ClearVehiclePreview();
+
+        return WhenVehiclePreviewReadsEndedAsync();
+    }
+
+    private void RestoreVehiclePreview()
+    {
+        if (VehiclePreview is null)
+            RefreshVehiclePreview();
     }
 
     [RelayCommand]

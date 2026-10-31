@@ -44,6 +44,36 @@ public sealed class LibraryFolderViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ChangeLibraryFolder_StopsAPreviewThatStillReads_MovesAfterItEnded_AndMakesItAgain()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var (service, held) = await VehiclePreviewViewModelTests.OpenRoverWithHeldLoadAsync(viewModel);
+        var first = viewModel.VehiclePreview!;
+
+        var change = viewModel.ChangeLibraryFolderCommand.ExecuteAsync(_library);
+
+        Assert.Null(viewModel.VehiclePreview);
+        Assert.True(Assert.Single(service.LoadTokens).Token.IsCancellationRequested);
+        Assert.True(viewModel.IsChangingLibraryFolder);
+        Assert.Null(viewModel.LibraryFolderProgressText);
+        Assert.False(change.IsCompleted);
+
+        // no preview starts while the folders move
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        Assert.Null(viewModel.VehiclePreview);
+
+        held.SetResult(service.Ready(new FakeAssets()));
+        await change;
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Null(viewModel.LibraryFolderError);
+        Assert.Equal(_library, viewModel.LibraryFolder);
+        Assert.NotNull(viewModel.VehiclePreview);
+        Assert.NotSame(first, viewModel.VehiclePreview);
+    }
+
+    [Fact]
     public async Task ChangeLibraryFolder_ShowsEveryAttemptInTheTaskHistoryAndAsAToast()
     {
         using var harness = await ViewModelHarness.CreateAsync();
