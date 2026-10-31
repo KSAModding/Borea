@@ -3984,6 +3984,12 @@
   <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
     <value>Starts {0} {1}, the newest installed version that fits the game and the mods.</value>
   </data>
+  <data name="InstanceLoaderAutomaticTargetIncompatibleFormat" xml:space="preserve">
+    <value>Starts {0} {1}, but {0} {1} does not support KSA {2}, which this instance keeps. {0} {3} does. Install {0} {3} in the Mod loader row of the instance page.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetIncompatibleNoOfferFormat" xml:space="preserve">
+    <value>Starts {0} {1}, but {0} {1} does not support KSA {2}, which this instance keeps.</value>
+  </data>
   <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
     <value>{0} {1} fits the game and the mods, but it is not installed. Borea installs it when you save.</value>
   </data>
@@ -4283,6 +4289,12 @@
   </data>
   <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
     <value>Used by {0}</value>
+  </data>
+  <data name="SettingsLoaderRatedForGameFolderFormat" xml:space="preserve">
+    <value>Rated for KSA {0} in the game folder</value>
+  </data>
+  <data name="SettingsLoaderRatedForKeptFormat" xml:space="preserve">
+    <value>Rated for KSA {0}, which {1} keeps</value>
   </data>
   <data name="SettingsLoaderUnused" xml:space="preserve">
     <value>Not used</value>

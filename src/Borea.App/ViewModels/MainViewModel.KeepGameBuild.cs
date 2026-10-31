@@ -258,7 +258,7 @@ public partial class MainViewModel
 
         services.Log.Write(logText);
         await ReloadInstancesAsync();
-        RefreshKeptGameBuildsIfShown();
+        await RefreshGameTabAfterBuildChangeAsync();
     }
 
     private string? KeepGameBuildRefusal(GameBuildKeepCheck check, bool fromFolder) => check.Refusal switch
@@ -533,7 +533,7 @@ public partial class MainViewModel
 
         services.Log.Write(logText);
         await ReloadInstancesAsync();
-        RefreshKeptGameBuildsIfShown();
+        await RefreshGameTabAfterBuildChangeAsync();
     }
 
     /// <summary>The kept builds, for Settings, Game.</summary>
@@ -563,13 +563,32 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// A keep or a clear can end while Settings show the Game tab, for example a long copy. A new game folder
-    /// in the settings can make a kept build the game folder of the settings, or stop it being that.
+    /// A new game folder in the settings can make a kept build the game folder of the settings, or stop it being that.
     /// </summary>
     private void RefreshKeptGameBuildsIfShown()
     {
         if (IsSettingsOpen && IsGameTab)
             _ = StartKeptGameBuildLoad();
+    }
+
+    /// <summary>The refresh that Settings start when they open again on the Game tab, which nothing awaits.</summary>
+    private Task _gameTabReopenRefresh = Task.CompletedTask;
+
+    internal Task WhenGameTabReopenRefreshedAsync() => _gameTabReopenRefresh;
+
+    /// <summary>
+    /// A keep, a use of the current build, a pin or a deleted instance changes the builds that the instances start,
+    /// and the mod loader versions are rated for those builds, so their rows load again with the kept builds. A keep
+    /// can end while Settings show the Game tab, and Settings that open again on that tab show the rows of their last
+    /// load until this runs.
+    /// </summary>
+    private async Task RefreshGameTabAfterBuildChangeAsync()
+    {
+        if (!IsSettingsOpen || !IsGameTab)
+            return;
+
+        _ = StartKeptGameBuildLoad();
+        await RefreshLoaderStateAsync();
     }
 
     private async Task LoadKeptGameBuildsAsync()

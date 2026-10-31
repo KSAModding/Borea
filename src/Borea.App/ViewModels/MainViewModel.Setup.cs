@@ -385,9 +385,9 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// The installed versions with their rating for the game in the settings and the instances that start them. The
-    /// instances are resolved with the inputs of the launch, so a version that a launch starts is never shown as unused.
-    /// When the instances cannot be resolved, no version can be removed.
+    /// The installed versions with the instances that start them, by name, and the rating for the builds that those
+    /// instances start. The instances are resolved with the inputs of the launch, so a version that a launch starts is
+    /// never shown as unused. When the instances cannot be resolved, no version can be removed.
     /// </summary>
     private async Task<IReadOnlyList<LoaderVersionItem>> ReadLoaderVersionsAsync(BoreaServices services)
     {
@@ -403,17 +403,20 @@ public partial class MainViewModel
             services.Log.Write("Could not tell which instances start each mod loader version.", exception);
         }
 
-        var game = services.InstalledVersion.GetInstalledVersion()?.Version;
+        var settingsGame = services.InstalledVersion.GetInstalledVersion();
         var items = new List<LoaderVersionItem>();
         foreach (var version in installed)
         {
-            var compatibility = GameCompatibility.Unknown;
+            var users = uses?.First(use => ReferenceEquals(use.Version, version)).Users
+                .OrderBy(user => user.Instance.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            (GameCompatibility Compatibility, string? Build, string? KeptBy) rating = (GameCompatibility.Unknown, null, null);
             if (releases is not null && version.Version is { } known)
             {
                 try
                 {
                     if (await releases.GetReleaseAsync(version.LoaderId, known) is { } release)
-                        compatibility = Compatibility.Evaluate(release, game);
+                        rating = RateForUsers(services, release, users, settingsGame);
                 }
                 catch (Exception exception) when (exception is IOException or InvalidOperationException)
                 {
@@ -422,11 +425,46 @@ public partial class MainViewModel
             }
 
             var name = Loaders.FirstOrDefault(loader => ModIds.Equals(loader.ModId, version.LoaderId))?.Name ?? version.LoaderId;
-            var users = uses?.First(use => ReferenceEquals(use.Version, version)).Users.Select(user => user.Instance.Name).ToList();
-            items.Add(new LoaderVersionItem(this, version, name, compatibility, users));
+            items.Add(new LoaderVersionItem(this, version, name, rating.Compatibility, rating.Build, rating.KeptBy, users?.Select(user => user.Instance.Name).ToList()));
         }
 
         return items;
+    }
+
+    /// <summary>
+    /// The worst rating of <paramref name="release"/> for the builds that <paramref name="users"/> start, Incompatible
+    /// over Unknown over Compatible, with the build and the instance that gave it. A tie keeps the first user, so the
+    /// build is always one that a user starts. A version with no user is rated for the build of the settings, and a
+    /// kept build whose folder does not hold that build rates as unknown.
+    /// </summary>
+    private static (GameCompatibility Compatibility, string? Build, string? KeptBy) RateForUsers(BoreaServices services, ModVersionMetadata release, IReadOnlyList<LoaderVersionUser>? users, InstalledGameVersion? settingsGame)
+    {
+        (GameCompatibility Compatibility, string? Build, string? KeptBy) settingsRating = (Compatibility.Evaluate(release, settingsGame?.Version), settingsGame?.RawVersion, null);
+        if (users is not { Count: > 0 })
+            return settingsRating;
+
+        var worst = Rate(users[0]);
+        foreach (var user in users.Skip(1))
+        {
+            var rating = Rate(user);
+            if (Severity(rating.Compatibility) > Severity(worst.Compatibility))
+                worst = rating;
+        }
+
+        return worst;
+
+        (GameCompatibility Compatibility, string? Build, string? KeptBy) Rate(LoaderVersionUser user) => user.Instance.GameBuild is not { } kept
+            ? settingsRating
+            : services.InstanceGames.Resolve(user.Instance) is { Problem: KeptBuildProblem.None, Version: { } game }
+                ? (Compatibility.Evaluate(release, game.Version), game.RawVersion, user.Instance.Name)
+                : (GameCompatibility.Unknown, kept.ToString(), user.Instance.Name);
+
+        static int Severity(GameCompatibility compatibility) => compatibility switch
+        {
+            GameCompatibility.Incompatible => 2,
+            GameCompatibility.Unknown => 1,
+            _ => 0,
+        };
     }
 
     private static async Task<IReadOnlyList<LoaderVersionUse>> LoaderVersionUsesAsync(BoreaServices services, IReadOnlyList<InstalledLoaderVersion> installed) =>
@@ -680,13 +718,20 @@ public sealed partial class LoaderVersionItem : ObservableObject
 
     private readonly MainViewModel _owner;
 
+    private readonly string? _ratedBuild;
+    private readonly string? _keptBy;
+
+    /// <param name="ratedBuild">The build that <paramref name="compatibility"/> is for, or null when Borea rated no release.</param>
+    /// <param name="keptBy">The instance that keeps <paramref name="ratedBuild"/>, or null for the build of the game folder.</param>
     /// <param name="users">The names of the instances that start this version, or null when Borea could not tell.</param>
-    public LoaderVersionItem(MainViewModel owner, InstalledLoaderVersion version, string name, GameCompatibility compatibility, IReadOnlyList<string>? users)
+    public LoaderVersionItem(MainViewModel owner, InstalledLoaderVersion version, string name, GameCompatibility compatibility, string? ratedBuild, string? keptBy, IReadOnlyList<string>? users)
     {
         _owner = owner;
         Version = version;
         Name = name;
         Compatibility = compatibility;
+        _ratedBuild = ratedBuild;
+        _keptBy = keptBy;
         Users = users;
     }
 
@@ -723,6 +768,14 @@ public sealed partial class LoaderVersionItem : ObservableObject
     public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
+
+    /// <summary>"Rated for KSA 2026.9.4.5400, which Career Save keeps", or null when Borea rated no release.</summary>
+    public string? CompatibilityToolTip => (_ratedBuild, _keptBy) switch
+    {
+        (null, _) => null,
+        ({ } build, null) => _owner.Localization.FormatSettingsLoaderRatedForGameFolder(build),
+        ({ } build, { } instance) => _owner.Localization.FormatSettingsLoaderRatedForKept(build, instance),
+    };
 
     /// <summary>"Used by A, B, C, ..." with at most <see cref="UsersShown"/> names, "Not used", or null when Borea could not tell.</summary>
     public string? UsedByText => Users switch

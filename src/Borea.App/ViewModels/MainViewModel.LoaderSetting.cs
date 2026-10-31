@@ -29,6 +29,13 @@ public partial class MainViewModel
     /// <summary>The release that Automatic installs before it saves, or null when Automatic starts an installed version.</summary>
     private ModVersionMetadata? _loaderSettingAutomaticMissing;
 
+    /// <summary>
+    /// The offer of Automatic when the Mod loader row of the instance page shows it too, so the text never sends the
+    /// player to a button that is not there. A pin, a conflict of the mods and another loader than the one that starts
+    /// give the row no offer.
+    /// </summary>
+    private ModVersionMetadata? _loaderSettingRowOffer;
+
     private Task _loaderSettingChoices = Task.CompletedTask;
 
     /// <summary>The instance whose loader the modal sets. Null while the modal is closed.</summary>
@@ -49,14 +56,22 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsLoaderSettingAutomatic), nameof(IsLoaderSettingPinned), nameof(LoaderSettingNeedsInstall), nameof(LoaderSettingActionText))]
     private bool _pinsLoaderVersion;
 
-    /// <summary>"Starts StarMap 0.4.8", or what Automatic does when that version is not installed.</summary>
+    /// <summary>
+    /// "Starts StarMap 0.4.8", what Automatic does when that version is not installed, or which release to install
+    /// when the version that starts does not support the kept build of the instance.
+    /// </summary>
     public string? LoaderSettingAutomaticText => (_loaderSettingAutomatic, LoaderSettingLoader) switch
     {
         (null, _) or (_, null) => null,
-        ({ Start: { } start }, { } loader) => Localization.FormatInstanceLoaderAutomaticTarget(loader.Name, start.Version?.ToString() ?? start.RawVersion ?? string.Empty),
+        ({ Start: { } start, StartCompatibility: GameCompatibility.Incompatible }, { } loader) when _loaderSetting?.KeptBuild is { } kept => _loaderSettingRowOffer is not { } offer
+            ? Localization.FormatInstanceLoaderAutomaticTargetIncompatibleNoOffer(loader.Name, StartVersionText(start), kept)
+            : Localization.FormatInstanceLoaderAutomaticTargetIncompatible(loader.Name, StartVersionText(start), kept, offer.Version.ToString()),
+        ({ Start: { } start }, { } loader) => Localization.FormatInstanceLoaderAutomaticTarget(loader.Name, StartVersionText(start)),
         ({ Missing: { } missing }, { } loader) => Localization.FormatInstanceLoaderAutomaticNotInstalled(loader.Name, missing.Version.ToString()),
         (_, { } loader) => Localization.FormatInstanceLoaderAutomaticNone(loader.Name),
     };
+
+    private static string StartVersionText(InstalledLoaderVersion start) => start.Version?.ToString() ?? start.RawVersion ?? string.Empty;
 
     /// <summary>The versions a pin can name: the installed ones and the releases the channel offers, newest first.</summary>
     [ObservableProperty]
@@ -136,6 +151,7 @@ public partial class MainViewModel
                 await HeldLoaderReleasesAsync(services),
                 services.Settings.ReleaseChannel,
                 services.InstanceGames.Resolve(instance).Version?.Version,
+                KeptBuildTextOf(instance),
                 resolution.Version?.LoaderId);
             LoaderSettingLoaders = loaders;
             PinsLoaderVersion = instance.Loader.IsPinned;
@@ -160,6 +176,7 @@ public partial class MainViewModel
         // the answer for the last loader does not describe this one
         _loaderSettingAutomatic = null;
         _loaderSettingAutomaticMissing = null;
+        _loaderSettingRowOffer = null;
         _loaderSettingChoices = BuildLoaderSettingChoicesAsync(value);
     }
 
@@ -170,6 +187,7 @@ public partial class MainViewModel
         {
             _loaderSettingAutomatic = null;
             _loaderSettingAutomaticMissing = null;
+            _loaderSettingRowOffer = null;
             OnPropertyChanged(nameof(LoaderSettingAutomaticText));
             LoaderSettingReleases = [];
             SelectedLoaderSettingRelease = null;
@@ -199,6 +217,9 @@ public partial class MainViewModel
 
         _loaderSettingAutomatic = automatic;
         _loaderSettingAutomaticMissing = automatic.Start is null ? automatic.Missing : null;
+        _loaderSettingRowOffer = !instance.Loader.IsPinned && need is not { HasConflict: true } && ModIds.Equals(loader.ModId, context.AutomaticLoaderId)
+            ? automatic.Offer
+            : null;
         OnPropertyChanged(nameof(LoaderSettingAutomaticText));
 
         // an installed copy can always be pinned, but Borea never installs a yanked release or one whose download is gone
@@ -316,6 +337,7 @@ public partial class MainViewModel
     }
 
     /// <summary>The inputs of the open modal.</summary>
+    /// <param name="KeptBuild">The kept build as the texts name it, or null on the build of the settings.</param>
     /// <param name="AutomaticLoaderId">The loader that Borea chooses for the instance, or null when it cannot choose one.</param>
     private sealed record LoaderSettingContext(
         Instance Instance,
@@ -324,6 +346,7 @@ public partial class MainViewModel
         IModRepository? Releases,
         ReleaseChannel Channel,
         GameVersion? Game,
+        string? KeptBuild,
         string? AutomaticLoaderId);
 }
 

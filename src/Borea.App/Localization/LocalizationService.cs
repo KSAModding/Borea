@@ -2639,6 +2639,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstanceLoaderAutomaticTarget(string loader, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetFormat, loader, version);
 
+    public string FormatInstanceLoaderAutomaticTargetIncompatible(string loader, string version, string build, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetIncompatibleFormat, loader, version, build, offer);
+
+    public string FormatInstanceLoaderAutomaticTargetIncompatibleNoOffer(string loader, string version, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetIncompatibleNoOfferFormat, loader, version, build);
+
     public string FormatInstanceLoaderAutomaticNotInstalled(string loader, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticNotInstalledFormat, loader, version);
 
@@ -3075,6 +3081,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatSettingsLoaderUsedBy(string instances)
         => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderUsedByFormat, instances);
+
+    public string FormatSettingsLoaderRatedForGameFolder(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRatedForGameFolderFormat, build);
+
+    public string FormatSettingsLoaderRatedForKept(string build, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRatedForKeptFormat, build, instance);
 
     public string FormatSettingsLoaderInUse(string instances)
         => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderInUseFormat, instances);

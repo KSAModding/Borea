@@ -182,8 +182,7 @@ public partial class MainViewModel : ViewModelBase
         IsSettingsOpen = true;
 
         // Settings open again on the tab they closed on, and an instance can have kept, cleared or gone since then
-        if (IsGameTab)
-            _ = StartKeptGameBuildLoad();
+        _gameTabReopenRefresh = RefreshGameTabAfterBuildChangeAsync();
     }
 
     [RelayCommand]
