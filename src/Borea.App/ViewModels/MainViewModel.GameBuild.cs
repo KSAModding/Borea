@@ -47,9 +47,11 @@ public partial class MainViewModel
     /// <summary>
     /// The Home instance and the installed build while that instance has mods and plays on the game folder of the settings.
     /// A game update replaces that folder in place, so the newer-build banner is the last place where a keep still gets this build.
+    /// It offers no keep that the instance menu refuses.
     /// </summary>
     private (string Instance, string Build)? GameBuildKeepOffer =>
-        HomeInstance is { ModCount: > 0, Instance.GameBuild: null } home && GameVersion.TryParse(InstalledVersionText, out var installed)
+        HomeInstance is { ModCount: > 0, Instance.GameBuild: null } home && GameFolderKeepRefusal == GameBuildKeepRefusal.None
+            && GameVersion.TryParse(InstalledVersionText, out var installed)
             ? (home.Name, installed.ToString())
             : null;
 
