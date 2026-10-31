@@ -3582,6 +3582,9 @@
   <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
     <value>{0} mit Ordner und Backups löschen? Das lässt sich nicht rückgängig machen.</value>
   </data>
+  <data name="ModalDeleteInstanceKeptBuildFormat" xml:space="preserve">
+    <value>KSA {0} ({1}), den diese Instanz behält, bleibt in Game Builds. Du kannst ihn im Tab Spiel der Einstellungen löschen.</value>
+  </data>
   <data name="ModalKeepGameBuildTitle" xml:space="preserve">
     <value>Diesen Spiel-Build behalten</value>
   </data>
@@ -3661,22 +3664,25 @@
     <value>Aktuellen Spiel-Build verwenden</value>
   </data>
   <data name="ModalUseCurrentGameBuildTextFormat" xml:space="preserve">
-    <value>{0} startet dann mit KSA {1} aus dem Spielordner in den Einstellungen und nicht mehr mit dem behaltenen Build {2}. Die Spielstände bleiben in der Instanz, und der behaltene Build bleibt im Ordner Game Builds.</value>
+    <value>Danach startet {0} mit dem aktuellen Spiel-Build KSA {1} statt mit dem behaltenen KSA {2}. Die Spielstände bleiben in der Instanz. Borea kann {0} später nicht zu KSA {2} zurückbringen, aber eine neue Instanz kann noch damit starten. Wenn keine Instanz KSA {2} mehr verwendet, kannst du ihn im Tab Spiel der Einstellungen löschen.</value>
   </data>
   <data name="ModalUseCurrentGameBuildMissingTextFormat" xml:space="preserve">
     <value>Danach startet {0} mit dem aktuellen Spiel-Build KSA {1}. Die Spielstände bleiben in der Instanz. Der Ordner des behaltenen KSA {2} fehlt oder enthält einen anderen Build, darum kann diese Instanz nicht mehr damit starten.</value>
   </data>
   <data name="ModalUseCurrentGameBuildFitFormat" xml:space="preserve">
-    <value>{0} von {1} Mods passen zu KSA {2}.</value>
+    <value>Mit KSA {2} kompatible Mods: {0} von {1}.</value>
   </data>
-  <data name="ModalUseCurrentGameBuildIncompatibleFormat" xml:space="preserve">
-    <value>Passen nicht: {0}</value>
-  </data>
-  <data name="ModalUseCurrentGameBuildUnknownFormat" xml:space="preserve">
-    <value>Kompatibilität unbekannt: {0}</value>
+  <data name="ModalUseCurrentGameBuildIncompatibleNoteFormat" xml:space="preserve">
+    <value>Diese Mods unterstützen KSA {0} nicht, darum startet das Spiel vielleicht nicht.</value>
   </data>
   <data name="ModalUseCurrentGameBuildOlderFormat" xml:space="preserve">
-    <value>KSA {0} in den Einstellungen ist älter als der behaltene Build {1}. Ein älterer Build lädt Spielstände eines neueren Builds vielleicht nicht, und das Spiel warnt davor nicht.</value>
+    <value>Der aktuelle Spiel-Build KSA {0} ist älter als der behaltene KSA {1}. Ein älterer Build lädt Spielstände eines neueren Builds vielleicht nicht, und das Spiel warnt nicht davor. Sichere die Spielstände vorher.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildBackingUp" xml:space="preserve">
+    <value>Die Spielstände werden gesichert...</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildBackupFailedFormat" xml:space="preserve">
+    <value>Die Spielstände konnten nicht gesichert werden. {0}</value>
   </data>
   <data name="ModalUseCurrentGameBuildConfirm" xml:space="preserve">
     <value>Aktuellen Build verwenden</value>

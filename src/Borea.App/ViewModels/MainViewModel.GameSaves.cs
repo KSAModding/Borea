@@ -282,7 +282,8 @@ public partial class MainViewModel
     }
 
     /// <summary>Backs up every save of the instance. Its page, when shown, turns to the tab with the saves.</summary>
-    internal async Task BackUpAllSavesAsync(InstanceItem instance)
+    /// <param name="report">Shows the outcome in place of the toast, for a modal that the toast would draw under.</param>
+    internal async Task BackUpAllSavesAsync(InstanceItem instance, GameSaveOutcomeReport? report = null)
     {
         if (CurrentWindowInstance && SelectedInstance?.InstanceId == instance.InstanceId)
             InstanceTab = InstanceTab.Content;
@@ -293,14 +294,14 @@ public partial class MainViewModel
             return () => zips.Count == 0
                 ? Localization.GameSavesNothingToBackUp
                 : Localization.FormatGameSavesBackedUp(zips.Count, Path.GetDirectoryName(zips[0])!);
-        });
+        }, report);
     }
 
     /// <summary>
     /// Shows the outcome as a toast, and "Close the game first" when Borea
     /// runs one of the instances.
     /// </summary>
-    private async Task<bool> RunGameSaveActionAsync(IReadOnlyCollection<Guid> instanceIds, Func<string> failed, Func<BoreaServices, Task<Func<string>?>> action)
+    private async Task<bool> RunGameSaveActionAsync(IReadOnlyCollection<Guid> instanceIds, Func<string> failed, Func<BoreaServices, Task<Func<string>?>> action, GameSaveOutcomeReport? report = null)
     {
         if (_services is not { } services)
             return false;
@@ -308,29 +309,37 @@ public partial class MainViewModel
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
-            ShowErrorToast(failed, Localization.LibraryFolderBusy);
+            ShowFailure(Localization.LibraryFolderBusy);
             return false;
         }
 
         // the game opens a save file only while it writes it, so the change itself does not notice a running game
         if (instanceIds.Any(services.Launcher.IsRunning) || services.IsGameProcessRunning())
         {
-            ShowErrorToast(failed, Localization.GameSaveCloseGame);
+            ShowFailure(Localization.GameSaveCloseGame);
             return false;
         }
 
         try
         {
-            if (await action(services) is { } result)
+            if (await action(services) is { } result && report?.Invoke(result, null) != true)
                 ShowSuccessToast(result);
             return true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            ShowErrorToast(failed, exception.Message);
+            ShowFailure(exception.Message);
         }
 
         return false;
+
+        void ShowFailure(string reason)
+        {
+            if (report?.Invoke(failed, reason) == true)
+                services.Log.Write($"{failed()}: {reason}");
+            else
+                ShowErrorToast(failed, reason);
+        }
     }
 
     private void RefreshGameSaveText()
@@ -341,6 +350,12 @@ public partial class MainViewModel
         RefreshBackupText();
     }
 }
+
+/// <summary>
+/// Shows the outcome of a save action in place of its toast. The reason is null when the action worked.
+/// Returns false when the place for the outcome is gone, so the toast shows it.
+/// </summary>
+internal delegate bool GameSaveOutcomeReport(Func<string> message, string? reason);
 
 /// <summary>
 /// The Vehicles or the Saves section of the instance page, with its chooser

@@ -2254,6 +2254,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatModalDeleteInstanceText(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalDeleteInstanceTextFormat, name);
 
+    public string FormatModalDeleteInstanceKeptBuild(string build, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalDeleteInstanceKeptBuildFormat, build, size);
+
     public string ModalKeepGameBuildTitle => Resources.ModalKeepGameBuildTitle;
 
     public string ModalAddGameBuildTitle => Resources.ModalAddGameBuildTitle;
@@ -2330,14 +2333,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatModalUseCurrentGameBuildFit(int fitting, int total, string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildFitFormat, fitting, total, build);
 
-    public string FormatModalUseCurrentGameBuildIncompatible(string names)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildIncompatibleFormat, names);
-
-    public string FormatModalUseCurrentGameBuildUnknown(string names)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildUnknownFormat, names);
+    public string FormatModalUseCurrentGameBuildIncompatibleNote(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildIncompatibleNoteFormat, build);
 
     public string FormatModalUseCurrentGameBuildOlder(string build, string keptBuild)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildOlderFormat, build, keptBuild);
+
+    public string ModalUseCurrentGameBuildBackingUp => Resources.ModalUseCurrentGameBuildBackingUp;
+
+    public string FormatModalUseCurrentGameBuildBackupFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildBackupFailedFormat, reason);
 
     public string ModalUseCurrentGameBuildConfirm => Resources.ModalUseCurrentGameBuildConfirm;
 

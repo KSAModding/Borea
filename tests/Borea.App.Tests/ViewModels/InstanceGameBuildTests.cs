@@ -329,6 +329,76 @@ public sealed class InstanceGameBuildTests
     }
 
     [Fact]
+    public async Task UseCurrentGameBuild_ToAnOlderBuild_BacksUpTheSavesAndHoldsTheConfirm()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var newer = GameVersion.Parse("2026.10.13.5602");
+        // the first instance becomes the active one, so the backup must take the instance of the modal and not this one
+        var active = await CreateInstanceAsync(harness, "Active", build: null);
+        var kept = await CreateInstanceAsync(harness, "Kept", newer);
+        foreach (var instance in new[] { active, kept })
+            GameSavesViewModelTests.WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId), "Orbit", "2026-10-14T12:00:00.0000000", $"v{newer}", 10);
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single(item => item.InstanceId == kept.InstanceId).BeginUseCurrentGameBuildCommand.ExecuteAsync(null);
+        var canConfirm = new List<bool>();
+        viewModel.ConfirmUseCurrentGameBuildCommand.CanExecuteChanged += (_, _) => canConfirm.Add(viewModel.ConfirmUseCurrentGameBuildCommand.CanExecute(null));
+
+        await viewModel.BackUpUseCurrentGameBuildSavesCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsUseCurrentGameBuildToOlder);
+        var zip = Assert.Single(Directory.GetFiles(Path.Combine(harness.Services.Paths.GetBackupsRoot(), kept.InstanceId.ToString(), "saves"), "*.zip"));
+        Assert.False(Directory.Exists(Path.Combine(harness.Services.Paths.GetBackupsRoot(), active.InstanceId.ToString())));
+        Assert.Equal([false, true], canConfirm);
+        Assert.True(viewModel.IsUseCurrentGameBuildModalOpen);
+        Assert.Equal(harness.Localization.FormatGameSavesBackedUp(1, Path.GetDirectoryName(zip)!), viewModel.UseCurrentGameBuildBackupText);
+        Assert.False(viewModel.IsUseCurrentGameBuildBackupFailed);
+        Assert.Empty(viewModel.Toasts.Items);
+    }
+
+    [Fact]
+    public async Task UseCurrentGameBuild_BackupWhileTheGameRuns_ShowsTheRefusalInTheModalUntilItCloses()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var kept = await CreateInstanceAsync(harness, "Kept", GameVersion.Parse("2026.10.13.5602"));
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single(item => item.InstanceId == kept.InstanceId).BeginUseCurrentGameBuildCommand.ExecuteAsync(null);
+        harness.IsGameProcessRunning = () => true;
+
+        await viewModel.BackUpUseCurrentGameBuildSavesCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatModalUseCurrentGameBuildBackupFailed(harness.Localization.GameSaveCloseGame), viewModel.UseCurrentGameBuildBackupText);
+        Assert.True(viewModel.IsUseCurrentGameBuildBackupFailed);
+        Assert.Empty(viewModel.Toasts.Items);
+
+        viewModel.CancelUseCurrentGameBuildCommand.Execute(null);
+
+        Assert.Null(viewModel.UseCurrentGameBuildBackupText);
+        Assert.False(viewModel.IsUseCurrentGameBuildBackupFailed);
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("0.4.6.0", false)]
+    public async Task DeleteModal_NamesTheKeptBuildOnlyForItsLastInstance(string? otherBuild, bool named)
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        await CreateInstanceAsync(harness, "Other", otherBuild is null ? null : GameVersion.Parse(otherBuild));
+        await viewModel.LoadAsync();
+
+        viewModel.Instances.Single(item => item.InstanceId == kept.InstanceId).BeginDeleteCommand.Execute(null);
+        await viewModel.WhenKeptGameBuildsLoadedAsync();
+
+        var bytes = Assert.Single(await harness.Services.GameBuilds.ListKeptAsync(CancellationToken.None)).Bytes;
+        Assert.Equal(
+            named ? harness.Localization.FormatModalDeleteInstanceKeptBuild(KeptBuild.ToString(), MainViewModel.KeepSizeText(bytes)) : null,
+            viewModel.DeleteModalKeptBuildText);
+    }
+
+    [Fact]
     public async Task NewInstance_OnAKeptBuild_StartsAgainstIt()
     {
         var starter = new GameSavesViewModelTests.RunningGameStarter();
