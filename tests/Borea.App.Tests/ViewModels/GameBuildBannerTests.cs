@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.Preferences;
@@ -71,8 +73,30 @@ public sealed class GameBuildBannerTests
                 Content = new StringContent(JsonSerializer.Serialize(new { Version = version, Url = url }), Encoding.UTF8, "application/json"),
             };
 
-    /// <summary>A harness whose game folder holds a KSA.dll of <see cref="InstalledBuild"/>, after the master server check.</summary>
-    private static async Task<ViewModelHarness> CreateAsync(Func<HttpRequestMessage, HttpResponseMessage?>? respond, AppPreferences? preferences = null, Action<string>? fillGame = null, Func<string, string>? editSnapshot = null)
+    /// <summary>The ways the master server gives no answer, by the name of a Theory row.</summary>
+    private static Func<HttpRequestMessage, HttpResponseMessage?>? NoAnswer(string kind) => kind switch
+    {
+        "refused" => null,
+        "timeout" => request => request.RequestUri?.Host == MasterServerHost ? throw new TaskCanceledException("The request timed out.", new TimeoutException()) : null,
+        "cut off" => request => request.RequestUri?.Host == MasterServerHost ? throw new HttpIOException(HttpRequestError.ResponseEnded) : null,
+        "unknown charset" => request => request.RequestUri?.Host == MasterServerHost ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{ "Version": "2026.9.10.5438" }""", MediaTypeHeaderValue.Parse("application/json; charset=not-a-charset")) } : null,
+        _ => MasterServer("not a version"),
+    };
+
+    /// <summary>Makes <paramref name="build"/> the only build in game_versions of the snapshot.</summary>
+    private static string WithOnlyBuild(string json, string build)
+    {
+        var root = JsonNode.Parse(json)!;
+        root["game_versions"]!["versions"] = new JsonArray(build);
+        return root.ToJsonString();
+    }
+
+    private static List<string> FailedCheckLines(ViewModelHarness harness) =>
+        harness.Services.Log.ReadRecentLines(200).Where(line => line.Contains("The game build check at the master server failed.", StringComparison.Ordinal)).ToList();
+
+    /// <summary>A harness whose game folder holds a KSA.dll of <see cref="InstalledBuild"/>, after the master server check unless <paramref name="waitForCheck"/> is false.</summary>
+    /// <param name="heldSnapshot">The index file on disk before the first load.</param>
+    private static async Task<ViewModelHarness> CreateAsync(Func<HttpRequestMessage, HttpResponseMessage?>? respond, AppPreferences? preferences = null, Action<string>? fillGame = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, string? heldSnapshot = null, bool waitForCheck = true)
     {
         var harness = await ViewModelHarness.CreateAsync(async services =>
         {
@@ -82,8 +106,14 @@ public sealed class GameBuildBannerTests
             await services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
             if (preferences is not null)
                 await services.AppPreferences.SaveAsync(preferences, MainViewModel.BundledThemeNames);
-        }, respond, editSnapshot);
-        await harness.ViewModel.WhenGameBuildCheckedAsync();
+            if (heldSnapshot is not null)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(services.Paths.GetIndexPath())!);
+                await File.WriteAllTextAsync(services.Paths.GetIndexPath(), heldSnapshot);
+            }
+        }, respond, editSnapshot, indexOffline);
+        if (waitForCheck)
+            await harness.ViewModel.WhenGameBuildCheckedAsync();
         return harness;
     }
 
@@ -136,9 +166,9 @@ public sealed class GameBuildBannerTests
     }
 
     [Fact]
-    public async Task Load_MasterServerOffline_ShowsNoBannerAndNoError()
+    public async Task Load_MasterServerOfflineAndNoSnapshot_ShowsNoBannerAndNoError()
     {
-        using var harness = await CreateAsync(respond: null);
+        using var harness = await CreateAsync(respond: null, indexOffline: true);
         var viewModel = harness.ViewModel;
 
         Assert.Single(harness.Requests, uri => uri.Host == MasterServerHost);
@@ -154,23 +184,144 @@ public sealed class GameBuildBannerTests
         var answer = MasterServer("2026.9.10.5438");
         using var harness = await CreateAsync(request => online ? answer(request) : null);
         var viewModel = harness.ViewModel;
-        Assert.False(viewModel.ShowGameBuildBanner);
+        Assert.Equal("A newer KSA build is available: 2026.9.7.5402", viewModel.GameBuildBannerText);
 
         online = true;
         viewModel.GameDirectoryInput = Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetBoreaSettingsPath())!, "Game");
         await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
         await viewModel.WhenGameBuildCheckedAsync();
 
-        Assert.True(viewModel.ShowGameBuildBanner);
+        Assert.Equal("A newer KSA build is available: 2026.9.10.5438", viewModel.GameBuildBannerText);
+        Assert.Equal("https://ksa.ahwoo.com/", viewModel.GameBuildDownloadUrl);
         Assert.Equal(2, harness.Requests.Count(uri => uri.Host == MasterServerHost));
     }
 
     [Fact]
-    public async Task Load_UnreadableAnswer_ShowsNoBanner()
+    public async Task ServicesRebuiltWhileTheCheckRuns_TheCanceledCheckIsNoFailedCheck()
     {
-        using var harness = await CreateAsync(MasterServer("not a version"));
+        var reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var canceled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var answer = MasterServer("2026.9.10.5438");
+        var hold = 1;
+        using var harness = await CreateAsync(
+            request => request.RequestUri?.Host == MasterServerHost && Interlocked.Exchange(ref hold, 0) == 1
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new CanceledContent(reading, canceled.Task) }
+                : answer(request),
+            waitForCheck: false);
+        var viewModel = harness.ViewModel;
+        await reading.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        var firstCheck = viewModel.WhenGameBuildCheckedAsync();
+
+        viewModel.GameDirectoryInput = Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetBoreaSettingsPath())!, "Game");
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+        await viewModel.WhenGameBuildCheckedAsync();
+        canceled.SetResult();
+        await firstCheck;
+
+        Assert.Empty(FailedCheckLines(harness));
+        Assert.Equal("A newer KSA build is available: 2026.9.10.5438", viewModel.GameBuildBannerText);
+    }
+
+    [Fact]
+    public async Task Load_DisposedClient_IsNoFailedCheck()
+    {
+        using var harness = await CreateAsync(request => request.RequestUri?.Host == MasterServerHost ? throw new ObjectDisposedException(nameof(HttpClient)) : null);
+
+        Assert.Empty(FailedCheckLines(harness));
+        Assert.False(harness.ViewModel.ShowGameBuildBanner);
+    }
+
+    [Theory]
+    [InlineData("refused")]
+    [InlineData("timeout")]
+    [InlineData("cut off")]
+    [InlineData("unknown charset")]
+    [InlineData("unreadable")]
+    public async Task Load_NoAnswer_ShowsTheNewestSnapshotBuildWithTheGamePageAndWritesOneLogLine(string noAnswer)
+    {
+        using var harness = await CreateAsync(NoAnswer(noAnswer));
+        var viewModel = harness.ViewModel;
+
+        Assert.True(viewModel.ShowGameBuildBanner);
+        Assert.Equal("A newer KSA build is available: 2026.9.7.5402", viewModel.GameBuildBannerText);
+        Assert.Equal("https://ksa.ahwoo.com/", viewModel.GameBuildDownloadUrl);
+        Assert.Null(viewModel.UnexpectedError);
+        Assert.Single(FailedCheckLines(harness));
+    }
+
+    [Fact]
+    public async Task Load_NoAnswerAndIndexOffline_ReadsTheHeldSnapshot()
+    {
+        using var harness = await CreateAsync(respond: null, indexOffline: true, heldSnapshot: await File.ReadAllTextAsync(ViewModelHarness.SnapshotFixturePath));
+
+        Assert.Equal("A newer KSA build is available: 2026.9.7.5402", harness.ViewModel.GameBuildBannerText);
+    }
+
+    [Fact]
+    public async Task Load_NoAnswerAndHeldSnapshotUnreadable_ShowsNoBannerAndNoError()
+    {
+        using var harness = await CreateAsync(respond: null, indexOffline: true, heldSnapshot: "{ not an index");
 
         Assert.False(harness.ViewModel.ShowGameBuildBanner);
+        Assert.Null(harness.ViewModel.UnexpectedError);
+    }
+
+    [Fact]
+    public async Task Load_NoAnswerAndNoNewerBuildInTheSnapshot_ShowsNoBanner()
+    {
+        using var harness = await CreateAsync(respond: null, editSnapshot: json => WithOnlyBuild(json, InstalledBuild));
+
+        Assert.False(harness.ViewModel.ShowGameBuildBanner);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task IndexDownloadedWhileOpen_AfterAFailedCheck_ShowsTheNewBuildOnlyWithTheUpdateCheckOn(bool updateCheck)
+    {
+        var build = InstalledBuild;
+        using var harness = await CreateAsync(respond: null, editSnapshot: json => WithOnlyBuild(json, build));
+        var viewModel = harness.ViewModel;
+        Assert.False(viewModel.ShowGameBuildBanner);
+        viewModel.CheckForUpdatesAtStart = updateCheck;
+
+        build = "2026.9.7.5402";
+        await viewModel.RefreshContentIndexCommand.ExecuteAsync(null);
+
+        Assert.Equal(updateCheck, viewModel.ShowGameBuildBanner);
+        Assert.Single(FailedCheckLines(harness));
+    }
+
+    [Fact]
+    public async Task IndexDownloadedWhileOpen_OlderNewestBuild_KeepsTheHeldBuild()
+    {
+        var build = "2026.9.7.5402";
+        using var harness = await CreateAsync(respond: null, editSnapshot: json => WithOnlyBuild(json, build));
+        var viewModel = harness.ViewModel;
+        Assert.Equal("A newer KSA build is available: 2026.9.7.5402", viewModel.GameBuildBannerText);
+
+        build = "2026.8.22.5348";
+        await viewModel.RefreshContentIndexCommand.ExecuteAsync(null);
+
+        Assert.Equal("A newer KSA build is available: 2026.9.7.5402", viewModel.GameBuildBannerText);
+    }
+
+    [Fact]
+    public async Task Close_BuildFromTheSnapshot_StaysClosedAtTheNextStart()
+    {
+        using var harness = await CreateAsync(respond: null);
+
+        harness.ViewModel.DismissGameBuildBannerCommand.Execute(null);
+        await harness.ViewModel.WhenPreferencesSavedAsync();
+
+        Assert.False(harness.ViewModel.ShowGameBuildBanner);
+        var saved = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
+        Assert.Equal(5402, saved.Preferences.DismissedGameRevision);
+        var next = harness.NewViewModel(appPreferences: saved.Preferences, services: harness.Services);
+        await next.LoadAsync();
+        await next.WhenGameBuildCheckedAsync();
+        Assert.Equal("A newer KSA build is available: 2026.9.7.5402", next.GameBuildBannerText);
+        Assert.False(next.ShowGameBuildBanner);
     }
 
     [Fact]
@@ -496,6 +647,27 @@ public sealed class GameBuildBannerTests
         Assert.Equal(["2026.9.10.5438", "2026.9.7.5402", "2026.9.4.5400", "2026.8.22.5348", "2026.8.19.5261", "2026.8.5.5168", "2026.8.3.5117"], viewModel.GamePatchNotes.Select(item => item.Build));
         Assert.False(viewModel.NewerGamePatchNotesFailed);
         Assert.False(viewModel.IsLoadingNewerGamePatchNotes);
+    }
+
+    /// <summary>A response body whose read ends in a cancellation once <paramref name="canceled"/> completes, the way a disposed client ends a request.</summary>
+    private sealed class CanceledContent(TaskCompletionSource reading, Task canceled) : HttpContent
+    {
+        protected override async Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken)
+        {
+            reading.TrySetResult();
+            await canceled;
+            throw new OperationCanceledException();
+        }
+
+        protected override Task<Stream> CreateContentReadStreamAsync() => CreateContentReadStreamAsync(CancellationToken.None);
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => throw new NotSupportedException();
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
     }
 
     /// <summary>A response body that sends nothing until its read is canceled.</summary>
