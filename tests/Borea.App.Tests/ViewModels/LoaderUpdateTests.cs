@@ -38,7 +38,7 @@ public sealed class LoaderUpdateTests
     /// <param name="keptBuild">True keeps <see cref="KeptBuild"/> in the library and lets StarMap 0.4.6 fit it, and only it.</param>
     /// <param name="keptBuildFits">False lets no release fit <see cref="KeptBuild"/>.</param>
     /// <param name="respond">Answers the downloads, or null to serve every StarMap release.</param>
-    private static async Task<ViewModelHarness> CreateAsync(string? installed = "0.4.6", bool installedFitsTheGame = false, bool knownVersion = true, bool withGame = true, IProcessStarter? starter = null, bool noFittingRelease = false, string? loaderMax = null, bool adoptedOutsideTheLoaders = false, bool keptBuild = false, bool keptBuildFits = true, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null)
+    internal static async Task<ViewModelHarness> CreateAsync(string? installed = "0.4.6", bool installedFitsTheGame = false, bool knownVersion = true, bool withGame = true, IProcessStarter? starter = null, bool noFittingRelease = false, string? loaderMax = null, bool adoptedOutsideTheLoaders = false, bool keptBuild = false, bool keptBuildFits = true, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null)
     {
         var harness = await ViewModelHarness.CreateAsync(
             async services =>
@@ -950,7 +950,7 @@ public sealed class LoaderUpdateTests
     }
 
     /// <summary>A new instance on <see cref="KeptBuild"/>, which Home starts.</summary>
-    private static async Task<Instance> KeepBuildActiveAsync(ViewModelHarness harness)
+    internal static async Task<Instance> KeepBuildActiveAsync(ViewModelHarness harness)
     {
         var instance = (await harness.Services.Instances.CreateAsync("Kept", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>

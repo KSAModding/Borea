@@ -1390,7 +1390,7 @@
     <value>Update {0} to {1}</value>
   </data>
   <data name="LoaderUpdateGameRunning" xml:space="preserve">
-    <value>Close KSA first. Borea cannot update the mod loader while the game runs.</value>
+    <value>Close the game first, then try again. Borea cannot change the mod loader while the game runs.</value>
   </data>
   <data name="LoaderPinnedMissingFormat" xml:space="preserve">
     <value>The instance {2} is pinned to {0} {1}, and that version is not installed.</value>
@@ -4704,6 +4704,9 @@
   <data name="LaunchStartingFormat" xml:space="preserve">
     <value>Starting {0}…</value>
   </data>
+  <data name="LaunchStartedFormat" xml:space="preserve">
+    <value>Started {0} for instance "{1}".</value>
+  </data>
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} stopped {2} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.</value>
   </data>
@@ -4724,6 +4727,9 @@
   </data>
   <data name="LaunchLoaderTooOldForKeptBuildFormat" xml:space="preserve">
     <value>{0} was made for another KSA build than {1}, which this instance keeps, and cannot load the game. Install a {0} release for {1} in the Mod loader row of the instance page. A KSA update does not change a kept build.</value>
+  </data>
+  <data name="LaunchLoaderTooOldForKeptBuildOfferFormat" xml:space="preserve">
+    <value>{0} {1} was made for another KSA build than {2}, which this instance keeps. {0} {3} supports it.</value>
   </data>
   <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
     <value>{0} releases</value>
@@ -4762,7 +4768,7 @@
     <value>This instance runs on a kept KSA build, and the folder of that build is gone or holds another build. Borea starts nothing, so the instance does not start on another build. To use the game folder of the settings instead, select "Use the current game build" in the instance menu.</value>
   </data>
   <data name="LaunchOtherBuildRunningFormat" xml:space="preserve">
-    <value>A game is running, and {0} reads another game folder for it. If Borea changed that folder now, a restart of the running game would load the wrong build. Borea starts nothing. Close the game first.</value>
+    <value>Close the running game first. To start this instance, Borea must point {0} to another game folder, and it does that only while no game runs.</value>
   </data>
   <data name="LaunchLoaderTakesNoGamePathFormat" xml:space="preserve">
     <value>This instance runs on a kept KSA build, and the listing of {0} names no game path that Borea can write. Borea starts nothing. The loader author can add a [provides.configure] table to the listing.</value>

@@ -17,7 +17,7 @@
                 <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
                 <StackPanel Margin="36,32,24,32" Spacing="16">
                     <TextBlock Classes="body-md" Text="{Binding LaunchMessage}" TextWrapping="Wrap" />
-                    <Button Classes="link" HorizontalAlignment="Left" Command="{Binding OpenLaunchLoaderReleasesCommand}" ToolTip.Tip="{Binding LaunchLoaderReleases.Url}" IsVisible="{Binding LaunchLoaderReleases, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.ControlTypeOverride="Hyperlink">
+                    <Button Classes="link" HorizontalAlignment="Left" Margin="-8,0,0,0" Command="{Binding OpenLaunchLoaderReleasesCommand}" ToolTip.Tip="{Binding LaunchLoaderReleases.Url}" IsVisible="{Binding LaunchLoaderReleases, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.ControlTypeOverride="Hyperlink">
                         <TextBlock Classes="action-md" Text="{Binding LaunchLoaderReleases.Label}" />
                     </Button>
                     <Border Classes="card" Padding="16" IsVisible="{Binding IsLaunchOutputShown}">
@@ -26,15 +26,19 @@
                         </ScrollViewer>
                     </Border>
                     <TextBlock Classes="body-md danger" Text="{Binding LaunchFailureError}" TextWrapping="Wrap" IsVisible="{Binding LaunchFailureError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <!-- the text buttons wrap, so a long cta keeps the right edge of the text above it -->
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Center">
                             <Button Classes="text tall" Content="{Binding Localization.LaunchShowDetails}" Command="{Binding ToggleLaunchOutputCommand}" />
                             <Button Classes="text tall" Content="{Binding Localization.LaunchOpenLog}" Command="{Binding OpenLaunchLogCommand}" />
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="cta" Command="{Binding DisableBlamedModCommand}" IsVisible="{Binding CanDisableBlamedMod}">
+                        </WrapPanel>
+                        <Button Grid.Column="1" Classes="cta" Command="{Binding DisableBlamedModCommand}" IsVisible="{Binding CanDisableBlamedMod}">
                             <TextBlock Classes="action-lg" Text="{Binding DisableBlamedModText}" VerticalAlignment="Center" />
                         </Button>
-                        <Button Grid.Column="2" Classes="text tall" Content="{Binding Localization.ModalClose}" Command="{Binding CloseLaunchFailureCommand}" IsVisible="{Binding !CanDisableBlamedMod}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Classes="cta" Command="{Binding InstallLaunchLoaderOfferCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding LaunchLoaderInstallText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="action-lg" Text="{Binding LaunchLoaderInstallText}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Grid.Column="1" Classes="text tall" Content="{Binding Localization.ModalClose}" Command="{Binding CloseLaunchFailureCommand}" IsVisible="{Binding ShowsLaunchFailureClose}" VerticalAlignment="Center" />
                     </Grid>
                 </StackPanel>
             </StackPanel>
