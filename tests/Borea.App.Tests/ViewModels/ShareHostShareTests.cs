@@ -11,17 +11,22 @@ namespace Borea.App.Tests.ViewModels;
 /// <summary>Share on a share host of RFC 0094 from the listing editor, against a fake host.</summary>
 public sealed class ShareHostShareTests
 {
-    private const string HostsUrl = "https://raw.githubusercontent.com/KSAModding/content-index/main/hosts.toml";
-
     private static readonly string VehiclesUrl = ContentIndexTypeFiles.Vehicles.AddressFrom(new Uri("https://ksamodding.github.io/content-index-releases/v1/index.json")).AbsoluteUri;
 
     private const string Hosts = """
-        [ksamods]
-        kind = "share"
-        name = "ksamods.gg"
-        api = "https://ksamods.gg/api/share/v1/"
-        types = ["vehicle", "save"]
-        max_bytes = { vehicle = 10485760, save = 104857600 }
+        { "ksamods": {
+            "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/",
+            "types": ["vehicle", "save"], "max_bytes": { "vehicle": 10485760, "save": 104857600 }
+        } }
+        """;
+
+    /// <summary>A host without GitHub storage (RFC 0104), which serves signed data files and has no pages.</summary>
+    private const string DataHost = """
+        { "ownhost": {
+            "kind": "share", "name": "own.example", "api": "https://own.example/api/share/v1/", "types": ["vehicle"],
+            "data": "https://data.own.example/share/", "downloads": ["https://cdn.own.example/"],
+            "key": "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=", "retired_keys": []
+        } }
         """;
 
     private static readonly ShareUpload Checked = new("u42", [new ShareCheck("meta.toml", true, null), new ShareCheck("install.folder", true, null)], "1.0.0", "id = \"ExampleRover\"\n");
@@ -30,7 +35,7 @@ public sealed class ShareHostShareTests
     public async Task FirstShare_SignsInUploadsShowsTheChecksAndPublishes()
     {
         var host = new FakeHost();
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: host);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
         var editor = await ShareAsync(harness);
         editor.Authors = "Maxi";
         editor.License = "CC-BY-4.0";
@@ -66,7 +71,7 @@ public sealed class ShareHostShareTests
     [Fact]
     public async Task ShareOnTheHost_HidesTheCardsThatTheHostDoesNotTake()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: new FakeHost());
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
         Assert.True(harness.ViewModel.ListingEditor.ShowsIndexOnlyCards);
 
         var editor = await ShareAsync(harness);
@@ -94,7 +99,7 @@ public sealed class ShareHostShareTests
     public async Task ErrorInACardThatHides_StopsTheUploadWhileTheCardShows()
     {
         var host = new FakeHost();
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: host);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
         var editor = await ShareAsync(harness);
         editor.Homepage = "not a link";
 
@@ -108,7 +113,7 @@ public sealed class ShareHostShareTests
     [Fact]
     public async Task CancelAfterTheUpload_DropsItAndShowsEveryCard()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: new FakeHost());
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
         var editor = await ShareAsync(harness);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
         Assert.False(editor.ShowsIndexOnlyCards);
@@ -125,7 +130,7 @@ public sealed class ShareHostShareTests
     public async Task HostError_ShowsItsMessage()
     {
         var host = new FakeHost { UploadFailure = new ShareHostException(ShareHostFailure.Host, "ExampleRover belongs to another account.", "id_taken") };
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: host);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
         var editor = await ShareAsync(harness);
         editor.Homepage = "https://example.test/rover";
 
@@ -142,7 +147,7 @@ public sealed class ShareHostShareTests
     public async Task ArchiveOverTheLimitOfTheHost_SendsNothing()
     {
         var host = new FakeHost();
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts.Replace("vehicle = 10485760", "vehicle = 10", StringComparison.Ordinal)), shareHostClient: host);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts.Replace("\"vehicle\": 10485760", "\"vehicle\": 10", StringComparison.Ordinal)), respond: Serve(), shareHostClient: host);
         var editor = await ShareAsync(harness);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
@@ -157,7 +162,7 @@ public sealed class ShareHostShareTests
     public async Task FailedCheck_IsMarkedAndBlocksThePublish()
     {
         var host = new FakeHost { Upload = new ShareUpload("u42", [new ShareCheck("meta.toml", true, null), new ShareCheck("install.folder", false, "Taken by OtherRover.")], "1.0.0", null) };
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: host);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
         var editor = await ShareAsync(harness);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
@@ -176,7 +181,7 @@ public sealed class ShareHostShareTests
     {
         // The dependency list did not change, so the host publishes the release without a listing pull request.
         var host = new FakeHost { PullRequest = null };
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts, vehicles: ListedRover), shareHostClient: host);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var editor = await ShareAsync(harness);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
@@ -195,11 +200,22 @@ public sealed class ShareHostShareTests
     [Fact]
     public async Task NoHostInContentIndex_OffersNone()
     {
-        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(null), shareHostClient: new FakeHost());
+        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(), shareHostClient: new FakeHost());
 
         var editor = await ShareAsync(harness);
 
         Assert.False(editor.HasShareHosts);
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsolutePath.EndsWith("/hosts.toml", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task HostWithoutStorage_IsOfferedByItsName()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(DataHost), respond: Serve(), shareHostClient: new FakeHost());
+
+        var editor = await ShareAsync(harness);
+
+        Assert.Equal(harness.Localization.FormatListingShareOnHost("own.example"), Assert.Single(editor.ShareHostRows).Label);
     }
 
     private static async Task<ListingEditor> ShareAsync(ViewModelHarness harness)
@@ -212,10 +228,9 @@ public sealed class ShareHostShareTests
         return editor;
     }
 
-    /// <summary>Serves hosts.toml, or a 404 when it is null, the schema without its gate, and the vehicles of the index.</summary>
-    private static Func<HttpRequestMessage, HttpResponseMessage?> Serve(string? hosts, string? vehicles = null) => request => request.RequestUri?.AbsoluteUri switch
+    /// <summary>Serves the schema without its gate and the vehicles of the index.</summary>
+    private static Func<HttpRequestMessage, HttpResponseMessage?> Serve(string? vehicles = null) => request => request.RequestUri?.AbsoluteUri switch
     {
-        HostsUrl => hosts is null ? new HttpResponseMessage(HttpStatusCode.NotFound) : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(hosts) },
         { } uri when uri == VehiclesUrl && vehicles is not null => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(vehicles) },
         _ => GameSaveShareTests.Ungated(request),
     };

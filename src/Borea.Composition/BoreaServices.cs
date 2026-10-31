@@ -279,7 +279,7 @@ public sealed class BoreaServices : IDisposable
 
     public required IListingValidator ListingValidator { get; init; }
 
-    /// <summary>The share hosts that hosts.toml of content-index registers (RFC 0094).</summary>
+    /// <summary>The share hosts of the content-index snapshot (RFC 0104).</summary>
     public required IShareHostSource ShareHosts { get; init; }
 
     /// <summary>Signs in to a share host, and uploads and publishes a vehicle or a save there.</summary>
@@ -660,7 +660,7 @@ public sealed class BoreaServices : IDisposable
             ListedDocuments = listedDocuments,
             ListingFormat = listingFormat,
             ListingValidator = new ListingValidator(new ListingSchemaStore(listedDocuments, paths)),
-            ShareHosts = new ShareHostStore(listedDocuments, paths),
+            ShareHosts = new ShareHostStore(indexSnapshots),
             ShareHostClient = shareHostClient ?? new ShareHostClient(http, listingFormat),
             ListingPublisher = new LoggingListingPublisher(listingPublisher ?? new ListingPublisher(gitHubSession, http, listingFormat), log),
             ListingOwnership = listingOwnership,

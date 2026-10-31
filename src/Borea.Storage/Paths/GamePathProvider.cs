@@ -56,7 +56,6 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetAnnouncementsPath() => Path.Combine(_boreaRoot, "announcements.toml");
     public string GetListingSchemaPath() => Path.Combine(_boreaRoot, "authored.schema.json");
 
-    public string GetShareHostsPath() => Path.Combine(_boreaRoot, "hosts.toml");
     public string GetImageCacheFolder() => Path.Combine(_boreaRoot, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_boreaRoot, "GamePatchNotes");
     public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
