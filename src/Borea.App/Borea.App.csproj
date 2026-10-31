@@ -12,7 +12,7 @@
     <!-- osx-arm64 excluded: EnableCompressionInSingleFile triggers a known .NET host
      AccessViolationException on Apple Silicon (dotnet/runtime#123324), fixed for .NET 11. -->
     <EnableCompressionInSingleFile Condition="'$(RuntimeIdentifier)' != 'osx-arm64'">true</EnableCompressionInSingleFile>
-    <SatelliteResourceLanguages>en;de;en-QP</SatelliteResourceLanguages>
+    <SatelliteResourceLanguages>en;de;en-QP;zh-Hans</SatelliteResourceLanguages>
     <!-- The analyzer adds an ILLink package whose version follows the SDK, which would tie the lock files to one SDK patch. -->
     <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
 
@@ -35,6 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Localization\Resources\Translators.json" LogicalName="Borea.App.Localization.Translators.json" />
     <EmbeddedResource Update="Localization\Resources\Resources.resx">
       <Generator>MSBuild:Compile</Generator>
       <Link>Localization\Resources.resx</Link>
@@ -46,6 +47,9 @@
     </EmbeddedResource>
     <EmbeddedResource Update="Localization\Resources\Resources.de.resx">
       <Link>Localization\Resources.de.resx</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Localization\Resources\Resources.zh-Hans.resx">
+      <Link>Localization\Resources.zh-Hans.resx</Link>
     </EmbeddedResource>
     <!-- MSBuild finds no culture in the name en-QP, so this file names its culture and its resource itself. -->
     <EmbeddedResource Update="Localization\Resources\Resources.en-QP.resx">

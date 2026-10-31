@@ -51,6 +51,24 @@ public sealed class GoneListingTests
         Assert.Equal(("MeasureTools", null), (gone.ListingId, gone.Name));
     }
 
+    [Fact]
+    public void From_ReadsTheVehiclesAndSavesToo()
+    {
+        var snapshot = new ContentIndexSnapshot(
+            1,
+            [Listing("MeasureTools", Early)],
+            [],
+            null,
+            [],
+            vehicles: [Listing("ExampleRover", Late)],
+            saves: [Listing("ExampleSave", Early), Listing("OtherSave", null)]);
+
+        Assert.Equal(["ExampleRover", "ExampleSave", "MeasureTools"], GoneListing.From(snapshot).Select(listing => listing.ListingId));
+    }
+
+    private static ContentIndexListing Listing(string id, DateTimeOffset? since) =>
+        new(id, PackMemberRepository.Listing(id, id + " name"), [PackMemberRepository.Release(id, "1.0.0", unavailableSince: since)], null);
+
     private static ContentIndexSnapshot Snapshot(params (string Id, (string Version, DateTimeOffset? Since)[] Releases)[] listings) => new(
         1,
         [.. listings.Select(listing => new ContentIndexListing(

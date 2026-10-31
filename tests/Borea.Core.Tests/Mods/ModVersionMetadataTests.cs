@@ -78,16 +78,12 @@ public sealed class ModVersionMetadataTests
             Assert.Throws<ArgumentException>(() => Build(changelogText: text));
     }
 
-    [Fact]
-    public void Constructor_GameMaxWithoutRevision_ThrowsArgumentException()
+    [Theory]
+    [InlineData("2026.8.3.5117", null)]
+    [InlineData(null, 5117)]
+    public void Constructor_GameMaxAndRevisionNotBothPresent_ThrowsArgumentException(string? gameMax, int? gameMaxRevision)
     {
-        Assert.Throws<ArgumentException>(() => Build(gameMax: "2026.8.3.5117"));
-    }
-
-    [Fact]
-    public void Constructor_GameMaxRevisionWithoutDisplayString_ThrowsArgumentException()
-    {
-        Assert.Throws<ArgumentException>(() => Build(gameMaxRevision: 5117));
+        Assert.Throws<ArgumentException>(() => Build(gameMax: gameMax, gameMaxRevision: gameMaxRevision));
     }
 
     [Fact]

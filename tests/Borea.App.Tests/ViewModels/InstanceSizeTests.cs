@@ -25,7 +25,6 @@ public sealed class InstanceSizeTests
         var armory = rows.Single(row => row.ModId == "KSArmory");
         Assert.Equal(MainViewModel.SizeText(2_500_000 + Existing(mods, "AdvancedFlightComputer")), afc.SizeText);
         Assert.Equal(MainViewModel.SizeText(Existing(mods, "KSArmory")), armory.SizeText);
-        Assert.NotNull(viewModel.InstanceSizeText);
         Assert.StartsWith("3.", viewModel.InstanceSizeText!.Replace(',', '.'), StringComparison.Ordinal);
         Assert.EndsWith(" MB", viewModel.InstanceSizeText, StringComparison.Ordinal);
     }

@@ -65,7 +65,7 @@ public sealed partial class IndexStatusDocument
 
         for (var index = 0; index < lines.Count; index++)
         {
-            var content = Content(lines[index], index == 0);
+            var content = Content(lines, index);
             if (content.Length == 0 || content[0] == '#')
                 continue;
 
@@ -219,12 +219,12 @@ public sealed partial class IndexStatusDocument
 
         var first = span.Start;
         var count = span.End - span.Start + 1;
-        if (index > 0 && Content(lines[first - 1], first - 1 == 0).Length == 0)
+        if (index > 0 && Content(lines, first - 1).Length == 0)
         {
             first--;
             count++;
         }
-        else if (index == 0 && span.End + 1 < lines.Count && Content(lines[span.End + 1], false).Length == 0)
+        else if (index == 0 && span.End + 1 < lines.Count && Content(lines, span.End + 1).Length == 0)
         {
             count++;
         }
@@ -253,7 +253,7 @@ public sealed partial class IndexStatusDocument
             return header;
 
         var start = header;
-        while (start - 1 > previousEnd && Content(lines[start - 1], false) is { Length: > 0 } above && above[0] == '#')
+        while (start - 1 > previousEnd && Content(lines, start - 1) is { Length: > 0 } above && above[0] == '#')
             start--;
 
         return start;
@@ -282,10 +282,11 @@ public sealed partial class IndexStatusDocument
         line.EndsWith("\r\n", StringComparison.Ordinal) ? "\r\n" : line.EndsWith('\n') ? "\n" : string.Empty;
 
     /// <summary>The line without its terminator and the spaces around it, and without a byte order mark on the first line.</summary>
-    private static string Content(string line, bool first)
+    private static string Content(List<string> lines, int index)
     {
+        var line = lines[index];
         var content = line[..^Terminator(line).Length];
-        if (first && content.StartsWith(ByteOrderMark))
+        if (index == 0 && content.StartsWith(ByteOrderMark))
             content = content[1..];
 
         return content.Trim(' ', '\t');
@@ -309,28 +310,7 @@ public sealed partial class IndexStatusDocument
         }
         else if (text.StartsWith('"'))
         {
-            end = 1;
-            while (true)
-            {
-                if (end >= text.Length)
-                    throw Unsupported(index);
-
-                var c = text[end];
-                if (c == '"')
-                    break;
-
-                if (c == '\\')
-                {
-                    end = Unescape(text, end, value, index);
-                    continue;
-                }
-
-                if (char.IsControl(c) && c != '\t')
-                    throw Unsupported(index);
-
-                value.Append(c);
-                end++;
-            }
+            end = ReadBasicString(text, value, index);
         }
         else
         {
@@ -342,6 +322,33 @@ public sealed partial class IndexStatusDocument
             throw Unsupported(index);
 
         return value.ToString();
+    }
+
+    /// <summary>Appends the characters of the basic string that opens <paramref name="text"/> and returns the position of its closing quote.</summary>
+    private static int ReadBasicString(string text, StringBuilder value, int index)
+    {
+        var end = 1;
+        while (true)
+        {
+            if (end >= text.Length)
+                throw Unsupported(index);
+
+            var c = text[end];
+            if (c == '"')
+                return end;
+
+            if (c == '\\')
+            {
+                end = Unescape(text, end, value, index);
+                continue;
+            }
+
+            if (char.IsControl(c) && c != '\t')
+                throw Unsupported(index);
+
+            value.Append(c);
+            end++;
+        }
     }
 
     /// <summary>Appends the escape at <paramref name="at"/> and returns the position after it.</summary>

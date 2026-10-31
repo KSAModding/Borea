@@ -1,6 +1,5 @@
 using Borea.Core.Index;
 using Borea.Core.Paths;
-using Borea.Core.Tags;
 
 namespace Borea.Storage.Index;
 
@@ -124,7 +123,7 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
                 SpecVersion: result.UnknownTags.SpecVersion));
         }
 
-        return new ContentIndexSnapshot(result.SnapshotVersion, listings, packs, gameVersions, diagnostics, result.Tags, vehicles, saves);
+        return new ContentIndexSnapshot(result.SnapshotVersion, listings, packs, gameVersions, diagnostics, result.Tags, vehicles, saves, result.ShareHosts);
     }
 
     private static List<ContentIndexListing> MapListings(

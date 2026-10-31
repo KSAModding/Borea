@@ -20,7 +20,6 @@ public sealed class InstalledGameVersionProviderTests : IDisposable
         return directory;
     }
 
-    /// <summary>Puts a fixture where the game's own assembly would be.</summary>
     private void PlaceGameAssembly(string fixtureFileName) =>
         File.Copy(Path.Combine(AppContext.BaseDirectory, fixtureFileName),
                   Path.Combine(GameDirectory(), "KSA.dll"));
@@ -52,10 +51,9 @@ public sealed class InstalledGameVersionProviderTests : IDisposable
     {
         PlaceGameAssembly(ForeignBuildFixture);
 
-        var installed = Provider().GetInstalledVersion();
+        var installed = Provider().GetInstalledVersion()!;
 
-        Assert.NotNull(installed);
-        Assert.Null(installed!.Version);
+        Assert.Null(installed.Version);
         Assert.Equal("1.0.0.0", installed.RawVersion);
     }
 
@@ -64,10 +62,9 @@ public sealed class InstalledGameVersionProviderTests : IDisposable
     {
         PlaceGameAssembly(RealBuildFixture);
 
-        var installed = Provider().GetInstalledVersion();
+        var installed = Provider().GetInstalledVersion()!;
 
-        Assert.NotNull(installed);
-        Assert.Equal("2026.8.3.5117", installed!.RawVersion);
+        Assert.Equal("2026.8.3.5117", installed.RawVersion);
         Assert.Equal(5117, installed.Version!.Value.Revision);
     }
 

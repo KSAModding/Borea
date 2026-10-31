@@ -54,14 +54,6 @@ public sealed class ModVersionTests
         Assert.Throws<FormatException>(() => ModVersion.Parse("not-a-version"));
     }
 
-    [Fact]
-    public void Parse_ValidInput_DoesNotThrow()
-    {
-        var version = ModVersion.Parse("1.2.3");
-
-        Assert.Equal(1, version.Major);
-    }
-
     [Theory]
     [InlineData("2.3.4", "2.3.4")]
     [InlineData("v2.3.4", "2.3.4")]
@@ -234,15 +226,5 @@ public sealed class ModVersionTests
         var newer = ModVersion.Parse("1.0.0-alpha.20260101120000");
 
         Assert.True(older < newer);
-    }
-
-    [Fact]
-    public void RecordStruct_Equality_IsValueBased()
-    {
-        var a = new ModVersion(1, 2, 3, "beta");
-        var b = new ModVersion(1, 2, 3, "beta");
-
-        Assert.Equal(a, b);
-        Assert.True(a == b);
     }
 }

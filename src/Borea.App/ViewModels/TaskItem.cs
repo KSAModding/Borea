@@ -75,6 +75,7 @@ public sealed partial class TaskItem : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStop))]
+    [NotifyPropertyChangedFor(nameof(CanPause))]
     private InstallRun? _run;
 
     internal TaskItem(TaskRegistry registry, TaskKind kind, TaskState state, string? subject, Guid? instanceId, string? instanceName, string? contentId, string? version, DateTimeOffset startedAt)
@@ -113,6 +114,7 @@ public sealed partial class TaskItem : ObservableObject
         TaskKind.BackupDelete => Localization.FormatTaskBackupDelete(Subject ?? string.Empty),
         TaskKind.LoaderInstall => Localization.FormatTaskInstall(LoaderInstallName),
         TaskKind.BoreaUpdate => Localization.FormatTaskSelfUpdate(Version ?? string.Empty),
+        TaskKind.GameBuildKeep => Localization.FormatTaskKeepGameBuild(Subject ?? string.Empty),
         _ => Localization.FormatTaskInstall(Subject ?? string.Empty),
     };
 
@@ -155,6 +157,9 @@ public sealed partial class TaskItem : ObservableObject
     /// <summary>The rows that start a mod list import or a replace of a manual install have no Stop.</summary>
     public bool CanStop => Run is not null && Kind is not (TaskKind.ModListImport or TaskKind.ManualReplace);
 
+    /// <summary>A build copy downloads nothing, so it has no Pause.</summary>
+    public bool CanPause => CanStop && Kind is not TaskKind.GameBuildKeep;
+
     public bool HasRetry => State == TaskState.Failed && Kind switch
     {
         TaskKind.IndexRefresh => true,
@@ -169,9 +174,11 @@ public sealed partial class TaskItem : ObservableObject
     private Task RetryAsync() => _registry.RetryAsync(this);
 
     /// <summary>The installs of one mod or pack share one row, and the updates of one instance run one at a time.</summary>
-    internal bool DoesSameWorkAs(TaskItem other) => Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate
-        ? other.Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate && other.InstanceId == InstanceId
+    internal bool DoesSameWorkAs(TaskItem other) => IsUpdate(Kind)
+        ? IsUpdate(other.Kind) && other.InstanceId == InstanceId
         : other.Kind == Kind && ModIds.Equals(other.ContentId, ContentId);
+
+    internal static bool IsUpdate(TaskKind kind) => kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate;
 
     /// <summary>Names the instance that the task created.</summary>
     internal void SetInstance(Guid instanceId, string instanceName)

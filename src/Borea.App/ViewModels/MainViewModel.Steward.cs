@@ -28,6 +28,11 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsStewardAmendmentOpen))]
     private ReleaseAmendmentDialog? _stewardAmendment;
 
+    /// <summary>The open request of a mod author to take their mod out of a pack, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStewardLeaveOpen))]
+    private PackLeaveDialog? _stewardLeave;
+
     /// <summary>The open confirmation of an action on the pull request of the review, or null.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStewardActionOpen))]
@@ -47,6 +52,8 @@ public partial class MainViewModel
     public bool IsStewardActionOpen => StewardAction is not null;
 
     public bool IsStewardAmendmentOpen => StewardAmendment is not null;
+
+    public bool IsStewardLeaveOpen => StewardLeave is not null;
 
     /// <summary>Editing index-status.toml needs the bypass of content-index itself.</summary>
     public bool CanEditIndexStatus => IsGitHubSignedIn && _services?.StewardRole.Current is { ContentIndex: true };
@@ -123,7 +130,6 @@ public partial class MainViewModel
             BeginIndexStatusChange(IndexStatusChange.Delist(pack.PackId, string.Empty));
     }
 
-    /// <summary>Retracts the pack version the page shows.</summary>
     [RelayCommand]
     private void RetractPackVersion()
     {
@@ -172,6 +178,23 @@ public partial class MainViewModel
     {
         if (ReferenceEquals(StewardChange, dialog))
             StewardChange = null;
+    }
+
+    /// <summary>Opens the request of a takedown to take a mod out of the pack it names, and reads the mods of the pack. Another open request stays until it is closed.</summary>
+    internal void BeginPackLeave(IndexReport report)
+    {
+        if (StewardLeave is not null || !CanEditIndexStatus)
+            return;
+
+        var dialog = new PackLeaveDialog(this, report);
+        StewardLeave = dialog;
+        dialog.Start();
+    }
+
+    internal void ClosePackLeave(PackLeaveDialog dialog)
+    {
+        if (ReferenceEquals(StewardLeave, dialog))
+            StewardLeave = null;
     }
 
     /// <summary>Opens the confirmation of the action on the pull request that the review shows. Another open confirmation stays until it is closed.</summary>
@@ -226,6 +249,35 @@ public partial class MainViewModel
     internal bool IsReporter(IndexReport report) =>
         GitHubLogin is { } login && string.Equals(login, report.Author, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>The proof that the checks find for <paramref name="login"/>, or the one that is missing, told about the account and not to it.</summary>
+    internal string? OwnershipProofText(ListingOwnership ownership, string login)
+    {
+        var repository = ownership.Repository ?? string.Empty;
+        var detail = ownership.State == ListingOwnershipState.Verified
+            ? ownership.Proof switch
+            {
+                ListingOwnershipProof.Owner => Localization.FormatStewardReviewProofOwner(login, repository),
+                ListingOwnershipProof.Topic => Localization.FormatListingProofTopic(repository, ListingOwnership.TopicFor(login)),
+                ListingOwnershipProof.MarkerFile => Localization.FormatStewardReviewProofMarker(login, repository),
+                _ => null,
+            }
+            : ownership.Problem switch
+            {
+                ListingOwnershipProblem.NoProof => Localization.FormatStewardReviewProofNone(login, repository, ListingOwnership.TopicFor(login)),
+                ListingOwnershipProblem.NoHost => Localization.StewardReviewProofNoHost,
+                ListingOwnershipProblem.RepositoryMissing => Localization.FormatListingFixMissing(repository),
+                ListingOwnershipProblem.RepositoryFork => Localization.FormatStewardReviewProofFork(login, repository, ListingOwnership.TopicFor(login)),
+                ListingOwnershipProblem.RepositoryRenamed => Localization.FormatStewardReviewProofRenamed(repository, ownership.RenamedTo ?? string.Empty),
+                ListingOwnershipProblem.SpaceDockModUnusable => Localization.FormatListingFixSpaceDockMod(ownership.SpaceDockMod ?? string.Empty),
+                ListingOwnershipProblem.SpaceDockNoSourceLink => Localization.FormatStewardReviewProofSpaceDockLink(ownership.SpaceDockMod ?? string.Empty),
+                _ => null,
+            };
+
+        return ownership.IsThroughSpaceDockLink && detail is not null
+            ? Localization.FormatListingProofSpaceDockLink(ownership.SpaceDockMod!, repository) + " " + detail
+            : detail;
+    }
+
     internal string IndexStatusStateText(string state) => state switch
     {
         IndexStatusEntry.Delisted => Localization.StewardStateDelisted,
@@ -273,6 +325,8 @@ public partial class MainViewModel
     {
         StewardQueueKind.Listing => Localization.StewardQueueKindListing,
         StewardQueueKind.Pack => Localization.StewardQueueKindPack,
+        StewardQueueKind.Vehicle => Localization.StewardQueueKindVehicle,
+        StewardQueueKind.Save => Localization.StewardQueueKindSave,
         StewardQueueKind.Release => Localization.StewardQueueKindRelease,
         StewardQueueKind.Amendment => Localization.StewardQueueKindAmendment,
         StewardQueueKind.OwnerRecord => Localization.StewardQueueKindOwnerRecord,

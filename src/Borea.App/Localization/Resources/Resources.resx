@@ -124,7 +124,7 @@
     <value>Library folder</value>
   </data>
   <data name="SettingsLibraryFolderHint" xml:space="preserve">
-    <value>Borea keeps your instances and backups here. Moving the library takes them along. Settings, caches, logs and mod loaders stay in Borea's own folder.</value>
+    <value>Borea keeps your instances, backups and kept game builds here. Moving the library takes them along. Settings, caches, logs and mod loaders stay in Borea's own folder.</value>
   </data>
   <data name="SettingsLibraryFolderUseDefault" xml:space="preserve">
     <value>Move back to the default folder</value>
@@ -133,7 +133,7 @@
     <value>Move library...</value>
   </data>
   <data name="SettingsLibraryFolderMoveToolTip" xml:space="preserve">
-    <value>Pick a new folder for your instances and backups. Borea moves them there.</value>
+    <value>Pick a new folder for your instances, backups and kept game builds. Borea moves them there.</value>
   </data>
   <data name="SettingsLibraryFolderOpenToolTip" xml:space="preserve">
     <value>Shows this folder in your file manager. Nothing moves.</value>
@@ -249,6 +249,12 @@
   <data name="StewardQueueKindPack" xml:space="preserve">
     <value>Pack</value>
   </data>
+  <data name="StewardQueueKindVehicle" xml:space="preserve">
+    <value>Vehicle</value>
+  </data>
+  <data name="StewardQueueKindSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
   <data name="StewardQueueKindRelease" xml:space="preserve">
     <value>Release</value>
   </data>
@@ -351,6 +357,21 @@
   <data name="StewardReviewParseErrorFormat" xml:space="preserve">
     <value>The document does not parse: {0}</value>
   </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Newest release</value>
+  </data>
+  <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
+    <value>The newest release {0} installs into the folder "{1}".</value>
+  </data>
+  <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
+    <value>The newest release {0} names no install folder.</value>
+  </data>
+  <data name="StewardReviewNoRelease" xml:space="preserve">
+    <value>No release is stamped yet. The checks read the folder from the archive.</value>
+  </data>
+  <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
+    <value>The newest release could not be read from KSAModding/content-index-releases: {0}</value>
+  </data>
   <data name="StewardReviewOwnership" xml:space="preserve">
     <value>Ownership proof</value>
   </data>
@@ -386,6 +407,42 @@
   </data>
   <data name="StewardReviewProofSpaceDockLinkFormat" xml:space="preserve">
     <value>The source code link of SpaceDock mod {0} names no GitHub repository.</value>
+  </data>
+  <data name="StewardReviewOwnerRecords" xml:space="preserve">
+    <value>Owner records</value>
+  </data>
+  <data name="StewardOwnerRecordFirstClaim" xml:space="preserve">
+    <value>The pull request adds this record with the first version of its pack. Such a first claim merges itself when the checks pass.</value>
+  </data>
+  <data name="StewardOwnerRecordBeforeFormat" xml:space="preserve">
+    <value>Owner on the base branch: {0}, account id {1}</value>
+  </data>
+  <data name="StewardOwnerRecordNoneBefore" xml:space="preserve">
+    <value>The base branch has no owner record of this pack.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableBefore" xml:space="preserve">
+    <value>The record on the base branch names no login and account id.</value>
+  </data>
+  <data name="StewardOwnerRecordAfterFormat" xml:space="preserve">
+    <value>Owner after the merge: {0}, account id {1}</value>
+  </data>
+  <data name="StewardOwnerRecordRemoved" xml:space="preserve">
+    <value>The pull request removes the owner record, so the pack has no owner after the merge.</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableAfter" xml:space="preserve">
+    <value>The new record names no login and account id.</value>
+  </data>
+  <data name="StewardOwnerAccountSameFormat" xml:space="preserve">
+    <value>GitHub account {0} still has the login {1}.</value>
+  </data>
+  <data name="StewardOwnerAccountOtherLoginFormat" xml:space="preserve">
+    <value>GitHub account {0} has the login {1} now, not {2}. The checks compare the account id, so {1} owns the pack after the merge.</value>
+  </data>
+  <data name="StewardOwnerAccountGoneFormat" xml:space="preserve">
+    <value>GitHub has no account with the id {0}, so nobody can add a version of the pack after the merge.</value>
+  </data>
+  <data name="StewardOwnerAccountUnknownFormat" xml:space="preserve">
+    <value>Borea could not ask GitHub which login the account {0} has now.</value>
   </data>
   <data name="StewardReviewFilesFormat" xml:space="preserve">
     <value>Changed files ({0})</value>
@@ -633,6 +690,39 @@
   <data name="StewardReportNoIssuesPermission" xml:space="preserve">
     <value>GitHub refused the change, maybe because the Borea App has no Issues permission yet. Answer on GitHub instead. Your text stays here, so you can copy it.</value>
   </data>
+  <data name="StewardReportLeavePack" xml:space="preserve">
+    <value>Take the mod out of the pack</value>
+  </data>
+  <data name="StewardLeavePackTitleFormat" xml:space="preserve">
+    <value>Take a mod out of {0}</value>
+  </data>
+  <data name="StewardLeaveTitleFormat" xml:space="preserve">
+    <value>Retract every version of {0} that pins {1}</value>
+  </data>
+  <data name="StewardLeaveEffect" xml:space="preserve">
+    <value>Each version of the pack that pins the mod gets its own retracted entry, all in one pull request. A retracted version stays installed where it is, and clients stop offering it. The pack author publishes a version without the mod.</value>
+  </data>
+  <data name="StewardLeaveMod" xml:space="preserve">
+    <value>Mod to take out</value>
+  </data>
+  <data name="StewardLeaveChooseMod" xml:space="preserve">
+    <value>Choose the mod that the report asks to take out of the pack.</value>
+  </data>
+  <data name="StewardLeaveVersionsFormat" xml:space="preserve">
+    <value>Versions to retract: {0}</value>
+  </data>
+  <data name="StewardLeaveRetractedFormat" xml:space="preserve">
+    <value>Retracted already: {0}</value>
+  </data>
+  <data name="StewardLeaveReporterOwnsFormat" xml:space="preserve">
+    <value>{0} owns the listing of {1} by its ownership proof.</value>
+  </data>
+  <data name="StewardLeaveReporterUnprovenFormat" xml:space="preserve">
+    <value>The ownership proof of the listing of {1} does not name {0}. Confirm by the forums account of the listing that {0} owns it before you go on.</value>
+  </data>
+  <data name="StewardLeaveConfirmFormat" xml:space="preserve">
+    <value>I confirmed by the forums account that {0} owns {1}</value>
+  </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>Watcher</value>
   </data>
@@ -815,6 +905,12 @@
   </data>
   <data name="StewardRefusedNotInFile" xml:space="preserve">
     <value>index-status.toml no longer has this state. Refresh the list.</value>
+  </data>
+  <data name="StewardRefusedNotPinnedFormat" xml:space="preserve">
+    <value>No version of {0} that is not retracted pins {1}.</value>
+  </data>
+  <data name="StewardRefusedNotConfirmedFormat" xml:space="preserve">
+    <value>Confirm by the forums account that {0} owns {1} first.</value>
   </data>
   <data name="StewardErrorSignedOut" xml:space="preserve">
     <value>GitHub signed you out. Sign in again in Settings.</value>
@@ -1140,6 +1236,9 @@
   <data name="LibraryFolderCopyingFormat" xml:space="preserve">
     <value>Copying {0} of {1} files ({2} of {3} MB)</value>
   </data>
+  <data name="GameBuildCopyingFormat" xml:space="preserve">
+    <value>{2} of {3} copied, file {0} of {1}</value>
+  </data>
   <data name="LibraryFolderRemovingOldFiles" xml:space="preserve">
     <value>Deleting the old files...</value>
   </data>
@@ -1192,7 +1291,7 @@
     <value>Borea cannot create or write to {0}.</value>
   </data>
   <data name="LibraryFolderTargetNotEmptyFormat" xml:space="preserve">
-    <value>{0} already has an Instances, Backups or Static Mod Files folder without an instance Borea can read. Choose another folder.</value>
+    <value>{0} already has an Instances, Backups, Static Mod Files or Game Builds folder without an instance Borea can read. Choose another folder.</value>
   </data>
   <data name="LibraryFolderBothHaveInstancesFormat" xml:space="preserve">
     <value>Both {0} and {1} hold instances. Borea does not merge libraries.</value>
@@ -1289,6 +1388,42 @@
   </data>
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>A newer KSA build is available:</value>
+  </data>
+  <data name="GameBuildKeepHintFormat" xml:space="preserve">
+    <value>Your mods may need updates for the new build. To keep playing {0} on KSA {1} after the update, keep this build before you update the game.</value>
+  </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}. {0} {3} does.</value>
+  </data>
+  <data name="LoaderUpdateUrgentKeptFormat" xml:space="preserve">
+    <value>{0} keeps KSA {1}, which {2} {3} does not support. {2} {4} does.</value>
+  </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}, and no newer release of {0} does yet.</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} needs a newer KSA build than {2}. Update KSA before you play.</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} is available.</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>Update {0} to {1}</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>Close the game first, then try again. Borea cannot change the mod loader while the game runs.</value>
+  </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>The instance {2} is pinned to {0} {1}, and that version is not installed.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>The instance {2} is pinned to {0} {1}, which does not support KSA {3}.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>Install {0} {1}</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Change mod loader</value>
   </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Download</value>
@@ -1560,6 +1695,12 @@
   <data name="TaskBackupDeleteFormat" xml:space="preserve">
     <value>Delete backup {0}</value>
   </data>
+  <data name="TaskKeepGameBuildFormat" xml:space="preserve">
+    <value>Keep KSA {0}</value>
+  </data>
+  <data name="TaskGameBuildWaitingFormat" xml:space="preserve">
+    <value>Waiting for the copy of KSA {0}</value>
+  </data>
   <data name="TaskWaiting" xml:space="preserve">
     <value>Waiting</value>
   </data>
@@ -1623,11 +1764,20 @@
   <data name="ToastBackupDeletedFormat" xml:space="preserve">
     <value>Backup {0} deleted</value>
   </data>
+  <data name="ToastGameBuildKeptFormat" xml:space="preserve">
+    <value>KSA {0} kept for {1}</value>
+  </data>
+  <data name="ToastGameBuildAddedFormat" xml:space="preserve">
+    <value>KSA {0} kept in Game Builds</value>
+  </data>
   <data name="ToastInstallStoppedFormat" xml:space="preserve">
     <value>Install of {0} stopped</value>
   </data>
   <data name="ToastLibraryFolderStopped" xml:space="preserve">
     <value>Library move stopped</value>
+  </data>
+  <data name="ToastGameBuildKeepStoppedFormat" xml:space="preserve">
+    <value>Copy of KSA {0} stopped</value>
   </data>
   <data name="ToastUpdateStoppedFormat" xml:space="preserve">
     <value>Update of {0} stopped</value>
@@ -1683,6 +1833,15 @@
   <data name="ToastBackupDeleteFailedFormat" xml:space="preserve">
     <value>Could not delete backup {0}</value>
   </data>
+  <data name="ToastGameBuildKeepFailedFormat" xml:space="preserve">
+    <value>Could not keep KSA {0}</value>
+  </data>
+  <data name="ToastKeepGameBuildCheckFailedFormat" xml:space="preserve">
+    <value>Could not check the game build of {0}</value>
+  </data>
+  <data name="ToastUseCurrentGameBuildFailedFormat" xml:space="preserve">
+    <value>Could not move {0} to the current game build</value>
+  </data>
   <data name="ToastActivateFailedFormat" xml:space="preserve">
     <value>Could not activate {0}</value>
   </data>
@@ -1703,6 +1862,9 @@
   </data>
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Could not save the launch arguments of {0}</value>
+  </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Could not save the mod loader of {0}</value>
   </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>Could not enable {0}</value>
@@ -1733,6 +1895,21 @@
   </data>
   <data name="ToastBackUpFailedFormat" xml:space="preserve">
     <value>Could not back up {0}</value>
+  </data>
+  <data name="ToastShareFailedFormat" xml:space="preserve">
+    <value>Could not share {0}</value>
+  </data>
+  <data name="ShareFolderFileMissingFormat" xml:space="preserve">
+    <value>The folder has no {0}.</value>
+  </data>
+  <data name="ShareFolderNotTomlFormat" xml:space="preserve">
+    <value>{0} is not TOML.</value>
+  </data>
+  <data name="ShareFolderNoNameFormat" xml:space="preserve">
+    <value>{0} has no name.</value>
+  </data>
+  <data name="ShareFolderNotXmlFormat" xml:space="preserve">
+    <value>{0} is not well-formed XML.</value>
   </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Could not back up the saves</value>
@@ -1856,6 +2033,12 @@
   </data>
   <data name="GameSaveBackUp" xml:space="preserve">
     <value>Back up</value>
+  </data>
+  <data name="GameSaveShare" xml:space="preserve">
+    <value>Share</value>
+  </data>
+  <data name="GameSaveShareRenameFormat" xml:space="preserve">
+    <value>The game no longer accepts the name "{0}", and the index checks names the same way. Rename the item to a name that follows the rules below, then share it.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>Backed up {0} to {1}.</value>
@@ -2430,6 +2613,9 @@
   <data name="DiscoverAddingToFormat" xml:space="preserve">
     <value>Adding to {0}</value>
   </data>
+  <data name="DiscoverKeptBuildUnavailableFormat" xml:space="preserve">
+    <value>{0} keeps KSA {1}, but that build is not in the library, so Borea cannot rate or install mods for it.</value>
+  </data>
   <data name="DiscoverInstalled" xml:space="preserve">
     <value>Installed</value>
   </data>
@@ -2499,6 +2685,12 @@
   <data name="ListingPackTitle" xml:space="preserve">
     <value>New mod pack</value>
   </data>
+  <data name="ListingShareVehicleTitle" xml:space="preserve">
+    <value>Share a vehicle</value>
+  </data>
+  <data name="ListingShareSaveTitle" xml:space="preserve">
+    <value>Share a save</value>
+  </data>
   <data name="ListingPackHint" xml:space="preserve">
     <value>A pack pins listed mods to exact releases, so players install the set that you tested. Borea writes one version of the pack.</value>
   </data>
@@ -2506,10 +2698,10 @@
     <value>Start a mod pack</value>
   </data>
   <data name="ListingChangeTitle" xml:space="preserve">
-    <value>Change a listed mod or pack</value>
+    <value>Change listed content</value>
   </data>
   <data name="ListingChangeHint" xml:space="preserve">
-    <value>Load a listing of the content index, for example to add an icon, or a pack to make its next version.</value>
+    <value>Load a listing of the content index, for example to add an icon to a mod, a vehicle or a save, or a pack to make its next version.</value>
   </data>
   <data name="ListingSearchListed" xml:space="preserve">
     <value>Search by name, id or author</value>
@@ -2634,6 +2826,9 @@
   <data name="ListingForumsHint" xml:space="preserve">
     <value>Required: the thread of your mod on forums.ahwoo.com.</value>
   </data>
+  <data name="ListingForumsOptionalHint" xml:space="preserve">
+    <value>Optional: a thread about it on forums.ahwoo.com.</value>
+  </data>
   <data name="ListingReleasesGitHub" xml:space="preserve">
     <value>GitHub repository</value>
   </data>
@@ -2655,6 +2850,9 @@
   <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
     <value>Leave this empty when every release of the repository is a mod release. With a prefix, the index takes only the GitHub releases whose tag starts with it, with the same letter case, and reads the version from the rest of the tag. For example, with mymod- the tag mymod-v1.2.0 is version 1.2.0.</value>
   </data>
+  <data name="ListingReleasesShareHostFormat" xml:space="preserve">
+    <value>Shared on {0} as {1}. Only the share host changes this.</value>
+  </data>
   <data name="ListingReleasesHint" xml:space="preserve">
     <value>New releases are listed from here on their own.</value>
   </data>
@@ -2669,6 +2867,9 @@
   </data>
   <data name="ListingGameHint" xml:space="preserve">
     <value>As the game shows it, such as 2026.9.10.5438, or a month such as 2026.9.</value>
+  </data>
+  <data name="ListingGameMinFromArchiveHint" xml:space="preserve">
+    <value>Optional. When this is empty, the index takes the build that wrote the file from meta.toml in the archive. Set an older version only when you know that it loads the file.</value>
   </data>
   <data name="ListingGameMinProposalFormat" xml:space="preserve">
     <value>The pinned releases need game {0} or newer, so Borea proposes {0} as the oldest game version.</value>
@@ -3124,7 +3325,7 @@
     <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page and open the pull request. A version from the account that owns the pack merges itself.</value>
   </data>
   <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page. The first version of a new pack also adds {1} to the same pull request. A steward accepts a first claim after the checks pass, and the checks of a new GitHub account can wait for a steward to start them.</value>
+    <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page. The first version of a new pack also adds {1} to the same pull request, which merges itself when the checks pass. The checks of a new GitHub account can wait for a steward to start them.</value>
   </data>
   <data name="ListingOwnerFileTextFormat" xml:space="preserve">
     <value>The first version of a new pack also adds {0}, which names your GitHub account as the owner of the pack. When Borea opens the pull request from your account, it writes this file itself. In the browser, add it to the branch of the same pull request with Add file, and put in your GitHub login and the numeric id that https://api.github.com/users/&lt;your GitHub name&gt; shows.</value>
@@ -3146,6 +3347,156 @@
   </data>
   <data name="ListingSaveFailed" xml:space="preserve">
     <value>The listing file could not be saved.</value>
+  </data>
+  <data name="ListingShareHeading" xml:space="preserve">
+    <value>What you share</value>
+  </data>
+  <data name="ListingShareIntro" xml:space="preserve">
+    <value>Borea writes the file that lists your vehicle or save in the content index, and checks it before you open the pull request.</value>
+  </data>
+  <data name="ListingShareIdHint" xml:space="preserve">
+    <value>It cannot change later. A vehicle or save installs under the name in its meta.toml, not under this id.</value>
+  </data>
+  <data name="ListingShareDependenciesHint" xml:space="preserve">
+    <value>The archive has no mod.toml, so a client knows only this list. Name every mod that the file needs.</value>
+  </data>
+  <data name="ListingShareGameMaxHint" xml:space="preserve">
+    <value>Leave this empty unless newer game builds no longer load the file. Players on a newer build then cannot install it. Every release stamped while this is set keeps the limit, because a release can only get stricter later.</value>
+  </data>
+  <data name="ListingShareDependencyRequired" xml:space="preserve">
+    <value>Your vehicle or save does not load without it, so a client always installs it too.</value>
+  </data>
+  <data name="ListingShareDependencyOptional" xml:space="preserve">
+    <value>Your vehicle or save uses it when it is there. A client does not install it by itself.</value>
+  </data>
+  <data name="ListingShareDependencyConflict" xml:space="preserve">
+    <value>Your vehicle or save must not be installed together with it. Give the versions that conflict as the oldest and the newest version, or leave both empty when every version conflicts.</value>
+  </data>
+  <data name="ListingShareHint" xml:space="preserve">
+    <value>Borea read the file and proposed one required dependency for each mod of this instance that defines a part, substance, character or body that the file names. Check the list: remove what the file does not need, and add a mod that only changes how parts behave as recommends.</value>
+  </data>
+  <data name="ListingShareArchiveHeading" xml:space="preserve">
+    <value>Save the archive</value>
+  </data>
+  <data name="ListingShareArchiveHint" xml:space="preserve">
+    <value>Attach the saved archive to a release of your own, and name that release under Releases.</value>
+  </data>
+  <data name="ListingShareExtraFiles" xml:space="preserve">
+    <value>The game does not write these files, so a mod did. Add the mod that writes them as a dependency:</value>
+  </data>
+  <data name="ListingShareSaveArchive" xml:space="preserve">
+    <value>Save archive</value>
+  </data>
+  <data name="ListingShareArchiveFileType" xml:space="preserve">
+    <value>Zip archive</value>
+  </data>
+  <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
+    <value>Saved {0}. SHA-256 {1}, {2} bytes.</value>
+  </data>
+  <data name="ListingShareHostHint" xml:space="preserve">
+    <value>A share host keeps the archive and opens the listing pull request for you. You sign in with the account that the host offers, and the host checks the archive before anything is published.</value>
+  </data>
+  <data name="ListingShareHostHeading" xml:space="preserve">
+    <value>Share on a share host</value>
+  </data>
+  <data name="ListingShareOnHostFormat" xml:space="preserve">
+    <value>Share on {0}</value>
+  </data>
+  <data name="ListingShareHostWriting" xml:space="preserve">
+    <value>Writing the archive...</value>
+  </data>
+  <data name="ListingShareHostSigningInFormat" xml:space="preserve">
+    <value>Waiting for the sign-in on {0}...</value>
+  </data>
+  <data name="ListingShareHostCodeFormat" xml:space="preserve">
+    <value>Open {0} and enter this code.</value>
+  </data>
+  <data name="ListingShareHostCopyCode" xml:space="preserve">
+    <value>Copy the code and open the page</value>
+  </data>
+  <data name="ListingShareHostUploading" xml:space="preserve">
+    <value>Uploading, and the host checks the archive...</value>
+  </data>
+  <data name="ListingShareHostPublishing" xml:space="preserve">
+    <value>Publishing...</value>
+  </data>
+  <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
+    <value>The archive is {0}, and {1} takes at most {2}. Nothing was sent.</value>
+  </data>
+  <data name="ListingShareCheckPassedFormat" xml:space="preserve">
+    <value>{0}: passed</value>
+  </data>
+  <data name="ListingShareCheckFailedFormat" xml:space="preserve">
+    <value>{0}: failed. {1}</value>
+  </data>
+  <data name="ListingShareHostChecksFailed" xml:space="preserve">
+    <value>Fix what the host found, then share again.</value>
+  </data>
+  <data name="ListingShareHostListing" xml:space="preserve">
+    <value>The listing text that the host shows</value>
+  </data>
+  <data name="ListingShareHostVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ListingShareHostStatus" xml:space="preserve">
+    <value>Release status</value>
+  </data>
+  <data name="ListingShareHostPublish" xml:space="preserve">
+    <value>Publish</value>
+  </data>
+  <data name="ListingShareHostPublishedFormat" xml:space="preserve">
+    <value>{0} {1} is published. The host opened the listing pull request.</value>
+  </data>
+  <data name="ListingShareHostReleasedFormat" xml:space="preserve">
+    <value>{0} {1} is published on the host.</value>
+  </data>
+  <data name="ListingShareHostSignedOut" xml:space="preserve">
+    <value>The share host no longer takes the sign-in. Share again to sign in.</value>
+  </data>
+  <data name="ListingShareHostSignInRefused" xml:space="preserve">
+    <value>The sign-in was refused, or its code expired.</value>
+  </data>
+  <data name="ListingShareHostNetwork" xml:space="preserve">
+    <value>The share host could not be reached.</value>
+  </data>
+  <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
+    <value>{0} answered in a way that Borea does not understand.</value>
+  </data>
+  <data name="ListingShareHostSaidFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="ListingShareContentIdFormat" xml:space="preserve">
+    <value>{0} {1}</value>
+  </data>
+  <data name="ListingShareKindPart" xml:space="preserve">
+    <value>part</value>
+  </data>
+  <data name="ListingShareKindSubstance" xml:space="preserve">
+    <value>substance</value>
+  </data>
+  <data name="ListingShareKindCharacter" xml:space="preserve">
+    <value>character</value>
+  </data>
+  <data name="ListingShareKindBody" xml:space="preserve">
+    <value>body</value>
+  </data>
+  <data name="ListingShareKindSystem" xml:space="preserve">
+    <value>star system</value>
+  </data>
+  <data name="ListingShareNotProvidedFormat" xml:space="preserve">
+    <value>No mod of this instance defines {0}.</value>
+  </data>
+  <data name="ListingShareDisabledProviderFormat" xml:space="preserve">
+    <value>{0} defines {1}, but this instance does not load it, so Borea added no entry.</value>
+  </data>
+  <data name="ListingShareInvalidFolderFormat" xml:space="preserve">
+    <value>The folder {0} defines {1}, but its name is not a listing id, so Borea added no entry.</value>
+  </data>
+  <data name="ListingShareSharedIdFormat" xml:space="preserve">
+    <value>{1} all define {0}. The game takes the first of them, so keep only the entry that the file needs.</value>
+  </data>
+  <data name="ListingShareUnreadableFileFormat" xml:space="preserve">
+    <value>Borea could not read {0}, so it does not know what that file defines.</value>
   </data>
   <data name="ListingOpenedWithText" xml:space="preserve">
     <value>GitHub opened with the file filled in.</value>
@@ -3193,7 +3544,7 @@
     <value>Borea could not read who owns the pack id. The checks decide after you open the pull request.</value>
   </data>
   <data name="ListingOwnershipFirstClaim" xml:space="preserve">
-    <value>The pack id is free. The pull request claims it for your account, and a steward accepts a first claim after the checks pass.</value>
+    <value>The pack id is free. The pull request claims it for your account, and it merges itself when the checks pass.</value>
   </data>
   <data name="ListingProofOwnerFormat" xml:space="preserve">
     <value>You own {0}.</value>
@@ -3215,6 +3566,9 @@
   </data>
   <data name="ListingFixNoHost" xml:space="preserve">
     <value>Name the GitHub repository or the SpaceDock mod under Releases.</value>
+  </data>
+  <data name="ListingFixShareHost" xml:space="preserve">
+    <value>Borea cannot read the proof of a share host. The checks accept a pull request from the GitHub account that you linked on the host, or one that the host opens for you.</value>
   </data>
   <data name="ListingFixMissingFormat" xml:space="preserve">
     <value>GitHub has no public repository {0}.</value>
@@ -3513,6 +3867,9 @@
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>The active instance no longer exists.</value>
   </data>
+  <data name="InstallKeptBuildUnavailableFormat" xml:space="preserve">
+    <value>To install into this instance, select "Use the current game build" in the instance menu. KSA {0}, which this instance keeps, is not in the folder {1} of the library, or that folder holds another build.</value>
+  </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Create instance</value>
   </data>
@@ -3524,6 +3881,129 @@
   </data>
   <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
     <value>Delete {0}, its folder and its backups? You cannot undo this.</value>
+  </data>
+  <data name="ModalDeleteInstanceKeptBuildFormat" xml:space="preserve">
+    <value>KSA {0} ({1}), which this instance keeps, stays in Game Builds. You can delete it on the Game tab of Settings.</value>
+  </data>
+  <data name="ModalKeepGameBuildTitle" xml:space="preserve">
+    <value>Keep this game build</value>
+  </data>
+  <data name="ModalAddGameBuildTitle" xml:space="preserve">
+    <value>Add a game build</value>
+  </data>
+  <data name="ModalKeepGameBuildTextFormat" xml:space="preserve">
+    <value>After this, the instance {3} always starts on KSA {0}, even after the next game update, so its mods stay on the build they work with. KSA {0} is the build in the game folder now, and Borea can keep only that build. Borea copies it once ({1}) to Game Builds in the library. The copy runs in Tasks, and closing Borea stops it.</value>
+  </data>
+  <data name="ModalKeepGameBuildSharedFormat" xml:space="preserve">
+    <value>After this, the instance {2} always starts on KSA {0}, even after the next game update. Borea already has this build in Game Builds in the library, so it copies nothing.</value>
+  </data>
+  <data name="ModalAddGameBuildTextFormat" xml:space="preserve">
+    <value>After this, new instances can start on KSA {0}. Borea copies the build once ({1}) from the folder you chose to Game Builds in the library.</value>
+  </data>
+  <data name="ModalAddGameBuildSharedFormat" xml:space="preserve">
+    <value>Borea already has KSA {0} in Game Builds in the library, so it copies nothing. New instances can already start on it.</value>
+  </data>
+  <data name="ModalKeepGameBuildFolderFormat" xml:space="preserve">
+    <value>Folder: {0}</value>
+  </data>
+  <data name="ModalAddGameBuildSourceFormat" xml:space="preserve">
+    <value>Source folder: {0}</value>
+  </data>
+  <data name="ModalKeepGameBuildIncompatibleFormat" xml:space="preserve">
+    <value>Mods of this instance that do not support KSA {2}: {0} of {1}. Keeping KSA {2} does not bring back an earlier build.</value>
+  </data>
+  <data name="ModalKeepGameBuildFreeSpaceFormat" xml:space="preserve">
+    <value>{0} free on the drive of the library</value>
+  </data>
+  <data name="ModalKeepGameBuildFreeSpaceDriveFormat" xml:space="preserve">
+    <value>{0} free on drive {1}</value>
+  </data>
+  <data name="ModalKeepGameBuildPopupNote" xml:space="preserve">
+    <value>When a newer build is out, the game shows its update popup on each start with an internet connection. Select Cancel there, because GET closes the game.</value>
+  </data>
+  <data name="ModalKeepGameBuildConfirm" xml:space="preserve">
+    <value>Keep build</value>
+  </data>
+  <data name="ModalKeepGameBuildChecking" xml:space="preserve">
+    <value>Borea checks the build and the free space...</value>
+  </data>
+  <data name="KeepGameBuildAlreadyKeptFormat" xml:space="preserve">
+    <value>This instance already keeps KSA {0}.</value>
+  </data>
+  <data name="KeepGameBuildNoGame" xml:space="preserve">
+    <value>Borea cannot read the game build in the game folder. Set the game folder in the settings first.</value>
+  </data>
+  <data name="KeepGameBuildNotAGame" xml:space="preserve">
+    <value>The folder you chose holds no KSA that Borea can start on this system. Choose another folder, one that holds KSA.exe on Windows or the file KSA on Linux.</value>
+  </data>
+  <data name="KeepGameBuildWineWrapper" xml:space="preserve">
+    <value>The game is in a Wine wrapper app, which cannot start a copy outside the wrapper. Borea does not keep this build.</value>
+  </data>
+  <data name="KeepGameBuildWindowsBuild" xml:space="preserve">
+    <value>The game folder holds the Windows build of KSA, which Borea cannot start on this system yet, so Borea does not keep it.</value>
+  </data>
+  <data name="KeepGameBuildFolderTakenFormat" xml:space="preserve">
+    <value>The folder for this build in Game Builds already exists and holds another build or no build, so Borea does not change it. Move or delete that folder, then try again: {0}</value>
+  </data>
+  <data name="KeepGameBuildLibraryInsideGame" xml:space="preserve">
+    <value>The library folder is inside the game folder, so a copy of the game would hold the library. First move the library to another folder on the General tab of Settings.</value>
+  </data>
+  <data name="KeepGameBuildNotEnoughSpaceFormat" xml:space="preserve">
+    <value>The copy needs {0}, and {1} must stay free on top of it, but the drive of the library has {2} free. Free up space, or move the library to another drive on the General tab of Settings.</value>
+  </data>
+  <data name="KeepGameBuildDriveFull" xml:space="preserve">
+    <value>The drive of the library ran full during the copy, so Borea kept nothing and deleted the partial copy. Free some space and try again.</value>
+  </data>
+  <data name="KeepGameBuildFolderLinkFormat" xml:space="preserve">
+    <value>The game folder holds a folder link, and Borea does not copy links, because the copy would then change with the game folder. Replace the link with a real folder, or keep the build from a folder without links. The link is {0}.</value>
+  </data>
+  <data name="KeepGameBuildFolderSourceLinkFormat" xml:space="preserve">
+    <value>The folder you chose holds a folder link, so Borea does not copy it. Choose a folder without folder links. The link is {0}.</value>
+  </data>
+  <data name="KeepGameBuildBuildChangedFormat" xml:space="preserve">
+    <value>The game folder changed to KSA {0} before the copy started, so Borea copied nothing. To keep KSA {0}, select "Keep this game build" again.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildTitle" xml:space="preserve">
+    <value>Use the current game build</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildTextFormat" xml:space="preserve">
+    <value>After this, {0} starts on the current game build, KSA {1}, instead of the kept KSA {2}. Its saves stay in the instance. Borea cannot move {0} back to KSA {2} later, but a new instance can still start on it. When no instance uses KSA {2} any more, you can delete it on the Game tab of Settings.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildMissingTextFormat" xml:space="preserve">
+    <value>After this, {0} starts on the current game build, KSA {1}. Its saves stay in the instance. The folder of the kept KSA {2} is gone or holds another build, so this instance cannot start on it any more.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildFitFormat" xml:space="preserve">
+    <value>Mods compatible with KSA {2}: {0} of {1}.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildIncompatibleNoteFormat" xml:space="preserve">
+    <value>These mods do not support KSA {0}, so the game may not start.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildOlderFormat" xml:space="preserve">
+    <value>The current game build, KSA {0}, is older than the kept KSA {1}. An older build may not load saves that a newer build wrote, and the game does not warn about this. Back up the saves first.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildBackingUp" xml:space="preserve">
+    <value>Backing up the saves...</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildBackupFailedFormat" xml:space="preserve">
+    <value>Could not back up the saves. {0}</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildConfirm" xml:space="preserve">
+    <value>Use current build</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildChecking" xml:space="preserve">
+    <value>Borea checks whether your mods are compatible with the current game build...</value>
+  </data>
+  <data name="ToastUsesCurrentGameBuildFormat" xml:space="preserve">
+    <value>{0} now starts on KSA {1}</value>
+  </data>
+  <data name="KeepGameBuildFolderChangedFormat" xml:space="preserve">
+    <value>The folder changed to KSA {0} before the copy started, so Borea copied nothing.</value>
+  </data>
+  <data name="KeepGameBuildChangedDuringCopyFormat" xml:space="preserve">
+    <value>The game folder changed while Borea copied KSA {0}, most likely because of a game update. Borea kept nothing. If the game folder still holds KSA {0}, try again. If it now holds a newer build, Borea cannot keep KSA {0} from it any more.</value>
+  </data>
+  <data name="KeepGameBuildFolderChangedDuringCopyFormat" xml:space="preserve">
+    <value>The folder changed while Borea copied KSA {0}, so Borea kept nothing. Try again when no other program changes the folder.</value>
   </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instances are packages of mods and game content that Borea manages on top of your existing game install. You can create multiple instances and activate one at a time for different play experiences.</value>
@@ -3598,10 +4078,10 @@
     <value>One of each set is installed with it</value>
   </data>
   <data name="ContentDependencyConflicts" xml:space="preserve">
-    <value>Conflicts</value>
+    <value>Conflicts with</value>
   </data>
   <data name="ContentDependencyConflictsHint" xml:space="preserve">
-    <value>Not installed together</value>
+    <value>These mods do not work together with this one</value>
   </data>
   <data name="ContentDependencyRecommended" xml:space="preserve">
     <value>Recommended</value>
@@ -3632,6 +4112,21 @@
   </data>
   <data name="ContentDependencyOtherHint" xml:space="preserve">
     <value>A kind this version of Borea does not know</value>
+  </data>
+  <data name="ContentDependencyRequiredBy" xml:space="preserve">
+    <value>Required by</value>
+  </data>
+  <data name="ContentDependencyRequiredByHint" xml:space="preserve">
+    <value>Mods whose newest release needs this mod</value>
+  </data>
+  <data name="ContentDependencyRequiredByShowAllFormat" xml:space="preserve">
+    <value>Show all {0}</value>
+  </data>
+  <data name="ContentDependencyRequiredByShowInstalled" xml:space="preserve">
+    <value>Show only installed</value>
+  </data>
+  <data name="ContentDependencyRequiredByNoneInstalled" xml:space="preserve">
+    <value>No installed mod needs this mod.</value>
   </data>
   <data name="ContentDependencyOneOf" xml:space="preserve">
     <value>One of:</value>
@@ -3674,6 +4169,9 @@
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
+  </data>
+  <data name="ContentSharedOnFormat" xml:space="preserve">
+    <value>Shared on {0}</value>
   </data>
   <data name="ContentCopyLink" xml:space="preserve">
     <value>Copy link</value>
@@ -3780,9 +4278,6 @@
   <data name="InstanceLoaderConflict" xml:space="preserve">
     <value>The mods need versions that do not overlap</value>
   </data>
-  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
-    <value>Game settings</value>
-  </data>
   <data name="InstanceLoaderConflictShort" xml:space="preserve">
     <value>No version fits</value>
   </data>
@@ -3815,6 +4310,57 @@
   </data>
   <data name="InstanceLoaderWrongVersionFormat" xml:space="preserve">
     <value>{0} installed</value>
+  </data>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}, not for this KSA build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>The mod loader starts the game with the mods of this instance. Automatic starts the newest installed version that fits the game and the mods. A pinned version stays until you change it, also when a newer version fits.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatic: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Pinned at {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>Install {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallingFormat" xml:space="preserve">
+    <value>Installing {0}...</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Choose which version of the mod loader starts {0}. Other instances keep their own setting.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatic (recommended)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Starts {0} {1}, the newest installed version that fits the game and the mods.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetIncompatibleFormat" xml:space="preserve">
+    <value>Starts {0} {1}, but {0} {1} does not support KSA {2}, which this instance keeps. {0} {3} does. Install {0} {3} in the Mod loader row of the instance page.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetIncompatibleNoOfferFormat" xml:space="preserve">
+    <value>Starts {0} {1}, but {0} {1} does not support KSA {2}, which this instance keeps.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} fits the game and the mods, but it is not installed. Borea installs it when you save.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>No release of {0} fits this game build and the mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Always use this version</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Install and save</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod loader</value>
   </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
@@ -4033,7 +4579,7 @@
     <value>Game</value>
   </data>
   <data name="SetupGameDirectory" xml:space="preserve">
-    <value>Game directory</value>
+    <value>Game folder</value>
   </data>
   <data name="SetupGameDirectoryHint" xml:space="preserve">
     <value>The folder that holds the game executable.</value>
@@ -4072,7 +4618,7 @@
     <value>Loader directory</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>Leave empty to let Borea pick a folder when installing.</value>
+    <value>A folder that already holds the mod loader. Use existing makes Borea start it from there.</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>Install</value>
@@ -4095,20 +4641,50 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>Installed {0} {1} to {2}.</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>Installed {0}</value>
-  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Installed, version unknown</value>
   </data>
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>Update to {0}</value>
   </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>Reinstall</value>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>Mod loaders</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea keeps each installed version in its own folder. Every instance starts the version that the Mod loader row of its page names, so one instance can stay on an older version.</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>Used by {0}</value>
+  </data>
+  <data name="SettingsLoaderRatedForGameFolderFormat" xml:space="preserve">
+    <value>Rated for KSA {0} in the game folder</value>
+  </data>
+  <data name="SettingsLoaderRatedForKeptFormat" xml:space="preserve">
+    <value>Rated for KSA {0}, which {1} keeps</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>Not used</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>Used by {0}. Set these instances to another version first.</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}, your folder</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>Forget</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>Install another version</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>Delete this version from the disk?</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>Removed {0} {1}.</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>Mod loaders are set up from the Game settings.</value>
+    <value>Each instance chooses its mod loader version in the Mod loader row of its page. The settings list the installed versions.</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Forum</value>
@@ -4193,6 +4769,15 @@
   </data>
   <data name="AboutCredits" xml:space="preserve">
     <value>Built with</value>
+  </data>
+  <data name="AboutTranslators" xml:space="preserve">
+    <value>Translators</value>
+  </data>
+  <data name="AboutTranslatorNotListed" xml:space="preserve">
+    <value>Not credited yet</value>
+  </data>
+  <data name="AboutOriginalRepository" xml:space="preserve">
+    <value>Borea repository</value>
   </data>
   <data name="AboutCommunity" xml:space="preserve">
     <value>KSA modding on GitHub</value>
@@ -4446,6 +5031,9 @@
   <data name="CloseNowInstallWarning" xml:space="preserve">
     <value>If you close now, a mod that Borea is installing may be incomplete, and you can install it again.</value>
   </data>
+  <data name="CloseNowGameBuildKeepWarningFormat" xml:space="preserve">
+    <value>Borea stops the copy of KSA {0}, so the instance keeps no build. Keep the build again after you start Borea, before the game updates.</value>
+  </data>
   <data name="CloseNowKeepWaiting" xml:space="preserve">
     <value>Keep waiting</value>
   </data>
@@ -4462,13 +5050,37 @@
     <value>This instance no longer exists.</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The mod loader {0} is not installed. Mod loaders are set up from the Game settings.</value>
+    <value>The mod loader {0} is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The mods in this instance need the mod loader {0}, and it is not installed. Mod loaders are set up from the Game settings.</value>
+    <value>The mods in this instance need the mod loader {0}, and it is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>This instance needs {0}. Install it now?</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}. Update it to {3} before you play?</value>
+  </data>
+  <data name="LaunchLoaderInstallOlderFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}. Install {0} {3} for this instance before you play? {0} {1} stays installed.</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}, so the game may not start. Play anyway?</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>Update and play</value>
+  </data>
+  <data name="LaunchInstallAndPlay" xml:space="preserve">
+    <value>Install and play</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>Play anyway</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>This instance is pinned to {0} {1}. That version is not installed, and the index no longer offers it. Use Automatic to start the newest version that fits?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Use Automatic</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This instance needs {0}. Set up the game folder first.</value>
@@ -4503,17 +5115,35 @@
   <data name="LaunchStartingFormat" xml:space="preserve">
     <value>Starting {0}…</value>
   </data>
+  <data name="LaunchStartedFormat" xml:space="preserve">
+    <value>Started {0} for instance "{1}".</value>
+  </data>
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} stopped {2} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.</value>
   </data>
   <data name="LaunchModLikelyBrokeFormat" xml:space="preserve">
     <value>{2} stopped while it loaded {0} {1}. That mod is the likely cause. Disable it and try again, or look for an update.</value>
   </data>
+  <data name="LaunchOtherModsNeedMissingFormat" xml:space="preserve">
+    <value>These mods need parts of KSA that this version does not have, so they will likely fail too: {0}.</value>
+  </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} stopped right after starting (exit code {1}). The details show what it wrote.</value>
   </data>
   <data name="LaunchStoppedLoadingModsFormat" xml:space="preserve">
     <value>{0} stopped while it loaded mods (exit code {1}). A mod of this instance is the likely cause. The details show what it wrote.</value>
+  </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} was made for another KSA build than the installed {1} and cannot load the game. When a {0} release for {1} is out, install it in the Mod loader row of the instance page. If {1} is older than the build that {0} was made for, update KSA instead.</value>
+  </data>
+  <data name="LaunchLoaderTooOldForKeptBuildFormat" xml:space="preserve">
+    <value>{0} was made for another KSA build than {1}, which this instance keeps, and cannot load the game. Install a {0} release for {1} in the Mod loader row of the instance page. A KSA update does not change a kept build.</value>
+  </data>
+  <data name="LaunchLoaderTooOldForKeptBuildOfferFormat" xml:space="preserve">
+    <value>{0} {1} was made for another KSA build than {2}, which this instance keeps. {0} {3} supports it.</value>
+  </data>
+  <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
+    <value>{0} releases</value>
   </data>
   <data name="LaunchExitCodeFormat" xml:space="preserve">
     <value>Exit code {0}</value>
@@ -4544,6 +5174,18 @@
   </data>
   <data name="LaunchWrapperBusyFormat" xml:space="preserve">
     <value>A game that Borea started through the Wine wrapper '{0}' is still running. The wrapper runs one game at a time, so close that game first.</value>
+  </data>
+  <data name="LaunchGameBuildMissingFormat" xml:space="preserve">
+    <value>KSA {0}, which this instance keeps, is not in the folder {1} of the library, so Borea starts nothing. Copy that build back into the folder.</value>
+  </data>
+  <data name="LaunchOtherBuildRunningFormat" xml:space="preserve">
+    <value>Close the running game first. To start this instance, Borea must point {0} to another game folder, and it does that only while no game runs.</value>
+  </data>
+  <data name="LaunchLoaderTakesNoGamePathFormat" xml:space="preserve">
+    <value>This instance runs on a kept KSA build, and the listing of {0} names no game path that Borea can write. Borea starts nothing. The loader author can add a [provides.configure] table to the listing.</value>
+  </data>
+  <data name="LaunchLoaderConfigurationUnreadableFormat" xml:space="preserve">
+    <value>Borea cannot read the game folder from '{0}', so Borea starts nothing, and {1} cannot start with this file either. Repair or delete the file. Without it, Borea writes a new one at the next start.</value>
   </data>
   <data name="LaunchWrapperNeedsVariableFormat" xml:space="preserve">
     <value>{0} takes the instance folder only after '{1}', and the Wine wrapper '{2}' passes no arguments to it. Borea starts nothing. The loader author can add a variable to the [provides.instance] table of the listing.</value>
@@ -4581,8 +5223,14 @@
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>Disable {0}</value>
   </data>
+  <data name="LaunchDisableModsFormat" xml:space="preserve">
+    <value>Disable {0} mods</value>
+  </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
     <value>{0} is disabled. Start the instance again.</value>
+  </data>
+  <data name="LaunchModsDisabledFormat" xml:space="preserve">
+    <value>{0} mods are disabled. Start the instance again.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Show details</value>
@@ -4622,6 +5270,75 @@
   </data>
   <data name="InstanceSaveSettingsPreset" xml:space="preserve">
     <value>Save settings as preset</value>
+  </data>
+  <data name="InstanceKeepGameBuild" xml:space="preserve">
+    <value>Keep this game build</value>
+  </data>
+  <data name="InstanceUseCurrentGameBuild" xml:space="preserve">
+    <value>Use the current game build</value>
+  </data>
+  <data name="InstanceGameBuildFormat" xml:space="preserve">
+    <value>KSA {0}</value>
+  </data>
+  <data name="InstanceGameBuildNotFoundFormat" xml:space="preserve">
+    <value>KSA {0} not found</value>
+  </data>
+  <data name="InstanceGameBuildToolTipFormat" xml:space="preserve">
+    <value>This instance keeps KSA {0} and always starts on that copy.</value>
+  </data>
+  <data name="SettingsGameBuildsTitle" xml:space="preserve">
+    <value>Kept game builds</value>
+  </data>
+  <data name="SettingsGameBuildsHint" xml:space="preserve">
+    <value>Copies of KSA that instances start on. You can delete a build when no instance uses it.</value>
+  </data>
+  <data name="SettingsGameBuildUsedByFormat" xml:space="preserve">
+    <value>Used by {0}. To delete this build, first select "Use the current game build" in the instance menu.</value>
+  </data>
+  <data name="SettingsGameBuildUnused" xml:space="preserve">
+    <value>No instance uses this build.</value>
+  </data>
+  <data name="SettingsGameBuildRemoveConfirmFormat" xml:space="preserve">
+    <value>Delete the copy of KSA {0} ({1})? Borea cannot download a game build, so only a game folder that is still on this build can give it back. Your game folder and the saves of your instances stay.</value>
+  </data>
+  <data name="SettingsGameBuildRemovingFormat" xml:space="preserve">
+    <value>Deleting KSA {0}...</value>
+  </data>
+  <data name="SettingsGameBuildRemovedFormat" xml:space="preserve">
+    <value>KSA {0} was deleted. {1} are free again.</value>
+  </data>
+  <data name="SettingsGameBuildInUse" xml:space="preserve">
+    <value>An instance uses this build, so you cannot delete it.</value>
+  </data>
+  <data name="SettingsGameBuildInstanceUnreadable" xml:space="preserve">
+    <value>Borea cannot read every instance, so it cannot tell whether one uses this build.</value>
+  </data>
+  <data name="SettingsGameBuildIsGameFolder" xml:space="preserve">
+    <value>This build is the game folder in Settings, so you cannot delete it. To delete it, first select another game folder above.</value>
+  </data>
+  <data name="KeptGameBuildBusy" xml:space="preserve">
+    <value>Borea is copying or deleting a game build. Try again when that is done.</value>
+  </data>
+  <data name="KeptGameBuildInUseByProgramFormat" xml:space="preserve">
+    <value>Borea could not delete KSA {0}, most likely because a program uses a file in its folder. Close the game and any window that shows that folder, then try again.</value>
+  </data>
+  <data name="SetupAddGameBuild" xml:space="preserve">
+    <value>Keep a build from a folder</value>
+  </data>
+  <data name="SetupAddGameBuildHint" xml:space="preserve">
+    <value>Select the folder of another KSA build, for example an old install or an unpacked archive. Borea copies it to Game Builds in the library, and new instances can start on it.</value>
+  </data>
+  <data name="ModalGameBuildLabel" xml:space="preserve">
+    <value>Game build</value>
+  </data>
+  <data name="ModalGameBuildSettings" xml:space="preserve">
+    <value>Current game build</value>
+  </data>
+  <data name="ModalGameBuildKept" xml:space="preserve">
+    <value>Kept build</value>
+  </data>
+  <data name="ModalGameBuildHint" xml:space="preserve">
+    <value>A kept build stays the same when KSA updates. The current game build changes with each update.</value>
   </data>
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Game settings presets</value>

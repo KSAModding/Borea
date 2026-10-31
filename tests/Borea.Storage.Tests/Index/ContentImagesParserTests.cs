@@ -50,20 +50,12 @@ public sealed class ContentImagesParserTests : IDisposable
         Assert.Null(listing.Images.FindDescriptionImage("map-view")!.License);
     }
 
-    [Fact]
-    public void Parse_NoImages_LeavesImagesNull()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("{}")]
+    public void Parse_NoOrEmptyImages_LeavesImagesNull(string? images)
     {
-        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", null)));
-
-        var listing = Assert.Single(result.ValidListings);
-        Assert.Null(listing.Images);
-        Assert.Empty(listing.ImagesErrors);
-    }
-
-    [Fact]
-    public void Parse_EmptyImages_LeavesImagesNull()
-    {
-        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", "{}")));
+        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", images)));
 
         var listing = Assert.Single(result.ValidListings);
         Assert.Null(listing.Images);
@@ -121,6 +113,8 @@ public sealed class ContentImagesParserTests : IDisposable
     [InlineData("license", "5", "license value must be a string")]
     [InlineData("license", "\"\"", "license cannot be empty")]
     [InlineData("source", "\"http://example.com/original\"", "source must be an absolute HTTPS URL")]
+    [InlineData("id", "\"\\ud800\"", "not valid Unicode text")]
+    [InlineData("license", "\"\\ud800\"", "not valid Unicode text")]
     public void Parse_InvalidDescriptionRecord_DropsOnlyThatRecord(string key, string? rawValue, string reason)
     {
         var images = $$"""{ "description": [{{Record("keep")}}, {{Record("shot", key, rawValue)}}] }""";

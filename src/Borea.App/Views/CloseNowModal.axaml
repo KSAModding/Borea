@@ -20,13 +20,17 @@
                         <ItemsControl ItemsSource="{Binding CloseWaitsFor}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TaskItem">
-                                    <TextBlock Classes="body-md" Text="{Binding Title}" TextWrapping="Wrap" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="body-md" Text="{Binding Title}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="1" Classes="body-md secondary" Margin="12,0,0,0" Text="{Binding Run.StopText}" IsVisible="{Binding Run.IsStopping, FallbackValue=False}" />
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <TextBlock Classes="body-md" Text="{Binding Localization.CloseNowSavingHistory}" TextWrapping="Wrap" IsVisible="{Binding IsCloseWaitingForHistory}" />
                     </StackPanel>
                     <TextBlock Classes="body-md secondary" Text="{Binding Localization.CloseNowInstallWarning}" TextWrapping="Wrap" IsVisible="{Binding CloseStopsInstall}" />
+                    <TextBlock Classes="body-md secondary" Text="{Binding CloseNowGameBuildKeepWarningText}" TextWrapping="Wrap" IsVisible="{Binding CloseNowGameBuildKeepWarningText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                         <Button Classes="text danger tall" Content="{Binding Localization.CloseNowConfirm}" Command="{Binding CloseNowCommand}" VerticalAlignment="Center" />
                         <Button Classes="cta" Command="{Binding KeepWaitingCommand}">

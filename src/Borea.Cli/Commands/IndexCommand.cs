@@ -64,17 +64,7 @@ internal static class IndexCommand
         output.WriteLine($"  Dates: {view.Count(ContentIndexDiagnosticScope.Dates, ContentIndexDiagnosticKind.Malformed)} malformed.");
         output.WriteLine($"  Changelog text: {view.Count(ContentIndexDiagnosticScope.ChangelogText, ContentIndexDiagnosticKind.Malformed)} malformed.");
 
-        if (view.Diagnostics.Entries.Count == 0)
-            return;
-
-        output.WriteLine("Diagnostics:");
-        foreach (var diagnostic in view.Diagnostics.Entries)
-        {
-            var identity = diagnostic.Id is null ? string.Empty : $" {diagnostic.Id}";
-            var version = diagnostic.Version is null ? string.Empty : $" {diagnostic.Version}";
-            var specVersion = diagnostic.SpecVersion is null ? string.Empty : $" (spec version {diagnostic.SpecVersion})";
-            output.WriteLine($"  {diagnostic.Kind} {diagnostic.Scope}{identity}{version}{specVersion}: {diagnostic.Reason}");
-        }
+        ContentOutput.WriteDiagnostics(output, view.Diagnostics.Entries);
     }
 
     private sealed record IndexValidationView(
@@ -84,7 +74,7 @@ internal static class IndexCommand
     {
         public static IndexValidationView From(ContentIndexSnapshot snapshot)
         {
-            var entries = snapshot.Diagnostics.Select(DiagnosticView.From).ToArray();
+            var entries = snapshot.Diagnostics.Select(Diagnostic).ToArray();
             return new IndexValidationView(
                 snapshot.SnapshotVersion,
                 new AcceptedContentView(
@@ -95,9 +85,9 @@ internal static class IndexCommand
                     snapshot.GameVersions?.Versions.Count ?? 0,
                     snapshot.Listings.Count(listing => listing.Downloads is not null)),
                 new DiagnosticSummaryView(
-                    entries.Count(entry => entry.Kind == "malformed"),
-                    entries.Count(entry => entry.Kind == "unsupported-version"),
-                    entries.Count(entry => entry.Kind == "unsupported-value"),
+                    entries.Count(entry => entry.Kind == Name(ContentIndexDiagnosticKind.Malformed)),
+                    entries.Count(entry => entry.Kind == Name(ContentIndexDiagnosticKind.UnsupportedVersion)),
+                    entries.Count(entry => entry.Kind == Name(ContentIndexDiagnosticKind.UnsupportedValue)),
                     entries));
         }
 
@@ -119,22 +109,13 @@ internal static class IndexCommand
         int UnsupportedValues,
         IReadOnlyList<DiagnosticView> Entries);
 
-    private sealed record DiagnosticView(
-        string Kind,
-        string Scope,
-        string Reason,
-        string? Id,
-        string? Version,
-        int? SpecVersion)
-    {
-        public static DiagnosticView From(ContentIndexDiagnostic diagnostic) => new(
-            Name(diagnostic.Kind),
-            Name(diagnostic.Scope),
-            diagnostic.Reason,
-            diagnostic.Id,
-            diagnostic.Version,
-            diagnostic.SpecVersion);
-    }
+    private static DiagnosticView Diagnostic(ContentIndexDiagnostic diagnostic) => new(
+        Name(diagnostic.Kind),
+        Name(diagnostic.Scope),
+        diagnostic.Reason,
+        diagnostic.Id,
+        diagnostic.Version,
+        diagnostic.SpecVersion);
 
     private static string Name(ContentIndexDiagnosticKind kind) => kind switch
     {

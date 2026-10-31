@@ -61,8 +61,7 @@ public static class Compatibility
     /// </summary>
     public static GameCompatibility Evaluate(ModVersionMetadata release, GameVersion? installed)
     {
-        if (release is null)
-            throw new ArgumentNullException(nameof(release));
+        ArgumentNullException.ThrowIfNull(release);
 
         return Evaluate(release.GameMinRevision, release.GameMaxRevision, installed);
     }
@@ -134,9 +133,6 @@ public static class Compatibility
         return (max is not { } last || min <= last) && SupportsAnyBuild(min, max, fromRevision, toRevision);
     }
 
-    /// <summary>
-    /// What the os list says about the target platform.
-    /// </summary>
     public static OsSupport EvaluateOs(IReadOnlyList<string>? os, OsPlatform target)
     {
         if (os is null || os.Count == 0)

@@ -16,10 +16,11 @@ public sealed class LoaderPromptTests
     private static readonly byte[] StarMapArchive = CreateStarMapArchive();
 
     /// <summary>A harness with a saved game directory, whose StarMap release is <see cref="StarMapArchive"/>.</summary>
-    private static async Task<ViewModelHarness> CreateAsync(IProcessStarter starter, Func<HttpRequestMessage, HttpResponseMessage?> respond)
+    private static async Task<ViewModelHarness> CreateAsync(IProcessStarter starter, Func<HttpRequestMessage, HttpResponseMessage?> respond, bool indexOffline = false)
     {
         var harness = await ViewModelHarness.CreateAsync(
             respond: respond,
+            indexOffline: indexOffline,
             editSnapshot: json => json
                 .Replace("BC9510994DAF56FD826B734EF0F2704C8E4D1B91BCF010C76733E168CC23604A", Convert.ToHexString(SHA256.HashData(StarMapArchive)), StringComparison.Ordinal)
                 .Replace("\"size\": 891020", $"\"size\": {StarMapArchive.Length}", StringComparison.Ordinal),
@@ -42,7 +43,8 @@ public sealed class LoaderPromptTests
         await viewModel.PlayCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsLoaderPromptOpen);
-        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap 0.4.6"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.LaunchInstallAndPlay, viewModel.LoaderPromptActionText);
         Assert.Null(viewModel.LaunchMessage);
         Assert.False(viewModel.IsSettingsOpen);
         Assert.False(starter.Started);
@@ -130,13 +132,31 @@ public sealed class LoaderPromptTests
 
         await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap 0.4.6"), viewModel.LoaderPromptText);
         Assert.Contains(harness.Services.Log.ReadRecentLines(20), line => line.EndsWith("did not start, NoLoaderTakesInstance.", StringComparison.Ordinal));
 
         await viewModel.InstallPromptedLoaderCommand.ExecuteAsync(null);
 
         Assert.True(harness.Services.Launcher.IsRunning(instance.InstanceId));
         Assert.True(viewModel.CurrentWindowHome);
+    }
+
+    [Fact]
+    public async Task PlayActiveInstance_NoIndexHeldBeforeTheLaunchFetch_OffersALoaderThatTakesAnInstance()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateAsync(starter, ServeStarMap, indexOffline: true);
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await harness.WhenIdleAsync();
+        harness.IndexOffline = false;
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap 0.4.6"), viewModel.LoaderPromptText);
+        Assert.Null(viewModel.LaunchMessage);
     }
 
     [Fact]

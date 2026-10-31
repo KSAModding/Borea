@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Instances;
+using Borea.Core.Listings;
+using Borea.Core.Sharing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -40,6 +41,185 @@ public partial class MainViewModel
         await LoadGameSavesAsync(VehiclesSection);
         await LoadGameSavesAsync(SavesSection);
         await RefreshInstanceStartsEmptyAsync();
+        if (ShareSchemaLoad is null && _services is { } services && services.ListingValidator.SchemaOrigin != ListingSchemaOrigin.Downloaded)
+            ShareSchemaLoad = LoadShareSchemaAsync(services);
+    }
+
+    /// <summary>The one load of the newest schema in a session, whose types decide whether Share shows. Null until an instance page opens.</summary>
+    internal Task? ShareSchemaLoad { get; private set; }
+
+    /// <summary>
+    /// Share shows only for a type that the index accepts, so it appears once the index lifts the rollout gate of the type,
+    /// without a new Borea. The page does not wait for this.
+    /// </summary>
+    private async Task LoadShareSchemaAsync(BoreaServices services)
+    {
+        try
+        {
+            await services.ListingValidator.LoadSchemaAsync();
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException)
+        {
+        }
+
+        VehiclesSection.RefreshShare();
+        SavesSection.RefreshShare();
+    }
+
+    internal async Task ShareGameSaveAsync(GameSaveItem item)
+    {
+        if (_services is not { } services)
+            return;
+
+        item.CloseEdits();
+        if (services.Launcher.IsRunning(item.InstanceId))
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(item.Name), Localization.GameSaveCloseGame);
+            return;
+        }
+
+        try
+        {
+            var content = await services.ContentIds.ReadAsync(item.Entry.Path, item.Entry.Kind);
+
+            // the index checks the name the way the game names a new save, which an item from an older build can fail
+            if (!GameSaveName.IsValid(content.Name))
+            {
+                BeginRenameGameSave(item);
+                if (GameSaveName.Sanitize(content.Name) is { Length: > 0 } sanitized)
+                    ModalInstanceName = sanitized;
+                GameSaveRenameReason = Localization.FormatGameSaveShareRename(content.Name);
+                return;
+            }
+
+            var providers = await services.ContentProviders.ReadAsync(item.InstanceId);
+            var installed = (await services.Instances.GetByIdAsync(item.InstanceId))?.Mods ?? [];
+            var share = new GameSaveShareStart(item.InstanceId, item.Entry, content, ContentShareProposal.Of(content.Ids, providers, installed));
+            await OpenListingAsync();
+            ListingEditor.StartShare(share);
+        }
+        catch (GameFolderException exception)
+        {
+            // the file name first, because the toast cuts a long text, and the full path in the details
+            ShowErrorToast(() => Localization.FormatToastShareFailed(item.Name), $"{FolderProblemText(exception)}\n{exception.Message}");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(item.Name), exception.Message);
+        }
+    }
+
+    private string FolderProblemText(GameFolderException exception)
+    {
+        var file = Path.GetFileName(exception.Path);
+        return exception.Problem switch
+        {
+            GameFolderProblem.MetadataMissing or GameFolderProblem.GameFileMissing => Localization.FormatShareFolderFileMissing(file),
+            GameFolderProblem.MetadataUnreadable => Localization.FormatShareFolderNotToml(file),
+            GameFolderProblem.NameMissing => Localization.FormatShareFolderNoName(file),
+            _ => Localization.FormatShareFolderNotXml(file),
+        };
+    }
+
+    /// <summary>The path relative to the instance or the game folder, because a full path fills several lines of a note.</summary>
+    internal string ShortSharePath(Guid instanceId, string path)
+    {
+        if (_services is not { } services)
+            return path;
+
+        foreach (var root in new[] { services.Paths.GetInstanceRoot(instanceId), services.Paths.GetGameDirectoryPath() })
+        {
+            if (root is null)
+                continue;
+
+            var relative = Path.GetRelativePath(root, path);
+            if (!Path.IsPathRooted(relative) && relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                return relative.Replace(Path.DirectorySeparatorChar, '/');
+        }
+
+        return path;
+    }
+
+    /// <summary>Lets the player pick the file, and writes the archive of the shared item into it. Null when nothing was saved.</summary>
+    internal async Task<(string File, GameSaveArchive Archive)?> SaveShareArchiveAsync(GameSaveShareStart share)
+    {
+        if (_services is not { } services || WindowServices is not { } window)
+            return null;
+
+        var name = share.Content.Name;
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.LibraryFolderBusy);
+            return null;
+        }
+
+        if (services.Launcher.IsRunning(share.InstanceId))
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.GameSaveCloseGame);
+            return null;
+        }
+
+        try
+        {
+            GameSaveArchive? archive = null;
+            var file = await window.SaveFileAsync(Localization.ListingShareSaveArchive, name + ".zip", "zip", Localization.ListingShareArchiveFileType,
+                async stream => archive = await services.GameSaves.WriteShareArchiveAsync(share.InstanceId, share.Entry, name, stream));
+            return file is not null && archive is not null ? (file, archive) : null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), exception.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Writes the archive of the shared item into a new file in the temporary folder, which the caller deletes. Null when
+    /// nothing was written, and a toast says why.
+    /// </summary>
+    internal async Task<(string File, GameSaveArchive Archive)?> WriteShareArchiveToTempAsync(GameSaveShareStart share)
+    {
+        if (_services is not { } services)
+            return null;
+
+        var name = share.Content.Name;
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.LibraryFolderBusy);
+            return null;
+        }
+
+        if (services.Launcher.IsRunning(share.InstanceId))
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.GameSaveCloseGame);
+            return null;
+        }
+
+        var file = Path.Combine(Path.GetTempPath(), "Borea-share-" + Guid.NewGuid().ToString("N") + ".zip");
+        try
+        {
+            await using var stream = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            return (file, await services.GameSaves.WriteShareArchiveAsync(share.InstanceId, share.Entry, name, stream));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            TryDeleteFile(file);
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), exception.Message);
+            return null;
+        }
+    }
+
+    internal static void TryDeleteFile(string file)
+    {
+        try
+        {
+            File.Delete(file);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     private async Task RefreshInstanceStartsEmptyAsync()
@@ -87,7 +267,7 @@ public partial class MainViewModel
             if (SelectedInstance?.InstanceId != instance.InstanceId)
                 return;
 
-            var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
+            var installed = GameVersionOf(services, instance.Instance);
             section.SetItems(entries.Select(entry => new GameSaveItem(this, section, instance.InstanceId, entry, installed)));
             await ShowRecordedContentAsync(section, instance.InstanceId);
         }
@@ -137,11 +317,11 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
     internal void BeginRenameGameSave(GameSaveItem item)
     {
         item.CloseEdits();
         InstanceError = null;
+        GameSaveRenameReason = null;
         ModalInstanceName = item.Name;
         RenamingGameSave = item;
     }
@@ -150,7 +330,8 @@ public partial class MainViewModel
     private async Task RenameGameSaveFromModalAsync(GameSaveItem item)
     {
         var name = ModalInstanceName.Trim();
-        if (name == item.Name && name == item.FolderName)
+        // a share reads meta.toml again, so its name can differ from the name of the list
+        if (name == item.Name && name == item.FolderName && GameSaveRenameReason is null)
         {
             RenamingGameSave = null;
             return;
@@ -243,7 +424,8 @@ public partial class MainViewModel
         try
         {
             var entries = await services.GameSaves.ListSharedProfileAsync(section.Kind);
-            var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
+            // the profile items are offered for a copy into the shown instance, so they are compared with its build
+            var installed = GameVersionOf(services, SelectedInstance?.Instance);
             section.ShowProfile(entries.Select(entry => new GameSaveItem(this, section, Guid.Empty, entry, installed)
             {
                 ExistsInInstance = section.Items.Any(item => string.Equals(item.FolderName, entry.FolderName, StringComparison.OrdinalIgnoreCase)),
@@ -290,7 +472,8 @@ public partial class MainViewModel
     }
 
     /// <summary>Backs up every save of the instance. Its page, when shown, turns to the tab with the saves.</summary>
-    internal async Task BackUpAllSavesAsync(InstanceItem instance)
+    /// <param name="report">Shows the outcome in place of the toast, for a modal that the toast would draw under.</param>
+    internal async Task BackUpAllSavesAsync(InstanceItem instance, GameSaveOutcomeReport? report = null)
     {
         if (CurrentWindowInstance && SelectedInstance?.InstanceId == instance.InstanceId)
             InstanceTab = InstanceTab.Content;
@@ -301,14 +484,14 @@ public partial class MainViewModel
             return () => zips.Count == 0
                 ? Localization.GameSavesNothingToBackUp
                 : Localization.FormatGameSavesBackedUp(zips.Count, Path.GetDirectoryName(zips[0])!);
-        });
+        }, report);
     }
 
     /// <summary>
     /// Shows the outcome as a toast, and "Close the game first" when Borea
     /// runs one of the instances.
     /// </summary>
-    private async Task<bool> RunGameSaveActionAsync(IReadOnlyCollection<Guid> instanceIds, Func<string> failed, Func<BoreaServices, Task<Func<string>?>> action)
+    private async Task<bool> RunGameSaveActionAsync(IReadOnlyCollection<Guid> instanceIds, Func<string> failed, Func<BoreaServices, Task<Func<string>?>> action, GameSaveOutcomeReport? report = null)
     {
         if (_services is not { } services)
             return false;
@@ -316,29 +499,37 @@ public partial class MainViewModel
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
-            ShowErrorToast(failed, Localization.LibraryFolderBusy);
+            ShowFailure(Localization.LibraryFolderBusy);
             return false;
         }
 
         // the game opens a save file only while it writes it, so the change itself does not notice a running game
         if (instanceIds.Any(services.Launcher.IsRunning) || services.IsGameProcessRunning())
         {
-            ShowErrorToast(failed, Localization.GameSaveCloseGame);
+            ShowFailure(Localization.GameSaveCloseGame);
             return false;
         }
 
         try
         {
-            if (await action(services) is { } result)
+            if (await action(services) is { } result && report?.Invoke(result, null) != true)
                 ShowSuccessToast(result);
             return true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            ShowErrorToast(failed, exception.Message);
+            ShowFailure(exception.Message);
         }
 
         return false;
+
+        void ShowFailure(string reason)
+        {
+            if (report?.Invoke(failed, reason) == true)
+                services.Log.Write($"{failed()}: {reason}");
+            else
+                ShowErrorToast(failed, reason);
+        }
     }
 
     private void RefreshGameSaveText()
@@ -349,6 +540,12 @@ public partial class MainViewModel
         RefreshBackupText();
     }
 }
+
+/// <summary>
+/// Shows the outcome of a save action in place of its toast. The reason is null when the action worked.
+/// Returns false when the place for the outcome is gone, so the toast shows it.
+/// </summary>
+internal delegate bool GameSaveOutcomeReport(Func<string> message, string? reason);
 
 /// <summary>
 /// The Vehicles or the Saves section of the instance page, with its chooser
@@ -369,6 +566,9 @@ public sealed partial class GameSaveSection : ObservableObject
     public string Title => Kind == GameSaveKind.Vehicle ? _owner.Localization.InstanceGroupVehicles : _owner.Localization.InstanceGroupSaves;
 
     public string EmptyText => Kind == GameSaveKind.Vehicle ? _owner.Localization.GameSaveNoVehicles : _owner.Localization.GameSaveNoSaves;
+
+    /// <summary>Whether the schema in use accepts the type, so the index takes a listing of it (RFC 0085 rollout gate).</summary>
+    public bool CanShare => _owner.Services?.ListingValidator.AcceptedTypes.Contains(Kind == GameSaveKind.Vehicle ? ListingFolders.VehicleType : ListingFolders.SaveType) == true;
 
     /// <summary>A save does not list its mods, so Borea cannot check them on a copy.</summary>
     public string? CopyNoteText => Kind == GameSaveKind.Save ? _owner.Localization.GameSaveCopyModsNote : null;
@@ -446,6 +646,13 @@ public sealed partial class GameSaveSection : ObservableObject
         OnPropertyChanged(nameof(ProfileSelectionText));
     }
 
+    internal void RefreshShare()
+    {
+        OnPropertyChanged(nameof(CanShare));
+        foreach (var item in Items)
+            item.RefreshShare();
+    }
+
     internal void RefreshText()
     {
         OnPropertyChanged(nameof(Title));
@@ -513,7 +720,7 @@ public sealed partial class GameSaveItem : ObservableObject
 
     public bool IsVehicle => Entry.Kind == GameSaveKind.Vehicle;
 
-    public string UpdatedText => _owner.Localization.FormatGameSaveUpdated(Entry.UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
+    public string UpdatedText => _owner.Localization.FormatGameSaveUpdated(MainViewModel.DateTimeText(Entry.UpdatedAt));
 
     public string? BuildText => _build?.ToString() ?? Entry.GameBuild;
 
@@ -557,6 +764,15 @@ public sealed partial class GameSaveItem : ObservableObject
 
     public bool IsIdle => !IsConfirmingDelete && !IsChoosingTarget && !IsConfirmingReplace && !IsConfirmingInstall && !IsInstalling;
 
+    /// <summary>An item of an instance, of a type that the index accepts.</summary>
+    public bool CanShare => InstanceId != Guid.Empty && Section.CanShare;
+
+    internal void RefreshShare()
+    {
+        OnPropertyChanged(nameof(CanShare));
+        ShareCommand.NotifyCanExecuteChanged();
+    }
+
     internal void CloseEdits()
     {
         IsConfirmingDelete = false;
@@ -586,6 +802,9 @@ public sealed partial class GameSaveItem : ObservableObject
 
     [RelayCommand]
     private void BeginRename() => _owner.BeginRenameGameSave(this);
+
+    [RelayCommand(CanExecute = nameof(CanShare))]
+    private Task ShareAsync() => _owner.ShareGameSaveAsync(this);
 
     [RelayCommand]
     private Task CopyAsync() => _owner.CopyGameSaveAsync(this, replace: false);

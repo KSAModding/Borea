@@ -130,7 +130,7 @@ public static class ModPackUpdates
         var mods = instance.Mods
             .Where(mod => changes.FirstOrDefault(change => ModIds.Equals(change.ModId, mod.ModId))?.Kind != ModPackChangeKind.Remove)
             .ToList();
-        return Instance.FromExisting(instance.InstanceId, instance.Name, instance.Source, instance.CreatedAt, mods, instance.ForeignMods, instance.IsFavorite, instance.LastPlayedAt, instance.LaunchArguments);
+        return Instance.FromExisting(instance.InstanceId, instance.Name, instance.Source, instance.CreatedAt, mods, instance.ForeignMods, instance.IsFavorite, instance.LastPlayedAt, instance.LaunchArguments, instance.GameBuild);
     }
 
     private static List<ModPackChange> Ordered(IEnumerable<ModPackChange> changes)

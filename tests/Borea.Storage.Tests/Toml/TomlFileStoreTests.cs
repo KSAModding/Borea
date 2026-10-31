@@ -67,7 +67,6 @@ public sealed class TomlFileStoreTests : IDisposable
         await TomlFileStore.WriteAsync(path, original);
         var reloaded = await TomlFileStore.ReadAsync<SampleDto>(path);
 
-        Assert.NotNull(reloaded);
         Assert.Equal("hello", reloaded!.Name);
         Assert.Equal(42, reloaded.Count);
     }

@@ -8,38 +8,26 @@ namespace Borea.Core.Mods;
 /// </summary>
 public sealed class ListingSnapshot
 {
-    /// <summary>
-    /// The display name at stamp time.
-    /// </summary>
     public string Name { get; }
 
-    /// <summary>
-    /// The authors at stamp time.
-    /// </summary>
     public IReadOnlyList<string> Authors { get; }
 
     /// <summary>
-    /// The short summary at stamp time.
+    /// The short summary.
     /// </summary>
     public string Abstract { get; }
 
-    /// <summary>
-    /// The longer description at stamp time, if any.
-    /// </summary>
     public string? Description { get; }
 
     /// <summary>
-    /// The SPDX license expression at stamp time.
+    /// The SPDX license expression.
     /// </summary>
     public string License { get; }
 
-    /// <summary>
-    /// The tags at stamp time.
-    /// </summary>
     public IReadOnlyList<string> Tags { get; }
 
     /// <summary>
-    /// The links at stamp time. Keys keep their authored casing and compare case-insensitively.
+    /// Keys keep their authored casing and compare case-insensitively.
     /// </summary>
     public IReadOnlyDictionary<string, string> Links { get; }
 

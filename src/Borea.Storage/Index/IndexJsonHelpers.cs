@@ -15,10 +15,40 @@ internal static class IndexJsonHelpers
             element.TryGetProperty(propertyName, out var property) &&
             property.ValueKind == JsonValueKind.String)
         {
-            return property.GetString();
+            return TryReadText(property);
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The text of a string value. An escaped lone surrogate such as \ud800 is valid JSON but not valid Unicode text,
+    /// and <see cref="JsonElement.GetString"/> throws <see cref="InvalidOperationException"/> for it, so this throws
+    /// the <see cref="FormatException"/> that every index reader treats as bad input.
+    /// </summary>
+    public static string ReadText(JsonElement value)
+    {
+        try
+        {
+            return value.GetString()!;
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new FormatException("A string value is not valid Unicode text.", ex);
+        }
+    }
+
+    /// <summary>The text of a string value, or null when it is not valid Unicode text.</summary>
+    public static string? TryReadText(JsonElement value)
+    {
+        try
+        {
+            return value.GetString();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     public static int? TryExtractInt(JsonElement element, string propertyName)

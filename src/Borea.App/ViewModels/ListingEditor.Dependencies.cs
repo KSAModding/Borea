@@ -158,7 +158,7 @@ public sealed partial class ListingEditor
 
     /// <summary>The release host that decides which releases exist, by the rule of the ownership check, or null.</summary>
     private ListingSourceReference? ReleasesSource() =>
-        Draft.Releases is not null && ListingAuthority.Of(Draft) is { } host && ListingSourceReference.TryParse(host.Target, out var reference) ? reference : null;
+        Draft.Releases is not null && ListingAuthority.Of(Draft) is { Kind: ListingAuthority.GitHub or ListingAuthority.SpaceDock } host && ListingSourceReference.TryParse(host.Target, out var reference) ? reference : null;
 
     /// <summary>
     /// The facts of the newest read of the archive, which the checks use, or null when that read found no archive. The source
@@ -268,11 +268,11 @@ public sealed partial class ListingEditor
 
     internal string? DependencyKindText(string kind) => kind switch
     {
-        "required" => Localization.ListingDependencyKindRequired,
-        "optional" => Localization.ListingDependencyKindOptional,
+        "required" => IsVehicleOrSave ? Localization.ListingShareDependencyRequired : Localization.ListingDependencyKindRequired,
+        "optional" => IsVehicleOrSave ? Localization.ListingShareDependencyOptional : Localization.ListingDependencyKindOptional,
         "recommends" => Localization.ListingDependencyKindRecommends,
         "suggests" => Localization.ListingDependencyKindSuggests,
-        "conflict" => Localization.ListingDependencyKindConflict,
+        "conflict" => IsVehicleOrSave ? Localization.ListingShareDependencyConflict : Localization.ListingDependencyKindConflict,
         _ => null,
     };
 

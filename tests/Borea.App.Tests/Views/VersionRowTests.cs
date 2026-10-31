@@ -21,15 +21,9 @@ public sealed class VersionRowTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, version: "0.7.3");
-        await viewModel.LoadAsync();
-        await viewModel.EnsureDiscoverLoadedAsync();
-        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
-        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+        await OpenVersionsAsync(harness);
 
-        var rows = await RenderAsync(harness, () => new Borea.App.Views.Pages.ContentPage(), width, page => viewModel.ContentVersions
-            .Select(version => new Row(version.Version, X(page, version.ToggleChangelogCommand), X(page, version.InstallCommand)))
-            .ToList());
+        var rows = await RenderAsync(harness, () => new Borea.App.Views.Pages.ContentPage(), width, page => ContentRows(viewModel, page));
 
         AssertAligned(rows, installed: "0.7.3");
     }
@@ -53,7 +47,7 @@ public sealed class VersionRowTests
         await OpenVersionsAsync(harness);
 
         var (rows, column) = await RenderAsync(harness, () => new Borea.App.Views.Pages.ContentPage(), width, rendered => (
-            viewModel.ContentVersions.Select(version => new Row(version.Version, X(rendered, version.ToggleChangelogCommand), X(rendered, version.InstallCommand))).ToList(),
+            ContentRows(viewModel, rendered),
             ReadDownloadsColumn(rendered)));
 
         AssertAligned(rows, installed: "0.7.3");
@@ -83,7 +77,7 @@ public sealed class VersionRowTests
         await OpenVersionsAsync(harness);
 
         var (rows, column) = await RenderAsync(harness, () => new Borea.App.Views.Pages.ContentPage(), width, rendered => (
-            viewModel.ContentVersions.Select(version => new Row(version.Version, X(rendered, version.ToggleChangelogCommand), X(rendered, version.InstallCommand))).ToList(),
+            ContentRows(viewModel, rendered),
             ReadDownloadsColumn(rendered)));
 
         Assert.False(viewModel.HasVersionDownloads);
@@ -91,6 +85,9 @@ public sealed class VersionRowTests
         Assert.Empty(column.Cells);
         Assert.Equal(viewModel.ContentVersions.Count + 1, column.SizeCells);
     }
+
+    private static List<Row> ContentRows(MainViewModel viewModel, Control page)
+        => viewModel.ContentVersions.Select(version => new Row(version.Version, X(page, version.ToggleChangelogCommand), X(page, version.InstallCommand))).ToList();
 
     private static async Task OpenVersionsAsync(ViewModelHarness harness)
     {

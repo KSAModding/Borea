@@ -25,24 +25,12 @@ public sealed class RegionalFormatServiceTests : IDisposable
         Assert.StartsWith("System default", service.SelectedFormat.DisplayName, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void Constructor_SavedSpecificCulture_RestoresTheFormat()
-    {
-        var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
-        var service = new RegionalFormatService(
-            localization,
-            CultureInfo.GetCultureInfo("fr-FR"),
-            "de-DE");
-
-        Assert.Equal("de-DE", service.SelectedCultureName);
-        Assert.Equal("de-DE", CultureInfo.CurrentCulture.Name);
-    }
-
     [Theory]
-    [InlineData("not-a-culture")]
-    [InlineData("de")]
-    [InlineData("")]
-    public void Constructor_InvalidOrNeutralCulture_FallsBackToTheSystemFormat(string cultureName)
+    [InlineData("de-DE", "de-DE", "de-DE")]
+    [InlineData("not-a-culture", null, "fr-FR")]
+    [InlineData("de", null, "fr-FR")]
+    [InlineData("", null, "fr-FR")]
+    public void Constructor_SavedCulture_IsRestoredOnlyWhenItIsASpecificCulture(string cultureName, string? expectedSelected, string expectedCulture)
     {
         var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
         var service = new RegionalFormatService(
@@ -50,8 +38,8 @@ public sealed class RegionalFormatServiceTests : IDisposable
             CultureInfo.GetCultureInfo("fr-FR"),
             cultureName);
 
-        Assert.Null(service.SelectedCultureName);
-        Assert.Equal("fr-FR", CultureInfo.CurrentCulture.Name);
+        Assert.Equal(expectedSelected, service.SelectedCultureName);
+        Assert.Equal(expectedCulture, CultureInfo.CurrentCulture.Name);
     }
 
     [Fact]

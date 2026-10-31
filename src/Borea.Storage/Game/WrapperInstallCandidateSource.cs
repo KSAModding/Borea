@@ -54,32 +54,37 @@ public sealed class WrapperInstallCandidateSource : IInstallCandidateSource
             if (_wine.Find(prefix) is not { } install)
                 continue;
 
-            foreach (var file in RegistryFiles)
-            {
-                foreach (var keyPath in UninstallKeyPaths)
-                {
-                    IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> keys;
-                    try
-                    {
-                        keys = WineRegistryFile.ReadSubKeys(Path.Combine(install.PrefixRoot, file), keyPath);
-                    }
-                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SecurityException)
-                    {
-                        continue;
-                    }
-
-                    foreach (var (name, values) in keys)
-                    {
-                        var location = values.GetValueOrDefault("InstallLocation") is { } windows ? install.Drives.ToHost(windows) : null;
-                        entries.Add(new UninstallEntry(name, values.GetValueOrDefault("DisplayName"), location));
-                    }
-                }
-            }
+            AddUninstallEntries(entries, install);
 
             loaderFolders.AddRange(LoaderFolders.Select(install.Drives.ToHost).OfType<string>());
         }
 
         return new WindowsInstallCandidateSource(() => entries, loaderFolders, modsFolder: null);
+    }
+
+    private static void AddUninstallEntries(List<UninstallEntry> entries, WineInstall install)
+    {
+        foreach (var file in RegistryFiles)
+        {
+            foreach (var keyPath in UninstallKeyPaths)
+            {
+                IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> keys;
+                try
+                {
+                    keys = WineRegistryFile.ReadSubKeys(Path.Combine(install.PrefixRoot, file), keyPath);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SecurityException)
+                {
+                    continue;
+                }
+
+                foreach (var (name, values) in keys)
+                {
+                    var location = values.GetValueOrDefault("InstallLocation") is { } windows ? install.Drives.ToHost(windows) : null;
+                    entries.Add(new UninstallEntry(name, values.GetValueOrDefault("DisplayName"), location));
+                }
+            }
+        }
     }
 
     private IEnumerable<string> Prefixes()

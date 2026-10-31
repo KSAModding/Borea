@@ -1,3 +1,5 @@
+using System.Globalization;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 
@@ -24,12 +26,17 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetIndexPath() => Path.Combine(_root, "index.json");
     public string GetAnnouncementsPath() => Path.Combine(_root, "announcements.toml");
     public string GetListingSchemaPath() => Path.Combine(_root, "authored.schema.json");
+
     public string GetImageCacheFolder() => Path.Combine(_root, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_root, "GamePatchNotes");
     public string GetPreviewCacheFolder() => Path.Combine(_root, "PreviewCache", "v1");
     public string GetInstancesRoot() => Path.Combine(_root, "Instances");
     public string GetStaticModFilesRoot() => Path.Combine(_root, "Static Mod Files");
+    public string GetGameBuildsRoot() => Path.Combine(_root, "Game Builds");
+    public string GetGameBuildFolder(GameVersion version)
+        => Path.Combine(GetGameBuildsRoot(), string.Create(CultureInfo.InvariantCulture, $"{version.Year}.{version.Month}.{version.BuildNumber}.{version.Revision}"));
     public string GetLoadersRoot() => Path.Combine(_root, "Loaders");
+    public string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version) => Path.Combine(GetLoadersRoot(), loaderId, version.ToString());
     public string GetPresetsRoot() => Path.Combine(_root, "Presets");
     public string GetGameSettingsPresetsRoot() => Path.Combine(GetPresetsRoot(), "GameSettings");
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());

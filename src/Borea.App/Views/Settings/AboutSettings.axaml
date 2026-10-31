@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:loc="using:Borea.App.Localization"
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Settings.AboutSettings"
              x:DataType="vm:MainViewModel">
@@ -66,6 +67,38 @@
             </StackPanel>
 
             <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
+
+            <TextBlock Classes="heading-md" Text="{Binding Localization.AboutTranslators}" />
+            <ItemsControl x:Name="TranslatorCreditsList" ItemsSource="{Binding TranslatorCredits}" Margin="0,8,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="loc:LanguageTranslatorCredits">
+                        <Grid ColumnDefinitions="160,*" Margin="0,0,0,10">
+                            <TextBlock Classes="label-md" Text="{Binding Language.DisplayName}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,16,0" />
+                            <StackPanel Grid.Column="1">
+                                <Button Classes="filter" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.AboutOriginalRepository}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.RepositoryUrl}" ToolTip.Tip="{x:Static vm:MainViewModel.RepositoryUrl}" IsVisible="{Binding IsOriginalLanguage}" HorizontalAlignment="Left" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.AboutTranslatorNotListed}" IsVisible="{Binding IsUncredited}" TextWrapping="Wrap" />
+                                <ItemsControl ItemsSource="{Binding Translators}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel ItemSpacing="8" LineSpacing="6" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="loc:TranslatorCredit">
+                                            <Panel>
+                                                <Button Classes="filter" Content="{Binding Name}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenAboutLinkCommand}" CommandParameter="{Binding Url}" ToolTip.Tip="{Binding Url}" IsVisible="{Binding HasUrl}" />
+                                                <TextBlock Classes="body-md" Text="{Binding Name}" TextWrapping="Wrap" IsVisible="{Binding !HasUrl}" VerticalAlignment="Center" />
+                                            </Panel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,8,0,12" />
 
             <TextBlock Classes="heading-md" Text="{Binding Localization.AboutCredits}" />
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.AboutCreditsHint}" TextWrapping="Wrap" Margin="0,4,0,0" />

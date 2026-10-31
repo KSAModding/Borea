@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -28,6 +29,45 @@ internal sealed class WindowServices(TopLevel topLevel) : IWindowServices
         stream.SetLength(0);
         await using var writer = new StreamWriter(stream);
         await writer.WriteAsync(text);
+        return file.Name;
+    }
+
+    public async Task<string?> SaveFileAsync(string title, string suggestedFileName, string extension, string fileTypeName, Func<Stream, Task> write)
+    {
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = suggestedFileName,
+            DefaultExtension = extension,
+            FileTypeChoices = [new FilePickerFileType(fileTypeName) { Patterns = ["*." + extension] }],
+            ShowOverwritePrompt = true,
+        });
+        if (file is null)
+            return null;
+
+        var stream = await file.OpenWriteAsync();
+        try
+        {
+            await using (stream)
+            {
+                stream.SetLength(0);
+                await write(stream);
+            }
+        }
+        catch
+        {
+            // a file that stops half way is no archive
+            try
+            {
+                await file.DeleteAsync();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+            }
+
+            throw;
+        }
+
         return file.Name;
     }
 

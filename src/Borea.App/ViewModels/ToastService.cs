@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.History;
@@ -72,7 +73,7 @@ public sealed partial class ToastService : ObservableObject
     {
         Items.Add(toast);
         while (Items.Count > MaxShown)
-            Close(Items[0]);
+            Close(ToastToClose());
 
         // a screen reader announces only a changed text
         if (Announcement == toast.AnnouncementText)
@@ -81,6 +82,13 @@ public sealed partial class ToastService : ObservableObject
         _announced = toast;
         toast.RestartTimer();
     }
+
+    /// <summary>
+    /// A finished toast only confirms what the player did, so it goes before a toast that holds a
+    /// problem the player may still need to read. The toast that was just added never goes while an
+    /// older one can.
+    /// </summary>
+    private ToastItem ToastToClose() => Items.SkipLast(1).FirstOrDefault(item => item.IsFinished) ?? Items[0];
 
     internal void Close(ToastItem toast)
     {

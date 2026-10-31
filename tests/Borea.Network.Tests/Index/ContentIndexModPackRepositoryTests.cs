@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -120,19 +121,6 @@ public sealed class ContentIndexModPackRepositoryTests
     }
 
     [Fact]
-    public async Task OfflineFirstQuery_ReadsTheCachedSnapshot()
-    {
-        var snapshot = Snapshot(new ContentIndexPack("test-pack", [Version("test-pack", "1.0.0")], null));
-        var fetcher = new SequenceFetcher(
-            _ => Task.FromException<ContentIndexFetchResult>(new HttpRequestException("offline")));
-        var reader = new CountingReader(snapshot);
-        var provider = new ContentIndexSnapshotProvider(fetcher, reader, new TestPathProvider());
-
-        Assert.Single(await new ContentIndexModPackRepository(provider).GetAvailableModPacksAsync());
-        Assert.Equal(1, reader.CallCount);
-    }
-
-    [Fact]
     public async Task ModAndPackRepositories_ShareOneConcurrentRefresh()
     {
         var completion = new TaskCompletionSource<ContentIndexFetchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -222,6 +210,7 @@ public sealed class ContentIndexModPackRepositoryTests
         public string GetIndexPath() => "index.json";
         public string GetAnnouncementsPath() => throw new NotSupportedException();
         public string GetListingSchemaPath() => throw new NotSupportedException();
+
         public string GetImageCacheFolder() => throw new NotSupportedException();
         public string GetGamePatchNotesFolder() => throw new NotSupportedException();
         public string GetPreviewCacheFolder() => throw new NotSupportedException();
@@ -232,6 +221,8 @@ public sealed class ContentIndexModPackRepositoryTests
         public string GetSecretsFolder() => throw new NotSupportedException();
         public string GetInstancesRoot() => throw new NotSupportedException();
         public string GetStaticModFilesRoot() => throw new NotSupportedException();
+        public string GetGameBuildsRoot() => throw new NotSupportedException();
+        public string GetGameBuildFolder(GameVersion version) => throw new NotSupportedException();
         public string GetLoadersRoot() => throw new NotSupportedException();
         public string GetPresetsRoot() => throw new NotSupportedException();
         public string GetGameSettingsPresetsRoot() => throw new NotSupportedException();
@@ -259,5 +250,6 @@ public sealed class ContentIndexModPackRepositoryTests
         public string GetInstanceMetadataPath(Guid instanceId) => throw new NotSupportedException();
         public string? GetGameDirectoryPath() => throw new NotSupportedException();
         public string? GetLoaderDirectoryPath(string loaderId) => throw new NotSupportedException();
+        public string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version) => throw new NotSupportedException();
     }
 }

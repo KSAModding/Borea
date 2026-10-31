@@ -16,7 +16,10 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         _log = log ?? throw new ArgumentNullException(nameof(log));
     }
 
-    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null)
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
+        Launch(instance, loader, loaderDirectory: null, arguments);
+
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments, bool isAdopted = false)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -24,7 +27,7 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         LaunchResult result;
         try
         {
-            result = Inner.Launch(instance, loader, arguments);
+            result = Inner.Launch(instance, loader, loaderDirectory, arguments, isAdopted);
         }
         catch (Exception exception)
         {
@@ -48,11 +51,14 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         {
             var blamed = (result.CrashCause, result.BlamedModId) switch
             {
+                (LoaderCrashCause.GameAssembly, _) => "cannot load a game assembly, so the loader was made for another game build",
                 (LoaderCrashCause.ModLoading, null) => "stopped while loading mods, no mod found",
                 (LoaderCrashCause.ModLoading, var modId) => $"stopped while loading mods, likely {modId}",
                 (_, null) => "no mod named",
                 (_, var modId) => $"blames {modId}",
             };
+            if (result.OtherBlamedModIds.Count > 0)
+                blamed += $", game assemblies that this build does not have are also needed by {string.Join(", ", result.OtherBlamedModIds)}";
             var exitCode = result.ExitCode is { } code ? LoaderExitCode.Describe(code, OperatingSystem.IsWindows()) : "unknown";
             _log.Write($"Launch of instance {instance.InstanceId} stopped early with exit code {exitCode}, {blamed}. Last output:{Environment.NewLine}{string.Join(Environment.NewLine, result.Output)}");
         }

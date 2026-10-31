@@ -1,3 +1,4 @@
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Storage.Files;
@@ -5,16 +6,16 @@ using Borea.Storage.Files;
 namespace Borea.Storage.Mods;
 
 /// <summary>
-/// File-backed implementation of IModUninstaller. A linked mod loses only its
-/// link, and its stored release goes when no other instance links to it.
+/// A linked mod loses only its link, and its stored release goes when no
+/// other instance links to it.
 /// </summary>
 public sealed class FileModUninstaller : IModUninstaller
 {
     private readonly IGamePathProvider _pathProvider;
-    private readonly Borea.Core.Instances.IInstanceRepository _instances;
+    private readonly IInstanceRepository _instances;
     private readonly ModStore _store;
 
-    public FileModUninstaller(IGamePathProvider pathProvider, Borea.Core.Instances.IInstanceRepository instances, ModStore? store = null)
+    public FileModUninstaller(IGamePathProvider pathProvider, IInstanceRepository instances, ModStore? store = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));

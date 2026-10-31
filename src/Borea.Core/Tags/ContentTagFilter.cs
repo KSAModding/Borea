@@ -11,7 +11,7 @@ public static class ContentTagFilter
         ArgumentNullException.ThrowIfNull(vocabulary);
         var selected = selectedTags?.ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var curated = vocabulary.GetTags(contentType).Select(item => item.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return listings.Where(listing => listing.Type == contentType).Where(listing => Matches(listing, selected, curated, includeOther)).ToArray();
+        return listings.Where(listing => listing.Type == contentType).Where(listing => Matches(listing.Tags, selected, curated, includeOther)).ToArray();
     }
 
     public static IReadOnlyList<ModPackMetadata> Filter(IEnumerable<ModPackMetadata> packs, CuratedTagVocabulary vocabulary, IEnumerable<string>? selectedTags = null, bool includeOther = false)
@@ -42,15 +42,12 @@ public static class ContentTagFilter
             || pack.Tags.Any(tag => Contains(tag, query));
     }
 
-    private static bool Matches(ModMetadata listing, IReadOnlySet<string> selected, IReadOnlySet<string> curated, bool includeOther)
+    private static bool Matches(IReadOnlyList<string> tags, IReadOnlySet<string> selected, IReadOnlySet<string> curated, bool includeOther)
     {
         if (selected.Count == 0 && !includeOther)
             return true;
-        return Matches(listing.Tags, selected, curated, includeOther);
+        return tags.Any(selected.Contains) || (includeOther && !tags.Any(curated.Contains));
     }
-
-    private static bool Matches(IReadOnlyList<string> tags, IReadOnlySet<string> selected, IReadOnlySet<string> curated, bool includeOther) =>
-        tags.Any(selected.Contains) || (includeOther && !tags.Any(curated.Contains));
 
     private static bool Contains(string? value, string query) => value?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
 }

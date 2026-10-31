@@ -19,7 +19,6 @@ public sealed class ModPackMetadata
     /// <summary>Which source this metadata came from. Borea-internal, not a format field.</summary>
     public string Source { get; }
 
-    /// <summary>The display name.</summary>
     public string Name { get; }
 
     /// <summary>Display names of the authors.</summary>

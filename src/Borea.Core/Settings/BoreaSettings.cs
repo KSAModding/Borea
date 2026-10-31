@@ -12,7 +12,9 @@ public sealed class BoreaSettings
     public string? GameDirectoryPath { get; }
 
     /// <summary>
-    /// Installation state for each loader, keyed by loader id. Empty means none.
+    /// The recorded installation of each loader, keyed by loader id, which is the one version that an older Borea starts.
+    /// Other versions are folders below the Loaders root, and <see cref="ILoaderVersionStore"/> lists them all.
+    /// Empty means none.
     /// </summary>
     public IReadOnlyDictionary<string, LoaderInstallation> LoaderInstallations { get; }
 

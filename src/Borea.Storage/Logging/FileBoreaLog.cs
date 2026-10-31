@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Borea.Core.Logging;
 using Borea.Core.Paths;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Logging;
 
@@ -58,18 +59,7 @@ public sealed class FileBoreaLog : IBoreaLog
 
         try
         {
-            using var stream = new FileStream(CurrentFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            var start = Math.Max(0, stream.Length - MaxReadBytes);
-            stream.Seek(start, SeekOrigin.Begin);
-            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: start == 0);
-
-            var lines = reader.ReadToEnd().Split('\n').Select(line => line.TrimEnd('\r')).ToList();
-            if (start > 0)
-                lines.RemoveAt(0);
-            if (lines.Count > 0 && lines[^1].Length == 0)
-                lines.RemoveAt(lines.Count - 1);
-
-            return lines.TakeLast(maxLines).ToList();
+            return LogFileTail.ReadLastLines(CurrentFilePath, MaxReadBytes, maxLines);
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
         {

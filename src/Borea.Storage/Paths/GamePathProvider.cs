@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 
@@ -6,7 +8,7 @@ namespace Borea.Storage.Paths;
 
 /// <summary>
 /// Resolves Borea's own paths under its root, %LocalAppData%\Borea unless another
-/// root is given, the Instances, Backups and Static Mod Files folders under the library folder,
+/// root is given, the Instances, Backups, Static Mod Files and Game Builds folders under the library folder,
 /// which is the root unless another one is given, and KSA and mod loader paths
 /// from the provided settings.
 /// </summary>
@@ -55,11 +57,19 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetIndexPath() => Path.Combine(_boreaRoot, "index.json");
     public string GetAnnouncementsPath() => Path.Combine(_boreaRoot, "announcements.toml");
     public string GetListingSchemaPath() => Path.Combine(_boreaRoot, "authored.schema.json");
+
     public string GetImageCacheFolder() => Path.Combine(_boreaRoot, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_boreaRoot, "GamePatchNotes");
     public string GetPreviewCacheFolder() => Path.Combine(_boreaRoot, "PreviewCache", "v1");
     public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
     public string GetStaticModFilesRoot() => Path.Combine(_libraryFolder, "Static Mod Files");
+
+    // only the numbers name the folder, so a suffix in a hand-edited instance.toml cannot put a separator into the path
+    public string GetGameBuildsRoot() => Path.Combine(_libraryFolder, "Game Builds");
+
+    public string GetGameBuildFolder(GameVersion version)
+        => Path.Combine(GetGameBuildsRoot(), string.Create(CultureInfo.InvariantCulture, $"{version.Year}.{version.Month}.{version.BuildNumber}.{version.Revision}"));
+
     public string GetLoadersRoot() => Path.Combine(_boreaRoot, "Loaders");
     public string GetPresetsRoot() => Path.Combine(_boreaRoot, "Presets");
     public string GetGameSettingsPresetsRoot() => Path.Combine(GetPresetsRoot(), "GameSettings");
@@ -90,6 +100,17 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetBackupsRoot() => Path.Combine(_libraryFolder, "Backups");
     public string? GetGameDirectoryPath() => _gameDirectory;
     public string GetSharedProfileRoot() => _sharedProfileRoot;
+
+    public string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version)
+    {
+        ModIds.Validate(loaderId, nameof(loaderId));
+
+        var name = version.ToString();
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new ArgumentException($"The version '{name}' cannot be a folder name.", nameof(version));
+
+        return Path.Combine(GetLoadersRoot(), loaderId, name);
+    }
 
     public string? GetLoaderDirectoryPath(string loaderId)
     {

@@ -272,7 +272,7 @@ public partial class MainViewModel
             LoadCategoryOptions(listings, packs);
             LoadGameVersionOptions(snapshot.GameVersions);
 
-            await RefreshCompatibilityAsync(services.InstalledVersion.GetInstalledVersion()?.Version);
+            await RefreshCompatibilityAsync(GameVersionOf(services, _activeInstanceEntity));
 
             DiscoverError = null;
         }
@@ -353,11 +353,15 @@ public partial class MainViewModel
     /// <summary>The Loaders tab has no Sort by dropdown, so it keeps the name order.</summary>
     private IEnumerable<DiscoverItem> SortDiscover(IEnumerable<DiscoverItem> items) => (IsLoadersTab ? DiscoverSortOrder.Name : DiscoverSort) switch
     {
-        DiscoverSortOrder.Popularity => items.OrderBy(item => item.Downloads is null).ThenByDescending(item => item.Downloads).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
+        DiscoverSortOrder.Popularity => MostDownloadedFirst(items),
         DiscoverSortOrder.RecentlyUpdated => items.OrderBy(item => item.UpdatedAt is null).ThenByDescending(item => item.UpdatedAt).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
         DiscoverSortOrder.RecentlyListed => items.OrderBy(item => item.ListedAt is null).ThenByDescending(item => item.ListedAt).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
         _ => items.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
     };
+
+    /// <summary>A listing without a download count comes after every listing with one, and the name breaks a tie.</summary>
+    private static IOrderedEnumerable<DiscoverItem> MostDownloadedFirst(IEnumerable<DiscoverItem> items)
+        => items.OrderBy(item => item.Downloads is null).ThenByDescending(item => item.Downloads).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase);
 
     /// <summary>A reload keeps a chosen bound while its build is still listed.</summary>
     private void LoadGameVersionOptions(ContentIndexGameVersions? gameVersions)
@@ -475,11 +479,11 @@ public partial class MainViewModel
     partial void OnInstalledInOtherInstancesChanged(bool value) => ApplyDiscoverFilters();
 
     /// <summary>
-    /// Evaluates every listing against the game the settings point at, for
-    /// example after the game directory changed.
+    /// Evaluates every listing against the build of the active instance, which is where Add installs, or against the
+    /// game the settings point at when no instance is active, for example after the game directory changed.
     /// </summary>
     internal Task RefreshCompatibilityAsync()
-        => _services is null ? Task.CompletedTask : RefreshCompatibilityAsync(_services.InstalledVersion.GetInstalledVersion()?.Version);
+        => _services is null ? Task.CompletedTask : RefreshCompatibilityAsync(GameVersionOf(_services, _activeInstanceEntity));
 
     /// <summary>
     /// Evaluates the newest release of every index listing and every row of
@@ -494,7 +498,7 @@ public partial class MainViewModel
             return;
 
         _compatibilityGame = installed;
-        var previewBuild = PreviewGameBuild.Of(_services.InstalledVersion.GetInstalledVersion());
+        var previewBuild = PreviewStillBuild(_services);
         foreach (var item in _listings)
         {
             var latest = item.Source != "index" ? null
@@ -509,6 +513,9 @@ public partial class MainViewModel
             // only a lookup of a stored file, so Discover never fetches, reads parts or plans for a vehicle
             item.PreviewStillPath = item.Type == ContentType.Vehicle ? _services.PreviewThumbnails.TryGetPath(latest?.Download.Sha256, previewBuild) : null;
         }
+
+        // the Required by and Conflicts with cards read the releases set here, and a page without a release in the channel has nothing else that refreshes it
+        RefreshContentDependencies();
 
         foreach (var release in _contentReleases)
             release.RefreshCompatibility(installed);
@@ -531,13 +538,17 @@ public partial class MainViewModel
         ApplyDiscoverFilters();
     }
 
+    /// <summary>The build whose stills the rows show, which is the build of the active instance, the same as for their chips.</summary>
+    private string? PreviewStillBuild(BoreaServices services) =>
+        PreviewGameBuild.Of(_activeInstanceEntity is { } active ? services.InstanceGames.Resolve(active).Version : services.InstalledVersion.GetInstalledVersion());
+
     /// <summary>Shows the still that the vehicle page just stored on every Discover row of that vehicle archive.</summary>
     private void ShowPreviewStill(string vehicleSha256)
     {
         if (_services is not { } services)
             return;
 
-        var path = services.PreviewThumbnails.TryGetPath(vehicleSha256, PreviewGameBuild.Of(services.InstalledVersion.GetInstalledVersion()));
+        var path = services.PreviewThumbnails.TryGetPath(vehicleSha256, PreviewStillBuild(services));
         foreach (var item in _listings)
         {
             if (item.Type != ContentType.Vehicle || !string.Equals(item.LatestInChannel?.Download.Sha256, vehicleSha256, StringComparison.OrdinalIgnoreCase))
@@ -823,20 +834,16 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     private ModVersionMetadata? _latestInChannel;
 
-    /// <summary>The release Add installs, which the size and the age on the row belong to.</summary>
+    /// <summary>The release Add installs, which the age on the row belongs to.</summary>
     internal ModVersionMetadata? LatestInChannel
     {
         get => _latestInChannel;
         set
         {
             _latestInChannel = value;
-            OnPropertyChanged(nameof(DownloadSizeText));
             OnPropertyChanged(nameof(GameVersionText));
         }
     }
-
-    /// <summary>The archive size of <see cref="LatestInChannel"/>, or null when the index states none.</summary>
-    public string? DownloadSizeText => LatestInChannel?.Download.SizeBytes is { } size ? MainViewModel.SizeText(size) : null;
 
     public string? Description => _listing.Description;
 
@@ -957,7 +964,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     [ObservableProperty]
     private string? _installError;
 
-    private bool _isOpening;
+    private readonly OpeningGate _opening = new();
 
     /// <summary>True between the Remove menu item and the confirmation.</summary>
     [ObservableProperty]
@@ -1180,24 +1187,10 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     /// <summary>
     /// The whole row is this command, so it stays executable while the page
     /// loads, because a command that cannot execute greys out every control on
-    /// the row. The flag takes over the job of dropping a second click.
+    /// the row. The gate takes over the job of dropping a second click.
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task OpenAsync()
-    {
-        if (_isOpening)
-            return;
-
-        _isOpening = true;
-        try
-        {
-            await _owner.OpenContentAsync(this);
-        }
-        finally
-        {
-            _isOpening = false;
-        }
-    }
+    private Task OpenAsync() => _opening.RunAsync(() => _owner.OpenContentAsync(this));
 
     [RelayCommand]
     private Task ChangeVersionAsync() => _owner.OpenContentVersionsAsync(this);

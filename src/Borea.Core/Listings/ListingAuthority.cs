@@ -9,7 +9,10 @@ public sealed partial record ListingAuthority(string Kind, string Target)
 
     public const string SpaceDock = "spacedock";
 
-    /// <summary>The single host of [releases], the one [releases].authority names, or else the GitHub repository link.</summary>
+    /// <summary>
+    /// The single host of [releases], the one [releases].authority names, or else the GitHub repository link. A share host
+    /// has its key as the kind and the listing id as the target.
+    /// </summary>
     public static ListingAuthority? Of(ListingDraft draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
@@ -19,6 +22,8 @@ public sealed partial record ListingAuthority(string Kind, string Target)
             hosts.Add(new ListingAuthority(GitHub, github));
         if (draft.Releases?.SpaceDock is { } spaceDock)
             hosts.Add(new ListingAuthority(SpaceDock, spaceDock.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        if (draft.Releases?.Share is { } share)
+            hosts.Add(new ListingAuthority(share.Key, share.Id));
 
         if (hosts.Count == 1)
             return hosts[0];

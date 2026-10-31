@@ -27,7 +27,6 @@ public sealed class UnexpectedErrorTests
 
         await viewModel.CopyUnexpectedErrorCommand.ExecuteAsync(null);
 
-        Assert.NotNull(window.CopiedText);
         Assert.StartsWith(viewModel.DiagnosticsText, window.CopiedText);
         Assert.Contains("NullReferenceException: The vehicle has no engine.", window.CopiedText);
         Assert.Contains(nameof(Thrown), window.CopiedText);
@@ -153,6 +152,8 @@ public sealed class UnexpectedErrorTests
         public Exception? Failure { get; init; }
 
         public Task<string?> SaveTextFileAsync(string title, string suggestedFileName, string fileTypeName, string text) => Task.FromResult<string?>(null);
+
+        public Task<string?> SaveFileAsync(string title, string suggestedFileName, string extension, string fileTypeName, Func<Stream, Task> write) => Task.FromResult<string?>(null);
 
         public Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName) => Task.FromResult<PickedTextFile?>(null);
 

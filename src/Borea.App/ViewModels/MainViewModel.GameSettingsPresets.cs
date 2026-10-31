@@ -1,4 +1,5 @@
 using Borea.Composition;
+using Borea.Core.Instances;
 using Borea.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -41,7 +42,7 @@ public partial class MainViewModel
     [ObservableProperty]
     private string? _gameSettingsPresetError;
 
-    private Guid _gameSettingsPresetSourceInstanceId;
+    private Instance? _gameSettingsPresetSource;
 
     private Task _gameSettingsPresetLoad = Task.CompletedTask;
 
@@ -60,9 +61,7 @@ public partial class MainViewModel
     private void StartGameSettingsPresetLoad()
     {
         SelectedGameSettingsPreset = GameSettingsPresets.FirstOrDefault();
-        var previous = _gameSettingsPresetLoad;
-        var load = LoadGameSettingsPresetsAsync();
-        _gameSettingsPresetLoad = previous.IsCompleted ? load : Task.WhenAll(previous, load);
+        _gameSettingsPresetLoad = Chain(_gameSettingsPresetLoad, LoadGameSettingsPresetsAsync());
     }
 
     /// <summary>
@@ -115,16 +114,16 @@ public partial class MainViewModel
         SelectedGameSettingsPreset = GameSettingsPresets.FirstOrDefault(item => item.Id == selectedId) ?? none;
     }
 
-    /// <summary>Opens the modal that saves the settings of <paramref name="instanceId"/> as a preset.</summary>
-    internal void BeginCreateGameSettingsPreset(Guid instanceId)
+    /// <summary>Opens the modal that saves the settings of <paramref name="instance"/> as a preset.</summary>
+    internal void BeginCreateGameSettingsPreset(Instance instance)
     {
-        if (_services?.InstalledVersion.GetInstalledVersion() is null)
+        if (_services?.InstanceGames.Resolve(instance).Version is null)
         {
             ShowErrorToast(() => Localization.PresetModalTitle, Localization.ModalSettingsPresetNoGameVersion);
             return;
         }
 
-        _gameSettingsPresetSourceInstanceId = instanceId;
+        _gameSettingsPresetSource = instance;
         GameSettingsPresetError = null;
         NewGameSettingsPresetName = string.Empty;
         IsCreatingGameSettingsPreset = true;
@@ -147,17 +146,17 @@ public partial class MainViewModel
             return;
         }
 
-        if (_services is not { } services)
+        if (_services is not { } services || _gameSettingsPresetSource is not { } source)
             return;
 
         // read again: the installed version can go between opening the modal and confirming
-        if (services.InstalledVersion.GetInstalledVersion()?.Version is not { } version)
+        if (GameVersionOf(services, source) is not { } version)
         {
             GameSettingsPresetError = Localization.ModalSettingsPresetNoGameVersion;
             return;
         }
 
-        var sourcePath = services.Paths.GetInstanceSettingsPath(_gameSettingsPresetSourceInstanceId);
+        var sourcePath = services.Paths.GetInstanceSettingsPath(source.InstanceId);
         if (!File.Exists(sourcePath))
         {
             GameSettingsPresetError = Localization.PresetModalNoSettings;

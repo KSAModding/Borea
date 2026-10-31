@@ -218,14 +218,17 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
     public string NoticesText => _localization.FormatPreviewNotices(Notices.Count);
 
-    /// <summary>The preparation and the load that run now, so a test can wait for them. It never fails.</summary>
+    /// <summary>
+    /// Every preparation and load that still runs, also one that a newer run cancelled, because that one can still
+    /// hold a file open. It never fails.
+    /// </summary>
     internal Task Loading { get; private set; } = Task.CompletedTask;
 
     /// <summary>Asks the service what the preview needs, and builds the scene at once when everything is on this computer.</summary>
-    internal void Start() => Loading = RunAsync(PrepareAsync);
+    internal Task Start() => TrackRun(PrepareAsync);
 
     [RelayCommand(CanExecute = nameof(CanShow))]
-    private Task ShowAsync() => Loading = RunAsync(async token =>
+    private Task ShowAsync() => TrackRun(async token =>
     {
         if (_plan is null)
         {
@@ -238,7 +241,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     });
 
     [RelayCommand(CanExecute = nameof(CanFetchModsNow))]
-    private Task FetchModsAsync() => Loading = RunAsync(token => LoadAsync(fetchVehicle: false, fetchMods: true, token));
+    private Task FetchModsAsync() => TrackRun(token => LoadAsync(fetchVehicle: false, fetchMods: true, token));
 
     private bool CanFetchModsNow() => CanFetchMods && !IsBusy;
 
@@ -275,6 +278,13 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         OnPropertyChanged(nameof(ShowText));
         ShowMissingMods(_missingMods);
         ShowNotices();
+    }
+
+    private Task TrackRun(Func<CancellationToken, Task> body)
+    {
+        var run = RunAsync(body);
+        Loading = Loading.IsCompleted ? run : Task.WhenAll(Loading, run);
+        return run;
     }
 
     /// <summary>

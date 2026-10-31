@@ -68,8 +68,6 @@ internal static class PublicNetworkTarget
 
     public static bool IsPublic(IPAddress address)
     {
-        ArgumentNullException.ThrowIfNull(address);
-
         if (address.IsIPv4MappedToIPv6)
             return IsPublic(address.MapToIPv4());
 

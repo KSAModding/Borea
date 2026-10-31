@@ -6,21 +6,19 @@ namespace Borea.App.Tests.SingleInstance;
 
 public sealed class HandoverProtocolTests
 {
-    [Fact]
-    public void Start_RoundTrips()
+    private static readonly string Umlauts = new([(char)0xFC, (char)0xDF]);
+
+    public static TheoryData<string[]> StartArgumentLists =>
+    [
+        [],
+        ["borea://install/Example?version=1.2.0", "", Umlauts + " \"quoted\" \\ path"],
+    ];
+
+    [Theory]
+    [MemberData(nameof(StartArgumentLists))]
+    public void Start_RoundTrips(string[] arguments)
     {
-        var umlauts = new string([(char)0xFC, (char)0xDF]);
-        string[] arguments = ["borea://install/Example?version=1.2.0", "", umlauts + " \"quoted\" \\ path"];
-
-        var decoded = HandoverProtocol.DecodeStart(HandoverProtocol.EncodeStart(arguments));
-
-        Assert.Equal(arguments, decoded);
-    }
-
-    [Fact]
-    public void Start_WithoutArguments_RoundTrips()
-    {
-        Assert.Empty(HandoverProtocol.DecodeStart(HandoverProtocol.EncodeStart([]))!);
+        Assert.Equal(arguments, HandoverProtocol.DecodeStart(HandoverProtocol.EncodeStart(arguments)));
     }
 
     [Fact]

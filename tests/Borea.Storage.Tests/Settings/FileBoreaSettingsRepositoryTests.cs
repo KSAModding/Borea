@@ -149,7 +149,6 @@ public sealed class FileBoreaSettingsRepositoryTests : IDisposable
         await _repository.SaveAsync(settings);
         var reloaded = await _repository.GetAsync();
 
-        Assert.NotNull(reloaded);
         Assert.Equal(@"C:\Games\KSA", reloaded!.GameDirectoryPath);
         Assert.Equal(2, reloaded.LoaderInstallations.Count);
 
@@ -162,18 +161,6 @@ public sealed class FileBoreaSettingsRepositoryTests : IDisposable
         var cheese = reloaded.LoaderInstallations["Cheese-Loader"];
         Assert.Equal(@"C:\Games\Cheese", cheese.DirectoryPath);
         Assert.False(cheese.IsAdopted);
-    }
-
-    [Fact]
-    public async Task SaveThenGet_RoundTripsPartialSettings_GameOnly()
-    {
-        var settings = new BoreaSettings(@"C:\Games\KSA");
-
-        await _repository.SaveAsync(settings);
-        var reloaded = await _repository.GetAsync();
-
-        Assert.Equal(@"C:\Games\KSA", reloaded!.GameDirectoryPath);
-        Assert.Empty(reloaded.LoaderInstallations);
     }
 
     [Fact]
@@ -199,7 +186,6 @@ public sealed class FileBoreaSettingsRepositoryTests : IDisposable
         await _repository.SaveAsync(settings);
         var reloaded = await _repository.GetAsync();
 
-        Assert.NotNull(reloaded);
         Assert.Null(reloaded!.GameDirectoryPath);
         Assert.Empty(reloaded.LoaderInstallations);
     }

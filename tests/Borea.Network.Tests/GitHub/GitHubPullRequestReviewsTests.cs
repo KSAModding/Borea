@@ -25,6 +25,7 @@ public sealed partial class GitHubPullRequestReviewsTests
     private const string IndexMarker = "<!-- content-index:verdict -->";
     private const string ReleasesMarker = "<!-- content-index-releases:verdict -->";
     private const string Listing = "id = \"MyMod\"\nname = \"My Mod\"\n[releases]\ngithub = \"alice/MyMod\"\n";
+    private const string VehicleListing = "id = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\n[releases]\ngithub = \"alice/ExampleRover\"\n";
 
     private readonly List<Sent> _sent = [];
     private readonly Dictionary<string, Func<HttpResponseMessage>> _routes = new(StringComparer.Ordinal);
@@ -64,6 +65,88 @@ public sealed partial class GitHubPullRequestReviewsTests
         Assert.DoesNotContain(_sent, sent => sent.Url.Contains("/repos/alice/", StringComparison.Ordinal));
         Assert.All(_sent, sent => Assert.Equal(sent.Url.Contains("/status", StringComparison.Ordinal) ? null : "Bearer " + Token, sent.Authorization));
         Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+    }
+
+    [Theory]
+    [InlineData("vehicles/ExampleRover.toml", StewardQueueKind.Vehicle)]
+    [InlineData("saves/ExampleSave.toml", StewardQueueKind.Save)]
+    public async Task ReadAsync_VehicleOrSave_IsADocumentWhoseAuthorIsCheckedAsForAListing(string path, StewardQueueKind kind)
+    {
+        Pull(Index, 9, First, "alice/content-index", labels: [kind.ToString().ToLowerInvariant(), "needs-steward"]);
+        Files(Index, 9, File(path, "added", "@@"));
+        Status(Index, First, ("validate", "success", "validated, a steward decides"));
+        Content(Index, path, First, VehicleListing);
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 9);
+
+        var document = Assert.Single(review.Documents);
+        Assert.Equal((path, kind, "Example Rover"), (document.Path, document.Kind, document.Document?.GetString("name")));
+        Assert.Same(_ownership.Result, document.Ownership);
+        Assert.Equal([(new GitHubAccount("alice", 5), path, "main", First)], _ownership.Calls);
+        Assert.Equal((null, null), (document.NewestRelease, document.NewestReleaseFailure));
+    }
+
+    [Fact]
+    public async Task ReadAsync_Vehicle_ReadsTheInstallFolderOfItsNewestReleaseOnMainOfTheReleases()
+    {
+        VehiclePull();
+        _routes[$"{Api}/repos/{Releases}/contents/releases/ExampleRover?ref=main"] = () => Json(JsonSerializer.Serialize(
+            new[] { "1.2.0.json", "1.10.0.json", "notes.md" }.Select(name => new { name, path = "releases/ExampleRover/" + name, type = "file" })));
+        Content(Releases, "releases/ExampleRover/1.10.0.json", "main", """{"id": "ExampleRover", "type": "vehicle", "version": "1.10.0", "install": {"root": "Example Rover", "derived": true, "folder": "Example Rover"}}""");
+        var reviews = await SignedInAsync();
+
+        var document = Assert.Single((await reviews.ReadAsync(Index, 9)).Documents);
+
+        Assert.Equal(new PullRequestRelease("1.10.0", "Example Rover"), document.NewestRelease);
+        Assert.Null(document.NewestReleaseFailure);
+        Assert.DoesNotContain(_sent, sent => sent.Url.Contains("1.2.0.json", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError, StewardFailure.UnexpectedResponse)]
+    [InlineData(HttpStatusCode.Forbidden, StewardFailure.Forbidden)]
+    public async Task ReadAsync_VehicleWhoseReleasesCannotBeRead_StillShowsWithItsOwnership(HttpStatusCode status, StewardFailure failure)
+    {
+        VehiclePull();
+        _routes[$"{Api}/repos/{Releases}/contents/releases/ExampleRover?ref=main"] = () => Json("""{"message":"Resource not accessible by integration"}""", status);
+        var reviews = await SignedInAsync();
+
+        var document = Assert.Single((await reviews.ReadAsync(Index, 9)).Documents);
+
+        Assert.Null(document.NewestRelease);
+        Assert.Equal(failure, document.NewestReleaseFailure?.Failure);
+        Assert.Same(_ownership.Result, document.Ownership);
+        Assert.Equal("Example Rover", document.Document?.GetString("name"));
+    }
+
+    [Fact]
+    public async Task ReadAsync_VehicleWhoseNewestReleaseIsNoJsonObject_SaysItCannotBeRead()
+    {
+        VehiclePull();
+        _routes[$"{Api}/repos/{Releases}/contents/releases/ExampleRover?ref=main"] = () => Json("""[{"name": "1.0.0.json", "type": "file"}]""");
+        Content(Releases, "releases/ExampleRover/1.0.0.json", "main", "[1]");
+        var reviews = await SignedInAsync();
+
+        var document = Assert.Single((await reviews.ReadAsync(Index, 9)).Documents);
+
+        Assert.Null(document.NewestRelease);
+        Assert.Equal(StewardFailure.UnreadableFile, document.NewestReleaseFailure?.Failure);
+    }
+
+    [Fact]
+    public async Task ReadAsync_ListingOrPack_ReadsNoRelease()
+    {
+        Pull(Index, 5, First, Index, labels: ["listing"]);
+        Files(Index, 5, File("listings/MyMod.toml", "added", "@@"));
+        Status(Index, First);
+        Content(Index, "listings/MyMod.toml", First, Listing);
+        var reviews = await SignedInAsync();
+
+        var document = Assert.Single((await reviews.ReadAsync(Index, 5)).Documents);
+
+        Assert.Null(document.NewestRelease);
+        Assert.DoesNotContain(_sent, sent => sent.Url.Contains(Releases, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -299,6 +382,99 @@ public sealed partial class GitHubPullRequestReviewsTests
         Assert.Empty(_sent);
     }
 
+    [Fact]
+    public async Task ReadAsync_Handover_ShowsTheOldAndTheNewOwnerAndThatTheNewAccountIdStillHasItsLogin()
+    {
+        Pull(Index, 40, First, Index, labels: ["needs-steward"]);
+        Files(Index, 40, File("packs/my-pack/owner.json", "modified", "@@ -1,4 +1,4 @@"));
+        Status(Index, First, ("validate", "success", "a steward decides"));
+        Content(Index, "packs/my-pack/owner.json", "main", """{ "github_login": "alice", "github_id": 5 }""");
+        Content(Index, "packs/my-pack/owner.json", First, """{ "github_login": "bob", "github_id": 7 }""");
+        _routes[$"{Api}/user/7"] = () => Json("""{"login":"bob","id":7}""");
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 40);
+
+        var record = Assert.Single(review.OwnerRecords);
+        Assert.Equal(("packs/my-pack/owner.json", false), (record.Path, record.IsFirstClaim));
+        Assert.Equal(new ListingPackOwner("alice", 5), record.Before?.Owner);
+        Assert.Equal(new ListingPackOwner("bob", 7), record.After?.Owner);
+        Assert.Equal(new PackOwnerAccount(PackOwnerAccountState.Same, "bob"), record.Account);
+        Assert.Empty(review.Documents);
+        Assert.Contains(_sent, sent => sent.Url == $"{Api}/user/7" && sent.Authorization == "Bearer " + Token);
+        Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+    }
+
+    [Theory]
+    [InlineData("""{"login":"BOB","id":7}""", HttpStatusCode.OK, PackOwnerAccountState.Same, "BOB")]
+    [InlineData("""{"login":"carol","id":7}""", HttpStatusCode.OK, PackOwnerAccountState.OtherLogin, "carol")]
+    [InlineData("""{"message":"Not Found"}""", HttpStatusCode.NotFound, PackOwnerAccountState.Gone, null)]
+    [InlineData("""{"message":"Server Error"}""", HttpStatusCode.BadGateway, PackOwnerAccountState.Unknown, null)]
+    [InlineData("""{"login":"bob","id":8}""", HttpStatusCode.OK, PackOwnerAccountState.Unknown, null)]
+    public async Task ReadAsync_OwnerRecord_SaysWhichLoginGitHubGivesItsAccountIdNow(string user, HttpStatusCode status, PackOwnerAccountState state, string? login)
+    {
+        Pull(Index, 41, First, Index, labels: ["needs-steward"]);
+        Files(Index, 41, File("packs/my-pack/owner.json", "modified", "@@ -1,4 +1,4 @@"));
+        Status(Index, First, ("validate", "success", "a steward decides"));
+        Content(Index, "packs/my-pack/owner.json", "main", """{ "github_login": "alice", "github_id": 5 }""");
+        Content(Index, "packs/my-pack/owner.json", First, """{ "github_login": "bob", "github_id": 7 }""");
+        _routes[$"{Api}/user/7"] = () => Json(user, status);
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 41);
+
+        Assert.Equal(new PackOwnerAccount(state, login), Assert.Single(review.OwnerRecords).Account);
+    }
+
+    [Fact]
+    public async Task ReadAsync_FirstPackClaim_ShowsTheRecordAsAFirstClaimWithNoOwnerBefore()
+    {
+        Pull(Index, 42, First, "bob/content-index", labels: ["pack"], author: "bob");
+        Files(Index, 42, File("packs/my-pack/1.0.0.toml", "added", "@@ -0,0 +1,2 @@"), File("packs/my-pack/owner.json", "added", "@@ -0,0 +1,4 @@"));
+        Status(Index, First, ("validate", "success", "validated"));
+        Content(Index, "packs/my-pack/1.0.0.toml", First, "id = \"my-pack\"\nversion = \"1.0.0\"\n");
+        Content(Index, "packs/my-pack/owner.json", First, """{ "github_login": "bob", "github_id": 7 }""");
+        _routes[$"{Api}/user/7"] = () => Json("""{"login":"bob","id":7}""");
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 42);
+
+        var record = Assert.Single(review.OwnerRecords);
+        Assert.True(record.IsFirstClaim);
+        Assert.Null(record.Before);
+        Assert.Equal(new ListingPackOwner("bob", 7), record.After?.Owner);
+        Assert.Equal(StewardQueueKind.Pack, Assert.Single(review.Documents).Kind);
+    }
+
+    [Fact]
+    public async Task ReadAsync_RemovedOrUnreadableOwnerRecord_HasNoAfterOrShowsItsText()
+    {
+        Pull(Index, 43, First, Index, labels: ["needs-steward"]);
+        Files(
+            Index,
+            43,
+            File("packs/my-pack/owner.json", "removed", null),
+            File("packs/other-pack/owner.json", "modified", null),
+            new { filename = "packs/third-pack/owner.txt", previous_filename = "packs/third-pack/owner.json", status = "renamed", additions = 0, deletions = 0 });
+        Status(Index, First, ("validate", "failure", "every pack must record its owner"));
+        Content(Index, "packs/my-pack/owner.json", "main", """{ "github_login": "alice", "github_id": 5 }""");
+        Content(Index, "packs/other-pack/owner.json", "main", """{ "github_login": "alice", "github_id": 5 }""");
+        Content(Index, "packs/other-pack/owner.json", First, """{ "github_login": "bob" }""");
+        Content(Index, "packs/third-pack/owner.json", "main", """{ "github_login": "carol", "github_id": 9 }""");
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 43);
+
+        Assert.Equal(3, review.OwnerRecords.Count);
+        var renamed = review.OwnerRecords[2];
+        Assert.Equal(("packs/third-pack/owner.txt", new ListingPackOwner("carol", 9), (PackOwnerText?)null), (renamed.Path, renamed.Before?.Owner, renamed.After));
+        var removed = review.OwnerRecords[0];
+        Assert.Equal((new ListingPackOwner("alice", 5), (PackOwnerText?)null, (PackOwnerAccount?)null), (removed.Before?.Owner, removed.After, removed.Account));
+        var unreadable = review.OwnerRecords[1];
+        Assert.Equal(("""{ "github_login": "bob" }""", (ListingPackOwner?)null, (PackOwnerAccount?)null), (unreadable.After?.Text, unreadable.After?.Owner, unreadable.Account));
+        Assert.DoesNotContain(_sent, sent => sent.Url.StartsWith($"{Api}/user/", StringComparison.Ordinal));
+    }
+
     /// <summary>Answers the pull request, and no comments until <see cref="Comments"/> gives some.</summary>
     private void Pull(string repository, int number, string head, string? headRepository, string[]? labels = null, string state = "open", bool merged = false, string? mergedAt = null, bool draft = false, string? author = "alice", string baseBranch = "main")
     {
@@ -317,6 +493,15 @@ public sealed partial class GitHubPullRequestReviewsTests
             head = new { @ref = "listing-MyMod", sha = head, repo = headRepository is null ? null : new { full_name = headRepository } },
             @base = new { @ref = baseBranch, sha = "fedcba9876543210fedcba9876543210fedcba98", repo = new { full_name = repository } },
         }));
+    }
+
+    /// <summary>A pull request that changes vehicles/ExampleRover.toml, whose releases the test gives.</summary>
+    private void VehiclePull()
+    {
+        Pull(Index, 9, First, Index, labels: ["vehicle"]);
+        Files(Index, 9, File("vehicles/ExampleRover.toml", "modified", "@@"));
+        Status(Index, First);
+        Content(Index, "vehicles/ExampleRover.toml", First, VehicleListing);
     }
 
     private static object File(string path, string status, string? patch, int additions = 1) =>

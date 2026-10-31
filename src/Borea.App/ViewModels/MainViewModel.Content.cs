@@ -12,6 +12,7 @@ using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.Preview;
+using Borea.Core.Sharing;
 using Borea.Core.Stewardship;
 using Borea.Preview.Loading;
 using Borea.Preview.Rendering;
@@ -91,6 +92,7 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
+    [NotifyPropertyChangedFor(nameof(ContentShareHostText))]
     [NotifyPropertyChangedFor(nameof(HasContentTags))]
     [NotifyPropertyChangedFor(nameof(IsLoaderContent))]
     [NotifyPropertyChangedFor(nameof(HasContentDependenciesTab))]
@@ -120,6 +122,17 @@ public partial class MainViewModel
     public bool HasVersionDownloads => _contentReleases.Any(release => release.HasDownloads);
 
     public bool HasContentLinks => ContentLinks.Count > 0;
+
+    /// <summary>The share host of hosts.toml that the open listing names, whose page the links show.</summary>
+    private ShareHost? _contentShareHost;
+
+    /// <summary>The share host that the listing names under [releases] (RFC 0094), while hosts.toml does not register it, or null.</summary>
+    public string? ContentShareHostText => _contentShareHost is null && ContentShareHostKey(SelectedContent) is { } key
+        ? Localization.FormatContentSharedOn(key)
+        : null;
+
+    private static string? ContentShareHostKey(DiscoverItem? item) =>
+        item?.Listing.Releases?.Hosts.FirstOrDefault(host => host.Kind == ReleaseHostKind.Share)?.Host;
 
     /// <summary>The share page of the listing on the landing site, or null when it has none.</summary>
     public string? ContentShareUrl => SelectedContent is { } item ? ShareLinks.For(item.Listing) : null;
@@ -194,6 +207,12 @@ public partial class MainViewModel
     private string? _vehiclePreviewTarget;
 
     /// <summary>
+    /// The loads of the previews that closed. A closed preview stops at its next check, so until then it can still hold
+    /// a file open below the folders of the library.
+    /// </summary>
+    private Task _closedVehiclePreviewLoads = Task.CompletedTask;
+
+    /// <summary>
     /// The releases whose fetch the player cancelled, or whose fetch failed, since Borea started. Every later preview
     /// of one of them waits for the click, also on a page that the player opens again. The list lives in memory only,
     /// so the next start of Borea loads a small vehicle file on its own again.
@@ -208,6 +227,12 @@ public partial class MainViewModel
 
     /// <summary>Completes when the preview of the open vehicle page has prepared or built what it can without a click.</summary>
     internal Task WhenVehiclePreviewLoadedAsync() => VehiclePreview?.Loading ?? Task.CompletedTask;
+
+    /// <summary>
+    /// Completes when no preview reads a file, also not one that closed. Windows does not move or delete a folder while
+    /// a file below it is open, so anything that moves or deletes the mods, the vehicles or the kept builds waits for it.
+    /// </summary>
+    internal Task WhenVehiclePreviewReadsEndedAsync() => Chain(_closedVehiclePreviewLoads, WhenVehiclePreviewLoadedAsync());
 
     /// <summary>
     /// The instance whose files the preview reads. A page opened from an instance reads that instance, where the
@@ -229,7 +254,7 @@ public partial class MainViewModel
         var old = VehiclePreview;
         RememberDeclinedPreview(old);
         VehiclePreviewViewModel? next = null;
-        if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
+        if (_services is { } services && !IsChangingLibraryFolder && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
         {
             var target = VehiclePreviewTarget;
             var installing = _contentInstallReleases.Any(release => SameRelease(release, latest.Release)) || HoldsContentPlan(latest.Release);
@@ -252,7 +277,7 @@ public partial class MainViewModel
         }
 
         VehiclePreview = next;
-        old?.Dispose();
+        Close(old);
         next?.Start();
     }
 
@@ -312,6 +337,7 @@ public partial class MainViewModel
         ? null
         : string.Join('|', [
             instance.InstanceId.ToString(),
+            instance.Instance.GameBuild?.ToString() ?? string.Empty,
             .. instance.Mods.Select(mod => $"{mod.ModId}@{mod.Version}"),
             .. instance.Content.Select(record => $"{record.ListingId}@{record.Metadata.Version}"),
         ]);
@@ -321,7 +347,34 @@ public partial class MainViewModel
         var old = VehiclePreview;
         RememberDeclinedPreview(old);
         VehiclePreview = null;
-        old?.Dispose();
+        Close(old);
+    }
+
+    private void Close(VehiclePreviewViewModel? preview)
+    {
+        if (preview is null)
+            return;
+
+        preview.Dispose();
+        _closedVehiclePreviewLoads = Chain(_closedVehiclePreviewLoads, preview.Loading);
+    }
+
+    /// <summary>
+    /// Closes a preview on the open page that still works, so the caller can move or delete files once the returned
+    /// task completes, and makes it again with <see cref="RestoreVehiclePreview"/> after that.
+    /// </summary>
+    private Task StopVehiclePreviewReadsAsync()
+    {
+        if (VehiclePreview is { Loading.IsCompleted: false })
+            ClearVehiclePreview();
+
+        return WhenVehiclePreviewReadsEndedAsync();
+    }
+
+    private void RestoreVehiclePreview()
+    {
+        if (VehiclePreview is null)
+            RefreshVehiclePreview();
     }
 
     [RelayCommand]
@@ -427,6 +480,7 @@ public partial class MainViewModel
         ApplyVersionFilter();
         VersionFilter = OptionFor(SavedReleaseChannel);
 
+        _contentShareHost = null;
         FillLinks(ContentLinks, item.Links);
         OnPropertyChanged(nameof(HasContentLinks));
 
@@ -474,6 +528,7 @@ public partial class MainViewModel
                 item.Update(full);
                 FillLinks(ContentLinks, item.Links);
                 OnPropertyChanged(nameof(HasContentLinks));
+                OnPropertyChanged(nameof(ContentShareHostText));
                 OnPropertyChanged(nameof(HasContentTags));
             }
 
@@ -488,6 +543,35 @@ public partial class MainViewModel
         {
             ContentDetailError = exception.Message;
         }
+
+        await LinkShareHostAsync(item);
+    }
+
+    /// <summary>Links the page of the share host that the listing names, once hosts.toml registers that host. A failure only loses the link.</summary>
+    private async Task LinkShareHostAsync(DiscoverItem item)
+    {
+        if (_services is null || ContentShareHostKey(item) is not { } key)
+            return;
+
+        IReadOnlyList<ShareHost> hosts;
+        try
+        {
+            hosts = await _services.ShareHosts.GetAsync();
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException or TaskCanceledException)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(SelectedContent, item) || hosts.FirstOrDefault(host => host.Key == key) is not { } host)
+            return;
+
+        _contentShareHost = host;
+        var link = new ContentLink(Localization.FormatContentSharedOn(host.Name), host.Page.AbsoluteUri, "share-host");
+        if (!ContentLinks.Contains(link))
+            ContentLinks.Add(link);
+        OnPropertyChanged(nameof(HasContentLinks));
+        OnPropertyChanged(nameof(ContentShareHostText));
     }
 
     // the order and names of the detail panel in #8; unknown keys follow with a capital first letter
@@ -518,7 +602,6 @@ public partial class MainViewModel
         _ => char.ToUpperInvariant(key[0]) + key[1..],
     };
 
-    /// <summary>Fills the links of a detail panel in the order of #8.</summary>
     private void FillLinks(ObservableCollection<ContentLink> links, IReadOnlyDictionary<string, string> source)
     {
         links.Clear();
@@ -791,7 +874,7 @@ public sealed partial class VersionItem : ObservableObject, IContentPlanRow
     public string InstallToolTip => ReplacedVersion is { } installed ? _owner.ReplaceVersionText(installed) : _owner.AddToText;
 
     /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
-    public string GameVersionText => _release.GameMax is null ? $">= {_release.GameMin}" : $"{_release.GameMin} - {_release.GameMax}";
+    public string GameVersionText => MainViewModel.GameBoundsText(_release.GameMin, _release.GameMax);
 
     public DateTimeOffset ReleaseDate => _release.ReleaseDate;
 

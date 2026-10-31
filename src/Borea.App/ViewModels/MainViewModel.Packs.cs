@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
-using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Licenses;
@@ -547,14 +546,14 @@ public partial class MainViewModel
             if (selected?.Metadata is not { } metadata)
                 throw new InvalidOperationException(Localization.DiscoverNoRelease);
 
-            var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
+            var instance = instanceId is { } existing
+                ? await services.Instances.GetByIdAsync(existing) ?? throw new InvalidOperationException(Localization.InstallInstanceMissing)
+                : NewPackInstance(newInstanceName!, metadata);
+            var installed = PlanningGameVersion(services, instance);
             var pinned = await PinnedReleasesAsync(services.Mods, metadata);
             var compatibility = Borea.Core.Game.Compatibility.Evaluate(metadata, installed, _gameReleases);
             ThrowIfIncompatible(metadata, compatibility, pinned, installed);
 
-            var instance = instanceId is { } existing
-                ? await services.Instances.GetByIdAsync(existing) ?? throw new InvalidOperationException(Localization.InstallInstanceMissing)
-                : NewPackInstance(newInstanceName!, metadata);
             var reasons = PackWarnings(selected, metadata, compatibility);
             var yanked = new HashSet<string>(ModIds.Comparer);
             var requested = new List<RequestedMod>();
@@ -628,7 +627,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, pack.InstallError);
-            pack.EndInstall(stopped);
+            EndRowInstall(pack, stopped);
         }
 
         if (executed)
@@ -799,7 +798,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, error);
-            pack.EndInstall(stopped);
+            EndRowInstall(pack, stopped);
             if (error is null)
                 ReplanIfChanged(pack, revision);
         }
@@ -923,7 +922,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         : Metadata.Vehicles.Count + Metadata.Saves.Count == 0 ? _owner.Localization.FormatPackNewerReleases(NewerMembers.Count, ModCount)
         : _owner.Localization.FormatPackNewerItems(NewerMembers.Count, ModCount + Metadata.Vehicles.Count + Metadata.Saves.Count);
 
-    public string GameVersionText => GameVersion(Metadata);
+    public string GameVersionText => MainViewModel.GameBoundsText(Metadata.GameMin, Metadata.GameMax);
 
     /// <summary>How long ago this pack version came out.</summary>
     public string ReleasedText => _owner.ShortAgeText(Metadata.ReleasedAt);
@@ -1100,9 +1099,6 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         OnPropertyChanged(nameof(UnfitPinTexts));
     }
 
-    internal static string GameVersion(ModPackMetadata pack)
-        => pack.GameMax is null ? $">= {pack.GameMin}" : $"{pack.GameMin} - {pack.GameMax}";
-
     internal bool Matches(string query)
         => Name.Contains(query, StringComparison.CurrentCultureIgnoreCase)
             || Abstract.Contains(query, StringComparison.CurrentCultureIgnoreCase)
@@ -1127,16 +1123,6 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         ProgressStatus = null;
         CancelInstall();
         ShowResults([]);
-    }
-
-    /// <param name="stopped">What the row shows after a stop, or null.</param>
-    internal void EndInstall(string? stopped = null)
-    {
-        IsInstalling = false;
-        Run = null;
-        Progress = 0;
-        ProgressStatus = stopped;
-        ProgressDetail = null;
     }
 
     internal void RefreshText()
@@ -1628,7 +1614,7 @@ public sealed partial class PackVersionItem : ObservableObject
 
     public string Version => Metadata.Version.ToString();
 
-    public string GameVersionText => PackItem.GameVersion(Metadata);
+    public string GameVersionText => MainViewModel.GameBoundsText(Metadata.GameMin, Metadata.GameMax);
 
     /// <summary>How long ago this version came out.</summary>
     public string PublishedText => _owner.ShortAgeText(Metadata.ReleasedAt);

@@ -95,6 +95,19 @@ public sealed partial class GitHubStewardQueueTests
     }
 
     [Fact]
+    public async Task ListAsync_AnAddedVehicle_IsContentOfTheKindVehicle()
+    {
+        Pull(Index, 30, Day, "alice", ["vehicle", "needs-steward"], ["vehicles/ExampleRover.toml"]);
+        var queue = await SignedInAsync();
+
+        var listed = await queue.ListAsync();
+
+        var item = Assert.Single(listed.Items);
+        Assert.Equal([StewardQueueKind.Vehicle], item.Kinds);
+        Assert.True(item.IsContent);
+    }
+
+    [Fact]
     public async Task ListAsync_RenamedFile_CountsItsOldPathToo()
     {
         Pull(Index, 7, Day, "alice", ["needs-steward"], ["tags.toml"]);

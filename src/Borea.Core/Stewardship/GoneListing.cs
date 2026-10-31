@@ -11,12 +11,12 @@ namespace Borea.Core.Stewardship;
 /// <param name="Releases">The marked releases, the newest mark first.</param>
 public sealed record GoneListing(string ListingId, string? Name, IReadOnlyList<GoneRelease> Releases)
 {
-    /// <summary>Each listing of the snapshot that has a marked release, the listing with the newest mark first.</summary>
+    /// <summary>Each listing, vehicle and save of the snapshot that has a marked release, the listing with the newest mark first.</summary>
     public static IReadOnlyList<GoneListing> From(ContentIndexSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        return [.. snapshot.Listings
+        return [.. snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves)
             .Select(listing => new GoneListing(listing.Id, listing.Authored?.Name, [.. listing.Releases
                 .Where(release => release.Download.UnavailableSince is not null)
                 .Select(release => new GoneRelease(release.Version, release.Download.UnavailableSince!.Value))

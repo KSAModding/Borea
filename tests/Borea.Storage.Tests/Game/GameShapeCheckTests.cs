@@ -1,5 +1,7 @@
 using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Storage.Game;
+using Borea.Storage.Instances;
 using Borea.Storage.Tests.Paths;
 
 namespace Borea.Storage.Tests.Game;
@@ -25,7 +27,19 @@ public sealed class GameShapeCheckTests : IDisposable
             Path.Combine(_paths.GetGameDirectoryPath()!, "KSA.dll"));
     }
 
-    private GameShapeCheck Check() => new(_paths, new InstalledGameVersionProvider(_paths));
+    private GameShapeCheck Check()
+    {
+        var installed = new InstalledGameVersionProvider(_paths);
+        return new(_paths, installed, new FileInstanceRepository(_paths), new InstanceGameResolver(_paths, installed));
+    }
+
+    private async Task<Guid> KeepingAsync(GameVersion build)
+    {
+        var instance = new Instance("Career", InstanceSource.Custom.Value);
+        instance.SetGameBuild(build);
+        await new FileInstanceRepository(_paths).CreateAsync(instance);
+        return instance.InstanceId;
+    }
 
     private static string Fixture(string name) => Path.Combine(AppContext.BaseDirectory, "Game", "Fixtures", name);
 
@@ -209,6 +223,42 @@ public sealed class GameShapeCheckTests : IDisposable
 
         Assert.Equal(GameShapeStatus.Verified, first.Status);
         Assert.Equal(GameShapeStatus.Verified, second.Status);
+    }
+
+    [Fact]
+    public async Task GetForInstanceAsync_KeptBuild_ChecksTheKeptFolder()
+    {
+        // the kept build reads the same version as the settings' folder, so only the folder tells the two apart
+        var build = GameVersion.Parse("2026.8.3.5117");
+        var kept = _paths.GetGameBuildFolder(build);
+        Directory.CreateDirectory(kept);
+        File.Copy(Path.Combine(_paths.GetGameDirectoryPath()!, "KSA.dll"), Path.Combine(kept, "KSA.dll"));
+        var instanceId = await KeepingAsync(build);
+        var check = Check();
+
+        var settings = await check.GetAsync();
+        var instance = await check.GetForInstanceAsync(instanceId);
+        var settingsAgain = await check.GetAsync();
+
+        Assert.Equal(build, instance.Version?.Version);
+        Assert.Equal(GameAssumptionState.Holds, instance.Results.Single(result => result.Assumption == GameAssumption.GameAssembly).State);
+        Assert.Equal(GameAssumptionState.NotChecked, instance.Results.Single(result => result.Assumption == GameAssumption.ContentManifest).State);
+        Assert.Equal(GameAssumptionState.Holds, settings.Results.Single(result => result.Assumption == GameAssumption.ContentManifest).State);
+        Assert.Equal(GameAssumptionState.Holds, settingsAgain.Results.Single(result => result.Assumption == GameAssumption.ContentManifest).State);
+    }
+
+    [Fact]
+    public async Task GetForInstanceAsync_KeptBuildMissing_ChecksNoOtherInstallation()
+    {
+        var build = GameVersion.Parse("2026.10.13.5602");
+        var instanceId = await KeepingAsync(build);
+
+        var shape = await Check().GetForInstanceAsync(instanceId);
+
+        // the folder of the settings holds a content manifest, so a check of it would hold
+        Assert.Null(shape.Version);
+        Assert.Equal(GameShapeStatus.Unknown, shape.Status);
+        Assert.Equal(GameAssumptionState.NotChecked, shape.Results.Single(result => result.Assumption == GameAssumption.ContentManifest).State);
     }
 
     public void Dispose()

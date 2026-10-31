@@ -14,6 +14,32 @@ internal static class UserContentFolder
 {
     public const string MetadataFileName = "meta.toml";
 
+    /// <summary>
+    /// Copies of EXECUTABLE_EXTENSIONS and BUNDLE_EXTENSIONS in tools/stamp_release.py of content-index-releases, and a change
+    /// there needs the same change here. The game reads only meta.toml and XML from these folders and runs nothing from them.
+    /// </summary>
+    private static readonly HashSet<string> ExecutableExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".exe", ".com", ".scr", ".pif", ".cpl", ".dll", ".xll", ".msi", ".msp",
+        ".msix", ".msixbundle", ".appx", ".appxbundle", ".application", ".appref-ms",
+        ".diagcab", ".gadget",
+        ".bat", ".cmd", ".ps1", ".psm1", ".vb", ".vbs", ".vbe", ".js", ".jse",
+        ".wsf", ".wsh", ".wsc", ".sct", ".hta", ".msc", ".reg", ".lnk", ".url",
+        ".chm", ".settingcontent-ms",
+        ".scf", ".library-ms", ".searchconnector-ms",
+        ".jar", ".jnlp", ".py", ".pyc", ".pyw", ".pyz",
+        ".so", ".sh", ".bash", ".zsh", ".ksh", ".csh", ".run", ".appimage", ".desktop",
+        ".deb", ".rpm",
+        ".dylib", ".app", ".command", ".tool", ".terminal", ".pkg", ".mpkg",
+        ".webloc", ".inetloc", ".fileloc",
+    };
+
+    /// <summary>The types that macOS also runs as a folder.</summary>
+    private static readonly HashSet<string> BundleExtensions = new(StringComparer.OrdinalIgnoreCase) { ".app", ".pkg", ".mpkg" };
+
+    /// <summary>GAME_FILE_LIMIT of the same file, for each XML file and for all of them together.</summary>
+    private const long XmlLimit = 256L * 1024 * 1024;
+
     public static string GameFileName(ContentType type) => type == ContentType.Save ? "universe.xml" : "vehicle.xml";
 
     public static GameSaveKind Kind(ContentType type) => type == ContentType.Save ? GameSaveKind.Save : GameSaveKind.Vehicle;
@@ -96,7 +122,69 @@ internal static class UserContentFolder
         }
     }
 
-    // The game looks the file up by its exact name, which a file system that ignores case would hide.
-    private static bool HasFile(string folder, string name) =>
-        new DirectoryInfo(folder).EnumerateFiles().Any(file => string.Equals(file.Name, name, StringComparison.Ordinal));
+    /// <summary>
+    /// Refuses a file or folder of a type that runs as code, at any depth, and an XML file that is too large, not well-formed
+    /// or carries a DOCTYPE, as the index refuses them in the archive (RFC 0085). Borea installs from the archive and checks
+    /// again. <see cref="Check(string, ModVersionMetadata)"/> parses the game file itself.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The folder holds such a file.</exception>
+    public static void CheckFiles(string folder, ModVersionMetadata release)
+    {
+        var what = $"The archive of '{release.ModId}' {release.Version}";
+        var gameFile = GameFileName(release.Type);
+        var xmlFiles = new List<(string Path, string FullName)>();
+        long total = 0;
+        foreach (var file in new DirectoryInfo(folder).EnumerateFiles("*", InstalledContentHashes.EveryFile))
+        {
+            var parts = Path.GetRelativePath(folder, file.FullName).Split(Path.DirectorySeparatorChar);
+
+            // Windows drops dots and spaces at the end of a name when it creates the file, so Setup.exe. lands as Setup.exe.
+            var names = Array.ConvertAll(parts, part => part.TrimEnd('.', ' '));
+            for (var depth = 1; depth <= names.Length; depth++)
+            {
+                var isFile = depth == names.Length;
+                var extension = Path.GetExtension(names[depth - 1]);
+                if ((isFile ? ExecutableExtensions : BundleExtensions).Contains(extension))
+                    throw new InvalidOperationException($"{what} holds '{string.Join('/', parts[..depth])}', a {extension.ToLowerInvariant()} {(isFile ? "file" : "folder")}. That type runs as code, and the game runs nothing from a vehicle or save folder.");
+            }
+
+            if (!names[^1].EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var path = string.Join('/', parts);
+            if (file.Length > XmlLimit)
+                throw new InvalidOperationException($"{what} has '{path}' of {file.Length} bytes, above the limit of {XmlLimit} bytes for an XML file.");
+
+            total += file.Length;
+            if (!string.Equals(path, gameFile, StringComparison.Ordinal))
+                xmlFiles.Add((path, file.FullName));
+        }
+
+        if (total > XmlLimit)
+            throw new InvalidOperationException($"{what} has XML files of {total} bytes together, above the limit of {XmlLimit} bytes.");
+
+        foreach (var (path, fullName) in xmlFiles)
+        {
+            try
+            {
+                // XmlReader reads a path string as a URI, which would open stateA.xml for the file state%41.xml.
+                using var stream = File.OpenRead(fullName);
+                using var reader = XmlReader.Create(stream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
+                while (reader.Read())
+                {
+                }
+            }
+            catch (XmlException exception)
+            {
+                throw new InvalidOperationException($"{what} has '{path}', which is not well-formed XML or carries a DOCTYPE. {exception.Message}", exception);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether the folder has a file of exactly this name. The game looks the file up by its exact name, which a file system
+    /// that ignores case would hide, and the release checks compare the names in the archive exactly.
+    /// </summary>
+    public static bool HasFile(string folder, string name) =>
+        Directory.Exists(folder) && new DirectoryInfo(folder).EnumerateFiles().Any(file => string.Equals(file.Name, name, StringComparison.Ordinal));
 }

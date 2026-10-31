@@ -270,8 +270,18 @@ public sealed class FileSharedModStoreTests : IAsyncLifetime
     public async Task WaitForGameExitAsync_ReturnsOnceTheGameIsClosed()
     {
         _gameRunning = true;
-        var wait = SharedStore().WaitForGameExitAsync(_first);
-        await Task.Delay(50);
+        var checks = 0;
+        var checkedThreeTimes = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Func<bool> isGameRunning = () =>
+        {
+            if (Interlocked.Increment(ref checks) == 3)
+                checkedThreeTimes.SetResult();
+            return _gameRunning;
+        };
+        var store = new FileSharedModStore(_paths, _store, _instances, _settings, _launcher, isGameRunning, () => _otherBoreaRunning, TimeSpan.FromMilliseconds(10));
+
+        var wait = store.WaitForGameExitAsync(_first);
+        await checkedThreeTimes.Task.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.False(wait.IsCompleted);
 
         _gameRunning = false;

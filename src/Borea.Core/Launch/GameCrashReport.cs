@@ -60,7 +60,11 @@ public static partial class GameCrashReport
         foreach (var line in lines)
         {
             var match = FramePattern().Match(line);
-            if (match.Success && match.Groups["root"].Value is var root && !HostNamespaces.Contains(root) && !names.Contains(root, StringComparer.OrdinalIgnoreCase))
+            if (!match.Success)
+                continue;
+
+            var root = match.Groups["root"].Value;
+            if (!HostNamespaces.Contains(root) && !names.Contains(root, StringComparer.OrdinalIgnoreCase))
                 names.Add(root);
         }
 

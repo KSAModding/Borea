@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Borea.Core.GitHub;
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 using Borea.Core.Stewardship;
 using Borea.Network.Listings;
 
@@ -28,7 +29,6 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
     private readonly string _base;
 
     /// <param name="http">Reads the release hosts that name the owner of a listing.</param>
-    /// <param name="format">Reads the listing documents.</param>
     /// <param name="baseBranch">The branch of content-index that the changes start from and go to. Null takes <see cref="ListingPullRequestLinks.Branch"/>.</param>
     public GitHubIndexStatusEditor(IGitHubSession session, IStewardRole role, HttpClient http, IListingFormat format, TimeProvider? time = null, string? baseBranch = null)
     {
@@ -41,7 +41,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         _ownership = new ListingOwnershipCheck(_api, http, format);
     }
 
-    public Task<IndexStatusOverview> ReadAsync(CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<IndexStatusOverview> ReadAsync(CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         Login();
         var commit = await ReadBaseAsync(cancellationToken).ConfigureAwait(false);
@@ -49,7 +49,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         return new IndexStatusOverview(commit.Document.Entries, open);
     });
 
-    public Task<IndexStatusCheck> CheckAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<IndexStatusCheck> CheckAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         ArgumentNullException.ThrowIfNull(change);
         var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -78,7 +78,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         return new IndexStatusCheck(refusal, open, owners, isOwner);
     });
 
-    public Task<IndexStatusPullRequest> OpenAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<IndexStatusPullRequest> OpenAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         ArgumentNullException.ThrowIfNull(change);
         var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -87,30 +87,61 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         var id = commit.Contents.ListingId(change.Id) ?? commit.Contents.PackId(change.Id) ?? change.Id;
         change = change with { Id = id, Version = change.Version is { } version ? commit.Contents.PackVersion(id, version) ?? version : null };
         var (owners, _) = await OwnersAsync(change.Id, commit, login, cancellationToken).ConfigureAwait(false);
-
-        var branch = await _api.CreateFreeBranchAsync(Repository, change.Branch, commit.Head, cancellationToken).ConfigureAwait(false);
-        var put = new Dictionary<string, object>
-        {
-            ["message"] = change.Title,
-            ["content"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(changed.Text)),
-            ["branch"] = branch,
-            ["sha"] = commit.FileSha,
-        };
-        GitHubApi.Ensure(await _api.SendAsync(HttpMethod.Put, $"{Api}/repos/{Repository}/contents/{IndexStatusDocument.Path}", put, cancellationToken).ConfigureAwait(false));
-
-        var request = new Dictionary<string, object>
-        {
-            ["title"] = change.Title,
-            ["head"] = branch,
-            ["base"] = _base,
-            ["body"] = change.Body(owners),
-        };
-        var reply = await _api.SendAsync(HttpMethod.Post, $"{Api}/repos/{Repository}/pulls", request, cancellationToken).ConfigureAwait(false);
-        var pull = GitHubApi.Parse<PullDto>(GitHubApi.Ensure(reply));
-        return PullRequestOf(pull, login);
+        return await OpenPullRequestAsync(commit, changed, change.Branch, change.Title, change.Body(owners), login, cancellationToken).ConfigureAwait(false);
     });
 
-    public Task<IReadOnlyList<string>> OwnedAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default) => GuardAsync<IReadOnlyList<string>>(async () =>
+    public Task<IReadOnlyList<string>> PackMembersAsync(string packId, CancellationToken cancellationToken = default) => StewardActions.GuardAsync<IReadOnlyList<string>>(async () =>
+    {
+        ArgumentNullException.ThrowIfNull(packId);
+        Login();
+        var commit = await ReadBaseAsync(cancellationToken).ConfigureAwait(false);
+        var versions = await PackPinsAsync(packId, commit, cancellationToken).ConfigureAwait(false);
+        return versions.SelectMany(version => version.Mods).Distinct(ModIds.Comparer).Order(StringComparer.OrdinalIgnoreCase).ToList();
+    });
+
+    public Task<PackLeaveCheck> CheckLeaveAsync(PackLeave leave, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
+    {
+        ArgumentNullException.ThrowIfNull(leave);
+        var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
+        var commit = await ReadBaseAsync(cancellationToken).ConfigureAwait(false);
+        leave = SpelledAsListed(leave, commit);
+        var (plan, _) = await PlanAsync(leave, commit, cancellationToken).ConfigureAwait(false);
+        var ownership = await ReporterOwnershipAsync(leave, commit, cancellationToken).ConfigureAwait(false);
+
+        IReadOnlyList<IndexStatusPullRequest>? open;
+        try
+        {
+            open = await OpenPullRequestsAsync(withConflicts: false, cancellationToken).ConfigureAwait(false);
+        }
+        catch (GitHubApiException exception) when (exception.Failure != GitHubApiFailure.SignedOut)
+        {
+            open = null;
+        }
+
+        var (owners, isOwner) = await OwnersAsync(leave.PackId, commit, login, cancellationToken).ConfigureAwait(false);
+        return new PackLeaveCheck(plan.Refusal, plan.Versions, plan.Retracted, ownership, open, owners, isOwner);
+    });
+
+    public Task<IndexStatusPullRequest> OpenLeaveAsync(PackLeave leave, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
+    {
+        ArgumentNullException.ThrowIfNull(leave);
+        var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
+        var commit = await ReadBaseAsync(cancellationToken).ConfigureAwait(false);
+        leave = SpelledAsListed(leave, commit);
+        var (plan, changed) = await PlanAsync(leave, commit, cancellationToken).ConfigureAwait(false);
+        if (changed is null)
+            throw new IndexStatusRefusedException(plan.Refusal ?? IndexStatusRefusal.NotPinned, leave.PackId);
+
+        var ownership = await ReporterOwnershipAsync(leave, commit, cancellationToken).ConfigureAwait(false);
+        var proven = ownership.State == ListingOwnershipState.Verified;
+        if (!proven && !leave.ConfirmedByForums)
+            throw new IndexStatusRefusedException(IndexStatusRefusal.NotConfirmed, leave.PackId);
+
+        var (owners, _) = await OwnersAsync(leave.PackId, commit, login, cancellationToken).ConfigureAwait(false);
+        return await OpenPullRequestAsync(commit, changed, leave.Branch, leave.Title, leave.Body(plan.Versions, proven, owners), login, cancellationToken).ConfigureAwait(false);
+    });
+
+    public Task<IReadOnlyList<string>> OwnedAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default) => StewardActions.GuardAsync<IReadOnlyList<string>>(async () =>
     {
         ArgumentNullException.ThrowIfNull(ids);
         var login = Login();
@@ -203,7 +234,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
     }
 
     /// <summary>
-    /// The owners of the listing or pack at the base commit, without the steward, and whether the steward is one of them.
+    /// The owners of the listing, vehicle, save or pack at the base commit, without the steward, and whether the steward is one of them.
     /// A listing's owner is who its host proves, and a pack's is its accepted owner record. An owner that cannot be read names nobody.
     /// </summary>
     private async Task<(IReadOnlyList<string> Owners, bool IsOwner)> OwnersAsync(string id, BaseCommit commit, string login, CancellationToken cancellationToken)
@@ -212,10 +243,9 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         var isOwner = false;
         try
         {
-            if (commit.Contents.ListingId(id) is { } listing)
+            if (commit.Contents.ListingPath(id) is { } listing)
             {
-                var path = $"{ListingDraft.ListingsFolder}/{listing}.toml";
-                if (await _api.ReadFileAsync(Repository, path, commit.Head, cancellationToken).ConfigureAwait(false) is { Text: { } text })
+                if (await _api.ReadFileAsync(Repository, listing, commit.Head, cancellationToken).ConfigureAwait(false) is { Text: { } text })
                     owners = await _ownership.OwnersAsync(ListingDraft.FromDocument(_format.Read(text)), cancellationToken).ConfigureAwait(false);
 
                 isOwner = owners.Contains(login, StringComparer.OrdinalIgnoreCase);
@@ -250,16 +280,120 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
             ? new IndexStatusPullRequest(pull.Number, url, pull.Title, author)
             : throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse);
 
-    private static async Task<T> GuardAsync<T>(Func<Task<T>> call)
+    /// <summary>The pack id as its folder spells it, and the mod id as its listing spells it, so the title and the reason name them so.</summary>
+    private static PackLeave SpelledAsListed(PackLeave leave, BaseCommit commit) => leave with
     {
+        PackId = commit.Contents.PackId(leave.PackId) ?? leave.PackId,
+        ModId = commit.Contents.ListingId(leave.ModId) ?? leave.ModId,
+    };
+
+    /// <summary>Commits the changed file to a free steward branch cut from the base commit, and opens its pull request.</summary>
+    private async Task<IndexStatusPullRequest> OpenPullRequestAsync(BaseCommit commit, IndexStatusDocument changed, string branchName, string title, string body, string login, CancellationToken cancellationToken)
+    {
+        var branch = await _api.CreateFreeBranchAsync(Repository, branchName, commit.Head, cancellationToken).ConfigureAwait(false);
+        var put = new Dictionary<string, object>
+        {
+            ["message"] = title,
+            ["content"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(changed.Text)),
+            ["branch"] = branch,
+            ["sha"] = commit.FileSha,
+        };
+        GitHubApi.Ensure(await _api.SendAsync(HttpMethod.Put, $"{Api}/repos/{Repository}/contents/{IndexStatusDocument.Path}", put, cancellationToken).ConfigureAwait(false));
+
+        var request = new Dictionary<string, object>
+        {
+            ["title"] = title,
+            ["head"] = branch,
+            ["base"] = _base,
+            ["body"] = body,
+        };
+        var reply = await _api.SendAsync(HttpMethod.Post, $"{Api}/repos/{Repository}/pulls", request, cancellationToken).ConfigureAwait(false);
+        var pull = GitHubApi.Parse<PullDto>(GitHubApi.Ensure(reply));
+        return PullRequestOf(pull, login);
+    }
+
+    /// <summary>
+    /// The versions that a leave retracts at the base commit, and the file with one retracted entry for each of them, checked as
+    /// tools/check_status.py checks it. The file is null when the plan has a refusal.
+    /// </summary>
+    private async Task<(PackLeavePlan Plan, IndexStatusDocument? Changed)> PlanAsync(PackLeave leave, BaseCommit commit, CancellationToken cancellationToken)
+    {
+        if (commit.Contents.PackId(leave.PackId) is null)
+            return (new PackLeavePlan([], [], IndexStatusRefusal.NotAPack), null);
+
+        var plan = leave.Plan(await PackPinsAsync(leave.PackId, commit, cancellationToken).ConfigureAwait(false), commit.Document.Entries);
+        if (plan.Refusal is not null)
+            return (plan, null);
+
         try
         {
-            return await call().ConfigureAwait(false);
+            var changed = commit.Document;
+            foreach (var version in plan.Versions)
+                changed = changed.Apply(leave.ChangeOf(version), commit.Contents, _time.GetUtcNow());
+
+            return (plan, changed);
         }
-        catch (GitHubApiException exception)
+        catch (IndexStatusRefusedException exception)
         {
-            throw exception.ToStewardException();
+            return (plan with { Refusal = exception.Refusal }, null);
         }
+    }
+
+    /// <summary>Each version of the pack at the base commit with the ids it pins. A pack that is not there has none.</summary>
+    private async Task<IReadOnlyList<PackVersionPins>> PackPinsAsync(string packId, BaseCommit commit, CancellationToken cancellationToken)
+    {
+        if (commit.Contents.PackId(packId) is not { } pack)
+            return [];
+
+        var versions = new List<PackVersionPins>();
+        foreach (var version in commit.Contents.PackVersions(pack))
+        {
+            var path = $"{IndexContents.PacksFolder}/{pack}/{version}.toml";
+            var file = await _api.ReadFileAsync(Repository, path, commit.Head, cancellationToken).ConfigureAwait(false)
+                ?? throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse, $"{path} is not at {commit.Head}");
+            ListingDraft draft;
+            try
+            {
+                draft = ListingDraft.FromDocument(_format.Read(file.Text ?? throw new FormatException($"{path} is no UTF-8 text.")));
+            }
+            catch (FormatException exception)
+            {
+                throw new StewardException(StewardFailure.UnreadableFile, $"{path}: {exception.Message}", innerException: exception);
+            }
+
+            versions.Add(new PackVersionPins(version, draft.Mods.Select(member => member.Id).Where(id => id.Length > 0).ToList()));
+        }
+
+        return versions;
+    }
+
+    /// <summary>
+    /// The ownership proof of the reporter for the listing of the mod at the base commit, as the checks of content-index read it, with the
+    /// forums thread of the listing. A mod without a listing, or a report without an author, proves nothing.
+    /// </summary>
+    private async Task<ListingOwnership> ReporterOwnershipAsync(PackLeave leave, BaseCommit commit, CancellationToken cancellationToken)
+    {
+        if (commit.Contents.ListingId(leave.ModId) is not { } listing)
+            return ListingOwnership.Unknown;
+
+        var path = $"{ListingDraft.ListingsFolder}/{listing}.toml";
+        if (await _api.ReadFileAsync(Repository, path, commit.Head, cancellationToken).ConfigureAwait(false) is not { Text: { } text })
+            return ListingOwnership.Unknown;
+
+        ListingDraft draft;
+        try
+        {
+            draft = ListingDraft.FromDocument(_format.Read(text));
+        }
+        catch (FormatException)
+        {
+            return ListingOwnership.Unknown;
+        }
+
+        if (leave.Reporter is { } reporter)
+            return await _ownership.CheckAsync(reporter, draft, null, cancellationToken).ConfigureAwait(false);
+
+        return ListingOwnership.Unknown with { ForumsThread = ListingOwnershipCheck.ForumsThreadOf(draft) };
     }
 
     /// <param name="Head">The commit of the base branch that every read took.</param>

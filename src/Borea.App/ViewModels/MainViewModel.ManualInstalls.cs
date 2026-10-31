@@ -233,7 +233,7 @@ public partial class MainViewModel
                 WithoutForeignFolder(instance, row.FolderName),
                 [new RequestedMod(release, InstallReason.Manual, false)],
                 services.Mods,
-                services.InstalledVersion.GetInstalledVersion()?.Version,
+                PlanningGameVersion(services, instance),
                 services.GamePlatform.Current);
             var planned = await services.InstallPlanner.PlanAsync(request);
 
@@ -294,6 +294,12 @@ public partial class MainViewModel
         var stopped = false;
         try
         {
+            // the update check, the size walk of the instance page and the vehicle preview read the mod
+            // folders without being awaited, and Windows does not move a folder while a file or folder below
+            // it is open, so the take-over waits for the ones in flight, also for one that starts while it waits
+            while (Task.WhenAll(_contentUpdateCheck, _instanceSizeLoad, WhenVehiclePreviewReadsEndedAsync()) is { IsCompleted: false } reads)
+                await reads.WaitAsync(run.InstallStop.Token);
+
             var instance = await services.Instances.GetByIdAsync(row.InstanceId)
                 ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
             if (!plan.InstanceState.Matches(WithoutForeignFolder(instance, row.FolderName)))
@@ -305,9 +311,9 @@ public partial class MainViewModel
                 cancellationToken => services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), run.InstallStop, cancellationToken));
             completed = true;
         }
-        catch (InstallStoppedException)
+        catch (OperationCanceledException exception) when (exception is InstallStoppedException || exception.CancellationToken == run.InstallStop.Token)
         {
-            // only a closing window stops a replace, and the adopter moved the folder back
+            // only a closing window stops a replace, before the folder moved or after the adopter moved it back
             stopped = true;
         }
         catch (Exception exception) when (IsInstallFailure(exception))
@@ -317,11 +323,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped, error);
-            row.IsInstalling = false;
-            row.Run = null;
-            row.Progress = 0;
-            row.ProgressStatus = null;
-            row.ProgressDetail = null;
+            EndRowInstall(row, null);
         }
 
         await ReloadInstancesAsync();

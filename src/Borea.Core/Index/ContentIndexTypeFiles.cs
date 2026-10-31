@@ -12,8 +12,8 @@ public sealed record ContentIndexTypeFile(ContentType Type, string FileName, str
 }
 
 /// <summary>
-/// The files of vehicles and saves. Their names and their place next to index.json follow the proposal on
-/// RFC 0094, which is not decided yet, so they change here and nowhere else.
+/// The files of vehicles and saves. RFC 0094 names them and puts them next to index.json, and their
+/// names and place live here and nowhere else.
 /// </summary>
 public static class ContentIndexTypeFiles
 {

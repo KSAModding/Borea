@@ -81,12 +81,15 @@ public partial class MainViewModel
         _libraryFolderChangeEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         IsChangingLibraryFolder = true;
 
-        // the update check and the three loads of the instance page read the files
-        // this moves, and they are started without being awaited, so the move
-        // waits for the ones in flight. A read that starts later is not fenced
-        // out, which a rename does not mind and a copy reports as old files that
-        // stayed behind.
-        await Task.WhenAll(_contentUpdateCheck, _playtimeLoad, _instanceSizeLoad, _recordedContentCompare).ConfigureAwait(true);
+        // the content and loader update checks, the three loads of the instance
+        // page, the list of kept game builds and the vehicle preview read the files
+        // this moves, and they are started without being awaited, so the move waits
+        // for the ones in flight. A read that starts later is not fenced out, which a
+        // rename does not mind and a copy reports as old files that stayed behind.
+        // Only the preview stops, because it can wait for a download, and it starts
+        // again when the change ended.
+        ClearVehiclePreview();
+        await Task.WhenAll(_contentUpdateCheck, _loaderUpdateCheck, _playtimeLoad, _instanceSizeLoad, _recordedContentCompare, _keptGameBuildLoad, WhenVehiclePreviewReadsEndedAsync()).ConfigureAwait(true);
         LibraryFolderProgressText = Localization.LibraryFolderMoving;
         task.Report(LibraryFolderProgressText, null);
         var progress = new Progress<LibraryMoveProgress>(value => ShowLibraryMoveProgress(value, task));
@@ -142,6 +145,7 @@ public partial class MainViewModel
             var ended = _libraryFolderChangeEnded;
             _libraryFolderChangeEnded = null;
             ended?.TrySetResult();
+            RestoreVehiclePreview();
         }
     }
 

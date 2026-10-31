@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Instances;
 using Borea.Core.Listings;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -65,8 +67,9 @@ public partial class MainViewModel
 
             var manifest = await services.ModState.GetEntriesAsync(instanceId);
             var content = await InstalledContentOfAsync(services, instanceId);
+            var loaderStart = await LoaderStartOrNullAsync(services, instance);
             await OpenListingAsync();
-            if (!ListingEditor.StartPackFromInstance(instance, manifest, services.Settings.LoaderInstallations, content))
+            if (!ListingEditor.StartPackFromInstance(instance, manifest, loaderStart, content))
                 ShowErrorToast(() => Localization.FormatToastMakePackFailed(instance.Name), Localization.ToastMakePackNoIndex);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -92,6 +95,22 @@ public partial class MainViewModel
         }
 
         return content;
+    }
+
+    /// <summary>
+    /// The loader version that starts <paramref name="instance"/>, chosen as Play chooses it, or null when Borea cannot
+    /// read the listings. The pack then names the loader without a version.
+    /// </summary>
+    private static async Task<InstalledLoaderVersion?> LoaderStartOrNullAsync(BoreaServices services, Instance instance)
+    {
+        try
+        {
+            return (await ResolveLaunchLoaderAsync(services, instance)).Start;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or HttpRequestException or TaskCanceledException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Opens a GitHub page, and returns why it could not, or null. The message leaves out the URL, which can carry the whole file.</summary>

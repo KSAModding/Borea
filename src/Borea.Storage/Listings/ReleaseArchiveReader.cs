@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Stewardship;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Listings;
 
@@ -34,9 +35,15 @@ public sealed class ReleaseArchiveReader : IReleaseArchiveReader
     public async Task<IReadOnlyList<LocalModDependency>> DeclaredDependenciesAsync(string releaseFileText, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(releaseFileText);
-        var (release, isMod, root) = Release(releaseFileText);
+        var document = Document(releaseFileText);
+
+        // Only a mod has a mod.toml that a loader acts on, so the archive of a vehicle or save is not downloaded, as the checks of content-index-releases do.
+        if (Text(document["type"]) != ListingDraft.ModType)
+            return [];
+
+        var (release, root) = Release(document);
         var sha256 = release.Download.Sha256!;
-        var key = $"{sha256}\n{isMod}\n{root}";
+        var key = $"{sha256}\n{root}";
         if (_read.TryGetValue(key, out var known))
             return known;
 
@@ -55,7 +62,7 @@ public sealed class ReleaseArchiveReader : IReleaseArchiveReader
             if (!release.Download.HashMatches(result.Sha256))
                 throw new ReleaseArchiveException($"the archive at {result.Url} no longer matches the stamped sha256");
 
-            IReadOnlyList<LocalModDependency> declared = isMod ? ListingArchive.DeclaredDependencies(archivePath, root) : [];
+            var declared = ListingArchive.DeclaredDependencies(archivePath, root);
             _read[key] = declared;
             return declared;
         }
@@ -69,24 +76,27 @@ public sealed class ReleaseArchiveReader : IReleaseArchiveReader
         }
         finally
         {
-            TryDeleteFile(archivePath);
+            LeftoverCleanup.TryDeleteFile(archivePath);
         }
     }
 
-    /// <summary>The release as the downloader takes it, whether it is a mod, and its install root.</summary>
-    /// <exception cref="ReleaseArchiveException">The file names no download URL or no sha256.</exception>
-    private static (ModVersionMetadata Release, bool IsMod, string Root) Release(string text)
+    /// <exception cref="ReleaseArchiveException">The text is no JSON object.</exception>
+    private static JsonObject Document(string text)
     {
-        JsonObject document;
         try
         {
-            document = JsonNode.Parse(text) as JsonObject ?? throw new ReleaseArchiveException("the release file is not a JSON object");
+            return JsonNode.Parse(text) as JsonObject ?? throw new ReleaseArchiveException("the release file is not a JSON object");
         }
         catch (JsonException exception)
         {
             throw new ReleaseArchiveException($"the release file is not readable JSON: {exception.Message}", exception);
         }
+    }
 
+    /// <summary>The release as the downloader takes it, and its install root.</summary>
+    /// <exception cref="ReleaseArchiveException">The file names no download URL or no sha256.</exception>
+    private static (ModVersionMetadata Release, string Root) Release(JsonObject document)
+    {
         var download = document["download"] as JsonObject;
         var url = Text(download?["url"]);
         var sha256 = Text(download?["sha256"]);
@@ -111,25 +121,10 @@ public sealed class ReleaseArchiveReader : IReleaseArchiveReader
             download: new DownloadInfo(url, sha256, size, contentType, mirrors),
             installSizeBytes: null,
             dependencies: []);
-        return (release, Text(document["type"]) == "mod", Text((document["install"] as JsonObject)?["root"]) ?? string.Empty);
+        return (release, Text((document["install"] as JsonObject)?["root"]) ?? string.Empty);
     }
 
     private static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
 
     /// <summary>Stops the download once it sends more bytes than the release states.</summary>
     private sealed class SizeLimit(long maxBytes, CancellationTokenSource stop) : IProgress<DownloadProgress>

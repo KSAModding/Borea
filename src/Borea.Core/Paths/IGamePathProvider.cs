@@ -1,3 +1,6 @@
+using Borea.Core.Game;
+using Borea.Core.Mods;
+
 namespace Borea.Core.Paths;
 
 /// <summary>
@@ -48,9 +51,25 @@ public interface IGamePathProvider
     string GetStaticModFilesRoot();
 
     /// <summary>
-    /// Root for loaders installed standalone (RFC 0035), one folder per loader id.
+    /// The Game Builds folder of the library, which holds one folder per kept game build.
+    /// </summary>
+    string GetGameBuildsRoot();
+
+    /// <summary>
+    /// Folder of one kept game build, below the Game Builds folder of the library.
+    /// Only Year.Month.BuildNumber.Revision name the folder, without the suffix, so two builds that differ only by their suffix share one folder.
+    /// </summary>
+    string GetGameBuildFolder(GameVersion version);
+
+    /// <summary>
+    /// Root for loaders installed standalone (RFC 0035). Each loader has a folder here, and it holds a folder for each installed version.
     /// </summary>
     string GetLoadersRoot();
+
+    /// <summary>
+    /// The folder of one version of a loader, Loaders/&lt;id&gt;/&lt;version&gt;. It does not say whether that version is installed.
+    /// </summary>
+    string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version);
 
     /// <summary>
     /// Root for all presets in Borea.
@@ -68,14 +87,8 @@ public interface IGamePathProvider
     /// </summary>
     string GetActiveInstancePointerPath();
 
-    /// <summary>
-    /// Path to the file tracking the user's favorited/bookmarked mods.
-    /// </summary>
     string GetModFavoritesPath();
 
-    /// <summary>
-    /// Path to the file tracking the user's favorited/bookmarked mod packs.
-    /// </summary>
     string GetModPackFavoritesPath();
 
     /// <summary>
@@ -118,9 +131,6 @@ public interface IGamePathProvider
     /// </summary>
     string GetBackupsRoot();
 
-    /// <summary>
-    /// Root folder for a specific instance, e.g.
-    /// </summary>
     string GetInstanceRoot(Guid instanceId);
 
     string GetInstanceModsFolder(Guid instanceId);
@@ -166,10 +176,7 @@ public interface IGamePathProvider
     /// Root directory of the KSA game installation itself (not the Documents
     /// folder).
     /// </summary>
-    /// <returns><list type="bullet">
-    /// <item>null if path is unknown.</item>
-    /// <item>string path if known.</item>
-    /// </list></returns>
+    /// <returns>Null when the path is unknown.</returns>
     string? GetGameDirectoryPath();
 
     /// <summary>
@@ -178,12 +185,10 @@ public interface IGamePathProvider
     string GetSharedProfileRoot();
 
     /// <summary>
-    /// Root directory of one installed mod loader. Ids compare
+    /// The folder of the installation that the settings record for a loader, which an older Borea starts. Other
+    /// versions of the loader can be installed beside it, and an instance can start any of them. Ids compare
     /// case-insensitively, and no id at all throws.
     /// </summary>
-    /// <returns><list type="bullet">
-    /// <item>null if no path is known for that loader.</item>
-    /// <item>string path if known.</item>
-    /// </list></returns>
+    /// <returns>Null when no path is known for that loader.</returns>
     string? GetLoaderDirectoryPath(string loaderId);
 }

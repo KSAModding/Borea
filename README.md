@@ -1,4 +1,7 @@
 # Borea
+
+[简体中文](README.zh-CN.md) | [Deutsch](README.de.md)
+
 ![Downloads](https://img.shields.io/github/downloads/KSAModding/Borea/total)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Last commit](https://img.shields.io/github/last-commit/KSAModding/Borea/main.svg)
@@ -36,7 +39,7 @@ Kitten Space Agency is their game and their trademark.
 - Start the game through the mod loader with the right instance, and see why a launch failed, with the mod that broke it and a button to disable it.
 - Import the mods you installed by hand into an instance.
 - Play time and last played per instance, the game log in the App, and a Tasks page that shows what Borea did.
-- English, German and pirate speak, and a dark and a light theme.
+- English, German, pirate speak and Simplified Chinese, and a dark and a light theme.
 
 Everything Borea knows about a mod comes from the content index, which the [content-manager-design](https://github.com/KSAModding/content-manager-design) RFCs define.
 The index has two repositories: [content-index](https://github.com/KSAModding/content-index) holds the listings that mod authors write, and [content-index-releases](https://github.com/KSAModding/content-index-releases) holds the release files that are generated for each new release.
@@ -101,6 +104,8 @@ Common desktop installations usually have all of them. A minimal one needs these
 
 For the CLI alone, install only `libssl3` and the `libicu` package on Debian and Ubuntu, or `libicu openssl-libs` on Fedora.
 
+For the Simplified Chinese App interface, the system also needs a font with Chinese glyphs, such as Noto Sans CJK SC or WenQuanYi Micro Hei. On Debian and Ubuntu, install `fonts-noto-cjk` or the smaller `fonts-wqy-microhei` package. The bundled IBM Plex fonts do not contain Chinese glyphs; Borea relies on system font fallback. Without a suitable font, Chinese text can appear as empty boxes. This font is not needed for the CLI.
+
 The build needs glibc, so musl-based distributions such as Alpine are not supported.
 
 ### macOS
@@ -128,6 +133,22 @@ The `Borea-Cli-` archive unpacks with `tar -xzf` into `Borea-Cli`, and its `bore
 **Update now** on the Home banner, or `borea update-self`, installs the newest release of your update channel into the same folder, so shortcuts keep working.
 On macOS, a build from before the app bundle cannot update to a bundle release, so download the App archive once by hand, drag `Borea.app` into Applications and delete the old `Borea` folder.
 If Borea does not start after an update, rename `borea.exe.old` (`borea.old` on Linux, `Borea.app.old` on macOS) back to its old name to get the build you had back.
+
+### Removing Borea
+
+1. In **Settings**, **General**, turn off **Open borea:// links with this Borea**, so that Borea removes its link registration.
+2. Close Borea and delete the folder that you unpacked it into, or `Borea.app` on macOS.
+3. Delete Borea's own folder. It holds the settings, caches, logs and mod loaders, and also the instances, backups and kept game builds unless you moved the library:
+   - Windows: `%LocalAppData%\Borea`
+   - Linux: `~/.local/share/Borea`, or `$XDG_DATA_HOME/Borea` when that variable is set
+   - macOS: `~/Library/Application Support/Borea`
+4. If you moved the library to another folder in **Settings**, **General**, delete that folder too.
+5. On Linux, delete the menu entries `borea-app.desktop` and `borea.desktop` in `~/.local/share/applications` and the icon `~/.local/share/icons/hicolor/256x256/apps/borea.png`.
+
+When you skipped step 1, the link registration stays behind.
+On Windows it is the key `HKEY_CURRENT_USER\Software\Classes\borea`, and on Linux it is the `borea.desktop` entry of step 5.
+The .NET runtime in Borea unpacks some of its files into a folder of its own, `%TEMP%\.net\borea` on Windows and `~/.net/borea` on Linux and macOS, which you can delete as well.
+The game and its own profile in `Documents/My Games/Kitten Space Agency` are not part of Borea, so these steps leave them as they are.
 
 ### Checksums and provenance
 
@@ -163,7 +184,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 
 | Command | Does |
 | --- | --- |
-| `borea settings show` | Print where the game, the mod loaders and the library are, the release channel and whether the shared mod store is on. |
+| `borea settings show` | Print where the game, the mod loaders and the library are, every installed mod loader version, the release channel and whether the shared mod store is on. |
 | `borea settings set game <directory>` | Point Borea at the game installation. |
 | `borea settings set loader <loader-id> <directory>` | Point Borea at an installed mod loader. |
 | `borea settings set channel <channel>` | Choose which release statuses install and update offer: `stable` (the default), `testing` or `dev`. |
@@ -173,7 +194,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea game version` | Print the installed build and the current public build the master server reports. |
 | `borea game check` | Check the game installation against what Borea assumes about it. Exits 1 when an assumption is broken. |
 | `borea instance list` | Print every instance and mark the active one. |
-| `borea instance show <instance>` | Print one instance, the mod loader its mods need, its launch arguments, when it was last played, and how long it was played. |
+| `borea instance show <instance>` | Print one instance, the game build it runs on, the mod loader its mods need and the version it starts, its launch arguments, when it was last played, and how long it was played. |
 | `borea instance create <name>` | Create an empty instance. |
 | `borea instance duplicate <instance> [--name <name>]` | Create an instance with the same mods, versions, and enabled flags. |
 | `borea instance export <instance> [file]` | Write the mods of an instance, with their versions and enabled flags, as a modlist. |
@@ -182,6 +203,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea instance arguments <instance>` | Print the launch arguments that every launch of an instance passes to the mod loader and the game. |
 | `borea instance set-arguments <instance> -- <arguments>` | Save the arguments after `--` as the launch arguments of an instance, in place of the saved ones. |
 | `borea instance clear-arguments <instance>` | Remove the launch arguments of an instance. |
+| `borea instance set-loader <instance> <loader-id\|auto> [--version <version>\|auto]` | Set the mod loader that an instance starts. A `--version` pins that exact release, also when the game changes. `auto` lets Borea choose the newest release that fits the game and the mods, which is the default. |
 | `borea instance delete <instance>` | Delete an instance, its folder, and the backups of its saves and vehicles. |
 | `borea instance activate <instance>` | Make an instance the active one. |
 | `borea instance deactivate` | Leave no instance active. |

@@ -185,7 +185,7 @@
                             </Grid>
                         </StackPanel>
                         <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Top">
-                            <Button Classes="cta with-icon" Command="{Binding SelectedPack.InstallCommand}" IsVisible="{Binding SelectedPack.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
+                            <Button Classes="cta with-icon" Command="{Binding SelectedPack.InstallCommand}" IsVisible="{Binding SelectedPack.CanInstall}" IsEnabled="{Binding CanAddToActiveInstance}" ToolTip.Tip="{Binding AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding AddToText}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
                                     <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
@@ -262,6 +262,7 @@
                     </views:ContentHeaderPanel>
 
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource InstanceHint}" Margin="0,16,0,0" IsVisible="{Binding !HasActiveInstance}" />
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ActiveKeptBuildUnavailable}" Margin="0,16,0,0" IsVisible="{Binding !CanAddToActiveInstance}" />
                     <!-- the outcome of the last install, one row per mod -->
                     <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0" IsVisible="{Binding SelectedPack.HasResults}">
                         <ItemsControl ItemsSource="{Binding SelectedPack.Results}">
@@ -494,7 +495,7 @@
                                                     <Button Classes="icon" Command="{Binding NewInstanceCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}">
                                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Library}" />
                                                     </Button>
-                                                    <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
+                                                    <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanAddToActiveInstance}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" StrokeThickness="2" />
                                                     </Button>
                                                 </Grid>

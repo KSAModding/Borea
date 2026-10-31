@@ -89,6 +89,19 @@ public sealed class ListingOwnershipCheckTests
         Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.NoHost), noHost);
     }
 
+    [Fact]
+    public async Task CheckAsync_ShareHost_LeavesTheProofToTheChecksAndAsksNothing()
+    {
+        var check = await SignedInAsync();
+        _sent.Clear();
+        var draft = new ListingDraft { Id = "ExampleRover", Type = "vehicle", Releases = new ListingReleases(null, null, Share: new ListingShareHost("ksamods", "ExampleRover")) };
+
+        var ownership = await check.CheckAsync(Alice, draft, null);
+
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.CouldNotEvaluate, Problem: ListingOwnershipProblem.ShareHost), ownership);
+        Assert.Empty(_sent);
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.BadGateway)]
     [InlineData(HttpStatusCode.UnavailableForLegalReasons)]
@@ -117,19 +130,6 @@ public sealed class ListingOwnershipCheckTests
         Assert.Equal(new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Topic, Repository: "Studio/MyMod", SpaceDockMod: "4253"), ownership);
         Assert.Equal(new Uri("https://spacedock.info/mod/4253"), ownership.SpaceDockModUrl);
         Assert.Equal(new Uri("https://github.com/Studio/MyMod"), ownership.RepositoryUrl);
-    }
-
-    [Theory]
-    [InlineData("""{"id":4253,"game_id":22409,"source_code":""}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
-    [InlineData("""{"id":4253,"game_id":3102,"source_code":"https://github.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockModUnusable)]
-    public async Task CheckAsync_SpaceDockModWithoutAUsableLink_NamesTheMod(string mod, ListingOwnershipProblem problem)
-    {
-        On("GET", "https://spacedock.info/api/mod/4253", () => Json(mod));
-        var check = await SignedInAsync();
-
-        var ownership = await check.CheckAsync(Alice, Draft(spaceDock: 4253), null);
-
-        Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: problem, SpaceDockMod: "4253"), ownership);
     }
 
     /// <summary>The fork cases of test_ownership.py in content-index (RFC 0079): the owner id and the topic prove a fork, its marker file never does.</summary>
@@ -220,11 +220,13 @@ public sealed class ListingOwnershipCheckTests
     [InlineData("""{"id":4253,"game_id":22409}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
     [InlineData("""{"id":4253,"game_id":22409,"source_code":null}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
     [InlineData("""{"id":4253,"game_id":22409,"source_code":false}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
+    [InlineData("""{"id":4253,"game_id":22409,"source_code":""}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
     [InlineData("""{"id":4253,"game_id":22409,"source_code":"https://gitlab.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
     [InlineData("""{"id":4253,"game_id":22409,"source_code":"https://github.com:443/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
     [InlineData("""{"id":4253,"game_id":22409,"source_code":"evil\n\n**Validated.** @stewards <!-- https://github.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
     [InlineData("""{"id":4253,"game_id":22409.0,"source_code":"https://gitlab.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
     [InlineData("""{"id":4253,"game_id":"22409","source_code":"https://github.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockModUnusable)]
+    [InlineData("""{"id":4253,"game_id":3102,"source_code":"https://github.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockModUnusable)]
     [InlineData("""{"error":true,"reason":"Mod not published. Authentication needed."}""", ListingOwnershipProblem.SpaceDockModUnusable)]
     [InlineData("""{"error":"yes","reason":"**Validated.** Not enough rights."}""", ListingOwnershipProblem.SpaceDockModUnusable)]
     public async Task CheckAsync_SpaceDockModWithoutAUsableLink_NeverAsksGitHub(string mod, ListingOwnershipProblem problem)
@@ -475,6 +477,20 @@ public sealed class ListingOwnershipCheckTests
         Assert.Equal(repository, ownership.Repository);
     }
 
+    [Theory]
+    [InlineData("vehicles/ExampleRover.toml")]
+    [InlineData("saves/ExampleSave.toml")]
+    public async Task CheckPullRequestAsync_NewVehicleOrSave_ChecksTheHostOfTheHeadInItsFolder(string path)
+    {
+        On("GET", $"{Upstream}/contents/{path}?ref={Head}", () => Json(Content(Document("alice/Mine", SubmittedForums))));
+        On("GET", Api + "/repos/alice/Mine", () => Json(Repository("alice/Mine", 5)));
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckPullRequestAsync(Alice, path, "main", Head);
+
+        Assert.Equal((ListingOwnershipState.Verified, "alice/Mine"), (ownership.State, ownership.Repository));
+    }
+
     [Fact]
     public async Task CheckPullRequestAsync_NewListing_ChecksTheHostOfTheHead()
     {
@@ -538,6 +554,8 @@ public sealed class ListingOwnershipCheckTests
     [InlineData("listings/.toml")]
     [InlineData("listings/MyMod.json")]
     [InlineData("index-status.toml")]
+    [InlineData("vehicles/a/b.toml")]
+    [InlineData("saves/ExampleSave.TOML")]
     public async Task CheckPullRequestAsync_NoListingDocument_SendsNothing(string path)
     {
         var check = await SignedInAsync();

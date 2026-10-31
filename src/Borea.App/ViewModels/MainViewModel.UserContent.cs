@@ -195,9 +195,10 @@ public partial class MainViewModel
         installed ??= (await services.InstalledContent.ListAsync(instanceId)).FirstOrDefault(record => ModIds.Equals(record.ListingId, release.ModId));
         var deselected = choices?.DeselectedRecommendations ?? new HashSet<string>(StringComparer.Ordinal);
         var recommended = new HashSet<string>(choices?.SelectedRecommendations ?? new HashSet<string>(), StringComparer.Ordinal);
+        var gameVersion = PlanningGameVersion(services, instance);
         while (true)
         {
-            var request = new UserContentRequest(instance, release, services.Mods, services.InstalledVersion.GetInstalledVersion()?.Version, services.GamePlatform.Current, recommended, choices?.SelectedAlternatives, Name: name);
+            var request = new UserContentRequest(instance, release, services.Mods, gameVersion, services.GamePlatform.Current, recommended, choices?.SelectedAlternatives, Name: name);
             var plan = installed is null
                 ? await services.UserContentInstallation.PlanInstallAsync(request)
                 : await services.UserContentInstallation.PlanUpdateAsync(installed, request, discardChanges);
@@ -277,6 +278,8 @@ public partial class MainViewModel
         string? error = null;
         try
         {
+            // the page of this vehicle can be open, and its preview can read this folder
+            await StopVehiclePreviewReadsAsync();
             var result = await services.UserContentInstaller.RemoveAsync(instance.InstanceId, record, discardChanges: item.RemoveChanges is not null);
             if (result.Outcome == UserContentOutcome.Changed && result.Changes is { } changes)
             {
@@ -305,6 +308,7 @@ public partial class MainViewModel
             EndTask(task, completed, stopped: false, error);
         }
 
+        RestoreVehiclePreview();
         if (completed)
             await ReloadInstancesAsync();
         item.InstallError = error;

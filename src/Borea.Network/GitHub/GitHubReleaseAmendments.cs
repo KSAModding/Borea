@@ -51,7 +51,7 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         _ownership = new ListingOwnershipCheck(_api, http, format);
     }
 
-    public Task<IReadOnlyList<string>> ReleasesAsync(string listingId, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<IReadOnlyList<string>> ReleasesAsync(string listingId, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         CheckId(listingId);
         await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -59,7 +59,7 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         return ReleaseAmendment.Select(await StampedAsync(listingId, head, cancellationToken).ConfigureAwait(false), ReleaseSelection.All);
     });
 
-    public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         CheckId(listingId);
         await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -89,14 +89,14 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         return DeclaredAsync(file.Path, file.Text, cancellationToken);
     }
 
-    public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         ArgumentNullException.ThrowIfNull(request);
         var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
         return (await DeriveAsync(request, login, cancellationToken).ConfigureAwait(false)).Preview;
     });
 
-    public Task<ReleaseAmendmentPullRequest> OpenAsync(ReleaseAmendmentPreview preview, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    public Task<ReleaseAmendmentPullRequest> OpenAsync(ReleaseAmendmentPreview preview, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
     {
         ArgumentNullException.ThrowIfNull(preview);
         var login = await StewardAsync(cancellationToken).ConfigureAwait(false);
@@ -149,15 +149,17 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         var selected = ReleaseAmendment.Select(await StampedAsync(request.ListingId, head, cancellationToken).ConfigureAwait(false), request.Selection);
 
         var files = new List<ReleaseFilePreview>();
+        string? type = null;
         foreach (var version in selected)
         {
             var path = ReleaseAmendment.PathOf(request.ListingId, version);
             var text = await ReadReleaseAsync(path, head, cancellationToken).ConfigureAwait(false);
+            type ??= ReleaseFileValues.Read(text)?.Type;
             var declared = amendment.ReadsArchive(text) ? await DeclaredAsync(path, text, cancellationToken).ConfigureAwait(false) : null;
             files.Add(new ReleaseFilePreview(version, path, text, amendment.Apply(path, text, request.Amender, declared)?.Text));
         }
 
-        var owners = await OwnersAsync(request.ListingId, login, cancellationToken).ConfigureAwait(false);
+        var owners = await OwnersAsync(request.ListingId, type, login, cancellationToken).ConfigureAwait(false);
         return (head, new ReleaseAmendmentPreview(request, files, owners));
     }
 
@@ -177,7 +179,6 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         }
     }
 
-    /// <summary>The text of a release file at the commit.</summary>
     private async Task<string> ReadReleaseAsync(string path, string head, CancellationToken cancellationToken)
     {
         var file = await _api.ReadFileAsync(Repository, path, head, cancellationToken).ConfigureAwait(false)
@@ -198,7 +199,6 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         return reference.Object?.Sha is { Length: > 0 } sha ? sha : throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse);
     }
 
-    /// <summary>The versions of game-versions.json at the commit.</summary>
     private async Task<IReadOnlyList<string>> GameVersionsAsync(string head, CancellationToken cancellationToken)
     {
         var file = await _api.ReadFileAsync(Repository, GameVersionsPath, head, cancellationToken).ConfigureAwait(false)
@@ -215,10 +215,14 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
     }
 
     /// <summary>The versions of the release files of the listing at the commit, as their file names spell them, as tools/amend.py finds them.</summary>
-    private async Task<IReadOnlyList<string>> StampedAsync(string listingId, string head, CancellationToken cancellationToken)
+    private Task<IReadOnlyList<string>> StampedAsync(string listingId, string head, CancellationToken cancellationToken) =>
+        StampedAsync(_api, listingId, head, cancellationToken);
+
+    /// <param name="reference">A commit or a branch of content-index-releases.</param>
+    internal static async Task<IReadOnlyList<string>> StampedAsync(GitHubApi api, string listingId, string reference, CancellationToken cancellationToken)
     {
-        var folder = $"{Api}/repos/{Repository}/contents/{ReleaseAmendment.Folder}/{Uri.EscapeDataString(listingId)}?ref={Uri.EscapeDataString(head)}";
-        var reply = await _api.SendAsync(HttpMethod.Get, folder, null, cancellationToken).ConfigureAwait(false);
+        var folder = $"{Api}/repos/{Repository}/contents/{ReleaseAmendment.Folder}/{Uri.EscapeDataString(listingId)}?ref={Uri.EscapeDataString(reference)}";
+        var reply = await api.SendAsync(HttpMethod.Get, folder, null, cancellationToken).ConfigureAwait(false);
         if (reply.Status == HttpStatusCode.NotFound)
             return [];
 
@@ -231,12 +235,15 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
             .Select(item => item.Name[..^ReleaseSuffix.Length])];
     }
 
-    /// <summary>The owners of the listing on the base branch of content-index, without the steward. An owner that cannot be read names nobody.</summary>
-    private async Task<IReadOnlyList<string>> OwnersAsync(string listingId, string login, CancellationToken cancellationToken)
+    /// <summary>
+    /// The owners of the listing on the base branch of content-index, without the steward. An owner that cannot be read names nobody.
+    /// The stamper copies the type of the listing into each release, so the type of a release file names the folder of its listing.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> OwnersAsync(string listingId, string? type, string login, CancellationToken cancellationToken)
     {
         try
         {
-            var path = $"{ListingDraft.ListingsFolder}/{listingId}.toml";
+            var path = $"{ListingFolders.Of(type)}/{listingId}.toml";
             if (await _api.ReadFileAsync(ListingPullRequestLinks.Repository, path, ListingPullRequestLinks.Branch, cancellationToken).ConfigureAwait(false) is not { Text: { } text })
                 return [];
 
@@ -250,18 +257,6 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         catch (FormatException)
         {
             return [];
-        }
-    }
-
-    private static async Task<T> GuardAsync<T>(Func<Task<T>> call)
-    {
-        try
-        {
-            return await call().ConfigureAwait(false);
-        }
-        catch (GitHubApiException exception)
-        {
-            throw exception.ToStewardException();
         }
     }
 

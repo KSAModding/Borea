@@ -7,13 +7,13 @@ using Borea.Storage.Files;
 namespace Borea.Storage.Mods;
 
 /// <summary>
-/// File-backed <see cref="IForeignModHandover"/>. The release is downloaded and
-/// unpacked into a staging folder first, or linked there from the
-/// <see cref="ModStore"/>, so the folder and the record change together at the
-/// end, and the ownership marker or link reaches the instance only with the
-/// files Borea itself wrote. The previous files go into a recovery folder
-/// that the handover deletes when it is finished, and a delete that fails names
-/// that folder in the result instead of dropping it silently.
+/// The release is downloaded and unpacked into a staging folder first, or
+/// linked there from the <see cref="ModStore"/>, so the folder and the record
+/// change together at the end, and the ownership marker or link reaches the
+/// instance only with the files Borea itself wrote. The previous files go into
+/// a recovery folder that the handover deletes when it is finished, and a
+/// delete that fails names that folder in the result instead of dropping it
+/// silently.
 /// </summary>
 public sealed class FileForeignModHandover : IForeignModHandover
 {
@@ -33,7 +33,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
         IModStateRepository modState,
         TimeProvider? timeProvider = null,
         ModStore? store = null)
-        : this(paths, downloader, instances, modState, timeProvider, TryDeleteDirectory, store)
+        : this(paths, downloader, instances, modState, timeProvider, LeftoverCleanup.TryDeleteTree, store)
     {
     }
 
@@ -103,7 +103,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
                 current =>
                 {
                     var recorded = RequireForeign(current, foreign.ModId);
-                    if (!Matches(recorded, foreign))
+                    if (!InstalledModRecord.Matches(recorded, foreign))
                         throw new InvalidOperationException($"Mod '{foreign.ModId}' changed after the handover was requested.");
 
                     folder = ModFolders.Find(modsFolder, foreign.ModId)
@@ -139,7 +139,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
                 }
             }
 
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
             if (owned is not null)
                 await _store.ReleaseAsync(owned).ConfigureAwait(false);
 
@@ -147,7 +147,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
         }
         finally
         {
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
         }
     }
 
@@ -165,7 +165,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
             {
                 var recorded = current.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, foreign.ModId))
                     ?? throw new InvalidOperationException($"The installed record for '{foreign.ModId}' is missing.");
-                if (!Matches(recorded, foreign) && !Matches(recorded, owned))
+                if (!InstalledModRecord.Matches(recorded, foreign) && !InstalledModRecord.Matches(recorded, owned))
                     throw new InvalidOperationException($"Mod '{foreign.ModId}' changed while Borea tried to restore it.");
 
                 if (ownedMoved && Directory.Exists(folder))
@@ -181,7 +181,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
                     throw new InvalidOperationException($"The recovery folder for '{foreign.ModId}' is missing.");
 
                 Directory.Move(backupFolder, folder);
-                if (!Matches(recorded, foreign))
+                if (!InstalledModRecord.Matches(recorded, foreign))
                     current.ReplaceMod(foreign);
 
                 return true;
@@ -197,25 +197,5 @@ public sealed class FileForeignModHandover : IForeignModHandover
             throw new InvalidOperationException($"Borea already owns the files of '{installed.ModId}'.");
 
         return installed;
-    }
-
-    private static bool Matches(InstalledMod current, InstalledMod expected) =>
-        current.Version == expected.Version &&
-        current.Reason == expected.Reason &&
-        current.InstalledAt == expected.InstalledAt &&
-        string.Equals(current.Checksum, expected.Checksum, StringComparison.OrdinalIgnoreCase) &&
-        current.Ownership == expected.Ownership &&
-        current.Storage == expected.Storage &&
-        string.Equals(current.OwnershipToken, expected.OwnershipToken, StringComparison.Ordinal);
-
-    private static bool TryDeleteDirectory(string path)
-    {
-        try
-        {
-            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
-            return true;
-        }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
     }
 }

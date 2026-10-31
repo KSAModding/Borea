@@ -415,7 +415,6 @@ public sealed class DiscoverViewModelTests
         ("KSArmory", "GPL-2.0-only WITH Classpath-exception-2.0"),
         ("MeasureTools", "MIT OR Apache-2.0"));
 
-    /// <summary>Sets the license of each listing, in its authored document and in the listing of every release.</summary>
     private static string WithLicenses(string json, params (string Id, string License)[] licenses)
     {
         var root = JsonNode.Parse(json)!;
@@ -578,12 +577,7 @@ public sealed class DiscoverViewModelTests
     public async Task Install_DownloadFails_ShowsTheErrorOnTheRow()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
-        await viewModel.LoadAsync();
-        await viewModel.EnsureDiscoverLoadedAsync();
-        var item = viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
+        var (instance, item) = await ActivateMainAndFindTheAfcRowAsync(harness);
 
         await item.InstallCommand.ExecuteAsync(null);
 
@@ -615,16 +609,20 @@ public sealed class DiscoverViewModelTests
                 return root.ToJsonString();
             },
             gamePlatform: new FixedGamePlatform(game));
-        var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
-        await viewModel.LoadAsync();
-        await viewModel.EnsureDiscoverLoadedAsync();
-        var item = viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
+        var (_, item) = await ActivateMainAndFindTheAfcRowAsync(harness);
 
         await item.InstallCommand.ExecuteAsync(null);
 
         Assert.Equal(warned, item.InstallWarning?.Contains("macOS") == true);
+    }
+
+    private static async Task<(Instance Instance, DiscoverItem Row)> ActivateMainAndFindTheAfcRowAsync(ViewModelHarness harness)
+    {
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+        return (instance, harness.ViewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer"));
     }
 
     private sealed class FixedGamePlatform(OsPlatform platform) : IGamePlatform
@@ -636,12 +634,7 @@ public sealed class DiscoverViewModelTests
     public async Task Install_WarningCancelled_InstallsNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
-        await viewModel.LoadAsync();
-        await viewModel.EnsureDiscoverLoadedAsync();
-        var item = viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
+        var (instance, item) = await ActivateMainAndFindTheAfcRowAsync(harness);
 
         await item.InstallCommand.ExecuteAsync(null);
         Assert.Contains("AdvancedFlightComputer", item.InstallWarning);
@@ -688,6 +681,30 @@ public sealed class DiscoverViewModelTests
         Assert.True(afc.CanInstall);
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
         Assert.Equal(0, viewModel.ActiveInstance?.ModCount);
+    }
+
+    [Fact]
+    public async Task Remove_WaitsForTheLoadOfAPreviewThatClosed()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        var (service, held) = await VehiclePreviewViewModelTests.OpenRoverWithHeldLoadAsync(viewModel);
+        viewModel.SetMainWindowDiscover();
+        viewModel.ShowDiscoverModsCommand.Execute(null);
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        afc.BeginRemoveCommand.Execute(null);
+
+        var remove = afc.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.False(remove.IsCompleted);
+
+        held.SetResult(service.Ready(new FakeAssets()));
+        await remove;
+
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
     }
 
     [Fact]

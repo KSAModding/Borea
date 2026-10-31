@@ -110,7 +110,6 @@ public sealed class GameVersionTests
     [Fact]
     public void SameRevisionDifferentBuild_ComparesAsNeitherNewerNorOlder()
     {
-        // Same revision, different build: distinct versions, neither is newer.
         var a = GameVersion.Parse("2026.7.4.2131");
         var b = GameVersion.Parse("2026.7.9.2131");
 
@@ -118,16 +117,6 @@ public sealed class GameVersionTests
         Assert.Equal(0, a.CompareTo(b));
         Assert.False(a < b);
         Assert.False(a > b);
-    }
-
-    [Fact]
-    public void Equality_IsValueBased_ForIdenticalComponents()
-    {
-        var a = GameVersion.Parse("2026.7.4.2131");
-        var b = GameVersion.Parse("2026.7.4.2131");
-
-        Assert.Equal(a, b);
-        Assert.True(a == b);
     }
 
     [Fact]

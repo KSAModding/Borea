@@ -61,6 +61,22 @@ public sealed class ContentIndexReaderTests : IDisposable
         }
         """;
 
+    /// <summary>The share host example of RFC 0094 as the snapshot carries it.</summary>
+    private const string StorageHost = """
+        {
+            "kind": "share",
+            "name": "ksamods.gg",
+            "storage": "ksamods-content/share",
+            "bot": 98765432,
+            "api": "https://ksamods.gg/api/share/v1/",
+            "pages": "https://ksamods-content.github.io/share/",
+            "types": ["vehicle", "save"],
+            "max_bytes": { "vehicle": 10485760, "save": 104857600 },
+            "new_listings_per_day": 5,
+            "policy": "https://ksamods.gg/policy"
+        }
+        """;
+
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
     private readonly ContentIndexReader _reader;
@@ -74,14 +90,9 @@ public sealed class ContentIndexReaderTests : IDisposable
     private string IndexPath => _paths.GetIndexPath();
 
     [Fact]
-    public void Constructor_NullPathProvider_ThrowsArgumentNullException()
+    public void Constructor_NullPathProviderOrEmptySource_Throws()
     {
         Assert.Throws<ArgumentNullException>(() => new ContentIndexReader(null!));
-    }
-
-    [Fact]
-    public void Constructor_EmptySource_ThrowsArgumentException()
-    {
         Assert.Throws<ArgumentException>(() => new ContentIndexReader(_paths, ""));
     }
 
@@ -197,6 +208,85 @@ public sealed class ContentIndexReaderTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadAsync_Hosts_ReadsAStorageHostAndAHostWithoutStorage()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: $$"""
+            "hosts": {
+                "ksamods": {{StorageHost}},
+                "ownhost": {
+                    "kind": "share",
+                    "api": "https://own.example/api",
+                    "data": "https://data.own.example/share/",
+                    "downloads": ["https://cdn.own.example/"],
+                    "key": "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+                    "retired_keys": [],
+                    "types": ["vehicle"]
+                }
+            },
+            """));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Single(result.Listings);
+        Assert.Equal(["ksamods", "ownhost"], result.ShareHosts.Select(host => host.Key));
+        var storage = result.ShareHosts[0];
+        Assert.Equal(("ksamods.gg", "https://ksamods.gg/api/share/v1/"), (storage.Name, storage.Api.AbsoluteUri));
+        Assert.Equal(["vehicle", "save"], storage.Types);
+        Assert.Equal(10485760, storage.MaxBytesFor("vehicle"));
+        Assert.Equal("https://ksamods.gg/", storage.Page.AbsoluteUri);
+        var own = result.ShareHosts[1];
+        Assert.Equal(("ownhost", "https://own.example/api/"), (own.Name, own.Api.AbsoluteUri));
+        Assert.Equal(["vehicle"], own.Types);
+        Assert.Null(own.MaxBytesFor("vehicle"));
+        Assert.Equal("https://own.example/", own.Page.AbsoluteUri);
+    }
+
+    [Theory]
+    [InlineData("\"ksamods\":", "\"github\":")]
+    [InlineData("\"ksamods\":", "\"KSAmods\":")]
+    [InlineData("\"kind\": \"share\"", "\"kind\": \"mirror\"")]
+    [InlineData("https://ksamods.gg/api/share/v1/", "http://ksamods.gg/api/share/v1/")]
+    [InlineData("\"types\": [\"vehicle\", \"save\"]", "\"types\": \"vehicle\"")]
+    [InlineData("\"vehicle\": 10485760", "\"vehicle\": 0")]
+    [InlineData("\"vehicle\": 10485760", "\"vehicle\": 10485760.5")]
+    [InlineData("\"ksamods\":", "\"\\ud800\":")]
+    [InlineData("\"ksamods.gg\"", "\"\\ud800\"")]
+    [InlineData("\"save\"]", "\"\\ud800\"]")]
+    [InlineData("\"vehicle\": 10485760", "\"\\ud800\": 10485760")]
+    [InlineData("\"https://ksamods.gg/policy\"", "\"\\ud800\"")]
+    public async Task ReadAsync_HostTableBoreaCannotUse_IsSkippedAndTheOthersStay(string from, string to)
+    {
+        var hosts = $$"""
+            "hosts": {
+                "ksamods": {{StorageHost}},
+                "other": {{StorageHost}}
+            },
+            """;
+        // Only the first table changes, so the other one stays usable.
+        var at = hosts.IndexOf(from, StringComparison.Ordinal);
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: hosts[..at] + to + hosts[(at + from.Length)..]));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("other", Assert.Single(result.ShareHosts).Key);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\"hosts\": {},")]
+    [InlineData("\"hosts\": \"ksamods\",")]
+    public async Task ReadAsync_NoHostTables_GivesNoHostsAndKeepsTheRest(string hosts)
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: hosts));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Empty(result.ShareHosts);
+        Assert.Single(result.Listings);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public async Task ReadAsync_InvalidGameVersions_KeepsUsableListingAndAddsDiagnostic()
     {
         var gameVersions = """{ "spec_version": 1, "source": "master-server", "versions": ["invalid"] }""";
@@ -224,49 +314,26 @@ public sealed class ContentIndexReaderTests : IDisposable
         Assert.Equal(ContentIndexDiagnosticScope.GameVersions, Assert.Single(result.Diagnostics).Scope);
     }
 
-    [Fact]
-    public async Task ReadAsync_MalformedIndexStatusTimestamp_KeepsModerationStateAndAddsDiagnostic()
+    [Theory]
+    [InlineData("""{ "state": "disputed", "since": "not-a-date" }""", IndexStatusState.Disputed, "disputed", null, "timestamp")]
+    [InlineData("""{ "state": "delisted", "since": 123, "reason": "The entry was removed." }""", IndexStatusState.Delisted, "delisted", "The entry was removed.", "must be a string")]
+    public async Task ReadAsync_IndexStatusTimestampThatDoesNotParse_KeepsModerationStateAndAddsDiagnostic(
+        string indexStatus, IndexStatusState state, string rawState, string? statusReason, string diagnosticReason)
     {
-        var listing = Listing(
-            "test-mod",
-            ValidAuthoredJson,
-            """, "index_status": { "state": "disputed", "since": "not-a-date" }""");
-        await WriteIndexAsync(Snapshot(listing));
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson, ", \"index_status\": " + indexStatus)));
 
         var result = await _reader.ReadAsync();
 
         var status = Assert.Single(result.Listings).IndexStatus!;
-        Assert.Equal(IndexStatusState.Disputed, status.State);
-        Assert.Equal("disputed", status.RawState);
+        Assert.Equal(state, status.State);
+        Assert.Equal(rawState, status.RawState);
         Assert.Null(status.Since);
+        Assert.Equal(statusReason, status.Reason);
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
         Assert.Equal(ContentIndexDiagnosticScope.IndexStatus, diagnostic.Scope);
         Assert.Equal("test-mod", diagnostic.Id);
-        Assert.Contains("timestamp", diagnostic.Reason);
-    }
-
-    [Fact]
-    public async Task ReadAsync_NonStringIndexStatusTimestamp_KeepsModerationStateAndAddsDiagnostic()
-    {
-        var listing = Listing(
-            "test-mod",
-            ValidAuthoredJson,
-            """, "index_status": { "state": "delisted", "since": 123, "reason": "The entry was removed." }""");
-        await WriteIndexAsync(Snapshot(listing));
-
-        var result = await _reader.ReadAsync();
-
-        var status = Assert.Single(result.Listings).IndexStatus!;
-        Assert.Equal(IndexStatusState.Delisted, status.State);
-        Assert.Equal("delisted", status.RawState);
-        Assert.Null(status.Since);
-        Assert.Equal("The entry was removed.", status.Reason);
-        var diagnostic = Assert.Single(result.Diagnostics);
-        Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
-        Assert.Equal(ContentIndexDiagnosticScope.IndexStatus, diagnostic.Scope);
-        Assert.Equal("test-mod", diagnostic.Id);
-        Assert.Contains("must be a string", diagnostic.Reason);
+        Assert.Contains(diagnosticReason, diagnostic.Reason);
     }
 
     [Fact]
