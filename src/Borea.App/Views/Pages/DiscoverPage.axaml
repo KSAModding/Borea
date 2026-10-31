@@ -167,6 +167,7 @@
                         </Button>
                     </StackPanel>
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource InstanceHint}" Margin="8,24,0,0" IsVisible="{Binding !HasActiveInstance}" />
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ActiveKeptBuildUnavailable}" Margin="8,24,0,0" IsVisible="{Binding !CanAddToActiveInstance}" />
                     <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverEmpty}" Margin="8,24,0,0">
                         <TextBlock.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">

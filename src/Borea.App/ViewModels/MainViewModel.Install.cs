@@ -250,9 +250,11 @@ public partial class MainViewModel
     /// settings never stands in for it.
     /// </summary>
     internal static GameVersion? GameVersionOf(BoreaServices services, Instance? instance)
-        => instance is null
-            ? services.InstalledVersion.GetInstalledVersion()?.Version
-            : services.InstanceGames.Resolve(instance).Version?.Version;
+        => GameVersionOf(services, instance is null ? null : services.InstanceGames.Resolve(instance));
+
+    /// <summary>The same build as the overload for an instance, from a game that the caller already resolved.</summary>
+    internal static GameVersion? GameVersionOf(BoreaServices services, InstanceGame? game)
+        => game is null ? services.InstalledVersion.GetInstalledVersion()?.Version : game.Version?.Version;
 
     /// <summary>
     /// The build that a plan for <paramref name="instance"/> is checked against. A kept build that is missing or reads
@@ -263,7 +265,7 @@ public partial class MainViewModel
     {
         var game = services.InstanceGames.Resolve(instance);
         if (game is { Problem: not KeptBuildProblem.None, KeptBuild: { } build })
-            throw new InvalidOperationException(Localization.FormatInstallKeptBuildUnavailable(build.ToString(), services.Paths.GetGameBuildFolder(build)));
+            throw new InvalidOperationException(Localization.FormatInstallKeptBuildUnavailable(build.ToString(), KeptBuildFolderText(services.Paths, build)));
 
         return game.Version?.Version;
     }

@@ -59,7 +59,7 @@ public sealed class ModListViewModelTests
         Assert.Null(viewModel.ModListImport);
         var toast = Assert.Single(viewModel.Toasts.Items);
         Assert.Equal(harness.Localization.FormatToastDuplicateFailed("Main"), toast.Message);
-        Assert.Equal(harness.Localization.FormatInstallKeptBuildUnavailable(gone.ToString(), harness.Services.Paths.GetGameBuildFolder(gone)), toast.Detail);
+        Assert.Equal(harness.Localization.FormatInstallKeptBuildUnavailable(gone.ToString(), MainViewModel.KeptBuildFolderText(harness.Services.Paths, gone)), toast.Detail);
         Assert.Single(await harness.Services.Instances.GetAllAsync());
     }
 

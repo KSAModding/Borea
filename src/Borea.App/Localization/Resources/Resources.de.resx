@@ -2535,6 +2535,9 @@
   <data name="DiscoverAddingToFormat" xml:space="preserve">
     <value>Hinzufügen zu {0}</value>
   </data>
+  <data name="DiscoverKeptBuildUnavailableFormat" xml:space="preserve">
+    <value>{0} behält KSA {1}, aber dieser Build fehlt in der Bibliothek, darum kann Borea keine Mods dafür bewerten oder installieren.</value>
+  </data>
   <data name="DiscoverInstalled" xml:space="preserve">
     <value>Installiert</value>
   </data>
@@ -3574,7 +3577,7 @@
     <value>Die aktive Instanz existiert nicht mehr.</value>
   </data>
   <data name="InstallKeptBuildUnavailableFormat" xml:space="preserve">
-    <value>Diese Instanz läuft auf dem behaltenen KSA-Build {0}, und der Ordner {1} fehlt oder enthält diesen Build nicht. Borea installiert und aktualisiert nichts in dieser Instanz, bis der Ordner diesen Build wieder enthält. Um stattdessen den Spielordner der Einstellungen zu verwenden, wähle „Aktuellen Spiel-Build verwenden“ im Menü der Instanz.</value>
+    <value>Um in diese Instanz zu installieren, wähle „Aktuellen Spiel-Build verwenden“ im Menü der Instanz. KSA {0}, den diese Instanz behält, ist nicht im Ordner {1} der Bibliothek, oder der Ordner enthält einen anderen Build.</value>
   </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Instanz erstellen</value>

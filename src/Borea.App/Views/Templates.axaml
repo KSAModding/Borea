@@ -31,6 +31,15 @@
             </Button>
         </WrapPanel>
     </DataTemplate>
+    <!-- the kept build of the active instance is not found: one line, and the way out -->
+    <DataTemplate x:Key="ActiveKeptBuildUnavailable" x:DataType="vm:MainViewModel">
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="body-md danger" Text="{Binding ActiveInstance.AddRefusalText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="link" Margin="16,0,0,0" VerticalAlignment="Center" Command="{Binding ActiveInstance.BeginUseCurrentGameBuildCommand}">
+                <TextBlock Classes="action-md" Text="{Binding Localization.InstanceUseCurrentGameBuild}" />
+            </Button>
+        </Grid>
+    </DataTemplate>
     <!-- the page header names the instance that Add goes into, and leads to the Library to change it -->
     <DataTemplate x:Key="AddingTo" x:DataType="vm:MainViewModel">
         <Button Classes="plain" HorizontalAlignment="Right" Margin="16,0,0,0" Command="{Binding SetMainWindowLibraryCommand}" IsVisible="{Binding HasActiveInstance}" ToolTip.Tip="{Binding AddingToText}" AutomationProperties.Name="{Binding AddingToText}" AutomationProperties.HelpText="{Binding Localization.DiscoverOpenLibrary}">
@@ -354,7 +363,7 @@
                             </StackPanel>
                             <!-- c/button-icon-add -->
                             <Panel Grid.Column="2" VerticalAlignment="Top">
-                                <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
+                                <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanAddToActiveInstance}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                                 </Button>
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
@@ -499,7 +508,7 @@
                                 <Button Classes="add" Command="{Binding NewInstanceCommand}" IsVisible="{Binding !IsInstalling}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Library}" />
                                 </Button>
-                                <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
+                                <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanAddToActiveInstance}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                                 </Button>
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">

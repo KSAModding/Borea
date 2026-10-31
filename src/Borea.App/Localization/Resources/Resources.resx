@@ -2535,6 +2535,9 @@
   <data name="DiscoverAddingToFormat" xml:space="preserve">
     <value>Adding to {0}</value>
   </data>
+  <data name="DiscoverKeptBuildUnavailableFormat" xml:space="preserve">
+    <value>{0} keeps KSA {1}, but that build is not in the library, so Borea cannot rate or install mods for it.</value>
+  </data>
   <data name="DiscoverInstalled" xml:space="preserve">
     <value>Installed</value>
   </data>
@@ -3574,7 +3577,7 @@
     <value>The active instance no longer exists.</value>
   </data>
   <data name="InstallKeptBuildUnavailableFormat" xml:space="preserve">
-    <value>This instance runs on the kept KSA build {0}, and the folder {1} is gone or does not hold that build. Borea installs and updates nothing in this instance until the folder holds that build again. To use the game folder of the settings instead, select "Use the current game build" in the instance menu.</value>
+    <value>To install into this instance, select "Use the current game build" in the instance menu. KSA {0}, which this instance keeps, is not in the folder {1} of the library, or that folder holds another build.</value>
   </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Create instance</value>
