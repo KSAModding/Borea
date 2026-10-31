@@ -599,7 +599,7 @@ public sealed class GameSavesViewModelTests
     }
 
     /// <summary>A folder the way the game writes it, with a meta.toml in the shape of SaveMetaData.</summary>
-    private static void WriteItem(string kindFolder, string name, string updated, string version, int dataBytes, string dataFile = "universe.xml")
+    internal static void WriteItem(string kindFolder, string name, string updated, string version, int dataBytes, string dataFile = "universe.xml")
     {
         var folder = Directory.CreateDirectory(Path.Combine(kindFolder, name)).FullName;
         File.WriteAllText(Path.Combine(folder, "meta.toml"), $"""

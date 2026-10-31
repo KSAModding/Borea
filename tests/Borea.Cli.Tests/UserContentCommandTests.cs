@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -40,6 +41,35 @@ public sealed class UserContentCommandTests : IDisposable
         Assert.Equal(["parts-lib", "wheels"], (await Entries(instance)).Where(entry => entry.Enabled).Select(entry => entry.ModId).Order());
         Assert.True(File.Exists(Path.Combine(_host.Paths.GetInstanceVehiclesFolder(instance), "Rover", "vehicle.xml")));
         Assert.Equal("rover", Assert.Single(await new FileInstalledContentRecords(_host.Paths).ListAsync(instance)).ListingId);
+    }
+
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 1)]
+    public async Task InstallDryRun_ChecksTheVehicleAgainstTheBuildOfTheInstance(bool keepsAnOlderBuild, int exitCode)
+    {
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(new GameVersion(2026, 9, 7, 5402), "2026.9.7.5402") };
+        await CreateAsync();
+        if (keepsAnOlderBuild)
+            await _host.KeepGameBuildAsync("Alpha");
+
+        var run = await _host.RunAsync("install", "rover", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(exitCode, run.ExitCode);
+    }
+
+    [Fact]
+    public async Task InstallDryRun_KeptBuildIsGone_FailsAndNamesTheBuild()
+    {
+        await CreateAsync();
+        await _host.KeepGameBuildAsync("Alpha", withFolder: false);
+
+        var run = await _host.RunAsync("install", "rover", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("2026.8.3.5117", run.Error);
+        Assert.Contains("is gone", run.Error);
+        Assert.DoesNotContain("Install vehicle rover", run.Output);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
@@ -80,6 +81,42 @@ public sealed class LibraryFolderChangerTests : IDisposable
         Assert.Equal(StoreEntry(Target), new DirectoryLinker().GetTarget(LinkedModFolder(Target, instance)));
         Assert.True(File.Exists(Path.Combine(LinkedModFolder(Target, instance), "mod.toml")));
         Assert.False(Directory.Exists(Path.Combine(BoreaRoot, "Static Mod Files")));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ChangeAsync_KeptGameBuild_MovesTheGameBuildsFolder(bool sameVolume)
+    {
+        var instance = await SeedLibraryAsync(BoreaRoot);
+        var build = Path.Combine("Game Builds", "2026.8.3.5117", "KSA.dll");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(BoreaRoot, build))!);
+        await File.WriteAllTextAsync(Path.Combine(BoreaRoot, build), "game");
+
+        var result = await Changer(sameVolume).ChangeAsync(Target);
+
+        Assert.Equal(LibraryFolderChangeOutcome.Moved, result.Outcome);
+        Assert.False(result.OldFilesRemain);
+        await AssertLibraryAtAsync(Target, instance);
+        Assert.Equal("game", await File.ReadAllTextAsync(Path.Combine(Target, build)));
+        Assert.False(Directory.Exists(Path.Combine(BoreaRoot, "Game Builds")));
+    }
+
+    [UnixFact("Windows has no execute bit.")]
+    [UnsupportedOSPlatform("windows")]
+    public async Task ChangeAsync_OtherVolume_KeepsTheExecuteBitOfTheAppHost()
+    {
+        await SeedLibraryAsync(BoreaRoot);
+        var appHost = Path.Combine("Game Builds", "2026.8.3.5117", "KSA");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(BoreaRoot, appHost))!);
+        await File.WriteAllTextAsync(Path.Combine(BoreaRoot, appHost), "game");
+        var mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute;
+        File.SetUnixFileMode(Path.Combine(BoreaRoot, appHost), mode);
+
+        var result = await Changer(sameVolume: false).ChangeAsync(Target);
+
+        Assert.Equal(LibraryFolderChangeOutcome.Moved, result.Outcome);
+        Assert.Equal(mode, File.GetUnixFileMode(Path.Combine(Target, appHost)));
     }
 
     [Theory]

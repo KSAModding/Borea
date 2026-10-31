@@ -15,7 +15,10 @@ public sealed class InstallStop
 
     public bool IsRequested => _requested.IsCancellationRequested;
 
-    /// <summary>Canceled by the request. Only work that writes nothing, such as planning, may use it.</summary>
+    /// <summary>
+    /// Canceled by the request. Only work that writes nothing, such as planning, or work that writes only to a
+    /// temporary folder it deletes when it stops, may use it.
+    /// </summary>
     public CancellationToken Token => _requested.Token;
 
     /// <summary>

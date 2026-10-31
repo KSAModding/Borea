@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
@@ -21,6 +22,9 @@ public sealed class LoaderUpdateTests
 {
     private const string GameBuild = "2026.8.3.5117";
 
+    // the file version of this fixture reads as a game build of revision 0, which only StarMap 0.4.6 fits with keptBuild
+    private static readonly GameVersion KeptBuild = GameVersion.Parse("0.4.6.0");
+
     private static readonly byte[] StarMapArchive = CreateStarMapArchive();
 
     private static string DownloadUrl(string version) => $"https://github.com/StarMapLoader/StarMap/releases/download/{version}/StarMap-{version}.zip";
@@ -31,7 +35,10 @@ public sealed class LoaderUpdateTests
     /// <param name="noFittingRelease">True leaves out 0.4.7, so no release supports the game.</param>
     /// <param name="loaderMax">The highest StarMap version that KSArmory accepts, or null for no limit.</param>
     /// <param name="adoptedOutsideTheLoaders">True records the loader as a folder the player brought, outside the Loaders root.</param>
-    private static async Task<ViewModelHarness> CreateAsync(string? installed = "0.4.6", bool installedFitsTheGame = false, bool knownVersion = true, bool withGame = true, IProcessStarter? starter = null, bool noFittingRelease = false, string? loaderMax = null, bool adoptedOutsideTheLoaders = false)
+    /// <param name="keptBuild">True keeps <see cref="KeptBuild"/> in the library and lets StarMap 0.4.6 fit it, and only it.</param>
+    /// <param name="keptBuildFits">False lets no release fit <see cref="KeptBuild"/>.</param>
+    /// <param name="respond">Answers the downloads, or null to serve every StarMap release.</param>
+    internal static async Task<ViewModelHarness> CreateAsync(string? installed = "0.4.6", bool installedFitsTheGame = false, bool knownVersion = true, bool withGame = true, IProcessStarter? starter = null, bool noFittingRelease = false, string? loaderMax = null, bool adoptedOutsideTheLoaders = false, bool keptBuild = false, bool keptBuildFits = true, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null)
     {
         var harness = await ViewModelHarness.CreateAsync(
             async services =>
@@ -50,10 +57,16 @@ public sealed class LoaderUpdateTests
                     settings = settings.WithLoaderInstallation("StarMap", new LoaderInstallation(loader, knownVersion ? ModVersion.Parse(installed) : null, rawVersion: null, isAdopted: !knownVersion || adoptedOutsideTheLoaders));
                 }
 
+                if (keptBuild)
+                {
+                    var kept = Directory.CreateDirectory(services.Paths.GetGameBuildFolder(KeptBuild)).FullName;
+                    File.Copy(Path.Combine(AppContext.BaseDirectory, "LoaderVersionFixture.dll"), Path.Combine(kept, "KSA.dll"));
+                }
+
                 await services.SettingsRepository.SaveAsync(settings);
             },
-            respond: ServeStarMap,
-            editSnapshot: json => StarMapReleases(json, installedFitsTheGame, noFittingRelease, loaderMax),
+            respond: respond ?? ServeStarMap,
+            editSnapshot: json => StarMapReleases(json, installedFitsTheGame, noFittingRelease, loaderMax, keptBuild && keptBuildFits),
             processStarter: starter ?? new RunningStarter());
         await harness.ViewModel.WhenLoaderUpdatesCheckedAsync();
         return harness;
@@ -138,6 +151,25 @@ public sealed class LoaderUpdateTests
         Assert.Equal(harness.Localization.LoaderUpdateGameRunning, harness.ViewModel.SetupError);
         Assert.Equal(ModVersion.Parse("0.4.6"), harness.Services.Settings.LoaderInstallations["StarMap"].Version);
         Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri == DownloadUrl("0.4.7"));
+    }
+
+    [Fact]
+    public async Task InstancePage_UpdateWhileTheGameRuns_ShowsOneErrorToast()
+    {
+        using var harness = await CreateAsync();
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        harness.IsGameProcessRunning = () => true;
+
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        var toast = Assert.Single(viewModel.Toasts.Items, item => item.IsFailed);
+        Assert.Equal(harness.Localization.LoaderUpdateGameRunning, toast.Message);
+        Assert.Equal(ModVersion.Parse("0.4.6"), harness.Services.Settings.LoaderInstallations["StarMap"].Version);
     }
 
     [Fact]
@@ -299,6 +331,27 @@ public sealed class LoaderUpdateTests
         var updated = Assert.Single(viewModel.InstanceLoader!.Rows);
         Assert.Equal(InstanceLoaderState.Installed, updated.State);
         Assert.False(updated.CanUpdate);
+    }
+
+    [Fact]
+    public async Task InstancePage_NewGameBuild_RatesTheOpenRowAgain()
+    {
+        using var harness = await CreateAsync(withGame: false);
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        Assert.NotEqual(InstanceLoaderState.GameIncompatible, Assert.Single(viewModel.InstanceLoader!.Rows).State);
+
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(harness.Services.Settings.GameDirectoryPath!, "KSA.dll"));
+        await viewModel.RefreshInstalledGameAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        Assert.Equal(InstanceLoaderState.GameIncompatible, row.State);
+        Assert.True(row.CanUpdate);
+        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.7"), row.UpdateText);
     }
 
     [Fact]
@@ -475,6 +528,7 @@ public sealed class LoaderUpdateTests
         Assert.Equal(harness.Localization.FormatSettingsLoaderUsedBy(pinned.Name), used.UsedByText);
         Assert.True(unused.CanRemove);
         Assert.Equal(harness.Localization.SettingsLoaderUnused, unused.UsedByText);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRatedForGameFolder(GameBuild), unused.CompatibilityToolTip);
 
         await unused.RemoveCommand.ExecuteAsync(null);
         Assert.True(unused.IsConfirmingRemove);
@@ -714,6 +768,240 @@ public sealed class LoaderUpdateTests
         Assert.Equal(updated, starter.Plan?.WorkingDirectory);
     }
 
+    [Fact]
+    public async Task Play_OnAKeptBuildWithOnlyANewerLoader_OffersTheOlderReleaseThatFitsAndInstallsItBeside()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateAsync(installed: "0.4.7", starter: starter, keptBuild: true);
+        var instance = await KeepBuildActiveAsync(harness);
+        starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+
+        Assert.True(viewModel.ShowUrgentLoaderUpdateBanner);
+        Assert.Equal(harness.Localization.FormatLoaderUpdateUrgentKept("Kept", "0.4.6.0", "StarMap", "0.4.7", "0.4.6"), viewModel.LoaderUpdateBannerText);
+        Assert.Equal(harness.Localization.FormatLoaderInstallAction("StarMap", "0.4.6"), viewModel.LoaderUpdateActionText);
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatLaunchLoaderInstallOlder("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.LaunchInstallAndPlay, viewModel.LoaderPromptActionText);
+
+        await viewModel.InstallPromptedLoaderCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SetupError);
+        var versions = (await harness.Services.LoaderVersions.ListAsync()).Select(version => version.Version?.ToString()).Order(StringComparer.Ordinal);
+        Assert.Equal(["0.4.6", "0.4.7"], versions);
+        Assert.Equal(ModVersion.Parse("0.4.7"), harness.Services.Settings.LoaderInstallations["StarMap"].Version);
+        Assert.True(harness.Services.Launcher.IsRunning(instance.InstanceId));
+        Assert.Equal(harness.Services.Paths.GetLoaderVersionDirectoryPath("StarMap", ModVersion.Parse("0.4.6")), starter.Plan?.WorkingDirectory);
+    }
+
+    [Fact]
+    public async Task Play_OnAKeptBuildWithARecordedLoaderOfUnknownVersion_StartsWithoutTheUpdateOfTheSettingsBuild()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateAsync(knownVersion: false, starter: starter, keptBuild: true);
+        var instance = await KeepBuildActiveAsync(harness);
+        starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        // the update check rates the recorded folder against the build of the settings, which 0.4.6 does not fit
+        Assert.True(viewModel.LoaderUpdateFor("StarMap")?.IsUrgent);
+        // the index offers 0.4.6 for the kept build, which the recorded folder already holds
+        Assert.Null(viewModel.LoaderUpdate);
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsLoaderPromptOpen);
+        Assert.True(harness.Services.Launcher.IsRunning(instance.InstanceId));
+    }
+
+    [Fact]
+    public async Task Play_OnAKeptBuildThatTheRecordedLoaderOfUnknownVersionDoesNotFit_AsksAndNamesTheKeptBuild()
+    {
+        using var harness = await CreateAsync(knownVersion: false, keptBuild: true, keptBuildFits: false);
+        var instance = await KeepBuildActiveAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLoaderPromptOpen);
+        Assert.Equal(harness.Localization.FormatLaunchLoaderIncompatible("StarMap", "0.4.6", "0.4.6.0"), viewModel.LoaderPromptText);
+        Assert.False(harness.Services.Launcher.IsRunning(instance.InstanceId));
+    }
+
+    [Fact]
+    public async Task InstancePage_OnAKeptBuildWithOnlyANewerLoader_ExplainsItAgainstTheKeptBuild()
+    {
+        using var harness = await CreateAsync(installed: "0.4.7", keptBuild: true);
+        await KeepBuildActiveAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        Assert.Equal(InstanceLoaderState.GameIncompatible, row.State);
+        Assert.Equal(harness.Localization.FormatLoaderUpdateUrgent("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), row.StatusToolTip);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderInstall("0.4.6"), row.UpdateText);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    // a pin gives the Mod loader row no offer, so the text names none
+    [InlineData(true, true)]
+    public async Task LoaderSetting_OnAKeptBuildThatTheAutomaticStartDoesNotSupport_NamesTheBuildAndTheOfferThatTheRowShows(bool keptBuildFits, bool pinned)
+    {
+        using var harness = await CreateAsync(installed: "0.4.7", keptBuild: true, keptBuildFits: keptBuildFits);
+        var instance = await KeepBuildActiveAsync(harness);
+        if (pinned)
+            await PinAsync(harness, instance, "0.4.7");
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.BeginEditLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLoaderSettingModalOpen);
+        Assert.Equal(
+            keptBuildFits && !pinned
+                ? harness.Localization.FormatInstanceLoaderAutomaticTargetIncompatible("StarMap", "0.4.7", "0.4.6.0", "0.4.6")
+                : harness.Localization.FormatInstanceLoaderAutomaticTargetIncompatibleNoOffer("StarMap", "0.4.7", "0.4.6.0"),
+            viewModel.LoaderSettingAutomaticText);
+    }
+
+    [Fact]
+    public async Task GameSettings_AVersionThatAKeptBuildStarts_IsRatedForThatBuildAndListsItsUsersByName()
+    {
+        using var harness = await CreateAsync(installed: "0.4.7", keptBuild: true);
+        await KeepBuildActiveAsync(harness);
+        // an ordinal sort puts "Kept" before "base"
+        await harness.Services.Instances.CreateAsync("base", InstanceSource.Custom.Value);
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        var row = Assert.Single(viewModel.LoaderVersionItems);
+        Assert.True(row.IsIncompatible);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRatedForKept("0.4.6.0", "Kept"), row.CompatibilityToolTip);
+        Assert.Equal(["Alpha", "base", "Kept"], row.Users);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    // Settings that were closed on the Game tab open on it again
+    [InlineData(true)]
+    public async Task GameSettings_AKeepThatEndsWhileShownOrBeforeTheyOpenAgain_RatesTheVersionForTheKeptBuild(bool closedDuringKeep)
+    {
+        using var harness = await CreateAsync(installed: "0.4.7");
+        var instance = (await harness.Services.Instances.CreateAsync("Kept", InstanceSource.Custom.Value)).Instance;
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        viewModel.SetMainWindowSettings();
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRatedForGameFolder(GameBuild), Assert.Single(viewModel.LoaderVersionItems).CompatibilityToolTip);
+        if (closedDuringKeep)
+            viewModel.CloseSettingsCommand.Execute(null);
+
+        // a keep and not a use-current, because a keep waits for the static gate of the keeper while a keep test of
+        // another class copies, and a use-current is refused as busy
+        await viewModel.BeginKeepGameBuildAsync(viewModel.Instances.Single(item => item.InstanceId == instance.InstanceId));
+        await viewModel.ConfirmKeepGameBuildCommand.ExecuteAsync(null);
+        if (closedDuringKeep)
+        {
+            viewModel.SetMainWindowSettings();
+            await viewModel.WhenGameTabReopenRefreshedAsync();
+        }
+
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRatedForKept(GameBuild, "Kept"), Assert.Single(viewModel.LoaderVersionItems).CompatibilityToolTip);
+    }
+
+    [Fact]
+    public async Task InstancePage_RowInstall_StaysOnTheRowThatThePageBuildsAgain()
+    {
+        var downloading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var harness = await CreateAsync(installed: "0.4.7", keptBuild: true, respond: request => request.RequestUri?.AbsoluteUri == DownloadUrl("0.4.6")
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new InstallStopTests.StalledBody(downloading)) }
+            : ServeStarMap(request));
+        await KeepBuildActiveAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var install = Assert.Single(viewModel.InstanceLoader!.Rows).UpdateCommand.ExecuteAsync(null);
+        await downloading.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        // a page that opens again during the download builds new rows
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        Assert.True(row.IsInstalling);
+        Assert.False(row.CanUpdate);
+        Assert.Equal(harness.Localization.FormatInstanceLoaderInstalling("StarMap 0.4.6"), row.InstallingText);
+
+        viewModel.LoaderInstallRun!.StopCommand.Execute(null);
+        await install;
+        Assert.False(Assert.Single(viewModel.InstanceLoader!.Rows).IsInstalling);
+    }
+
+    [Fact]
+    public async Task BuildChange_OfTheActiveInstance_RatesTheLoaderAgainForTheBuildItStarts()
+    {
+        using var harness = await CreateAsync(installed: "0.4.7", keptBuild: true);
+        var instance = (await harness.Services.Instances.CreateAsync("Kept", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        Assert.False(viewModel.ShowUrgentLoaderUpdateBanner);
+
+        // A keep and a use-current write the build into the record and reload the instances, as this activation does.
+        // The commands share the static gate of the keeper with a keep test that runs at the same time: a keep waits
+        // for it, and a use-current is refused as busy.
+        await SetGameBuildAsync(KeptBuild);
+        Assert.True(viewModel.ShowUrgentLoaderUpdateBanner);
+        Assert.Equal(harness.Localization.FormatLoaderUpdateUrgentKept("Kept", "0.4.6.0", "StarMap", "0.4.7", "0.4.6"), viewModel.LoaderUpdateBannerText);
+
+        // a rename rates nothing again, and the banner names the instance as it is called now
+        await viewModel.RenameInstanceAsync(viewModel.ActiveInstance!, "Career");
+        Assert.Equal(harness.Localization.FormatLoaderUpdateUrgentKept("Career", "0.4.6.0", "StarMap", "0.4.7", "0.4.6"), viewModel.LoaderUpdateBannerText);
+
+        await SetGameBuildAsync(null);
+        Assert.False(viewModel.ShowUrgentLoaderUpdateBanner);
+        Assert.Null(viewModel.LoaderUpdateBannerText);
+
+        async Task SetGameBuildAsync(GameVersion? build)
+        {
+            await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
+            {
+                saved.SetGameBuild(build);
+                return true;
+            });
+            await viewModel.ActivateInstanceAsync(instance.InstanceId);
+            await viewModel.WhenLoaderUpdatesCheckedAsync();
+        }
+    }
+
+    /// <summary>A new instance on <see cref="KeptBuild"/>, which Home starts.</summary>
+    internal static async Task<Instance> KeepBuildActiveAsync(ViewModelHarness harness)
+    {
+        var instance = (await harness.Services.Instances.CreateAsync("Kept", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetGameBuild(KeptBuild);
+            return true;
+        });
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        return instance;
+    }
+
     private static Task PinAsync(ViewModelHarness harness, Instance instance, string version) =>
         harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
         {
@@ -721,8 +1009,11 @@ public sealed class LoaderUpdateTests
             return true;
         });
 
-    /// <summary>Gives 0.4.6 a game_max below the game unless it fits, and adds 0.4.7 for the game and 0.4.8 for a later build.</summary>
-    private static string StarMapReleases(string json, bool installedFitsTheGame, bool noFittingRelease, string? loaderMax)
+    /// <summary>
+    /// Gives 0.4.6 a game_max below the game unless it fits, and adds 0.4.7 for the game and 0.4.8 for a later build.
+    /// With <paramref name="keptBuild"/>, 0.4.6 also starts at <see cref="KeptBuild"/> and downloads like the others.
+    /// </summary>
+    private static string StarMapReleases(string json, bool installedFitsTheGame, bool noFittingRelease, string? loaderMax, bool keptBuild = false)
     {
         var root = JsonNode.Parse(json)!;
         var listings = root["listings"]!.AsArray();
@@ -736,6 +1027,15 @@ public sealed class LoaderUpdateTests
             first["game_min_revision"] = 5000;
             first["game_max"] = "2026.8.1.5100";
             first["game_max_revision"] = 5100;
+        }
+
+        if (keptBuild)
+        {
+            first["game_min"] = KeptBuild.ToString();
+            first["game_min_revision"] = KeptBuild.Revision;
+            first["download"]!["url"] = DownloadUrl("0.4.6");
+            first["download"]!["sha256"] = Convert.ToHexString(SHA256.HashData(StarMapArchive));
+            first["download"]!["size"] = StarMapArchive.Length;
         }
 
         if (!noFittingRelease)
@@ -767,7 +1067,7 @@ public sealed class LoaderUpdateTests
     }
 
     private static HttpResponseMessage? ServeStarMap(HttpRequestMessage request) =>
-        request.RequestUri?.AbsoluteUri is { } uri && (uri == DownloadUrl("0.4.7") || uri == DownloadUrl("0.4.8"))
+        request.RequestUri?.AbsoluteUri is { } uri && (uri == DownloadUrl("0.4.6") || uri == DownloadUrl("0.4.7") || uri == DownloadUrl("0.4.8"))
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(StarMapArchive) }
             : null;
 

@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Mods;
@@ -23,6 +24,7 @@ public static class InstanceMapper
             IsFavorite = instance.IsFavorite,
             LastPlayedAt = instance.LastPlayedAt,
             LaunchArguments = instance.LaunchArguments.ToList(),
+            GameBuild = instance.GameBuild?.ToString(),
             LoaderId = instance.Loader.LoaderId,
             LoaderVersion = instance.Loader.Version?.ToString(),
             SourceType = sourceType,
@@ -55,7 +57,9 @@ public static class InstanceMapper
         var mods = dto.Mods.Select(InstalledModMapper.FromDto).ToList();
         var foreignMods = dto.ForeignMods.Select(ForeignModMapper.FromDto).ToList();
 
-        var instance = Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, foreignMods, dto.IsFavorite, dto.LastPlayedAt, dto.LaunchArguments);
+        var gameBuild = dto.GameBuild is null ? (GameVersion?)null : GameVersion.Parse(dto.GameBuild);
+
+        var instance = Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, foreignMods, dto.IsFavorite, dto.LastPlayedAt, dto.LaunchArguments, gameBuild);
         instance.SetLoader(LoaderFrom(dto));
         return instance;
     }

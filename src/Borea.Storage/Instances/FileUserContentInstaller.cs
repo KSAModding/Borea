@@ -132,7 +132,7 @@ public sealed class FileUserContentInstaller : IUserContentInstaller
                 if (moved)
                     DirectoryRename.Move(target, staging);
 
-                Directory.Move(backup, oldFolder);
+                DirectoryRename.Move(backup, oldFolder);
                 GameSaveBackupFolder.TryDeleteRecord(backup);
                 throw;
             }

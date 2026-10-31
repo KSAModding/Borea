@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 
@@ -6,7 +8,7 @@ namespace Borea.Storage.Paths;
 
 /// <summary>
 /// Resolves Borea's own paths under its root, %LocalAppData%\Borea unless another
-/// root is given, the Instances, Backups and Static Mod Files folders under the library folder,
+/// root is given, the Instances, Backups, Static Mod Files and Game Builds folders under the library folder,
 /// which is the root unless another one is given, and KSA and mod loader paths
 /// from the provided settings.
 /// </summary>
@@ -60,6 +62,13 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetGamePatchNotesFolder() => Path.Combine(_boreaRoot, "GamePatchNotes");
     public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
     public string GetStaticModFilesRoot() => Path.Combine(_libraryFolder, "Static Mod Files");
+
+    // only the numbers name the folder, so a suffix in a hand-edited instance.toml cannot put a separator into the path
+    public string GetGameBuildsRoot() => Path.Combine(_libraryFolder, "Game Builds");
+
+    public string GetGameBuildFolder(GameVersion version)
+        => Path.Combine(GetGameBuildsRoot(), string.Create(CultureInfo.InvariantCulture, $"{version.Year}.{version.Month}.{version.BuildNumber}.{version.Revision}"));
+
     public string GetLoadersRoot() => Path.Combine(_boreaRoot, "Loaders");
     public string GetPresetsRoot() => Path.Combine(_boreaRoot, "Presets");
     public string GetGameSettingsPresetsRoot() => Path.Combine(GetPresetsRoot(), "GameSettings");

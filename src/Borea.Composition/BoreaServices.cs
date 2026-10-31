@@ -202,9 +202,6 @@ public sealed class BoreaServices : IDisposable
 
     public required ILoaderAdopter LoaderAdopter { get; init; }
 
-    /// <summary>Writes the game path into the configuration of a loader, which a launch through a Wine wrapper refreshes first.</summary>
-    public required ILoaderConfigurator LoaderConfiguration { get; init; }
-
     public required ILoaderUninstaller LoaderUninstaller { get; init; }
 
     /// <summary>The loader versions on disk, read again on each call.</summary>
@@ -225,8 +222,11 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
-    /// <summary>The game folder and the installed version of one instance.</summary>
+    /// <summary>The game folder and the installed version of one instance, which can keep its own game build.</summary>
     public required IInstanceGameResolver InstanceGames { get; init; }
+
+    /// <summary>Copies the game build of the settings for an instance, so the instance keeps it after a game update.</summary>
+    public required IGameBuildKeeper GameBuilds { get; init; }
 
     /// <summary>The platform whose code the game build runs, which the planner checks releases against.</summary>
     public required IGamePlatform GamePlatform { get; init; }
@@ -397,10 +397,10 @@ public sealed class BoreaServices : IDisposable
     /// <param name="gamePlatform">The platform of the game build. Null reads it from the game folder on this system.</param>
     /// <param name="loaderLauncher">Starts the game through a loader. Null starts it with the process starter.</param>
     /// <param name="sharedProfileLauncher">Starts the game without a loader. Null starts it with the process starter.</param>
-    /// <param name="loaderConfigurator">What <see cref="LoaderConfiguration"/> gives. Null gives the configurator the loader installer writes with.</param>
     /// <param name="wrapInstallPlanner">Wraps the planner that every service of the graph plans with. Null uses it as it is.</param>
     /// <param name="listingImageHandler">Fetches the images that the listing editor measures. Null fetches them from the author hosts.</param>
     /// <param name="shareHostClient">Signs in and uploads to a share host. Null builds one that keeps no sign-in.</param>
+    /// <param name="wrapGameBuilds">Wraps the keeper of the game builds. Null uses it as it is.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
@@ -427,15 +427,15 @@ public sealed class BoreaServices : IDisposable
         IGamePlatform? gamePlatform = null,
         ILauncher? loaderLauncher = null,
         ISharedProfileLauncher? sharedProfileLauncher = null,
-        ILoaderConfigurator? loaderConfigurator = null,
         Func<IInstallPlanner, IInstallPlanner>? wrapInstallPlanner = null,
         HttpMessageHandler? listingImageHandler = null,
-        IShareHostClient? shareHostClient = null)
+        IShareHostClient? shareHostClient = null,
+        Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, loaderConfigurator, wrapInstallPlanner, listingImageHandler, shareHostClient);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, wrapInstallPlanner, listingImageHandler, shareHostClient, wrapGameBuilds);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -466,10 +466,10 @@ public sealed class BoreaServices : IDisposable
         IGamePlatform? gamePlatform = null,
         ILauncher? loaderLauncher = null,
         ISharedProfileLauncher? sharedProfileLauncher = null,
-        ILoaderConfigurator? loaderConfigurator = null,
         Func<IInstallPlanner, IInstallPlanner>? wrapInstallPlanner = null,
         HttpMessageHandler? listingImageHandler = null,
-        IShareHostClient? shareHostClient = null)
+        IShareHostClient? shareHostClient = null,
+        Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -546,7 +546,8 @@ public sealed class BoreaServices : IDisposable
 
         var loaderVersions = new FileLoaderVersionStore(settingsRepository, paths);
         var installedVersion = new InstalledGameVersionProvider(paths);
-        var gameShape = new GameShapeCheck(paths, installedVersion);
+        var instanceGames = new InstanceGameResolver(paths, installedVersion);
+        var gameShape = new GameShapeCheck(paths, installedVersion, instances, instanceGames);
 
         // The file repository stays unguarded, because the installer and the
         // replacer own it and are guarded themselves.
@@ -564,7 +565,11 @@ public sealed class BoreaServices : IDisposable
             installPlanner = wrapInstallPlanner(installPlanner);
         isGameProcessRunning ??= RunningProcesses.IsGameRunning;
         var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
-        var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning), instances), log);
+        var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning, instanceGames, log), instances), log);
+        // the index lists every loader, and the offline SpaceDock throws on a list of all mods, so the keeper reads only the cached index
+        IGameBuildKeeper gameBuilds = new GameBuildKeeper(paths, instances, offlineContentIndex, loaderVersions, isGameProcessRunning, launcher.IsRunning);
+        if (wrapGameBuilds is not null)
+            gameBuilds = wrapGameBuilds(gameBuilds);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
         var announcementReader = new AnnouncementReader();
         var listedDocuments = new ListedDocumentFetcher(http);
@@ -629,7 +634,6 @@ public sealed class BoreaServices : IDisposable
             SpaceCheck = spaceCheck,
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration, isGameProcessRunning),
             LoaderAdopter = loaderAdopter,
-            LoaderConfiguration = loaderConfigurator ?? loaderConfiguration,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository, paths, loaderVersions, isGameProcessRunning),
             LoaderVersions = loaderVersions,
             Launcher = launcher,
@@ -639,12 +643,13 @@ public sealed class BoreaServices : IDisposable
             SelfUpdater = selfUpdater ?? BuildSelfUpdater(new BoreaReleaseFiles(http), log, fromCommandLine: logSource == BoreaLogSource.Cli),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
-            InstanceGames = new InstanceGameResolver(paths, installedVersion),
+            InstanceGames = instanceGames,
+            GameBuilds = gameBuilds,
             GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
             GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),
             GamePatchNotesFetcher = new GamePatchNotesFetcher(http, new FileGamePatchNotesCache(paths)),
-            InstallDetector = new InstallDetector(installCandidates, loaderAdopter, paths.GetLoadersRoot()),
+            InstallDetector = new InstallDetector(installCandidates, loaderAdopter, paths.GetLoadersRoot(), paths.GetGameBuildsRoot()),
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,
             IndexSnapshots = indexSnapshots,

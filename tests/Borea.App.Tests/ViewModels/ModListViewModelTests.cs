@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using Borea.App.ViewModels;
 using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 
@@ -42,6 +43,55 @@ public sealed class ModListViewModelTests
         Assert.Contains(viewModel.Instances, row => row.Name == "Main (copy)");
         Assert.DoesNotContain(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatLibraryNowActive("Main (copy)"));
         Assert.Equal("Main", viewModel.ActiveInstance?.Name);
+    }
+
+    [Fact]
+    public async Task Duplicate_KeptBuildIsGone_RefusesAndNamesTheBuild()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        await KeepGameBuildAsync(harness, await SeedMainAsync(harness));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.Instances.Single().DuplicateCommand.ExecuteAsync(null);
+
+        var gone = GameVersion.Parse("2026.10.13.5602");
+        Assert.Null(viewModel.ModListImport);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.FormatToastDuplicateFailed("Main"), toast.Message);
+        Assert.Equal(harness.Localization.FormatInstallKeptBuildUnavailable(gone.ToString(), MainViewModel.KeptBuildFolderText(harness.Services.Paths, gone)), toast.Detail);
+        Assert.Single(await harness.Services.Instances.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task Duplicate_KeptBuild_IsCheckedAgainstTheBuildOfTheSource()
+    {
+        // the settings point at build 5117, and the source keeps build 0.4.6.0, which the only release of OldTools supports
+        var kept = GameVersion.Parse("0.4.6.0");
+        using var harness = await ViewModelHarness.CreateAsync(
+            services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+                var folder = Directory.CreateDirectory(services.Paths.GetGameBuildFolder(kept)).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "LoaderVersionFixture.dll"), Path.Combine(folder, "KSA.dll"));
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
+            },
+            respond: ServeArchive);
+        harness.SpaceDock.Releases.Add(Release("OldTools", "1.0.0", gameMin: "0.4.6.0", gameMinRevision: 0, gameMax: "2026.1.1.5000", gameMaxRevision: 5000));
+        var source = await InstalledContent.AddAsync(harness, "OldTools", activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        var instance = (await harness.Services.Instances.GetByIdAsync(source.InstanceId))!;
+        instance.SetGameBuild(kept);
+        await harness.Services.Instances.SaveAsync(instance);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.Instances.Single().DuplicateCommand.ExecuteAsync(null);
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        var copy = (await harness.Services.Instances.GetAllAsync()).Single(candidate => candidate.Name == "Main (copy)");
+        Assert.Equal(kept, copy.GameBuild);
+        Assert.Equal(["OldTools 1.0.0 Manual"], Describe(copy));
     }
 
     [Fact]
@@ -111,6 +161,32 @@ public sealed class ModListViewModelTests
         Assert.Equal(InstanceSource.Custom.Value, imported.Source);
         Assert.Equal(["HudCore 1.0.0 Dependency", "HudExtras 2.0.0 Manual"], Describe(imported));
         Assert.Equal(await EntriesAsync(harness, source.InstanceId), await EntriesAsync(harness, imported.InstanceId));
+    }
+
+    [Fact]
+    public async Task ExportThenImport_DoesNotTakeTheGameBuildOver()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(
+            services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
+            },
+            respond: ServeArchive);
+        await KeepGameBuildAsync(harness, await SeedMainAsync(harness));
+        var window = new FakeWindowServices();
+        var viewModel = harness.ViewModel;
+        viewModel.WindowServices = window;
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single().ExportModListCommand.ExecuteAsync(null);
+        window.FileToOpen = new PickedTextFile("Main.toml", window.SavedText!);
+
+        await viewModel.ImportModListCommand.ExecuteAsync(null);
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        var imported = (await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Main (2)");
+        Assert.Null(imported.GameBuild);
     }
 
     [Fact]
@@ -253,6 +329,13 @@ public sealed class ModListViewModelTests
         return source;
     }
 
+    private static async Task KeepGameBuildAsync(ViewModelHarness harness, Instance seeded)
+    {
+        var instance = (await harness.Services.Instances.GetByIdAsync(seeded.InstanceId))!;
+        instance.SetGameBuild(GameVersion.Parse("2026.10.13.5602"));
+        await harness.Services.Instances.SaveAsync(instance);
+    }
+
     private static void AddReleases(ViewModelHarness harness) => harness.SpaceDock.Releases.AddRange(
     [
         Release("HudCore", "0.5.0"),
@@ -268,17 +351,19 @@ public sealed class ModListViewModelTests
     private static async Task<IReadOnlyList<string>> EntriesAsync(ViewModelHarness harness, Guid instanceId) =>
         (await harness.Services.ModState.GetEntriesAsync(instanceId)).Select(entry => $"{entry.ModId} {entry.Enabled}").ToList();
 
-    private static ModVersionMetadata Release(string modId, string version, IReadOnlyList<ModDependency>? dependencies = null, string? yankedReason = null) => new(
+    private static ModVersionMetadata Release(string modId, string version, IReadOnlyList<ModDependency>? dependencies = null, string? yankedReason = null, string gameMin = "2026.1.1.1", int gameMinRevision = 1, string? gameMax = null, int? gameMaxRevision = null) => new(
         specVersion: 1,
         modId: modId,
         version: ModVersion.Parse(version),
         releaseStatus: ReleaseStatus.Stable,
         releaseDate: DateTimeOffset.UnixEpoch,
-        gameMin: "2026.1.1.1",
-        gameMinRevision: 1,
+        gameMin: gameMin,
+        gameMinRevision: gameMinRevision,
         download: new DownloadInfo($"https://{ArchiveHost}/{modId}/{version}.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
         installSizeBytes: null,
         dependencies: dependencies ?? [],
+        gameMax: gameMax,
+        gameMaxRevision: gameMaxRevision,
         yanked: yankedReason is not null,
         yankedReason: yankedReason);
 

@@ -40,13 +40,13 @@
                         <Button Classes="cta" Command="{Binding ChangeLoaderFromPromptCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding ShowChangeLoaderPromptAction}">
                             <TextBlock Classes="action-lg" Text="{Binding Localization.LoaderChangeAction}" VerticalAlignment="Center" />
                         </Button>
-                        <Button Classes="cta" Command="{Binding UseAutomaticLoaderCommand}" IsVisible="{Binding ShowUseAutomaticLoaderAction}">
+                        <Button Classes="cta" Command="{Binding UseAutomaticLoaderCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding ShowUseAutomaticLoaderAction}">
                             <TextBlock Classes="action-lg" Text="{Binding Localization.LaunchUseAutomaticLoader}" VerticalAlignment="Center" />
                         </Button>
-                        <Button Classes="cta" Command="{Binding InstallPromptedLoaderCommand}" IsVisible="{Binding ShowLoaderPromptAction}">
+                        <Button Classes="cta" Command="{Binding InstallPromptedLoaderCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding ShowLoaderPromptAction}">
                             <TextBlock Classes="action-lg" Text="{Binding LoaderPromptActionText}" VerticalAlignment="Center" />
                         </Button>
-                        <Button Classes="cta" Command="{Binding SetUpGameForLoaderCommand}" IsVisible="{Binding NeedsGameSetup}">
+                        <Button Classes="cta" Command="{Binding SetUpGameForLoaderCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding NeedsGameSetup}">
                             <TextBlock Classes="action-lg" Text="{Binding Localization.SetupBannerAction}" VerticalAlignment="Center" />
                         </Button>
                     </StackPanel>

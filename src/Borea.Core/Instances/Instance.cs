@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using System.Collections.ObjectModel;
 
@@ -37,6 +38,9 @@ public sealed class Instance
     /// <summary>The arguments every launch of this instance passes after the instance handover, in order.</summary>
     public IReadOnlyList<string> LaunchArguments => new ReadOnlyCollection<string>(_launchArguments);
 
+    /// <summary>The kept game build this instance runs on, or null when it runs on the game folder of the settings.</summary>
+    public GameVersion? GameBuild { get; private set; }
+
     /// <summary>The mod loader, and its version, that a start of this instance uses.</summary>
     public LoaderSetting Loader { get; private set; } = LoaderSetting.Automatic;
 
@@ -56,8 +60,9 @@ public sealed class Instance
         IReadOnlyList<ForeignMod> foreignMods,
         bool isFavorite,
         DateTimeOffset? lastPlayedAt = null,
-        IReadOnlyList<string>? launchArguments = null)
-        => new(instanceId, name, source, createdAt, mods, foreignMods, isFavorite, lastPlayedAt, launchArguments);
+        IReadOnlyList<string>? launchArguments = null,
+        GameVersion? gameBuild = null)
+        => new(instanceId, name, source, createdAt, mods, foreignMods, isFavorite, lastPlayedAt, launchArguments, gameBuild);
 
     private Instance(
         Guid instanceId,
@@ -68,7 +73,8 @@ public sealed class Instance
         IReadOnlyList<ForeignMod> foreignMods,
         bool isFavorite = false,
         DateTimeOffset? lastPlayedAt = null,
-        IReadOnlyList<string>? launchArguments = null)
+        IReadOnlyList<string>? launchArguments = null,
+        GameVersion? gameBuild = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Instance name cannot be null or whitespace.", nameof(name));
@@ -88,6 +94,7 @@ public sealed class Instance
         IsFavorite = isFavorite;
         LastPlayedAt = lastPlayedAt;
         _launchArguments = CheckedArguments(launchArguments ?? Array.Empty<string>());
+        GameBuild = gameBuild;
 
         var duplicateId = _mods
             .GroupBy(m => m.ModId, ModIds.Comparer)
@@ -264,6 +271,7 @@ public sealed class Instance
 
     public void SetLaunchArguments(IReadOnlyList<string> arguments) => _launchArguments = CheckedArguments(arguments);
 
+    public void SetGameBuild(GameVersion? build) => GameBuild = build;
     public void SetLoader(LoaderSetting loader) => Loader = loader ?? throw new ArgumentNullException(nameof(loader));
 
     // a null character would cut the argument short on its way to the process

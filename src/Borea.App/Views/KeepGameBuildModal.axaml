@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.KeepGameBuildModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: keep the game build for an instance, or from a folder that the Game settings chose -->
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" Width="561" Margin="80,24,0,24">
+            <!-- the texts scroll in the height that is left, so the buttons stay in a window at its minimum height -->
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding KeepGameBuildTitle}" VerticalAlignment="Center" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CancelKeepGameBuildCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Grid.Row="1" Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <ScrollViewer Grid.Row="2">
+                    <StackPanel Margin="36,32,24,16" Spacing="16">
+                        <!-- a Grid, so a long line wraps next to the bar -->
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding IsKeepGameBuildChecking}">
+                            <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                            <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.ModalKeepGameBuildChecking}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                        </Grid>
+                        <TextBlock Classes="body-md" Text="{Binding KeepGameBuildText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md danger" Text="{Binding KeepGameBuildIncompatibleText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildIncompatibleText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding KeepGameBuildSourceText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildSourceText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding KeepGameBuildFolderText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildFolderText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding KeepGameBuildFreeSpaceText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildFreeSpaceText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding Localization.ModalKeepGameBuildPopupNote}" TextWrapping="Wrap" IsVisible="{Binding CanConfirmKeepGameBuild}" />
+                        <TextBlock Classes="body-md" Classes.danger="{Binding IsKeepGameBuildRefusalDanger}" Classes.secondary="{Binding !IsKeepGameBuildRefusalDanger}" Text="{Binding KeepGameBuildRefusalText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildRefusalText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
+                </ScrollViewer>
+                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="36,0,24,32">
+                    <Button Classes="text tall" Content="{Binding KeepGameBuildDismissText}" Command="{Binding CancelKeepGameBuildCommand}" VerticalAlignment="Center" />
+                    <Button Classes="cta" Command="{Binding SetUpGameForGameBuildCommand}" IsVisible="{Binding ShowsKeepGameBuildSetup}">
+                        <TextBlock Classes="action-lg" Text="{Binding Localization.SetupBannerAction}" VerticalAlignment="Center" />
+                    </Button>
+                    <Button Classes="cta" Command="{Binding ConfirmKeepGameBuildCommand}" IsVisible="{Binding CanConfirmKeepGameBuild}">
+                        <TextBlock Classes="action-lg" Text="{Binding Localization.ModalKeepGameBuildConfirm}" VerticalAlignment="Center" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Panel>
+</UserControl>

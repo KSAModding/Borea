@@ -32,12 +32,27 @@ public sealed class ContentDependenciesTests
         return viewModel.DiscoverItems.Single(item => item.ModId == modId).OpenCommand.ExecuteAsync(null);
     }
 
-    private static Func<string, string> EditReleases(string modId, Action<JsonArray> edit) => json =>
+    private static Func<string, string> EditListings(Action<Func<string, JsonNode>> edit) => json =>
     {
         var root = JsonNode.Parse(json)!;
-        edit(root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!["releases"]!.AsArray());
+        edit(modId => root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!);
         return root.ToJsonString();
     };
+
+    private static Func<string, string> EditReleases(string modId, Action<JsonArray> edit)
+        => EditListings(listing => edit(listing(modId)["releases"]!.AsArray()));
+
+    /// <summary>MeasureTools and <paramref name="copies"/> copies of it, each with a newest release that needs KSArmory and AdvancedFlightComputer.</summary>
+    private static Task<ViewModelHarness> CreateWithDependentsAsync(int copies)
+    {
+        var needs = EditReleases("MeasureTools", releases => releases[0]!["dependencies"] = JsonNode.Parse("""
+            [
+                { "id": "KSArmory", "kind": "required", "source": "authored" },
+                { "id": "AdvancedFlightComputer", "kind": "required", "source": "authored" }
+            ]
+            """));
+        return CreateAsync(json => ViewModelHarness.WithCopies(needs(json), "MeasureTools", copies));
+    }
 
     [Fact]
     public async Task Groups_FollowTheKindOrderAndListAnyOfMembersAsAlternatives()
@@ -60,12 +75,12 @@ public sealed class ContentDependenciesTests
         var groups = harness.ViewModel.BuildDependencyGroups(release);
 
         Assert.Equal(
-            [DependencyGroupKind.Required, DependencyGroupKind.AnyOf, DependencyGroupKind.Conflicts, DependencyGroupKind.Recommended, DependencyGroupKind.Suggested, DependencyGroupKind.Optional, DependencyGroupKind.Other],
+            [DependencyGroupKind.Required, DependencyGroupKind.AnyOf, DependencyGroupKind.Recommended, DependencyGroupKind.Suggested, DependencyGroupKind.Optional, DependencyGroupKind.Other],
             groups.Select(group => group.Kind));
         Assert.Equal(
-            [harness.Localization.ContentDependencyRequired, harness.Localization.ContentDependencyAnyOf, harness.Localization.ContentDependencyConflicts, harness.Localization.ContentDependencyRecommended, harness.Localization.ContentDependencySuggested, harness.Localization.ContentDependencyOptional, harness.Localization.ContentDependencyOther],
+            [harness.Localization.ContentDependencyRequired, harness.Localization.ContentDependencyAnyOf, harness.Localization.ContentDependencyRecommended, harness.Localization.ContentDependencySuggested, harness.Localization.ContentDependencyOptional, harness.Localization.ContentDependencyOther],
             groups.Select(group => group.Heading));
-        Assert.Equal(harness.Localization.ContentDependencyConflictsHint, groups[2].Hint);
+        Assert.Equal(harness.Localization.ContentDependencyRecommendedHint, groups[2].Hint);
         Assert.Equal(["Required1", "Required2"], groups[0].Entries.Select(entry => Assert.Single(entry.Members).ModId));
 
         var anyOf = groups[1].Entries;
@@ -80,7 +95,7 @@ public sealed class ContentDependenciesTests
         Assert.Null(anyOf[0].Members[1].BoundsText);
         Assert.Equal(["AlternativeC"], anyOf[1].Members.Select(member => member.ModId));
 
-        var recommended = groups[3].Entries;
+        var recommended = groups[2].Entries;
         Assert.Equal([true, false], recommended.Select(entry => entry.IsAnyOf));
         Assert.Equal([true, false], recommended.Select(entry => entry.ShowsOneOf));
         Assert.Equal(["RecommendedA", "RecommendedB"], recommended[0].Members.Select(member => member.ModId));
@@ -158,20 +173,38 @@ public sealed class ContentDependenciesTests
         var viewModel = harness.ViewModel;
         await InstalledContent.AddAsync(harness, "MeasureTools", activate: true);
         await viewModel.LoadAsync();
-        var release = Release(
+
+        var within = Assert.Single(viewModel.BuildConflictMembers("Sample", Release([new ModDependency("MeasureTools", ModDependencyKind.Conflict)])));
+        var outside = Assert.Single(viewModel.BuildConflictMembers("Sample", Release([new ModDependency("MeasureTools", ModDependencyKind.Conflict, maxVersion: ModVersion.Parse("1.0.0"))])));
+        var absent = Assert.Single(viewModel.BuildConflictMembers("Sample", Release([new ModDependency("KSArmory", ModDependencyKind.Conflict)])));
+        var twoRanges = Assert.Single(viewModel.BuildConflictMembers("Sample", Release(
         [
-            new ModDependency("MeasureTools", ModDependencyKind.Conflict),
             new ModDependency("MeasureTools", ModDependencyKind.Conflict, maxVersion: ModVersion.Parse("1.0.0")),
-            new ModDependency("KSArmory", ModDependencyKind.Conflict),
-        ]);
+            new ModDependency("MeasureTools", ModDependencyKind.Conflict, minVersion: ModVersion.Parse("1.1.0")),
+        ])));
 
-        var members = Assert.Single(viewModel.BuildDependencyGroups(release)).Entries.Select(entry => Assert.Single(entry.Members)).ToList();
+        Assert.True(within.IsConflicting);
+        Assert.False(within.IsInstalledWithoutConflict);
+        Assert.False(outside.IsConflicting);
+        Assert.True(outside.IsInstalled);
+        Assert.False(absent.IsConflicting);
+        Assert.True(twoRanges.IsConflicting);
+    }
 
-        Assert.True(members[0].IsConflicting);
-        Assert.False(members[0].IsInstalledWithoutConflict);
-        Assert.False(members[1].IsConflicting);
-        Assert.True(members[1].IsInstalled);
-        Assert.False(members[2].IsConflicting);
+    [Fact]
+    public async Task Conflict_WithSeveralEntriesForOneMod_ShowsEveryRangeOnItsRow()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var upToOne = new ModDependency("MeasureTools", ModDependencyKind.Conflict, maxVersion: ModVersion.Parse("1.0.0"));
+
+        var twoRanges = Assert.Single(viewModel.BuildConflictMembers("Sample", Release([upToOne, new ModDependency("MeasureTools", ModDependencyKind.Conflict, minVersion: ModVersion.Parse("1.1.0"))])));
+        var sameRange = Assert.Single(viewModel.BuildConflictMembers("Sample", Release([upToOne, upToOne])));
+        var everyVersion = Assert.Single(viewModel.BuildConflictMembers("Sample", Release([upToOne, new ModDependency("MeasureTools", ModDependencyKind.Conflict)])));
+
+        Assert.Equal("up to 1.0.0, 1.1.0 or newer", twoRanges.BoundsText);
+        Assert.Equal("up to 1.0.0", sameRange.BoundsText);
+        Assert.Null(everyVersion.BoundsText);
     }
 
     [Fact]
@@ -268,6 +301,486 @@ public sealed class ContentDependenciesTests
 
         Assert.True(viewModel.HasContentDependenciesTab);
         Assert.Equal(DependencyGroupKind.Suggested, Assert.Single(viewModel.ContentDependencyGroups).Kind);
+    }
+
+    [Fact]
+    public async Task Tab_OnALoaderPage_ShowsWhenARequiredEntryNamesTheLoader()
+    {
+        using var harness = await CreateAsync(EditReleases("AdvancedFlightComputer", releases =>
+            releases[0]!["dependencies"] = JsonNode.Parse("""[{ "id": "StarMap", "kind": "required", "source": "authored" }]""")));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "StarMap", ContentType.ModLoader);
+
+        Assert.True(viewModel.HasContentDependenciesTab);
+        Assert.Empty(viewModel.ContentDependencyGroups);
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+        Assert.Equal("AdvancedFlightComputer", Assert.Single(viewModel.ContentRequiredBy).ModId);
+    }
+
+    [Fact]
+    public async Task RequiredBy_ListsOnlyARequiredEntryOfTheNewestRelease()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("AdvancedFlightComputer")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "min": "0.8.0", "source": "authored" }]""");
+            var measureTools = listing("MeasureTools")["releases"]!;
+            measureTools[0]!["dependencies"] = JsonNode.Parse("""
+                [
+                    { "id": "KSArmory", "kind": "recommends", "source": "authored" },
+                    { "id": "KSArmory", "kind": "suggests", "source": "authored" },
+                    { "id": "KSArmory", "kind": "optional", "source": "authored" },
+                    { "id": "KSArmory", "kind": "conflict", "source": "authored" },
+                    { "kind": "required", "any_of": [{ "id": "KSArmory" }, { "id": "AdvancedFlightComputer" }], "source": "authored" }
+                ]
+                """);
+            measureTools[1]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        Assert.True(viewModel.HasContentRequiredBy);
+        var dependent = Assert.Single(viewModel.ContentRequiredBy);
+        Assert.Equal("AdvancedFlightComputer", dependent.ModId);
+        Assert.Equal("Advanced Flight Computer", dependent.Name);
+        Assert.Null(dependent.BoundsText);
+        Assert.Null(dependent.StateText);
+
+        await dependent.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal("AdvancedFlightComputer", viewModel.SelectedContent!.ModId);
+        Assert.Empty(viewModel.ContentRequiredBy);
+        Assert.False(viewModel.HasContentRequiredBy);
+    }
+
+    [Fact]
+    public async Task RequiredBy_IsMostDownloadedFirst_AndShowsOnlyTheInstalledState()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            var needsArmory = """[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""";
+            listing("AdvancedFlightComputer")["releases"]![0]!["dependencies"] = JsonNode.Parse(needsArmory);
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse(needsArmory);
+            listing("MeasureTools")["downloads"] = JsonNode.Parse("""{ "total": 1234, "hosts": { "github": 1234 } }""");
+        }));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "KSArmory");
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        Assert.Equal(["MeasureTools", "AdvancedFlightComputer"], viewModel.ContentRequiredBy.Select(member => member.ModId));
+        Assert.All(viewModel.ContentRequiredBy, member => Assert.Null(member.BoundsText));
+        Assert.Equal("Installed 1.1.10", viewModel.ContentRequiredBy[0].StateText);
+        Assert.True(viewModel.ContentRequiredBy[0].IsInstalled);
+        Assert.Null(viewModel.ContentRequiredBy[1].StateText);
+        Assert.False(viewModel.ContentRequiredBy[1].IsInstalled);
+    }
+
+    [Fact]
+    public async Task RequiredBy_ShowsOnAPageWithoutARelease()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("KSArmory")["releases"]![0]!["release_status"] = "dev";
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        Assert.Null(viewModel.LatestVersion);
+        Assert.Equal("MeasureTools", Assert.Single(viewModel.ContentRequiredBy).ModId);
+    }
+
+    [Fact]
+    public async Task RequiredBy_FollowsAChangeOfTheReleaseChannelOnAPageWithoutARelease()
+    {
+        var addTesting = SnapshotRelease.Add(new SnapshotRelease("MeasureTools", "1.2.0-rc.1", "testing", "2026-09-20T10:00:00Z"));
+        var edit = EditListings(listing =>
+        {
+            foreach (var release in listing("KSArmory")["releases"]!.AsArray())
+                release!["release_status"] = "dev";
+            listing("MeasureTools")["releases"]!.AsArray().Single(node => (string?)node!["version"] == "1.2.0-rc.1")!["dependencies"] =
+                JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""");
+        });
+        using var harness = await CreateAsync(json => edit(addTesting(json)));
+        var viewModel = harness.ViewModel;
+        await OpenAsync(viewModel, "KSArmory");
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+        Assert.Empty(viewModel.ContentRequiredBy);
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Testing);
+        await viewModel.WhenReleaseChannelSavedAsync();
+
+        Assert.Null(viewModel.LatestVersion);
+        Assert.Equal("MeasureTools", Assert.Single(viewModel.ContentRequiredBy).ModId);
+    }
+
+    [Fact]
+    public async Task RequiredBy_ByDefault_ShowsOnlyTheListingsThatTheInstanceHolds()
+    {
+        using var harness = await CreateWithDependentsAsync(copies: 2);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools1", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.True(viewModel.HasContentRequiredBy);
+        Assert.Equal("MeasureTools1", Assert.Single(viewModel.ContentRequiredBy).ModId);
+        Assert.False(viewModel.IsContentRequiredByNoneInstalled);
+        Assert.Equal("Show all 3", viewModel.ContentRequiredByToggleText);
+    }
+
+    [Fact]
+    public async Task RequiredBy_ShowAllShowsEveryListing_AndShowOnlyInstalledGoesBack()
+    {
+        using var harness = await CreateWithDependentsAsync(copies: 2);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools1", activate: true);
+        await viewModel.LoadAsync();
+        await OpenAsync(viewModel, "KSArmory");
+
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        Assert.Equal(["MeasureTools", "MeasureTools1", "MeasureTools2"], viewModel.ContentRequiredBy.Select(member => member.ModId));
+        Assert.Equal("Show only installed", viewModel.ContentRequiredByToggleText);
+
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        Assert.Equal("MeasureTools1", Assert.Single(viewModel.ContentRequiredBy).ModId);
+        Assert.Equal("Show all 3", viewModel.ContentRequiredByToggleText);
+    }
+
+    [Fact]
+    public async Task RequiredBy_WithoutAnActiveInstance_ShowsTheLineAndTheLink()
+    {
+        using var harness = await CreateWithDependentsAsync(copies: 2);
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.True(viewModel.HasContentRequiredBy);
+        Assert.Empty(viewModel.ContentRequiredBy);
+        Assert.True(viewModel.IsContentRequiredByNoneInstalled);
+        Assert.Equal("Show all 3", viewModel.ContentRequiredByToggleText);
+    }
+
+    [Fact]
+    public async Task RequiredBy_WhenTheInstanceHoldsNoListing_ShowsTheLineUntilShowAll()
+    {
+        using var harness = await CreateWithDependentsAsync(copies: 2);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Empty(viewModel.ContentRequiredBy);
+        Assert.True(viewModel.IsContentRequiredByNoneInstalled);
+
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        Assert.Equal(3, viewModel.ContentRequiredBy.Count);
+        Assert.False(viewModel.IsContentRequiredByNoneInstalled);
+    }
+
+    [Fact]
+    public async Task RequiredBy_WithoutAListing_ShowsNoCard()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "MeasureTools");
+
+        Assert.False(viewModel.HasContentRequiredBy);
+        Assert.False(viewModel.IsContentRequiredByNoneInstalled);
+    }
+
+    [Fact]
+    public async Task RequiredBy_AfterShowAll_StaysWhenTheLanguageChanges()
+    {
+        using var harness = await CreateWithDependentsAsync(copies: 2);
+        var viewModel = harness.ViewModel;
+        await OpenAsync(viewModel, "KSArmory");
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        harness.Localization.TrySetCulture("de");
+
+        Assert.Equal(3, viewModel.ContentRequiredBy.Count);
+        Assert.Equal(harness.Localization.ContentDependencyRequiredByShowInstalled, viewModel.ContentRequiredByToggleText);
+        Assert.NotEqual("Show only installed", viewModel.ContentRequiredByToggleText);
+    }
+
+    [Fact]
+    public async Task RequiredBy_OnAnotherPage_ShowsOnlyTheInstalledListingsAgain()
+    {
+        using var harness = await CreateWithDependentsAsync(copies: 2);
+        var viewModel = harness.ViewModel;
+        await OpenAsync(viewModel, "KSArmory");
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        await OpenAsync(viewModel, "AdvancedFlightComputer");
+
+        Assert.Empty(viewModel.ContentRequiredBy);
+        Assert.True(viewModel.IsContentRequiredByNoneInstalled);
+        Assert.Equal("Show all 3", viewModel.ContentRequiredByToggleText);
+    }
+
+    [Fact]
+    public async Task Conflicts_ListBothDirections_AndARowOpensItsMod()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("KSArmory")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "MeasureTools", "kind": "conflict", "max": "1.0.0", "source": "authored" }]""");
+            listing("AdvancedFlightComputer")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "conflict", "max": "1.0.0", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.True(viewModel.HasContentConflicts);
+        Assert.Equal(["MeasureTools", "AdvancedFlightComputer"], viewModel.ContentConflicts.Select(member => member.ModId));
+        Assert.Equal("up to 1.0.0", viewModel.ContentConflicts[0].BoundsText);
+        Assert.Null(viewModel.ContentConflicts[1].BoundsText);
+
+        await viewModel.ContentConflicts[1].OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal("AdvancedFlightComputer", viewModel.SelectedContent!.ModId);
+        Assert.Equal("KSArmory", Assert.Single(viewModel.ContentConflicts).ModId);
+    }
+
+    [Fact]
+    public async Task Conflicts_OfListings_AreMostDownloadedFirst_AndAnOlderReleaseDoesNotCount()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            var namesArmory = """[{ "id": "KSArmory", "kind": "conflict", "source": "authored" }]""";
+            listing("AdvancedFlightComputer")["releases"]![0]!["dependencies"] = JsonNode.Parse(namesArmory);
+            listing("StarMap")["releases"]![0]!["dependencies"] = JsonNode.Parse(namesArmory);
+            listing("StarMap")["downloads"] = JsonNode.Parse("""{ "total": 1234, "hosts": { "github": 1234 } }""");
+            listing("MeasureTools")["releases"]![1]!["dependencies"] = JsonNode.Parse(namesArmory);
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Equal(["StarMap", "AdvancedFlightComputer"], viewModel.ContentConflicts.Select(member => member.ModId));
+    }
+
+    [Fact]
+    public async Task Conflicts_OfAModInBothDirections_ShowOneRow()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("KSArmory")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "MeasureTools", "kind": "conflict", "max": "1.0.0", "source": "authored" }]""");
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "ksarmory", "kind": "conflict", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        var member = Assert.Single(viewModel.ContentConflicts);
+        Assert.Equal("MeasureTools", member.ModId);
+        Assert.Null(member.BoundsText);
+    }
+
+    [Fact]
+    public async Task Conflicts_OfAHeldModInBothDirections_ShowOneMarkedRowWithoutARange()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("KSArmory")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "MeasureTools", "kind": "conflict", "max": "1.0.0", "source": "authored" }]""");
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "conflict", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        var member = Assert.Single(viewModel.ContentConflicts);
+        Assert.True(member.IsConflicting);
+        Assert.Null(member.BoundsText);
+    }
+
+    [Fact]
+    public async Task Conflicts_WhenTheListingIsOutsideTheBoundsOfThisRelease_KeepTheRangeOfTheNamedEntry()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("KSArmory")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "MeasureTools", "kind": "conflict", "max": "1.0.0", "source": "authored" }]""");
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "conflict", "max": "0.1.0", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Equal("up to 1.0.0", Assert.Single(viewModel.ContentConflicts).BoundsText);
+    }
+
+    [Fact]
+    public async Task Conflicts_AreNotADependencyGroup()
+    {
+        using var harness = await CreateAsync(EditReleases("KSArmory", releases =>
+            releases[0]!["dependencies"] = JsonNode.Parse("""[{ "id": "MeasureTools", "kind": "conflict", "source": "authored" }]""")));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Empty(viewModel.ContentDependencyGroups);
+        Assert.Equal(harness.Localization.ContentNoDependencies, viewModel.ContentDependenciesEmptyText);
+        Assert.Equal("MeasureTools", Assert.Single(viewModel.ContentConflicts).ModId);
+    }
+
+    [Fact]
+    public async Task Conflicts_WithoutAConflictEntry_ShowNoCard()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("KSArmory")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "MeasureTools", "kind": "required", "source": "authored" }]""");
+            listing("AdvancedFlightComputer")["releases"]![0]!["dependencies"] = JsonNode.Parse("""
+                [
+                    { "id": "KSArmory", "kind": "required", "source": "authored" },
+                    { "id": "KSArmory", "kind": "recommends", "source": "authored" },
+                    { "id": "KSArmory", "kind": "suggests", "source": "authored" },
+                    { "kind": "required", "any_of": [{ "id": "KSArmory" }, { "id": "MeasureTools" }], "source": "authored" }
+                ]
+                """);
+        }));
+        var viewModel = harness.ViewModel;
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Empty(viewModel.ContentConflicts);
+        Assert.False(viewModel.HasContentConflicts);
+    }
+
+    [Fact]
+    public async Task Conflicts_OfAListing_ShowOnlyWithinTheBoundsOfThisRelease()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "AdvancedFlightComputer", "kind": "conflict", "max": "0.1.0", "source": "authored" }, { "id": "AdvancedFlightComputer", "kind": "conflict", "min": "0.7.0", "source": "authored" }]""");
+            listing("KSArmory")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "AdvancedFlightComputer", "kind": "conflict", "max": "0.1.0", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true);
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "AdvancedFlightComputer");
+
+        var member = Assert.Single(viewModel.ContentConflicts);
+        Assert.Equal("MeasureTools", member.ModId);
+        Assert.True(member.IsConflicting);
+        Assert.Equal(harness.Localization.FormatContentDependencyInstalled("1.1.10"), member.StateText);
+    }
+
+    [Fact]
+    public async Task Conflict_OfAListingThatTheInstanceDoesNotHold_IsNotMarked()
+    {
+        using var harness = await CreateAsync(EditReleases("MeasureTools", releases =>
+            releases[0]!["dependencies"] = JsonNode.Parse("""[{ "id": "AdvancedFlightComputer", "kind": "conflict", "source": "authored" }]""")));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "AdvancedFlightComputer");
+
+        var member = Assert.Single(viewModel.ContentConflicts);
+        Assert.False(member.IsConflicting);
+        Assert.False(member.IsInstalled);
+        Assert.Equal(harness.Localization.ContentDependencyNotInstalled, member.StateText);
+    }
+
+    [Fact]
+    public async Task Conflict_OnAPageWithoutARelease_ListsAHeldListingWithoutAMark()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("KSArmory")["releases"]![0]!["release_status"] = "dev";
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "conflict", "max": "0.1.0", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Null(viewModel.LatestVersion);
+        var member = Assert.Single(viewModel.ContentConflicts);
+        Assert.Equal("MeasureTools", member.ModId);
+        Assert.False(member.IsConflicting);
+        Assert.True(member.IsInstalledWithoutConflict);
+    }
+
+    [Fact]
+    public async Task Cards_FollowAModAddedWhileThePageIsOpen()
+    {
+        using var harness = await CreateAsync(EditListings(listing =>
+        {
+            listing("MeasureTools")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""");
+            listing("AdvancedFlightComputer")["releases"]![0]!["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "conflict", "source": "authored" }]""");
+        }));
+        var viewModel = harness.ViewModel;
+        await OpenAsync(viewModel, "KSArmory");
+        Assert.Empty(viewModel.ContentRequiredBy);
+        Assert.False(Assert.Single(viewModel.ContentConflicts).IsConflicting);
+
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true);
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+
+        Assert.Equal("MeasureTools", Assert.Single(viewModel.ContentRequiredBy).ModId);
+        Assert.False(viewModel.IsContentRequiredByNoneInstalled);
+        Assert.True(Assert.Single(viewModel.ContentConflicts).IsConflicting);
+    }
+
+    [Fact]
+    public async Task RequiredBy_AfterShowAll_StaysWhenAModIsAdded()
+    {
+        using var harness = await CreateWithDependentsAsync(copies: 2);
+        var viewModel = harness.ViewModel;
+        await OpenAsync(viewModel, "KSArmory");
+        viewModel.ToggleContentRequiredByCommand.Execute(null);
+
+        await InstalledContent.AddAsync(harness, "MeasureTools1", activate: true);
+        await viewModel.LoadAsync();
+
+        Assert.Equal([false, true, false], viewModel.ContentRequiredBy.Select(member => member.IsInstalled));
+        Assert.Equal("Show only installed", viewModel.ContentRequiredByToggleText);
+    }
+
+    [Fact]
+    public async Task RequiredBy_ByDefault_FindsAHeldModWhoseIdDiffersInCase()
+    {
+        using var harness = await CreateWithDependentsAsync(copies: 2);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "measuretools1", activate: true);
+        await viewModel.LoadAsync();
+
+        await OpenAsync(viewModel, "KSArmory");
+
+        Assert.Equal("MeasureTools1", Assert.Single(viewModel.ContentRequiredBy).ModId);
+    }
+
+    [Theory]
+    [InlineData("StarMap", "MeasureTools")]
+    [InlineData("MeasureTools", "StarMap")]
+    public async Task Tab_OnALoaderPage_ShowsForAConflictInEitherDirection(string listing, string named)
+    {
+        using var harness = await CreateAsync(EditReleases(listing, releases =>
+            releases[0]!["dependencies"] = JsonNode.Parse($$"""[{ "id": "{{named}}", "kind": "conflict", "source": "authored" }]""")));
+
+        await OpenAsync(harness.ViewModel, "StarMap", ContentType.ModLoader);
+
+        Assert.True(harness.ViewModel.HasContentDependenciesTab);
     }
 
     [Fact]

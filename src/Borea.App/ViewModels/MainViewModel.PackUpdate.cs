@@ -76,7 +76,9 @@ public partial class MainViewModel
         try
         {
             var metadata = item.Pack.Metadata!;
-            var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
+            var instance = await services.Instances.GetByIdAsync(item.InstanceId)
+                ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
+            var installed = PlanningGameVersion(services, instance);
             var pinned = await PinnedReleasesAsync(services.Mods, metadata);
             var compatibility = Borea.Core.Game.Compatibility.Evaluate(metadata, installed, _gameReleases);
             ThrowIfIncompatible(metadata, compatibility, pinned, installed);

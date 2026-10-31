@@ -338,8 +338,13 @@ public sealed class ListingPageTests
         session.SignIn();
         using var harness = await ViewModelHarness.CreateAsync(gitHub: session, listingPublisher: new ListingPullRequestViewModelTests.FakePublisher());
         var editor = harness.ViewModel.ListingEditor;
+        editor.OwnershipDelay = TimeSpan.Zero;
+        editor.ForumsDelay = TimeSpan.Zero;
         await harness.ViewModel.OpenListingAsync();
         ListingEditorTests.FillPack(editor);
+        // Work of the editor that finishes after the test changes the editor on another thread, and the bindings of the closed window then make that thread the Avalonia UI thread while the next test sets up its headless application.
+        await editor.OwnershipCheck;
+        await editor.TagProposal;
 
         var texts = await RenderAsync(harness);
 
@@ -372,9 +377,11 @@ public sealed class ListingPageTests
         using var harness = await ViewModelHarness.CreateAsync(gitHub: session, listingPublisher: publisher);
         var editor = harness.ViewModel.ListingEditor;
         editor.OwnershipDelay = TimeSpan.Zero;
+        editor.ForumsDelay = TimeSpan.Zero;
         await harness.ViewModel.OpenListingAsync();
         FillValidListing(editor);
         await editor.OwnershipCheck;
+        await editor.TagProposal;
         await editor.PublishCommand.ExecuteAsync(null);
 
         var texts = await RenderAsync(harness);
@@ -398,10 +405,12 @@ public sealed class ListingPageTests
         using var harness = await ViewModelHarness.CreateAsync(gitHub: session, listingPublisher: publisher);
         var editor = harness.ViewModel.ListingEditor;
         editor.OwnershipDelay = TimeSpan.Zero;
+        editor.ForumsDelay = TimeSpan.Zero;
         editor.FollowInterval = TimeSpan.FromHours(1);
         await harness.ViewModel.OpenListingAsync();
         FillValidListing(editor);
         await editor.OwnershipCheck;
+        await editor.TagProposal;
         await editor.PublishCommand.ExecuteAsync(null);
         using (var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
         {

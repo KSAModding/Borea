@@ -164,14 +164,15 @@ public sealed class LoggingDecoratorsTests
     }
 
     [Fact]
-    public void Launch_GivenLoaderFolder_PassesItOn()
+    public void Launch_GivenLoaderFolder_PassesItAndItsAdoptionOn()
     {
         var inner = new DirectoryRecorder();
         ILauncher launcher = new LoggingLauncher(inner, _log);
 
-        launcher.Launch(new Instance("Main", InstanceSource.Custom.Value), loader: null, "D:/Loaders/StarMap/0.4.7", arguments: null);
+        launcher.Launch(new Instance("Main", InstanceSource.Custom.Value), loader: null, "D:/Loaders/StarMap/0.4.7", arguments: null, isAdopted: true);
 
         Assert.Equal(["D:/Loaders/StarMap/0.4.7"], inner.Directories);
+        Assert.Equal([true], inner.Adoptions);
     }
 
     [Fact]
@@ -613,12 +614,15 @@ public sealed class LoggingDecoratorsTests
     {
         public List<string?> Directories { get; } = [];
 
+        public List<bool> Adoptions { get; } = [];
+
         public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
             Launch(instance, loader, loaderDirectory: null, arguments);
 
-        public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments)
+        public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments, bool isAdopted = false)
         {
             Directories.Add(loaderDirectory);
+            Adoptions.Add(isAdopted);
             return LaunchResult.Failed(LaunchOutcome.NoLaunchTarget, "Not started.");
         }
 

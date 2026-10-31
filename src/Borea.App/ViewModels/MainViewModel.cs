@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -180,6 +181,9 @@ public partial class MainViewModel : ViewModelBase
     {
         IsTasksOpen = false;
         IsSettingsOpen = true;
+
+        // Settings open again on the tab they closed on, and an instance can have kept, cleared or gone since then
+        _gameTabReopenRefresh = RefreshGameTabAfterBuildChangeAsync();
     }
 
     [RelayCommand]
@@ -213,6 +217,8 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasHomeInstance))]
+    [NotifyPropertyChangedFor(nameof(GameBuildKeepHintText))]
+    [NotifyPropertyChangedFor(nameof(GameBuildKeepActionText))]
     private InstanceItem? _homeInstance;
 
     public bool HasHomeInstance => HomeInstance is not null;
@@ -229,7 +235,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<InstanceItem> Instances { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(CanPickGameSettingsPreset))]
+    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(CanPickGameSettingsPreset), nameof(CanPickGameBuild))]
     private bool _isCreatingInstance;
 
     /// <summary>The row the name modal renames. Null while the modal creates an instance or is closed.</summary>
@@ -270,12 +276,27 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>The row the delete modal asks about. Null while the modal is closed.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDeleteModalOpen), nameof(DeleteModalText))]
+    [NotifyPropertyChangedFor(nameof(IsDeleteModalOpen), nameof(DeleteModalText), nameof(DeleteModalKeptBuildText))]
     private InstanceItem? _deletingInstance;
 
     public bool IsDeleteModalOpen => DeletingInstance is not null;
 
     public string? DeleteModalText => DeletingInstance is { } item ? Localization.FormatModalDeleteInstanceText(item.Name) : null;
+
+    /// <summary>
+    /// The copy of a build that only this instance keeps stays on the disk after the delete, so the modal names it and its size.
+    /// It reads the rows of Settings, Game, which the open of the modal loads again.
+    /// </summary>
+    public string? DeleteModalKeptBuildText => DeletingInstance is { } item
+        && LastKeptBuildOf(item) is { } build
+        && KeptGameBuilds.FirstOrDefault(row => row.Version == build) is { IsGameFolderOfSettings: false } row
+            ? Localization.FormatModalDeleteInstanceKeptBuild(build.ToString(), row.SizeText)
+            : null;
+
+    private GameVersion? LastKeptBuildOf(InstanceItem item)
+        => item.Instance.GameBuild is { } build && !Instances.Any(other => other.InstanceId != item.InstanceId && other.Instance.GameBuild == build)
+            ? build
+            : null;
 
     /// <summary>
     /// Why the name modal or the launch arguments modal cannot save, as the repository reported it.
@@ -369,6 +390,9 @@ public partial class MainViewModel : ViewModelBase
         RecordFirstStart();
         StartAnnouncementCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
+
+        // read before the instances and the build check, so the banner and the menu never offer a keep that is refused
+        await RefreshGameFolderKeepRefusalAsync();
         StartGameBuildCheck();
         StartGameSettingsPresetLoad();
         await ReloadInstancesAsync();
@@ -401,8 +425,11 @@ public partial class MainViewModel : ViewModelBase
         // a new build is a new shape, so the assumptions are checked again
         await RefreshGameShapeAsync();
 
+        // the new build in the same folder can be a Windows build that this system cannot start
+        await RefreshGameFolderKeepRefusalAsync();
+
         // the content page shows the same rows, so its chip follows too
-        await RefreshCompatibilityAsync(installed?.Version);
+        await RefreshCompatibilityAsync();
 
         // a loader release can end before the new build, so it is rated again, on Home and in the settings
         StartLoaderUpdateCheck();
@@ -500,8 +527,22 @@ public partial class MainViewModel : ViewModelBase
             Instances.Add(row);
         RefreshOtherInstances();
         _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
+        var activeGame = _services is null || _activeInstanceEntity is null ? null : _services.InstanceGames.Resolve(_activeInstanceEntity);
+
+        // the link of the launch line follows its instance to the new row, and a deleted instance takes the line with it
+        if (LaunchGameBuildMissingItem is { } linked)
+        {
+            LaunchGameBuildMissingItem = Instances.FirstOrDefault(instance => instance.InstanceId == linked.InstanceId);
+            if (LaunchGameBuildMissingItem is null)
+            {
+                ClearLaunchFailure();
+                LaunchMessage = null;
+            }
+        }
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
+        if (ActiveInstance is not null && activeGame is not null)
+            ActiveInstance.GameBuildProblem = activeGame.Problem;
         var kept = CurrentWindowHome ? Instances.FirstOrDefault(instance => instance.InstanceId == HomeInstance?.InstanceId) : null;
         HomeInstance = kept ?? ActiveInstance;
         RefreshInstanceHint();
@@ -509,6 +550,11 @@ public partial class MainViewModel : ViewModelBase
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
         OnPropertyChanged(nameof(ContentShareHostText));
+
+        // the chips follow the build of the active instance, so they are checked again only when that build changes
+        var game = _services is null ? null : GameVersionOf(_services, activeGame);
+        if (game != _compatibilityGame)
+            await RefreshCompatibilityAsync(game);
 
         // the instance page shows fresh rows after a change; any other page
         // stays where the user is instead of jumping to that instance
@@ -589,6 +635,7 @@ public partial class MainViewModel : ViewModelBase
         RenamingInstance = null;
         IsCreatingInstance = true;
         StartGameSettingsPresetLoad();
+        StartGameBuildChoicesLoad();
     }
 
     internal void BeginRenameInstance(InstanceItem item)
@@ -642,12 +689,15 @@ public partial class MainViewModel : ViewModelBase
             return CreatePackInstanceAsync(pack, name);
 
         var presetId = SelectedGameSettingsPreset?.Id;
+        var build = SelectedGameBuildChoice?.Build;
         return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunModalInstanceOperationAsync(async instances =>
         {
             if (!await instances.IsNameAvailableAsync(name))
                 throw new InvalidOperationException(Localization.ModalNameTaken);
 
-            var created = await instances.CreateAsync(name, InstanceSource.Custom.Value);
+            var instance = new Instance(name, InstanceSource.Custom.Value);
+            instance.SetGameBuild(build);
+            var created = await instances.CreateAsync(instance);
             if (presetId is { } id && _services is { } services)
             {
                 try
@@ -706,7 +756,12 @@ public partial class MainViewModel : ViewModelBase
             () => RenamingInstance == item,
             () => Localization.FormatToastRenameFailed(item.Name));
 
-    internal void BeginDeleteInstance(InstanceItem item) => DeletingInstance = item;
+    internal void BeginDeleteInstance(InstanceItem item)
+    {
+        DeletingInstance = item;
+        if (LastKeptBuildOf(item) is not null)
+            _ = StartKeptGameBuildLoad();
+    }
 
     [RelayCommand]
     private void CancelDeleteModal() => DeletingInstance = null;
@@ -974,6 +1029,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(ReleaseBannerText));
         OnPropertyChanged(nameof(SelfUpdateActionText));
         OnPropertyChanged(nameof(GameBuildBannerText));
+        OnPropertyChanged(nameof(GameBuildKeepHintText));
+        OnPropertyChanged(nameof(GameBuildKeepActionText));
         OnPropertyChanged(nameof(GameShapeBrokenText));
         OnPropertyChanged(nameof(GameShapeUntestedText));
         OnPropertyChanged(nameof(NewerGamePatchNotesCappedText));
@@ -988,6 +1045,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(NameModalPlaceholder));
         OnPropertyChanged(nameof(NameModalSkipText));
         OnPropertyChanged(nameof(DeleteModalText));
+        OnPropertyChanged(nameof(DeleteModalKeptBuildText));
+        RefreshKeepGameBuildText();
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
         OnPropertyChanged(nameof(DiscoverSortText));
         OnPropertyChanged(nameof(SelectedAuthorText));
@@ -1059,6 +1118,8 @@ public sealed partial class InstanceItem : ObservableObject
 
     public Guid InstanceId { get; }
 
+    internal Instance Instance { get; }
+
     public string Name { get; }
 
     public int ModCount { get; }
@@ -1096,6 +1157,45 @@ public sealed partial class InstanceItem : ObservableObject
 
     public string ModCountToolTip => _owner.Localization.FormatLibraryModCount(ModCount);
 
+    /// <summary>The game build the instance keeps, or null when it runs on the game folder of the settings.</summary>
+    public string? GameBuildText => Instance.GameBuild is { } build ? _owner.Localization.FormatInstanceGameBuild(build.ToString()) : null;
+
+    public string? GameBuildToolTip => Instance.GameBuild is { } build
+        ? _owner.Localization.FormatInstanceGameBuildToolTip(build.ToString()) + Environment.NewLine + _owner.Localization.ModalKeepGameBuildPopupNote
+        : null;
+
+    /// <summary>
+    /// Whether the kept build is there, read when the instance page opens, when a launch reads it, and for the active
+    /// instance when the instances load. None on a row where none of these happened.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsGameBuildChip), nameof(GameBuildNotFoundText), nameof(GameBuildMissingText), nameof(AddRefusalText))]
+    private KeptBuildProblem _gameBuildProblem;
+
+    /// <summary>The pin chip of the page, which the chip of a kept build that is not found replaces.</summary>
+    public bool ShowsGameBuildChip => GameBuildText is not null && GameBuildProblem == KeptBuildProblem.None;
+
+    public string? GameBuildNotFoundText => GameBuildProblem != KeptBuildProblem.None && Instance.GameBuild is { } build
+        ? _owner.Localization.FormatInstanceGameBuildNotFound(build.ToString())
+        : null;
+
+    /// <summary>The tooltip of the chip of a kept build that is not found, the same sentence a launch says.</summary>
+    public string? GameBuildMissingText => GameBuildProblem != KeptBuildProblem.None && Instance.GameBuild is { } build
+        ? _owner.GameBuildMissingText(build)
+        : null;
+
+    /// <summary>Why Add puts nothing into this instance while it is active, or null when it can.</summary>
+    public string? AddRefusalText => GameBuildProblem != KeptBuildProblem.None && Instance.GameBuild is { } build
+        ? _owner.Localization.FormatDiscoverKeptBuildUnavailable(Name, build.ToString())
+        : null;
+
+    // the add buttons of Discover and the content pages follow the active row, also when the instance page or a launch reads its build again
+    partial void OnGameBuildProblemChanged(KeptBuildProblem value)
+    {
+        if (ReferenceEquals(_owner.ActiveInstance, this))
+            _owner.RefreshInstanceHint();
+    }
+
     private bool _isOpening;
 
     public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null, IReadOnlyList<InstalledContentRecord>? content = null, IReadOnlyList<string>? inactive = null)
@@ -1104,6 +1204,7 @@ public sealed partial class InstanceItem : ObservableObject
         InactiveModIds = inactive ?? [];
         _owner = owner;
         _source = instance.Source;
+        Instance = instance;
         InstanceId = instance.InstanceId;
         Name = instance.Name;
         CreatedAt = instance.CreatedAt;
@@ -1122,6 +1223,11 @@ public sealed partial class InstanceItem : ObservableObject
         OnPropertyChanged(nameof(LastPlayedText));
         OnPropertyChanged(nameof(LastPlayedToolTip));
         OnPropertyChanged(nameof(ModCountToolTip));
+        OnPropertyChanged(nameof(GameBuildText));
+        OnPropertyChanged(nameof(GameBuildToolTip));
+        OnPropertyChanged(nameof(GameBuildNotFoundText));
+        OnPropertyChanged(nameof(GameBuildMissingText));
+        OnPropertyChanged(nameof(AddRefusalText));
     }
 
     /// <summary>The installed version of a mod, or of a recorded vehicle or save, because the ids are one namespace.</summary>
@@ -1194,7 +1300,14 @@ public sealed partial class InstanceItem : ObservableObject
     private Task BackUpAllSavesAsync() => _owner.BackUpAllSavesAsync(this);
 
     [RelayCommand]
-    private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(InstanceId);
+    private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(Instance);
+
+    // a check that a Cancel left running must not hold the next open, and the load count of the modals drops its result
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task BeginKeepGameBuildAsync() => _owner.BeginKeepGameBuildAsync(this);
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task BeginUseCurrentGameBuildAsync() => _owner.BeginUseCurrentGameBuildAsync(this);
 
     [RelayCommand]
     private void BeginDelete() => _owner.BeginDeleteInstance(this);

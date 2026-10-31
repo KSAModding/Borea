@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -240,8 +241,34 @@ public partial class MainViewModel
         return executed;
     }
 
-    private static InstallPlanningRequest PlanningRequest(BoreaServices services, Instance instance, IReadOnlyList<RequestedMod> requested)
-        => new(instance, requested, services.Mods, services.InstalledVersion.GetInstalledVersion()?.Version, services.GamePlatform.Current);
+    private InstallPlanningRequest PlanningRequest(BoreaServices services, Instance instance, IReadOnlyList<RequestedMod> requested)
+        => new(instance, requested, services.Mods, PlanningGameVersion(services, instance), services.GamePlatform.Current);
+
+    /// <summary>
+    /// The build that a display for <paramref name="instance"/> compares with, or the build of the settings without an instance.
+    /// A kept build that is missing or reads another version gives null, which reads as unknown, so the build of the
+    /// settings never stands in for it.
+    /// </summary>
+    internal static GameVersion? GameVersionOf(BoreaServices services, Instance? instance)
+        => GameVersionOf(services, instance is null ? null : services.InstanceGames.Resolve(instance));
+
+    /// <summary>The same build as the overload for an instance, from a game that the caller already resolved.</summary>
+    internal static GameVersion? GameVersionOf(BoreaServices services, InstanceGame? game)
+        => game is null ? services.InstalledVersion.GetInstalledVersion()?.Version : game.Version?.Version;
+
+    /// <summary>
+    /// The build that a plan for <paramref name="instance"/> is checked against. A kept build that is missing or reads
+    /// another version stops the plan with a message that names the build, because against an unknown game the planner
+    /// would pick releases that the kept build cannot load.
+    /// </summary>
+    private GameVersion? PlanningGameVersion(BoreaServices services, Instance instance)
+    {
+        var game = services.InstanceGames.Resolve(instance);
+        if (game is { Problem: not KeptBuildProblem.None, KeptBuild: { } build })
+            throw new InvalidOperationException(Localization.FormatInstallKeptBuildUnavailable(build.ToString(), KeptBuildFolderText(services.Paths, build)));
+
+        return game.Version?.Version;
+    }
 
     /// <summary>
     /// Plans with the user's choices and selects every recommendation the user has not seen yet,

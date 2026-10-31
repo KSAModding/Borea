@@ -28,6 +28,13 @@ public partial class GameSettings : UserControl
             viewModel.LoaderDirectoryInput = folder;
     }
 
+    private async void BrowseGameBuildFolder(object? sender, RoutedEventArgs e)
+    {
+        var folder = await PickFolderAsync();
+        if (folder is not null && DataContext is MainViewModel viewModel)
+            await viewModel.BeginAddGameBuildAsync(folder);
+    }
+
     private async Task<string?> PickFolderAsync()
     {
         if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage)

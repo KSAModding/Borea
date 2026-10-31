@@ -17,6 +17,9 @@ public sealed class DriveInstallSpaceCheck : IInstallSpaceCheck
     /// <summary>The smallest margin, so that a small plan also leaves room behind.</summary>
     public const long MinimumMarginBytes = 50L * 1000 * 1000;
 
+    /// <summary>The space that stays free on top of a write of <paramref name="bytes"/>.</summary>
+    public static long MarginFor(long bytes) => Math.Max(MinimumMarginBytes, (long)(bytes * MarginFraction));
+
     private readonly IGamePathProvider _paths;
     private readonly IFreeSpaceProbe _freeSpace;
     private readonly string _temporaryFolder;
@@ -46,7 +49,7 @@ public sealed class DriveInstallSpaceCheck : IInstallSpaceCheck
         foreach (var volume in needs.GroupBy(need => need.Volume.VolumeName, VolumeComparer))
         {
             var estimate = volume.Sum(need => need.Bytes);
-            var required = estimate + Math.Max(MinimumMarginBytes, (long)(estimate * MarginFraction));
+            var required = estimate + MarginFor(estimate);
             var available = volume.Min(need => need.Volume.AvailableBytes);
             if (available < required)
                 throw new InsufficientDiskSpaceException(volume.Key, required, available);

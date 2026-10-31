@@ -20,6 +20,13 @@ public sealed class LaunchFailureTests
         "Method 'DrawAxes' in type 'KSArmory.RoundFollowable' from assembly 'KSArmory, Version=0.8.44.0, Culture=neutral, PublicKeyToken=null' does not have an implementation.",
     ];
 
+    private static readonly string[] StarMapGameAssemblyCrash =
+    [
+        "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+        "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
+        "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+    ];
+
     /// <summary>A harness with StarMap recorded and a loader process that has already crashed with <see cref="KsArmoryCrash"/>.</summary>
     internal static Task<ViewModelHarness> CreateAsync(int exitCode = UnhandledException) => CreateAsync(new CrashingStarter(exitCode, KsArmoryCrash));
 
@@ -128,20 +135,7 @@ public sealed class LaunchFailureTests
     [Fact]
     public async Task Play_LoaderCannotLoadAGameAssembly_SaysTheLoaderNeedsAnUpdate()
     {
-        string[] starMap5638Crash =
-        [
-            "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
-            "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
-            "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
-        ];
-        using var harness = await ViewModelHarness.CreateAsync(
-            services =>
-            {
-                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
-                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
-                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game).WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap")));
-            },
-            processStarter: new CrashingStarter(UnhandledException, starMap5638Crash));
+        using var harness = await CreateWithGameAssemblyCrashAsync();
         var viewModel = harness.ViewModel;
         await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
         await viewModel.LoadAsync();
@@ -153,6 +147,71 @@ public sealed class LaunchFailureTests
         Assert.Equal("https://github.com/StarMapLoader/StarMap/releases", viewModel.LaunchLoaderReleases?.Url);
         Assert.False(viewModel.CanDisableBlamedMod);
     }
+
+    [Fact]
+    public async Task Play_LoaderCannotLoadAKeptBuild_NamesTheKeptBuildWithoutAKsaUpdate()
+    {
+        using var harness = await CreateWithGameAssemblyCrashAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        // the file version of this fixture reads as the game build 0.4.6.0
+        var keptBuild = GameVersion.Parse("0.4.6.0");
+        var folder = Directory.CreateDirectory(harness.Services.Paths.GetGameBuildFolder(keptBuild)).FullName;
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "LoaderVersionFixture.dll"), Path.Combine(folder, "KSA.dll"));
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, record =>
+        {
+            record.SetGameBuild(keptBuild);
+            return true;
+        });
+        await viewModel.LoadAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+        // the index also rates StarMap 0.4.6 against the kept build and names it
+        Assert.Equal(harness.Localization.FormatLaunchLoaderIncompatible("StarMap", "0.4.6", "0.4.6.0"), viewModel.LoaderPromptText);
+        await viewModel.PlayAnywayCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchLoaderTooOldForKeptBuild("StarMap", "0.4.6.0"), viewModel.LaunchMessage);
+        Assert.Equal("https://github.com/StarMapLoader/StarMap/releases", viewModel.LaunchLoaderReleases?.Url);
+    }
+
+    [Fact]
+    public async Task Play_LoaderCannotLoadAKeptBuildWithAnOffer_NamesBothVersionsAndInstallsTheOffer()
+    {
+        // only StarMap 0.4.6 fits the kept build of this fixture, and the recorded 0.4.7 stops on it
+        using var harness = await LoaderUpdateTests.CreateAsync(installed: "0.4.7", starter: new CrashingStarter(UnhandledException, StarMapGameAssemblyCrash), keptBuild: true);
+        await LoaderUpdateTests.KeepBuildActiveAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+        await viewModel.PlayAnywayCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchLoaderTooOldForKeptBuildOffer("StarMap", "0.4.7", "0.4.6.0", "0.4.6"), viewModel.LaunchMessage);
+        Assert.Null(viewModel.LaunchLoaderReleases);
+        Assert.Equal(harness.Localization.FormatLoaderInstallAction("StarMap", "0.4.6"), viewModel.LaunchLoaderInstallText);
+        Assert.False(viewModel.ShowsLaunchFailureClose);
+
+        await viewModel.InstallLaunchLoaderOfferCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsLaunchFailureOpen);
+        Assert.Null(viewModel.SetupError);
+        Assert.Null(viewModel.LaunchLoaderInstallText);
+        var versions = (await harness.Services.LoaderVersions.ListAsync()).Select(version => version.Version?.ToString()).Order(StringComparer.Ordinal);
+        Assert.Equal(["0.4.6", "0.4.7"], versions);
+    }
+
+    /// <summary>A harness whose game is build 5117 and whose StarMap stops because it cannot load an assembly of the game.</summary>
+    private static Task<ViewModelHarness> CreateWithGameAssemblyCrashAsync() =>
+        ViewModelHarness.CreateAsync(
+            services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game).WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap")));
+            },
+            processStarter: new CrashingStarter(UnhandledException, StarMapGameAssemblyCrash));
 
     [Fact]
     public async Task PlayActiveInstance_OtherModsNeedMissingGameParts_NamesThemAndDisablesThemWithTheBlamedMod()
@@ -534,6 +593,29 @@ public sealed class LaunchFailureTests
         Assert.NotEqual("English text.", harness.ViewModel.LaunchMessage);
     }
 
+    [Theory]
+    [InlineData(LaunchOutcome.OtherBuildRunning)]
+    [InlineData(LaunchOutcome.LoaderTakesNoGamePath)]
+    [InlineData(LaunchOutcome.LoaderConfigurationUnreadable)]
+    public async Task PlayActiveInstance_GameBuildRefusesTheLaunch_SaysWhyInTheDisplayLanguage(LaunchOutcome outcome)
+    {
+        var file = Path.Combine(Path.GetTempPath(), "StarMap", "StarMapConfig.json");
+        using var harness = await CreateWithLauncherAsync(new FixedLauncher(LaunchResult.Failed(outcome, "English text.", configurationFile: file)));
+        harness.Localization.TrySetCulture("de");
+
+        await PlayActiveInstanceAsync(harness);
+
+        var expected = outcome switch
+        {
+            LaunchOutcome.LoaderTakesNoGamePath => harness.Localization.FormatLaunchLoaderTakesNoGamePath("StarMap"),
+            LaunchOutcome.LoaderConfigurationUnreadable => harness.Localization.FormatLaunchLoaderConfigurationUnreadable(file, "StarMap"),
+            _ => harness.Localization.FormatLaunchOtherBuildRunning("StarMap"),
+        };
+        Assert.Equal(expected, harness.ViewModel.LaunchMessage);
+        Assert.NotEqual("English text.", harness.ViewModel.LaunchMessage);
+        Assert.True(harness.ViewModel.HasLaunchFailed);
+    }
+
     [Fact]
     public async Task PlayActiveInstance_WrapperStopsBeforeTheGame_OpensTheModalThatNamesTheWrapper()
     {
@@ -613,7 +695,8 @@ public sealed class LaunchFailureTests
         Assert.Equal(1, launcher.Watches);
         Assert.False(openWhileWatched);
         Assert.False(viewModel.IsRuntimePromptOpen);
-        Assert.Equal("Started StarMap.", viewModel.LaunchMessage);
+        Assert.Equal(harness.Localization.FormatLaunchStarted("StarMap", "Main"), viewModel.LaunchMessage);
+        Assert.False(viewModel.HasLaunchFailed);
     }
 
     [Fact]
@@ -680,44 +763,6 @@ public sealed class LaunchFailureTests
         viewModel.CloseRuntimePromptCommand.Execute(null);
 
         Assert.False(viewModel.IsRuntimePromptOpen);
-    }
-
-    /// <summary>A harness with a game directory and StarMap recorded, whose launches go to <paramref name="launcher"/> and whose refreshes to <paramref name="configurator"/>.</summary>
-    private static Task<ViewModelHarness> CreateWithConfiguratorAsync(ILauncher launcher, RefreshRecorder configurator) =>
-        ViewModelHarness.CreateAsync(
-            services => services.SettingsRepository.SaveAsync(services.Settings
-                .WithGameDirectory(Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName)
-                .WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap"))),
-            loaderLauncher: launcher,
-            loaderConfigurator: configurator);
-
-    [Fact]
-    public async Task PlayActiveInstance_RefreshesTheGamePathOfTheLoaderBeforeItStarts()
-    {
-        var launcher = new FixedLauncher(LaunchResult.Failed(LaunchOutcome.NoLaunchTarget, "Not started."));
-        var configurator = new RefreshRecorder(launcher);
-        using var harness = await CreateWithConfiguratorAsync(launcher, configurator);
-
-        await PlayActiveInstanceAsync(harness);
-
-        var refresh = Assert.Single(configurator.Refreshes);
-        Assert.Equal("StarMap", refresh.LoaderId);
-        Assert.Equal(harness.Services.Paths.GetLoaderDirectoryPath("StarMap"), refresh.LoaderDirectory);
-        Assert.Equal(harness.Services.Paths.GetGameDirectoryPath(), refresh.GameDirectory);
-        Assert.Equal(0, refresh.LaunchesBefore);
-        Assert.Equal(1, launcher.Launches);
-    }
-
-    [Fact]
-    public async Task PlayActiveInstance_GamePathCannotBeRefreshed_StartsNothingAndSaysWhy()
-    {
-        var launcher = new FixedLauncher(LaunchResult.Failed(LaunchOutcome.NoLaunchTarget, "Not started."));
-        using var harness = await CreateWithConfiguratorAsync(launcher, new RefreshRecorder(launcher, new InvalidOperationException("No drive of the Wine prefix holds the game.")));
-
-        await PlayActiveInstanceAsync(harness);
-
-        Assert.Equal("No drive of the Wine prefix holds the game.", harness.ViewModel.LaunchMessage);
-        Assert.Equal(0, launcher.Launches);
     }
 
     [Fact]
@@ -968,7 +1013,7 @@ public sealed class LaunchFailureTests
     }
 
     /// <summary>A loader launcher that answers every launch with <paramref name="launched"/> and its watch with <paramref name="watched"/>.</summary>
-    private sealed class FixedLauncher(LaunchResult launched, LaunchResult? watched = null) : ILauncher
+    internal sealed class FixedLauncher(LaunchResult launched, LaunchResult? watched = null) : ILauncher
     {
         public int Launches { get; private set; }
 
@@ -1012,26 +1057,6 @@ public sealed class LaunchFailureTests
     private sealed class FixedSharedProfileLauncher(SharedProfileLaunchResult result) : ISharedProfileLauncher
     {
         public SharedProfileLaunchResult Launch(IReadOnlyList<string>? arguments = null) => result;
-    }
-
-    /// <summary>Records each refresh with the launches before it, and throws <paramref name="failure"/> when set.</summary>
-    private sealed class RefreshRecorder(FixedLauncher launcher, Exception? failure = null) : ILoaderConfigurator
-    {
-        public List<(string LoaderId, string LoaderDirectory, string GameDirectory, int LaunchesBefore)> Refreshes { get; } = [];
-
-        public Task<string?> ConfigureAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>(null);
-
-        public Task<string?> RefreshForWineAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, CancellationToken cancellationToken = default)
-        {
-            Refreshes.Add((loader.ModId, loaderDirectory, gameDirectory, launcher.Launches));
-            return failure is null ? Task.FromResult<string?>(null) : Task.FromException<string?>(failure);
-        }
-
-        public Task<string?> PrepareForLaunchAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, bool isAdopted, CancellationToken cancellationToken = default) =>
-            RefreshForWineAsync(loader, loaderDirectory, gameDirectory, cancellationToken);
-
-        public string GamePathValue(string gameDirectory) => gameDirectory;
     }
 
     /// <summary>Hands out a loader process that has already exited with the given code and output.</summary>

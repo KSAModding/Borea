@@ -22,6 +22,12 @@ public partial class MainViewModel
     /// <summary>The release the modal installs when the version is missing, as the setting and the mods of the instance ask for it.</summary>
     private ModVersionMetadata? _promptedLoaderRelease;
 
+    /// <summary>The kept build of the prompted instance, which the modal names in place of the build of the settings. Null on the settings build.</summary>
+    private string? _promptedKeptBuild;
+
+    /// <summary>The build that the prompt rates the loader against, the kept build or else the build of the settings.</summary>
+    private string PromptedGameText => _promptedKeptBuild ?? InstalledVersionText ?? string.Empty;
+
     /// <summary>The update a launch skipped with "Play anyway", which no later launch of that instance asks about again.</summary>
     private string? _playedAnywayLoaderUpdate;
 
@@ -63,15 +69,22 @@ public partial class MainViewModel
         ? null
         : PromptedLoaderUpdate switch
         {
-            { InstalledVersion: { } installed, Offer: { } offer } => Localization.FormatLaunchLoaderUpdate(loader.Name, installed.ToString(), InstalledVersionText ?? string.Empty, offer.Version.ToString()),
-            { InstalledVersion: { } installed } => Localization.FormatLaunchLoaderIncompatible(loader.Name, installed.ToString(), InstalledVersionText ?? string.Empty),
+            { InstalledVersion: { } installed, Offer: { } offer } when IsOlderOffer(offer, installed) => Localization.FormatLaunchLoaderInstallOlder(loader.Name, installed.ToString(), PromptedGameText, offer.Version.ToString()),
+            { InstalledVersion: { } installed, Offer: { } offer } => Localization.FormatLaunchLoaderUpdate(loader.Name, installed.ToString(), PromptedGameText, offer.Version.ToString()),
+            { InstalledVersion: { } installed } => Localization.FormatLaunchLoaderIncompatible(loader.Name, installed.ToString(), PromptedGameText),
             _ when PromptedLoaderPin is { } pin => Localization.FormatLaunchPinnedLoaderNotInstallable(loader.Name, pin.ToString()),
             _ => NeedsGameSetup
                 ? Localization.FormatLaunchSetUpGameFirst(loader.Name)
                 : Localization.FormatLaunchInstallLoader(_promptedLoaderRelease is { } release ? $"{loader.Name} {release.Version}" : loader.Name),
         };
 
-    public string LoaderPromptActionText => IsLoaderUpdatePrompt ? Localization.LaunchUpdateAndPlay : Localization.SetupInstallLoader;
+    /// <summary>
+    /// The main action also starts the game, so it says "Install and play" for a missing version and for an older
+    /// release, which goes beside the installed one, and "Update and play" for a newer release.
+    /// </summary>
+    public string LoaderPromptActionText => PromptedLoaderUpdate is { Offer: { } offer } update && !IsOlderOffer(offer, update.InstalledVersion)
+        ? Localization.LaunchUpdateAndPlay
+        : Localization.LaunchInstallAndPlay;
 
     partial void OnPromptedLoaderChanged(ModMetadata? value)
     {
@@ -88,7 +101,8 @@ public partial class MainViewModel
     /// only a warning when none does. A pinned instance gets only a warning, because an update cannot change its version.
     /// Null when the launch starts without a question, also after "Play anyway" for the same instance and update.
     /// </summary>
-    private LoaderUpdate? LoaderUpdateBeforeLaunch(Instance instance, ModMetadata loader, LoaderVersionResolution version, InstalledLoaderVersion start)
+    /// <param name="recorded">The recorded folder rated against the game of the instance, or null.</param>
+    private LoaderUpdate? LoaderUpdateBeforeLaunch(Instance instance, ModMetadata loader, LoaderVersionResolution version, InstalledLoaderVersion start, LoaderUpdate? recorded)
     {
         LoaderUpdate update;
         if (version.StartCompatibility == GameCompatibility.Incompatible && start.Version is { } known)
@@ -96,13 +110,13 @@ public partial class MainViewModel
             update = new LoaderUpdate(loader.ModId, known, GameCompatibility.Incompatible, version.IsPinned ? null : version.Offer);
         }
         else if (!version.IsPinned && start.IsRecorded && version.StartCompatibility == GameCompatibility.Unknown
-            && LoaderUpdateFor(loader.ModId) is { } recorded && IsBroken(recorded))
+            && recorded is { } rated && IsBroken(rated))
         {
-            // Without held releases, or for a version that only its files name, the update check of the recorded folder
-            // still knows the rating. Its offer stays only when the mods of the instance accept it.
-            update = recorded.Offer is { } offer && !AcceptsLoader(instance, loader.ModId, offer.Version)
-                ? recorded with { Offer = null }
-                : recorded;
+            // Without held releases, or for a version that only its files name, the rating of the recorded folder still
+            // knows it. Its offer stays only when the mods of the instance accept it.
+            update = rated.Offer is { } offer && !AcceptsLoader(instance, loader.ModId, offer.Version)
+                ? rated with { Offer = null }
+                : rated;
         }
         else
         {
@@ -112,9 +126,10 @@ public partial class MainViewModel
         return string.Equals(PlayAnywayKey(instance.InstanceId, update), _playedAnywayLoaderUpdate, StringComparison.Ordinal) ? null : update;
     }
 
-    private void OpenLoaderPrompt(Guid instanceId, ModMetadata loader, LoaderUpdate? update = null, ModVersionMetadata? release = null, ModVersion? pin = null)
+    private void OpenLoaderPrompt(Instance instance, ModMetadata loader, LoaderUpdate? update = null, ModVersionMetadata? release = null, ModVersion? pin = null)
     {
-        _loaderPromptInstanceId = instanceId;
+        _loaderPromptInstanceId = instance.InstanceId;
+        _promptedKeptBuild = KeptBuildTextOf(instance);
         _promptedLoaderRelease = release;
         LaunchMessage = null;
         SetupMessage = null;

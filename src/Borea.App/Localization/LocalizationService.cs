@@ -9,6 +9,9 @@ namespace Borea.App.Localization;
 
 public sealed class LocalizationService : INotifyPropertyChanged
 {
+    /// <summary>Joins a number and its unit, or "KSA" and its build, so that a wrap never splits them.</summary>
+    internal const char NoBreakSpace = '\u00A0';
+
     private static readonly SupportedCulture English = new("en", "English");
     private static readonly SupportedCulture German = new("de", "Deutsch");
     private static readonly SupportedCulture Pirate = new("en-QP", "Pirate speak");
@@ -112,6 +115,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatTaskBackupDelete(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskBackupDeleteFormat, name);
 
+    public string FormatTaskKeepGameBuild(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskKeepGameBuildFormat, build);
+
+    public string FormatTaskGameBuildWaiting(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskGameBuildWaitingFormat, build);
+
     public string TaskWaiting => Resources.TaskWaiting;
 
     public string TaskRunning => Resources.TaskRunning;
@@ -167,10 +176,19 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastBackupDeleted(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackupDeletedFormat, name);
 
+    public string FormatToastGameBuildKept(string build, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildKeptFormat), build, instanceName);
+
+    public string FormatToastGameBuildAdded(string build)
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildAddedFormat), build);
+
     public string FormatToastInstallStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstallStoppedFormat, content);
 
     public string ToastLibraryFolderStopped => Resources.ToastLibraryFolderStopped;
+
+    public string FormatToastGameBuildKeepStopped(string build)
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildKeepStoppedFormat), build);
 
     public string FormatToastUpdateStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateStoppedFormat, content);
@@ -222,6 +240,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastBackupDeleteFailed(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackupDeleteFailedFormat, name);
+
+    public string FormatToastGameBuildKeepFailed(string build)
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastGameBuildKeepFailedFormat), build);
+
+    public string FormatToastKeepGameBuildCheckFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastKeepGameBuildCheckFailedFormat, instanceName);
+
+    public string FormatToastUseCurrentGameBuildFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUseCurrentGameBuildFailedFormat, instanceName);
 
     public string FormatToastActivateFailed(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastActivateFailedFormat, instanceName);
@@ -1196,6 +1223,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLibraryFolderCopying(int files, int totalFiles, string megabytes, string totalMegabytes)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderCopyingFormat, files, totalFiles, megabytes, totalMegabytes);
 
+    public string FormatGameBuildCopying(int files, int totalFiles, string size, string totalSize)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameBuildCopyingFormat, files, totalFiles, size, totalSize);
+
     public string LibraryFolderRemovingOldFiles => Resources.LibraryFolderRemovingOldFiles;
 
     public string FormatLibraryFolderMoved(string folder)
@@ -1318,8 +1348,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameBuildAvailable => Resources.GameBuildAvailable;
 
+    public string FormatGameBuildKeepHint(string instance, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameBuildKeepHintFormat, instance, build);
+
     public string FormatLoaderUpdateUrgent(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentFormat, loader, installed, game, offer);
+
+    public string FormatLoaderUpdateUrgentKept(string instance, string build, string loader, string installed, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentKeptFormat, instance, build, loader, installed, offer);
 
     public string FormatLoaderUpdateNone(string loader, string installed, string game)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateNoneFormat, loader, installed, game);
@@ -2355,6 +2391,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallInstanceMissing => Resources.InstallInstanceMissing;
 
+    public string FormatInstallKeptBuildUnavailable(string build, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallKeptBuildUnavailableFormat, build, folder);
+
     public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
 
     public string ModalRenameInstanceTitle => Resources.ModalRenameInstanceTitle;
@@ -2363,6 +2402,114 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatModalDeleteInstanceText(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalDeleteInstanceTextFormat, name);
+
+    public string FormatModalDeleteInstanceKeptBuild(string build, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalDeleteInstanceKeptBuildFormat, build, size);
+
+    public string ModalKeepGameBuildTitle => Resources.ModalKeepGameBuildTitle;
+
+    public string ModalAddGameBuildTitle => Resources.ModalAddGameBuildTitle;
+
+    public string FormatModalKeepGameBuildText(string build, string size, string folder, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildTextFormat, build, size, folder, instanceName);
+
+    public string FormatModalKeepGameBuildShared(string build, string folder, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildSharedFormat, build, folder, instanceName);
+
+    public string FormatModalAddGameBuildText(string build, string size, string source, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildTextFormat, build, size, source, folder);
+
+    public string FormatModalAddGameBuildShared(string build, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildSharedFormat, build, folder);
+
+    public string FormatModalKeepGameBuildFolder(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFolderFormat, folder);
+
+    public string FormatModalAddGameBuildSource(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildSourceFormat, folder);
+
+    public string FormatModalKeepGameBuildIncompatible(int count, int total, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildIncompatibleFormat, count, total, build);
+
+    public string FormatModalKeepGameBuildFreeSpace(string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFreeSpaceFormat, size);
+
+    public string FormatModalKeepGameBuildFreeSpaceDrive(string size, string drive)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFreeSpaceDriveFormat, size, drive);
+
+    public string ModalKeepGameBuildPopupNote => Resources.ModalKeepGameBuildPopupNote;
+
+    public string ModalKeepGameBuildConfirm => Resources.ModalKeepGameBuildConfirm;
+
+    public string ModalKeepGameBuildChecking => Resources.ModalKeepGameBuildChecking;
+
+    public string FormatKeepGameBuildAlreadyKept(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildAlreadyKeptFormat, build);
+
+    public string KeepGameBuildNoGame => Resources.KeepGameBuildNoGame;
+
+    public string KeepGameBuildNotAGame => Resources.KeepGameBuildNotAGame;
+
+    public string KeepGameBuildWineWrapper => Resources.KeepGameBuildWineWrapper;
+
+    public string KeepGameBuildWindowsBuild => Resources.KeepGameBuildWindowsBuild;
+
+    public string FormatKeepGameBuildFolderTaken(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderTakenFormat, folder);
+
+    public string KeepGameBuildLibraryInsideGame => Resources.KeepGameBuildLibraryInsideGame;
+
+    public string FormatKeepGameBuildNotEnoughSpace(string needed, string margin, string free)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildNotEnoughSpaceFormat, needed, margin, free);
+
+    public string KeepGameBuildDriveFull => Resources.KeepGameBuildDriveFull;
+
+    public string FormatKeepGameBuildFolderLink(string link)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderLinkFormat, link);
+
+    public string FormatKeepGameBuildFolderSourceLink(string link)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderSourceLinkFormat, link);
+
+    public string FormatKeepGameBuildBuildChanged(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildBuildChangedFormat, build);
+
+    public string ModalUseCurrentGameBuildTitle => Resources.ModalUseCurrentGameBuildTitle;
+
+    public string FormatModalUseCurrentGameBuildText(string instanceName, string build, string keptBuild)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildTextFormat, instanceName, build, keptBuild);
+
+    public string FormatModalUseCurrentGameBuildMissingText(string instanceName, string build, string keptBuild)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildMissingTextFormat, instanceName, build, keptBuild);
+
+    public string FormatModalUseCurrentGameBuildFit(int fitting, int total, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildFitFormat, fitting, total, build);
+
+    public string FormatModalUseCurrentGameBuildIncompatibleNote(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildIncompatibleNoteFormat, build);
+
+    public string FormatModalUseCurrentGameBuildOlder(string build, string keptBuild)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildOlderFormat, build, keptBuild);
+
+    public string ModalUseCurrentGameBuildBackingUp => Resources.ModalUseCurrentGameBuildBackingUp;
+
+    public string FormatModalUseCurrentGameBuildBackupFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildBackupFailedFormat, reason);
+
+    public string ModalUseCurrentGameBuildConfirm => Resources.ModalUseCurrentGameBuildConfirm;
+
+    public string ModalUseCurrentGameBuildChecking => Resources.ModalUseCurrentGameBuildChecking;
+
+    public string FormatToastUsesCurrentGameBuild(string instanceName, string build)
+        => string.Format(CultureInfo.CurrentCulture, JoinKsaAndBuild(Resources.ToastUsesCurrentGameBuildFormat), instanceName, build);
+
+    public string FormatKeepGameBuildFolderChanged(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderChangedFormat, build);
+
+    public string FormatKeepGameBuildChangedDuringCopy(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildChangedDuringCopyFormat, build);
+
+    public string FormatKeepGameBuildFolderChangedDuringCopy(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderChangedDuringCopyFormat, build);
 
     public string ModalInstanceExplanation => Resources.ModalInstanceExplanation;
 
@@ -2517,6 +2664,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDependencyOtherHint => Resources.ContentDependencyOtherHint;
 
+    public string ContentDependencyRequiredBy => Resources.ContentDependencyRequiredBy;
+
+    public string ContentDependencyRequiredByHint => Resources.ContentDependencyRequiredByHint;
+
+    public string FormatContentDependencyRequiredByShowAll(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyRequiredByShowAllFormat, count);
+
+    public string ContentDependencyRequiredByShowInstalled => Resources.ContentDependencyRequiredByShowInstalled;
+
+    public string ContentDependencyRequiredByNoneInstalled => Resources.ContentDependencyRequiredByNoneInstalled;
+
     public string ContentDependencyOneOf => Resources.ContentDependencyOneOf;
 
     public string FormatContentDependencyMin(string low)
@@ -2662,11 +2820,20 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstanceLoaderInstall(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstallFormat, version);
 
+    public string FormatInstanceLoaderInstalling(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstallingFormat, loader);
+
     public string FormatInstanceLoaderModalHint(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderModalHintFormat, instanceName);
 
     public string FormatInstanceLoaderAutomaticTarget(string loader, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetFormat, loader, version);
+
+    public string FormatInstanceLoaderAutomaticTargetIncompatible(string loader, string version, string build, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetIncompatibleFormat, loader, version, build, offer);
+
+    public string FormatInstanceLoaderAutomaticTargetIncompatibleNoOffer(string loader, string version, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetIncompatibleNoOfferFormat, loader, version, build);
 
     public string FormatInstanceLoaderAutomaticNotInstalled(string loader, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticNotInstalledFormat, loader, version);
@@ -2952,6 +3119,60 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceSaveSettingsPreset => Resources.InstanceSaveSettingsPreset;
 
+    public string InstanceKeepGameBuild => Resources.InstanceKeepGameBuild;
+
+    public string InstanceUseCurrentGameBuild => Resources.InstanceUseCurrentGameBuild;
+
+    public string FormatInstanceGameBuild(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGameBuildFormat, build);
+
+    public string FormatInstanceGameBuildNotFound(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGameBuildNotFoundFormat, build);
+
+    public string FormatInstanceGameBuildToolTip(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGameBuildToolTipFormat, build);
+
+    public string SettingsGameBuildsTitle => Resources.SettingsGameBuildsTitle;
+
+    public string SettingsGameBuildsHint => Resources.SettingsGameBuildsHint;
+
+    public string FormatSettingsGameBuildUsedBy(string instanceNames)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGameBuildUsedByFormat, instanceNames);
+
+    public string SettingsGameBuildUnused => Resources.SettingsGameBuildUnused;
+
+    public string FormatSettingsGameBuildRemoveConfirm(string build, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGameBuildRemoveConfirmFormat, build, size);
+
+    public string FormatSettingsGameBuildRemoving(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGameBuildRemovingFormat, build);
+
+    public string FormatSettingsGameBuildRemoved(string build, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGameBuildRemovedFormat, build, size);
+
+    public string SettingsGameBuildInUse => Resources.SettingsGameBuildInUse;
+
+    public string SettingsGameBuildInstanceUnreadable => Resources.SettingsGameBuildInstanceUnreadable;
+
+    public string SettingsGameBuildIsGameFolder => Resources.SettingsGameBuildIsGameFolder;
+
+    public string KeptGameBuildBusy => Resources.KeptGameBuildBusy;
+
+    public string FormatKeptGameBuildInUseByProgram(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeptGameBuildInUseByProgramFormat, build);
+
+    public string SetupAddGameBuild => Resources.SetupAddGameBuild;
+
+    public string SetupAddGameBuildHint => Resources.SetupAddGameBuildHint;
+
+    public string ModalGameBuildLabel => Resources.ModalGameBuildLabel;
+
+    public string ModalGameBuildSettings => Resources.ModalGameBuildSettings;
+
+    public string ModalGameBuildKept => Resources.ModalGameBuildKept;
+
+    public string ModalGameBuildHint => Resources.ModalGameBuildHint;
+
     public string SettingsPresetsTitle => Resources.SettingsPresetsTitle;
 
     public string SettingsPresetsHint => Resources.SettingsPresetsHint;
@@ -2978,10 +3199,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchLoaderUpdate(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderUpdateFormat, loader, installed, game, offer);
 
+    public string FormatLaunchLoaderInstallOlder(string loader, string installed, string game, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderInstallOlderFormat, loader, installed, game, offer);
+
     public string FormatLaunchLoaderIncompatible(string loader, string installed, string game)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderIncompatibleFormat, loader, installed, game);
 
     public string LaunchUpdateAndPlay => Resources.LaunchUpdateAndPlay;
+
+    public string LaunchInstallAndPlay => Resources.LaunchInstallAndPlay;
 
     public string LaunchPlayAnyway => Resources.LaunchPlayAnyway;
 
@@ -3066,6 +3292,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatSettingsLoaderUsedBy(string instances)
         => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderUsedByFormat, instances);
 
+    public string FormatSettingsLoaderRatedForGameFolder(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRatedForGameFolderFormat, build);
+
+    public string FormatSettingsLoaderRatedForKept(string build, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRatedForKeptFormat, build, instance);
+
     public string FormatSettingsLoaderInUse(string instances)
         => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderInUseFormat, instances);
 
@@ -3107,6 +3339,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     /// <summary>The text before and after the instance name of <see cref="FormatDiscoverAddingTo"/>, so a page can style the name.</summary>
     public (string Before, string After) SplitDiscoverAddingTo() => SplitAroundValue(Resources.DiscoverAddingToFormat);
+
+    public string FormatDiscoverKeptBuildUnavailable(string instance, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverKeptBuildUnavailableFormat, instance, build);
 
     /// <summary>The text before and after the names of <see cref="FormatContentByAuthor"/>, so a row can show each name as a link.</summary>
     public (string Before, string After) SplitContentByAuthor() => SplitAroundValue(Resources.ContentByAuthorFormat);
@@ -3518,6 +3753,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     private const double DaysPerWeek = 7;
 
+    // the resx stays ASCII, so the toasts of the game builds put the no-break space in here
+    private static string JoinKsaAndBuild(string format) => format.Replace("KSA {", "KSA" + NoBreakSpace + "{", StringComparison.Ordinal);
+
     private static string FormatCount(int count, string one, string format)
         => count == 1 ? one : string.Format(CultureInfo.CurrentCulture, format, count);
 
@@ -3725,6 +3963,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string CloseNowInstallWarning => Resources.CloseNowInstallWarning;
 
+    public string FormatCloseNowGameBuildKeepWarning(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.CloseNowGameBuildKeepWarningFormat, build);
+
     public string CloseNowKeepWaiting => Resources.CloseNowKeepWaiting;
 
     public string CloseNowConfirm => Resources.CloseNowConfirm;
@@ -3743,6 +3984,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchStarting(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStartingFormat, loader);
 
+    public string FormatLaunchStarted(string loader, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStartedFormat, loader, instance);
+
     public string FormatLaunchModBroke(string mod, string version, string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModBrokeFormat, mod, version, loader);
 
@@ -3760,6 +4004,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLaunchLoaderTooOld(string loader, string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldFormat, loader, build);
+
+    public string FormatLaunchLoaderTooOldForKeptBuild(string loader, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldForKeptBuildFormat, loader, build);
+
+    public string FormatLaunchLoaderTooOldForKeptBuildOffer(string loader, string failed, string build, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldForKeptBuildOfferFormat, loader, failed, build, offer);
 
     public string FormatLaunchLoaderReleases(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderReleasesFormat, loader);
@@ -3792,6 +4042,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLaunchWrapperBusy(string wrapper)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchWrapperBusyFormat, wrapper);
+
+    public string FormatLaunchGameBuildMissing(string build, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchGameBuildMissingFormat, build, folder);
+
+    public string FormatLaunchOtherBuildRunning(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchOtherBuildRunningFormat, loader);
+
+    public string FormatLaunchLoaderTakesNoGamePath(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTakesNoGamePathFormat, loader);
+
+    public string FormatLaunchLoaderConfigurationUnreadable(string file, string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderConfigurationUnreadableFormat, file, loader);
 
     public string FormatLaunchWrapperNeedsVariable(string loader, string flag, string wrapper)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchWrapperNeedsVariableFormat, loader, flag, wrapper);
