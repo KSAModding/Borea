@@ -29,6 +29,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
 
     public string GetImageCacheFolder() => Path.Combine(_root, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_root, "GamePatchNotes");
+    public string GetPreviewCacheFolder() => Path.Combine(_root, "PreviewCache", "v1");
     public string GetInstancesRoot() => Path.Combine(_root, "Instances");
     public string GetStaticModFilesRoot() => Path.Combine(_root, "Static Mod Files");
     public string GetGameBuildsRoot() => Path.Combine(_root, "Game Builds");

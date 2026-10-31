@@ -5,6 +5,7 @@
     <Project Path="src/Borea.Composition/Borea.Composition.csproj" />
     <Project Path="src/Borea.Core/Borea.Core.csproj" />
     <Project Path="src/Borea.Network/Borea.Network.csproj" />
+    <Project Path="src/Borea.Preview/Borea.Preview.csproj" />
     <Project Path="src/Borea.Storage/Borea.Storage.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -13,6 +14,7 @@
     <Project Path="tests/Borea.Composition.Tests/Borea.Composition.Tests.csproj" />
     <Project Path="tests/Borea.Core.Tests/Borea.Core.Tests.csproj" />
     <Project Path="tests/Borea.Network.Tests/Borea.Network.Tests.csproj" />
+    <Project Path="tests/Borea.Preview.Tests/Borea.Preview.Tests.csproj" />
     <Project Path="tests/Borea.Storage.Tests/Borea.Storage.Tests.csproj" />
     <Project Path="tests/Borea.Storage.Tests/Fixtures/GameVersionFixture/GameVersionFixture.csproj" />
     <Project Path="tests/Borea.Storage.Tests/Fixtures/LaunchProbeFixture/LaunchProbeFixture.csproj" />

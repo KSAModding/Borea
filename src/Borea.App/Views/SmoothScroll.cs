@@ -45,6 +45,13 @@ public static class SmoothScroll
     public static readonly AttachedProperty<bool> IsEnabledProperty =
         AvaloniaProperty.RegisterAttached<ScrollViewer, bool>("IsEnabled", typeof(SmoothScroll));
 
+    /// <summary>
+    /// Marks a control that uses the wheel itself, such as a view that zooms with it. A viewer around it then leaves
+    /// the wheel to the control, which also gets it when the viewer could scroll.
+    /// </summary>
+    public static readonly AttachedProperty<bool> OwnsWheelProperty =
+        AvaloniaProperty.RegisterAttached<Control, bool>("OwnsWheel", typeof(SmoothScroll));
+
     private static readonly AttachedProperty<Run?> RunProperty =
         AvaloniaProperty.RegisterAttached<ScrollViewer, Run?>("Run", typeof(SmoothScroll));
 
@@ -54,6 +61,10 @@ public static class SmoothScroll
     public static bool GetIsEnabled(ScrollViewer viewer) => viewer.GetValue(IsEnabledProperty);
 
     public static void SetIsEnabled(ScrollViewer viewer, bool value) => viewer.SetValue(IsEnabledProperty, value);
+
+    public static bool GetOwnsWheel(Control control) => control.GetValue(OwnsWheelProperty);
+
+    public static void SetOwnsWheel(Control control, bool value) => control.SetValue(OwnsWheelProperty, value);
 
     private static void Follow(ScrollViewer viewer, bool enabled)
     {
@@ -95,9 +106,10 @@ public static class SmoothScroll
     }
 
     /// <summary>
-    /// True when the wheel is not for this viewer: it is over a viewer inside it that can move that way, or over a
-    /// combo box that is focused or open, which uses the wheel to change or scroll its selection. A viewer inside that
-    /// cannot move, such as the one in a single line text box, leaves the wheel to this viewer.
+    /// True when the wheel is not for this viewer: it is over a viewer inside it that can move that way, over a
+    /// combo box that is focused or open, which uses the wheel to change or scroll its selection, or over a control
+    /// that <see cref="OwnsWheelProperty"/> marks. A viewer inside that cannot move, such as the one in a single line
+    /// text box, leaves the wheel to this viewer.
     /// </summary>
     private static bool WheelBelongsToAnother(ScrollViewer viewer, PointerWheelEventArgs args)
     {
@@ -108,6 +120,9 @@ public static class SmoothScroll
                 return true;
 
             if (node is ComboBox box && (box.IsDropDownOpen || box.IsFocused))
+                return true;
+
+            if (node is Control control && GetOwnsWheel(control))
                 return true;
         }
 

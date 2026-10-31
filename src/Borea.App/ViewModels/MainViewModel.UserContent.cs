@@ -40,6 +40,7 @@ public partial class MainViewModel
         row.Choices = null;
         row.ProgressStatus = null;
         row.IsInstalling = true;
+        StartContentInstall(release);
         try
         {
             plan = await PlanContentWithRecommendationsAsync(services, instanceId, release, name, discardChanges, choices: null);
@@ -51,6 +52,7 @@ public partial class MainViewModel
         }
         finally
         {
+            EndContentInstall(release);
             row.IsInstalling = false;
         }
 
@@ -146,6 +148,7 @@ public partial class MainViewModel
         row.InstallWarning = null;
         row.Choices = null;
         row.IsInstalling = true;
+        StartContentInstall(plan.Release);
         var run = row.Run = StartInstallRun(StartInstallTask(row, instanceId));
         var completed = false;
         string? stopped = null;
@@ -170,6 +173,7 @@ public partial class MainViewModel
         }
         finally
         {
+            EndContentInstall(plan.Release);
             EndInstallRun(run, completed, stopped is not null, error);
             row.IsInstalling = false;
             row.Run = null;
@@ -274,6 +278,8 @@ public partial class MainViewModel
         string? error = null;
         try
         {
+            // the page of this vehicle can be open, and its preview can read this folder
+            await StopVehiclePreviewReadsAsync();
             var result = await services.UserContentInstaller.RemoveAsync(instance.InstanceId, record, discardChanges: item.RemoveChanges is not null);
             if (result.Outcome == UserContentOutcome.Changed && result.Changes is { } changes)
             {
@@ -302,6 +308,7 @@ public partial class MainViewModel
             EndTask(task, completed, stopped: false, error);
         }
 
+        RestoreVehiclePreview();
         if (completed)
             await ReloadInstancesAsync();
         item.InstallError = error;

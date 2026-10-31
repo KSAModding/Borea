@@ -74,6 +74,7 @@
     <ProjectReference Include="..\Borea.Cli\Borea.Cli.csproj" />
     <ProjectReference Include="..\Borea.Composition\Borea.Composition.csproj" />
     <ProjectReference Include="..\Borea.Core\Borea.Core.csproj" />
+    <ProjectReference Include="..\Borea.Preview\Borea.Preview.csproj" />
   </ItemGroup>
 
   <!-- The App runs the command line itself, so the host files of the referenced borea program stay out.

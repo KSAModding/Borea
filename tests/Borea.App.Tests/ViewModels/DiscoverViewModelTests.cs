@@ -684,6 +684,30 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task Remove_WaitsForTheLoadOfAPreviewThatClosed()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        var (service, held) = await VehiclePreviewViewModelTests.OpenRoverWithHeldLoadAsync(viewModel);
+        viewModel.SetMainWindowDiscover();
+        viewModel.ShowDiscoverModsCommand.Execute(null);
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        afc.BeginRemoveCommand.Execute(null);
+
+        var remove = afc.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.False(remove.IsCompleted);
+
+        held.SetResult(service.Ready(new FakeAssets()));
+        await remove;
+
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
     public async Task Remove_FromDiscover_StaysOnDiscover()
     {
         using var harness = await ViewModelHarness.CreateAsync();

@@ -3300,4 +3300,148 @@
   <data name="SettingsLinksLabel" xml:space="preserve">
     <value>Charts</value>
   </data>
+  <data name="PreviewPanelName" xml:space="preserve">
+    <value>Spyglass view o' the vessel</value>
+  </data>
+  <data name="PreviewShow" xml:space="preserve">
+    <value>Raise the spyglass</value>
+  </data>
+  <data name="PreviewShowSizeFormat" xml:space="preserve">
+    <value>Raise the spyglass ({0})</value>
+  </data>
+  <data name="PreviewIdle" xml:space="preserve">
+    <value>Borea hauls in only the vessel chart fer a look, an' stows nothin'.</value>
+  </data>
+  <data name="PreviewNoGameFolder" xml:space="preserve">
+    <value>Mark yer KSA harbor in the riggin' to see this vessel in 3D.</value>
+  </data>
+  <data name="PreviewGameFolderInvalid" xml:space="preserve">
+    <value>That harbor be no KSA port, so Borea has no timbers to draw this vessel.</value>
+  </data>
+  <data name="PreviewVehicleDamaged" xml:space="preserve">
+    <value>The vessel chart be torn, so there be no spyglass view.</value>
+  </data>
+  <data name="PreviewFailedFormat" xml:space="preserve">
+    <value>The spyglass cracked: {0}</value>
+  </data>
+  <data name="PreviewCancelled" xml:space="preserve">
+    <value>Ye lowered the spyglass.</value>
+  </data>
+  <data name="PreviewStageFetchingVehicle" xml:space="preserve">
+    <value>Haulin' in the vessel chart</value>
+  </data>
+  <data name="PreviewStageReadingParts" xml:space="preserve">
+    <value>Countin' the timbers</value>
+  </data>
+  <data name="PreviewStageFetchingMods" xml:space="preserve">
+    <value>Haulin' in the missin' timbers</value>
+  </data>
+  <data name="PreviewStageBuildingModel" xml:space="preserve">
+    <value>Buildin' the hull</value>
+  </data>
+  <data name="PreviewStageLoadingTextures" xml:space="preserve">
+    <value>Paintin' the hull</value>
+  </data>
+  <data name="PreviewControlsTitle" xml:space="preserve">
+    <value>Workin' the spyglass</value>
+  </data>
+  <data name="PreviewControlTurn" xml:space="preserve">
+    <value>Bring her about</value>
+  </data>
+  <data name="PreviewControlZoom" xml:space="preserve">
+    <value>Work the glass</value>
+  </data>
+  <data name="PreviewControlMove" xml:space="preserve">
+    <value>Climb up and down the vessel</value>
+  </data>
+  <data name="PreviewControlFrame" xml:space="preserve">
+    <value>Show the whole vessel</value>
+  </data>
+  <data name="PreviewInputLeftRightDrag" xml:space="preserve">
+    <value>Port or starboard haul</value>
+  </data>
+  <data name="PreviewInputArrowKeys" xml:space="preserve">
+    <value>Compass keys</value>
+  </data>
+  <data name="PreviewInputMiddleDrag" xml:space="preserve">
+    <value>Middle haul</value>
+  </data>
+  <data name="PreviewInputShiftWheel" xml:space="preserve">
+    <value>Shift + wheel</value>
+  </data>
+  <data name="PreviewInputZoomKeys" xml:space="preserve">
+    <value>W / S</value>
+  </data>
+  <data name="PreviewInputWheel" xml:space="preserve">
+    <value>Wheel</value>
+  </data>
+  <data name="PreviewInputMoveKeys" xml:space="preserve">
+    <value>Q / E</value>
+  </data>
+  <data name="PreviewInputFrameKey" xml:space="preserve">
+    <value>F</value>
+  </data>
+  <data name="PreviewInputHome" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="PreviewInputDoubleClick" xml:space="preserve">
+    <value>Two quick clicks</value>
+  </data>
+  <data name="PreviewResetView" xml:space="preserve">
+    <value>Right the spyglass</value>
+  </data>
+  <data name="PreviewAttribution" xml:space="preserve">
+    <value>The timbers come from yer own KSA hold. Borea ships no game cargo.</value>
+  </data>
+  <data name="PreviewMissingModPartOneFormat" xml:space="preserve">
+    <value>1 timber comes from {0}, which be not aboard.</value>
+  </data>
+  <data name="PreviewMissingModPartsFormat" xml:space="preserve">
+    <value>{0} timbers come from {1}, which be not aboard.</value>
+  </data>
+  <data name="PreviewMissingModFormat" xml:space="preserve">
+    <value>Some timbers come from {0}, which be not aboard.</value>
+  </data>
+  <data name="PreviewLargeModFormat" xml:space="preserve">
+    <value>{0} be a heavy haul o' {1}.</value>
+  </data>
+  <data name="PreviewLoadParts" xml:space="preserve">
+    <value>Haul in the timbers</value>
+  </data>
+  <data name="PreviewLoadPartsSizeFormat" xml:space="preserve">
+    <value>Haul in the timbers ({0})</value>
+  </data>
+  <data name="PreviewNoticesOne" xml:space="preserve">
+    <value>1 note on this view</value>
+  </data>
+  <data name="PreviewNoticesFormat" xml:space="preserve">
+    <value>{0} notes on this view</value>
+  </data>
+  <data name="PreviewNoticeFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="PreviewNoticeDuplicateId" xml:space="preserve">
+    <value>Two timbers share this mark, the first one shows</value>
+  </data>
+  <data name="PreviewNoticePatchMod" xml:space="preserve">
+    <value>Patches o' this mod be not applied</value>
+  </data>
+  <data name="PreviewNoticeAssetFailed" xml:space="preserve">
+    <value>Borea could not read this scroll</value>
+  </data>
+  <data name="PreviewNoticeUnsupportedTexture" xml:space="preserve">
+    <value>This paint shows as one flat color</value>
+  </data>
+  <data name="PreviewNoticeBudget" xml:space="preserve">
+    <value>Left ashore to keep the view swift</value>
+  </data>
+  <data name="PreviewNoticeCycle" xml:space="preserve">
+    <value>A timber points back at itself</value>
+  </data>
+  <data name="PreviewNoticeMissingSource" xml:space="preserve">
+    <value>Not aboard</value>
+  </data>
+  <data name="PreviewNoticePlannerFallback" xml:space="preserve">
+    <value>The needed mods come from the must-have list o' the release</value>
+  </data>
 </root>

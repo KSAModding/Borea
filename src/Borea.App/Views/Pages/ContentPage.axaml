@@ -4,6 +4,8 @@
              xmlns:mods="using:Borea.Core.Mods"
              xmlns:stewardship="using:Borea.Core.Stewardship"
              xmlns:views="using:Borea.App.Views"
+             xmlns:preview="using:Borea.App.Views.Preview"
+             xmlns:loc="using:Borea.App.Localization"
              x:Class="Borea.App.Views.Pages.ContentPage"
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
@@ -288,6 +290,121 @@
                             <Button Classes="tab quiet" Classes.active="{Binding IsVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowContentVersionsCommand}" />
                         </StackPanel>
                     </Border>
+
+                    <!-- the 3D preview of a vehicle (RFC 0085), drawn from the parts of the own KSA install of the player. Only a vehicle page has one, so the content is null on any other page -->
+                    <ContentControl Margin="0,16,0,0" Content="{Binding VehiclePreview}" IsVisible="{Binding IsDescriptionTab}">
+                        <ContentControl.ContentTemplate>
+                            <DataTemplate x:DataType="vm:VehiclePreviewViewModel">
+                                <StackPanel Spacing="8">
+                                    <Border Classes="card" Padding="0" views:RoundedClip.IsEnabled="True">
+                                        <views:AspectRatioPanel>
+                                            <preview:VehiclePreviewView Scene="{Binding Scene}" ResetCount="{Binding ResetCount}" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
+                                            <!-- before there is a scene: what the preview needs, and the click that starts it -->
+                                            <StackPanel Spacing="12" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasScene}">
+                                                <TextBlock Classes="body-md secondary" Text="{Binding StatusText}" TextWrapping="Wrap" TextAlignment="Center" IsVisible="{Binding StatusText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                <WrapPanel ItemSpacing="8" LineSpacing="8" HorizontalAlignment="Center">
+                                                    <Button Classes="text primary" Content="{Binding ShowText}" Command="{Binding ShowCommand}" IsVisible="{Binding CanShow}" />
+                                                    <Button Classes="link" Command="{Binding OpenSettingsCommand}" IsVisible="{Binding IsNoGameFolder}">
+                                                        <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.NavigationSettings}" />
+                                                    </Button>
+                                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                            <Button Classes="text" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" IsVisible="{Binding HasScene}" />
+                                            <!-- the camera controls, in a flyout so that they never cover the scene until the player asks for them -->
+                                            <Button Classes="info" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding HasScene}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}">
+                                                <Button.Flyout>
+                                                    <Flyout Placement="BottomEdgeAlignedLeft">
+                                                        <!-- one column with a fixed largest width, so the chips wrap inside the scroll viewer of the flyout instead of making it scroll sideways -->
+                                                        <StackPanel Spacing="10" MaxWidth="260" DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization}" x:DataType="loc:LocalizationService">
+                                                            <TextBlock Classes="heading-sm" Text="{Binding PreviewControlsTitle}" />
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="body-sm" Text="{Binding PreviewControlTurn}" />
+                                                                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputLeftRightDrag}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputArrowKeys}" /></Border>
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="body-sm" Text="{Binding PreviewControlZoom}" />
+                                                                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputMiddleDrag}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputShiftWheel}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputZoomKeys}" /></Border>
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="body-sm" Text="{Binding PreviewControlMove}" />
+                                                                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputWheel}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputMoveKeys}" /></Border>
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="body-sm" Text="{Binding PreviewControlFrame}" />
+                                                                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputFrameKey}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputHome}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputDoubleClick}" /></Border>
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                            <!-- over a shown scene: the stage while the textures or the mods load, or why a later step stopped -->
+                                            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="12,4" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+                                                <Border.IsVisible>
+                                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                        <Binding Path="HasScene" />
+                                                        <Binding Path="StatusText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                                    </MultiBinding>
+                                                </Border.IsVisible>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Classes="body-sm secondary" Text="{Binding StatusText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </views:AspectRatioPanel>
+                                    </Border>
+                                    <!-- the mods the vehicle needs that are not on this computer, and the click that loads their parts -->
+                                    <Border Classes="card" Padding="16,12" IsVisible="{Binding HasMissingMods}">
+                                        <StackPanel Spacing="8">
+                                            <ItemsControl ItemsSource="{Binding MissingModLines}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Spacing="6" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:PreviewMissingModLine">
+                                                        <StackPanel Spacing="2">
+                                                            <TextBlock Classes="body-sm" Text="{Binding Text}" TextWrapping="Wrap" />
+                                                            <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding Warning}" TextWrapping="Wrap" IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <Button Classes="text primary" HorizontalAlignment="Left" Content="{Binding FetchModsText}" Command="{Binding FetchModsCommand}" IsVisible="{Binding CanFetchMods}" />
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Classes="body-sm muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewAttribution}" TextWrapping="Wrap" />
+                                    <StackPanel Spacing="4" IsVisible="{Binding HasNotices}">
+                                        <Button Classes="link" HorizontalAlignment="Left" Command="{Binding ToggleNoticesCommand}">
+                                            <TextBlock Classes="action-md" Text="{Binding NoticesText}" />
+                                        </Button>
+                                        <ItemsControl ItemsSource="{Binding Notices}" IsVisible="{Binding IsNoticesExpanded}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="x:String">
+                                                    <TextBlock Classes="body-sm secondary" Text="{Binding}" TextWrapping="Wrap" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ContentControl.ContentTemplate>
+                    </ContentControl>
 
                     <!-- c/block-text: the CommonMark description, after the steps before play and before the steps for a removal -->
                     <Border Classes="card" Padding="36,32" Margin="0,16,0,0" IsVisible="{Binding IsDescriptionTab}">

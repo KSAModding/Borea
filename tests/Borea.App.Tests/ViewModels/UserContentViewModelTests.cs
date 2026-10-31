@@ -602,14 +602,20 @@ public sealed class UserContentViewModelTests
     }
 
     /// <summary>The vehicle Example Rover with releases 1.0.0 and 1.1.0, served, with 42 downloads.</summary>
-    internal static Task<ViewModelHarness> VehicleHarnessAsync(Func<string, string>? editSnapshot = null, string dependencies = "")
+    internal static Task<ViewModelHarness> VehicleHarnessAsync(
+        Func<string, string>? editSnapshot = null,
+        string dependencies = "",
+        Func<Borea.Composition.BoreaServices, Task>? seed = null,
+        Func<Borea.Core.Planning.IInstallPlanner, Borea.Core.Planning.IInstallPlanner>? wrapInstallPlanner = null)
     {
         var rover = RoverArchive();
         var entry = EntryNeeding("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, dependencies, ["1.0.0", "1.1.0"])
             .Replace("\"id\": \"ExampleRover\",", "\"id\": \"ExampleRover\", \"downloads\": { \"total\": 42, \"hosts\": { \"github\": 42 } },", StringComparison.Ordinal);
         return ViewModelHarness.CreateAsync(
+            seed: seed,
             respond: request => request.RequestUri?.AbsoluteUri == RoverUrl ? ArchiveResponse(rover) : null,
             editSnapshot: editSnapshot,
+            wrapInstallPlanner: wrapInstallPlanner,
             typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, entry));
     }
 

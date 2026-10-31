@@ -49,7 +49,14 @@ public partial class MainViewModel
 
     partial void OnCurrentWindowInstanceChanged(bool value) => OnPageShown(value);
 
-    partial void OnCurrentWindowContentChanged(bool value) => OnPageShown(value);
+    partial void OnCurrentWindowContentChanged(bool value)
+    {
+        OnPageShown(value);
+
+        // every way off the content page ends here, so the preview stops and closes its archives
+        if (!value)
+            ClearVehiclePreview();
+    }
 
     partial void OnCurrentWindowPackChanged(bool value) => OnPageShown(value);
 

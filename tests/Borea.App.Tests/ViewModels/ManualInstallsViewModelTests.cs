@@ -259,6 +259,33 @@ public sealed class ManualInstallsViewModelTests
     }
 
     [Fact]
+    public async Task Replace_WaitsForTheLoadOfAPreviewThatClosed_BeforeTheFolderMoves()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var folder = WriteForeignMod(harness, instance, "KSArmory");
+        var (service, held) = await VehiclePreviewViewModelTests.OpenRoverWithHeldLoadAsync(viewModel);
+        await OpenAsync(harness, "Main");
+        var row = viewModel.ManualInstallItems.Single();
+        await row.BeginReplaceCommand.ExecuteAsync(null);
+        await row.ConfirmReplaceCommand.ExecuteAsync(null);
+
+        var install = row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.True(File.Exists(Path.Combine(folder, "mod.toml")));
+        Assert.Empty(RecoveryFolders(harness, instance));
+        Assert.False(install.IsCompleted);
+
+        held.SetResult(service.Ready(new FakeAssets()));
+        await install;
+
+        // the download of the test fails, so the folder is back
+        Assert.True(File.Exists(Path.Combine(folder, "mod.toml")));
+        Assert.Empty(RecoveryFolders(harness, instance));
+    }
+
+    [Fact]
     public async Task Replace_PlanHasAConflict_KeepsTheFolder()
     {
         using var harness = await ViewModelHarness.CreateAsync();

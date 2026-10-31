@@ -35,6 +35,12 @@ public interface IGamePathProvider
     string GetGamePatchNotesFolder();
 
     /// <summary>
+    /// Folder of the vehicle preview cache, with the archives it fetched before an install and its still images.
+    /// The folder name holds the format version, so a Borea with another format never reads these files.
+    /// </summary>
+    string GetPreviewCacheFolder();
+
+    /// <summary>
     /// Root of all Borea instance storage
     /// </summary>
     string GetInstancesRoot();

@@ -2747,6 +2747,109 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDownloadSize => Resources.ContentDownloadSize;
 
+    public string PreviewPanelName => Resources.PreviewPanelName;
+
+    public string PreviewControlsTitle => Resources.PreviewControlsTitle;
+
+    public string PreviewControlTurn => Resources.PreviewControlTurn;
+
+    public string PreviewControlZoom => Resources.PreviewControlZoom;
+
+    public string PreviewControlMove => Resources.PreviewControlMove;
+
+    public string PreviewControlFrame => Resources.PreviewControlFrame;
+
+    public string PreviewInputLeftRightDrag => Resources.PreviewInputLeftRightDrag;
+
+    public string PreviewInputArrowKeys => Resources.PreviewInputArrowKeys;
+
+    public string PreviewInputMiddleDrag => Resources.PreviewInputMiddleDrag;
+
+    public string PreviewInputShiftWheel => Resources.PreviewInputShiftWheel;
+
+    public string PreviewInputZoomKeys => Resources.PreviewInputZoomKeys;
+
+    public string PreviewInputWheel => Resources.PreviewInputWheel;
+
+    public string PreviewInputMoveKeys => Resources.PreviewInputMoveKeys;
+
+    public string PreviewInputFrameKey => Resources.PreviewInputFrameKey;
+
+    public string PreviewInputHome => Resources.PreviewInputHome;
+
+    public string PreviewInputDoubleClick => Resources.PreviewInputDoubleClick;
+
+    public string PreviewShow => Resources.PreviewShow;
+
+    public string FormatPreviewShowSize(string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewShowSizeFormat, size);
+
+    public string PreviewIdle => Resources.PreviewIdle;
+
+    public string PreviewNoGameFolder => Resources.PreviewNoGameFolder;
+
+    public string PreviewGameFolderInvalid => Resources.PreviewGameFolderInvalid;
+
+    public string PreviewVehicleDamaged => Resources.PreviewVehicleDamaged;
+
+    public string FormatPreviewFailed(string message)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewFailedFormat, message);
+
+    public string PreviewCancelled => Resources.PreviewCancelled;
+
+    public string PreviewStageFetchingVehicle => Resources.PreviewStageFetchingVehicle;
+
+    public string PreviewStageReadingParts => Resources.PreviewStageReadingParts;
+
+    public string PreviewStageFetchingMods => Resources.PreviewStageFetchingMods;
+
+    public string PreviewStageBuildingModel => Resources.PreviewStageBuildingModel;
+
+    public string PreviewStageLoadingTextures => Resources.PreviewStageLoadingTextures;
+
+    public string PreviewResetView => Resources.PreviewResetView;
+
+    public string PreviewAttribution => Resources.PreviewAttribution;
+
+    /// <param name="mod">The mod Id and its version, such as "Wings 1.0.0".</param>
+    public string FormatPreviewMissingModParts(int count, string mod)
+        => count == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.PreviewMissingModPartOneFormat, mod)
+            : string.Format(CultureInfo.CurrentCulture, Resources.PreviewMissingModPartsFormat, count, mod);
+
+    public string FormatPreviewMissingMod(string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewMissingModFormat, mod);
+
+    public string FormatPreviewLargeMod(string mod, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewLargeModFormat, mod, size);
+
+    public string PreviewLoadParts => Resources.PreviewLoadParts;
+
+    public string FormatPreviewLoadPartsSize(string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewLoadPartsSizeFormat, size);
+
+    public string FormatPreviewNotices(int count)
+        => FormatCount(count, Resources.PreviewNoticesOne, Resources.PreviewNoticesFormat);
+
+    public string FormatPreviewNotice(string kind, string subject)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewNoticeFormat, kind, subject);
+
+    public string PreviewNoticeDuplicateId => Resources.PreviewNoticeDuplicateId;
+
+    public string PreviewNoticePatchMod => Resources.PreviewNoticePatchMod;
+
+    public string PreviewNoticeAssetFailed => Resources.PreviewNoticeAssetFailed;
+
+    public string PreviewNoticeUnsupportedTexture => Resources.PreviewNoticeUnsupportedTexture;
+
+    public string PreviewNoticeBudget => Resources.PreviewNoticeBudget;
+
+    public string PreviewNoticeCycle => Resources.PreviewNoticeCycle;
+
+    public string PreviewNoticeMissingSource => Resources.PreviewNoticeMissingSource;
+
+    public string PreviewNoticePlannerFallback => Resources.PreviewNoticePlannerFallback;
+
     public string ContentSizeHeader => Resources.ContentSizeHeader;
 
     public string ContentDownloadsHeader => Resources.ContentDownloadsHeader;

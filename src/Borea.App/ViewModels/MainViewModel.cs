@@ -549,6 +549,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
+        RefreshVehiclePreviewWhenTargetChanged();
         OnPropertyChanged(nameof(ContentShareHostText));
 
         // the chips follow the build of the active instance, so they are checked again only when that build changes
@@ -776,10 +777,13 @@ public partial class MainViewModel : ViewModelBase
         return DeleteInstanceAsync(item.InstanceId);
     }
 
-    private Task DeleteInstanceAsync(Guid instanceId)
+    private async Task DeleteInstanceAsync(Guid instanceId)
     {
         var name = InstanceName(instanceId);
-        return RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId), () => Localization.FormatToastDeleteFailed(name));
+
+        // a preview that closed can still read the mods of this instance
+        await WhenVehiclePreviewReadsEndedAsync();
+        await RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId), () => Localization.FormatToastDeleteFailed(name));
     }
 
     private string InstanceName(Guid instanceId) => Instances.FirstOrDefault(instance => instance.InstanceId == instanceId)?.Name ?? instanceId.ToString();
@@ -1004,6 +1008,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var category in CategoryOptions)
             category.RefreshText();
         RefreshContentGroups();
+        VehiclePreview?.RefreshText();
         RefreshInstanceLoader();
         RefreshLoaderSettingText();
         RefreshModListText();

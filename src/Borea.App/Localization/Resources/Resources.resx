@@ -5358,4 +5358,148 @@
   <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
     <value>Created {0} without the preset</value>
   </data>
+  <data name="PreviewPanelName" xml:space="preserve">
+    <value>3D preview of the vehicle</value>
+  </data>
+  <data name="PreviewShow" xml:space="preserve">
+    <value>Show 3D preview</value>
+  </data>
+  <data name="PreviewShowSizeFormat" xml:space="preserve">
+    <value>Show 3D preview ({0})</value>
+  </data>
+  <data name="PreviewIdle" xml:space="preserve">
+    <value>Borea downloads only the vehicle file for the preview and installs nothing.</value>
+  </data>
+  <data name="PreviewNoGameFolder" xml:space="preserve">
+    <value>Set the KSA game folder in the settings to see this vehicle in 3D.</value>
+  </data>
+  <data name="PreviewGameFolderInvalid" xml:space="preserve">
+    <value>The game folder in the settings is not a KSA install, so Borea has no parts to draw this vehicle with.</value>
+  </data>
+  <data name="PreviewVehicleDamaged" xml:space="preserve">
+    <value>Borea cannot read the vehicle file, so it cannot show a preview.</value>
+  </data>
+  <data name="PreviewFailedFormat" xml:space="preserve">
+    <value>The preview stopped with an error: {0}</value>
+  </data>
+  <data name="PreviewCancelled" xml:space="preserve">
+    <value>The preview was stopped.</value>
+  </data>
+  <data name="PreviewStageFetchingVehicle" xml:space="preserve">
+    <value>Downloading the vehicle file</value>
+  </data>
+  <data name="PreviewStageReadingParts" xml:space="preserve">
+    <value>Reading the parts</value>
+  </data>
+  <data name="PreviewStageFetchingMods" xml:space="preserve">
+    <value>Downloading the parts of the missing mods</value>
+  </data>
+  <data name="PreviewStageBuildingModel" xml:space="preserve">
+    <value>Building the model</value>
+  </data>
+  <data name="PreviewStageLoadingTextures" xml:space="preserve">
+    <value>Loading the textures</value>
+  </data>
+  <data name="PreviewControlsTitle" xml:space="preserve">
+    <value>Controls</value>
+  </data>
+  <data name="PreviewControlTurn" xml:space="preserve">
+    <value>Turn the view</value>
+  </data>
+  <data name="PreviewControlZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="PreviewControlMove" xml:space="preserve">
+    <value>Move up and down the vehicle</value>
+  </data>
+  <data name="PreviewControlFrame" xml:space="preserve">
+    <value>Show the whole vehicle</value>
+  </data>
+  <data name="PreviewInputLeftRightDrag" xml:space="preserve">
+    <value>Left or right drag</value>
+  </data>
+  <data name="PreviewInputArrowKeys" xml:space="preserve">
+    <value>Arrow keys</value>
+  </data>
+  <data name="PreviewInputMiddleDrag" xml:space="preserve">
+    <value>Middle drag</value>
+  </data>
+  <data name="PreviewInputShiftWheel" xml:space="preserve">
+    <value>Shift + wheel</value>
+  </data>
+  <data name="PreviewInputZoomKeys" xml:space="preserve">
+    <value>W / S</value>
+  </data>
+  <data name="PreviewInputWheel" xml:space="preserve">
+    <value>Mouse wheel</value>
+  </data>
+  <data name="PreviewInputMoveKeys" xml:space="preserve">
+    <value>Q / E</value>
+  </data>
+  <data name="PreviewInputFrameKey" xml:space="preserve">
+    <value>F</value>
+  </data>
+  <data name="PreviewInputHome" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="PreviewInputDoubleClick" xml:space="preserve">
+    <value>Double click</value>
+  </data>
+  <data name="PreviewResetView" xml:space="preserve">
+    <value>Reset view</value>
+  </data>
+  <data name="PreviewAttribution" xml:space="preserve">
+    <value>Parts are drawn from your own KSA install. Borea does not ship game files.</value>
+  </data>
+  <data name="PreviewMissingModPartOneFormat" xml:space="preserve">
+    <value>1 part comes from {0}, which is not on this computer.</value>
+  </data>
+  <data name="PreviewMissingModPartsFormat" xml:space="preserve">
+    <value>{0} parts come from {1}, which is not on this computer.</value>
+  </data>
+  <data name="PreviewMissingModFormat" xml:space="preserve">
+    <value>Some parts come from {0}, which is not on this computer.</value>
+  </data>
+  <data name="PreviewLargeModFormat" xml:space="preserve">
+    <value>{0} is a large download of {1}.</value>
+  </data>
+  <data name="PreviewLoadParts" xml:space="preserve">
+    <value>Load parts</value>
+  </data>
+  <data name="PreviewLoadPartsSizeFormat" xml:space="preserve">
+    <value>Load parts ({0})</value>
+  </data>
+  <data name="PreviewNoticesOne" xml:space="preserve">
+    <value>1 note about this preview</value>
+  </data>
+  <data name="PreviewNoticesFormat" xml:space="preserve">
+    <value>{0} notes about this preview</value>
+  </data>
+  <data name="PreviewNoticeFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="PreviewNoticeDuplicateId" xml:space="preserve">
+    <value>Two items have this Id, and the first one shows</value>
+  </data>
+  <data name="PreviewNoticePatchMod" xml:space="preserve">
+    <value>Patches of this mod are not applied</value>
+  </data>
+  <data name="PreviewNoticeAssetFailed" xml:space="preserve">
+    <value>Borea could not read this file</value>
+  </data>
+  <data name="PreviewNoticeUnsupportedTexture" xml:space="preserve">
+    <value>This texture format shows as a flat color</value>
+  </data>
+  <data name="PreviewNoticeBudget" xml:space="preserve">
+    <value>Left out to keep the preview fast</value>
+  </data>
+  <data name="PreviewNoticeCycle" xml:space="preserve">
+    <value>A part refers back to itself or nests too deep</value>
+  </data>
+  <data name="PreviewNoticeMissingSource" xml:space="preserve">
+    <value>Not on this computer</value>
+  </data>
+  <data name="PreviewNoticePlannerFallback" xml:space="preserve">
+    <value>The needed mods come from the required list of the release</value>
+  </data>
 </root>

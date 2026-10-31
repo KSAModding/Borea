@@ -5349,6 +5349,150 @@
   <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
     <value>{0} wurde ohne die Vorlage erstellt</value>
   </data>
+  <data name="PreviewPanelName" xml:space="preserve">
+    <value>3D-Vorschau des Fahrzeugs</value>
+  </data>
+  <data name="PreviewShow" xml:space="preserve">
+    <value>3D-Vorschau zeigen</value>
+  </data>
+  <data name="PreviewShowSizeFormat" xml:space="preserve">
+    <value>3D-Vorschau zeigen ({0})</value>
+  </data>
+  <data name="PreviewIdle" xml:space="preserve">
+    <value>Borea lädt für die Vorschau nur die Fahrzeugdatei herunter und installiert nichts.</value>
+  </data>
+  <data name="PreviewNoGameFolder" xml:space="preserve">
+    <value>Lege den KSA-Spielordner in den Einstellungen fest, um dieses Fahrzeug in 3D zu sehen.</value>
+  </data>
+  <data name="PreviewGameFolderInvalid" xml:space="preserve">
+    <value>Der Spielordner in den Einstellungen ist keine KSA-Installation, darum hat Borea keine Teile, um dieses Fahrzeug zu zeichnen.</value>
+  </data>
+  <data name="PreviewVehicleDamaged" xml:space="preserve">
+    <value>Borea kann die Fahrzeugdatei nicht lesen und darum keine Vorschau zeigen.</value>
+  </data>
+  <data name="PreviewFailedFormat" xml:space="preserve">
+    <value>Die Vorschau ist mit einem Fehler abgebrochen: {0}</value>
+  </data>
+  <data name="PreviewCancelled" xml:space="preserve">
+    <value>Die Vorschau wurde abgebrochen.</value>
+  </data>
+  <data name="PreviewStageFetchingVehicle" xml:space="preserve">
+    <value>Fahrzeugdatei wird heruntergeladen</value>
+  </data>
+  <data name="PreviewStageReadingParts" xml:space="preserve">
+    <value>Teile werden gelesen</value>
+  </data>
+  <data name="PreviewStageFetchingMods" xml:space="preserve">
+    <value>Teile der fehlenden Mods werden heruntergeladen</value>
+  </data>
+  <data name="PreviewStageBuildingModel" xml:space="preserve">
+    <value>Modell wird gebaut</value>
+  </data>
+  <data name="PreviewStageLoadingTextures" xml:space="preserve">
+    <value>Texturen werden geladen</value>
+  </data>
+  <data name="PreviewControlsTitle" xml:space="preserve">
+    <value>Steuerung</value>
+  </data>
+  <data name="PreviewControlTurn" xml:space="preserve">
+    <value>Ansicht drehen</value>
+  </data>
+  <data name="PreviewControlZoom" xml:space="preserve">
+    <value>Zoomen</value>
+  </data>
+  <data name="PreviewControlMove" xml:space="preserve">
+    <value>Am Fahrzeug hoch und runter</value>
+  </data>
+  <data name="PreviewControlFrame" xml:space="preserve">
+    <value>Ganzes Fahrzeug zeigen</value>
+  </data>
+  <data name="PreviewInputLeftRightDrag" xml:space="preserve">
+    <value>Links oder rechts ziehen</value>
+  </data>
+  <data name="PreviewInputArrowKeys" xml:space="preserve">
+    <value>Pfeiltasten</value>
+  </data>
+  <data name="PreviewInputMiddleDrag" xml:space="preserve">
+    <value>Mitte ziehen</value>
+  </data>
+  <data name="PreviewInputShiftWheel" xml:space="preserve">
+    <value>Umschalt + Mausrad</value>
+  </data>
+  <data name="PreviewInputZoomKeys" xml:space="preserve">
+    <value>W / S</value>
+  </data>
+  <data name="PreviewInputWheel" xml:space="preserve">
+    <value>Mausrad</value>
+  </data>
+  <data name="PreviewInputMoveKeys" xml:space="preserve">
+    <value>Q / E</value>
+  </data>
+  <data name="PreviewInputFrameKey" xml:space="preserve">
+    <value>F</value>
+  </data>
+  <data name="PreviewInputHome" xml:space="preserve">
+    <value>Pos1</value>
+  </data>
+  <data name="PreviewInputDoubleClick" xml:space="preserve">
+    <value>Doppelklick</value>
+  </data>
+  <data name="PreviewResetView" xml:space="preserve">
+    <value>Ansicht zurücksetzen</value>
+  </data>
+  <data name="PreviewAttribution" xml:space="preserve">
+    <value>Die Teile kommen aus deiner eigenen KSA-Installation. Borea liefert keine Spieldateien mit.</value>
+  </data>
+  <data name="PreviewMissingModPartOneFormat" xml:space="preserve">
+    <value>1 Teil kommt aus {0}, das nicht auf diesem Computer ist.</value>
+  </data>
+  <data name="PreviewMissingModPartsFormat" xml:space="preserve">
+    <value>{0} Teile kommen aus {1}, das nicht auf diesem Computer ist.</value>
+  </data>
+  <data name="PreviewMissingModFormat" xml:space="preserve">
+    <value>Einige Teile kommen aus {0}, das nicht auf diesem Computer ist.</value>
+  </data>
+  <data name="PreviewLargeModFormat" xml:space="preserve">
+    <value>{0} ist ein großer Download mit {1}.</value>
+  </data>
+  <data name="PreviewLoadParts" xml:space="preserve">
+    <value>Teile laden</value>
+  </data>
+  <data name="PreviewLoadPartsSizeFormat" xml:space="preserve">
+    <value>Teile laden ({0})</value>
+  </data>
+  <data name="PreviewNoticesOne" xml:space="preserve">
+    <value>1 Hinweis zu dieser Vorschau</value>
+  </data>
+  <data name="PreviewNoticesFormat" xml:space="preserve">
+    <value>{0} Hinweise zu dieser Vorschau</value>
+  </data>
+  <data name="PreviewNoticeFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="PreviewNoticeDuplicateId" xml:space="preserve">
+    <value>Zwei Einträge haben diese Id, der erste wird gezeigt</value>
+  </data>
+  <data name="PreviewNoticePatchMod" xml:space="preserve">
+    <value>Patches dieser Mod werden nicht angewendet</value>
+  </data>
+  <data name="PreviewNoticeAssetFailed" xml:space="preserve">
+    <value>Borea konnte diese Datei nicht lesen</value>
+  </data>
+  <data name="PreviewNoticeUnsupportedTexture" xml:space="preserve">
+    <value>Dieses Texturformat wird als flache Farbe gezeigt</value>
+  </data>
+  <data name="PreviewNoticeBudget" xml:space="preserve">
+    <value>Ausgelassen, damit die Vorschau schnell bleibt</value>
+  </data>
+  <data name="PreviewNoticeCycle" xml:space="preserve">
+    <value>Ein Teil verweist auf sich selbst oder ist zu tief verschachtelt</value>
+  </data>
+  <data name="PreviewNoticeMissingSource" xml:space="preserve">
+    <value>Nicht auf diesem Computer</value>
+  </data>
+  <data name="PreviewNoticePlannerFallback" xml:space="preserve">
+    <value>Die nötigen Mods kommen aus der Pflichtliste des Release</value>
+  </data>
   <data name="AboutTranslators" xml:space="preserve">
     <value>Übersetzer</value>
   </data>
