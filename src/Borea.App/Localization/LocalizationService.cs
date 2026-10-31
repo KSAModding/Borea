@@ -2983,6 +2983,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ModalGameBuildSettings => Resources.ModalGameBuildSettings;
 
+    public string ModalGameBuildKept => Resources.ModalGameBuildKept;
+
+    public string ModalGameBuildHint => Resources.ModalGameBuildHint;
+
     public string SettingsPresetsTitle => Resources.SettingsPresetsTitle;
 
     public string SettingsPresetsHint => Resources.SettingsPresetsHint;

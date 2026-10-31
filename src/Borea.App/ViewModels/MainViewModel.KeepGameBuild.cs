@@ -334,7 +334,8 @@ public partial class MainViewModel
     /// <summary>Starts a read of the kept builds without awaiting it. The picker starts at the game folder of the settings again.</summary>
     private void StartGameBuildChoicesLoad()
     {
-        var settings = new GameBuildChoice(null, Localization.ModalGameBuildSettings);
+        var settings = new GameBuildChoice(null, Localization.ModalGameBuildSettings,
+            InstalledVersionText is { } installed ? Localization.FormatInstanceGameBuild(installed) : null);
         GameBuildChoices.Clear();
         GameBuildChoices.Add(settings);
         SelectedGameBuildChoice = settings;
@@ -362,7 +363,7 @@ public partial class MainViewModel
             return;
 
         foreach (var build in kept)
-            GameBuildChoices.Add(new GameBuildChoice(build, Localization.FormatInstanceGameBuild(build.ToString())));
+            GameBuildChoices.Add(new GameBuildChoice(build, Localization.ModalGameBuildKept, Localization.FormatInstanceGameBuild(build.ToString())));
 
         OnPropertyChanged(nameof(CanPickGameBuild));
     }
