@@ -4,12 +4,12 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.InstanceNameModal"
              x:DataType="vm:MainViewModel">
-    <!-- modal: new instance, rename instance, and rename save or vehicle -->
+    <!-- modal: new instance, rename instance, rename save or vehicle, and a new name for a pinned vehicle or save of a pack -->
     <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
             <StackPanel>
                 <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
-                    <TextBlock Classes="heading-lg" Text="{Binding NameModalTitle}" VerticalAlignment="Center" />
+                    <TextBlock Classes="heading-lg" Text="{Binding NameModalTitle}" ToolTip.Tip="{Binding NameModalTitle}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CancelNameModalCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
                         <Path Classes="icon" Data="{StaticResource Icon.Close}" />
                     </Button>
@@ -22,7 +22,10 @@
                         <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedProfileModalUnchanged}" TextWrapping="Wrap" />
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Classes="body-md secondary" Text="{Binding Localization.GameSaveNameRules}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding RenamingGameSave, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <!-- why a pinned vehicle or save of a pack needs a new name -->
+                <TextBlock Classes="body-md" Text="{Binding NameModalExplanation}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding NameModalExplanation, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="body-md" Text="{Binding GameSaveRenameReason}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding GameSaveRenameReason, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="body-md secondary" Text="{Binding Localization.GameSaveNameRules}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding ShowsGameSaveNameRules}" />
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="36,32,24,32">
                     <!-- Instance Name -->
                     <StackPanel Grid.Row="0" Spacing="6">
@@ -65,6 +68,7 @@
                     </StackPanel>
                     <!-- Buttons -->
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,32,0,0">
+                        <Button Classes="text tall" Content="{Binding NameModalSkipText}" Command="{Binding CancelNameModalCommand}" VerticalAlignment="Center" IsVisible="{Binding NameModalSkipText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <Button Classes="cta" Command="{Binding ConfirmNameModalCommand}">
                             <TextBlock Classes="action-lg" Text="{Binding NameModalConfirmText}" VerticalAlignment="Center" />
                         </Button>

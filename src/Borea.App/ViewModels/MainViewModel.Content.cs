@@ -10,6 +10,7 @@ using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.Sharing;
 using Borea.Core.Stewardship;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -86,6 +87,7 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
+    [NotifyPropertyChangedFor(nameof(ContentShareHostText))]
     [NotifyPropertyChangedFor(nameof(HasContentTags))]
     [NotifyPropertyChangedFor(nameof(IsLoaderContent))]
     [NotifyPropertyChangedFor(nameof(HasContentDependenciesTab))]
@@ -115,6 +117,17 @@ public partial class MainViewModel
     public bool HasVersionDownloads => _contentReleases.Any(release => release.HasDownloads);
 
     public bool HasContentLinks => ContentLinks.Count > 0;
+
+    /// <summary>The share host of hosts.toml that the open listing names, whose page the links show.</summary>
+    private ShareHost? _contentShareHost;
+
+    /// <summary>The share host that the listing names under [releases] (RFC 0094), while hosts.toml does not register it, or null.</summary>
+    public string? ContentShareHostText => _contentShareHost is null && ContentShareHostKey(SelectedContent) is { } key
+        ? Localization.FormatContentSharedOn(key)
+        : null;
+
+    private static string? ContentShareHostKey(DiscoverItem? item) =>
+        item?.Listing.Releases?.Hosts.FirstOrDefault(host => host.Kind == ReleaseHostKind.Share)?.Host;
 
     /// <summary>The share page of the listing on the landing site, or null when it has none.</summary>
     public string? ContentShareUrl => SelectedContent is { } item ? ShareLinks.For(item.Listing) : null;
@@ -259,6 +272,7 @@ public partial class MainViewModel
         ApplyVersionFilter();
         VersionFilter = OptionFor(SavedReleaseChannel);
 
+        _contentShareHost = null;
         FillLinks(ContentLinks, item.Links);
         OnPropertyChanged(nameof(HasContentLinks));
 
@@ -299,16 +313,21 @@ public partial class MainViewModel
         try
         {
             // the catalog leaves out per-mod fields such as the description
-            var full = await _services.Mods.GetListingAsync(item.ModId);
+            var content = item.Type.IsVehicleOrSave();
+            var full = content ? await _services.UserContent.FindAsync(item.ModId) : await _services.Mods.GetListingAsync(item.ModId);
             if (full is not null)
             {
                 item.Update(full);
                 FillLinks(ContentLinks, item.Links);
                 OnPropertyChanged(nameof(HasContentLinks));
+                OnPropertyChanged(nameof(ContentShareHostText));
                 OnPropertyChanged(nameof(HasContentTags));
             }
 
-            var release = await _services.Mods.GetLatestReleaseAsync(item.ModId);
+            // a vehicle or save installs the newest release of the saved channel, as its Discover row does
+            var release = content
+                ? await _services.UserContent.GetLatestReleaseAsync(item.ModId, _services.Settings.ReleaseChannel)
+                : await _services.Mods.GetLatestReleaseAsync(item.ModId);
             if (ReferenceEquals(SelectedContent, item))
                 LatestVersion = release is null ? null : new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version));
         }
@@ -316,6 +335,35 @@ public partial class MainViewModel
         {
             ContentDetailError = exception.Message;
         }
+
+        await LinkShareHostAsync(item);
+    }
+
+    /// <summary>Links the page of the share host that the listing names, once hosts.toml registers that host. A failure only loses the link.</summary>
+    private async Task LinkShareHostAsync(DiscoverItem item)
+    {
+        if (_services is null || ContentShareHostKey(item) is not { } key)
+            return;
+
+        IReadOnlyList<ShareHost> hosts;
+        try
+        {
+            hosts = await _services.ShareHosts.GetAsync();
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException or TaskCanceledException)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(SelectedContent, item) || hosts.FirstOrDefault(host => host.Key == key) is not { } host)
+            return;
+
+        _contentShareHost = host;
+        var link = new ContentLink(Localization.FormatContentSharedOn(host.Name), host.Page.AbsoluteUri, "share-host");
+        if (!ContentLinks.Contains(link))
+            ContentLinks.Add(link);
+        OnPropertyChanged(nameof(HasContentLinks));
+        OnPropertyChanged(nameof(ContentShareHostText));
     }
 
     // the order and names of the detail panel in #8; unknown keys follow with a capital first letter
@@ -411,7 +459,8 @@ public partial class MainViewModel
         IsLoadingVersions = true;
         try
         {
-            var releases = (await _services.Mods.GetReleaseHistoryAsync(item.ModId)).Select(release => new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version))).ToList();
+            var history = item.Type.IsVehicleOrSave() ? await _services.UserContent.GetReleaseHistoryAsync(item.ModId) : await _services.Mods.GetReleaseHistoryAsync(item.ModId);
+            var releases = history.Select(release => new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version))).ToList();
 
             if (ReferenceEquals(SelectedContent, item))
             {
@@ -511,11 +560,19 @@ public partial class MainViewModel
     /// installed version go away with it.
     /// </summary>
     internal Task InstallVersionAsync(ModVersionMetadata release, VersionItem row)
-        => PlanInstallAsync(
-            row,
-            () => Task.FromResult<ModVersionMetadata?>(release),
-            release.Version,
-            confirm: row.ReplacedVersion is not null);
+    {
+        if (!release.Type.IsVehicleOrSave())
+            return PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), release.Version, confirm: row.ReplacedVersion is not null);
+
+        // an instance with a record of the listing updates it to this release
+        if (ActiveInstance is not { } instance)
+        {
+            ShowInstanceHintToast();
+            return Task.CompletedTask;
+        }
+
+        return PlanContentAsync(row, instance.InstanceId, release);
+    }
 }
 
 /// <summary>Where a content or pack page was opened from.</summary>
@@ -557,7 +614,7 @@ public sealed record ReleaseChangelog(string Title, string? Text, ContentLink? L
 /// <summary>
 /// One release of a listing (c/table-version-row in #8).
 /// </summary>
-public sealed partial class VersionItem : ObservableObject, IInstallRow
+public sealed partial class VersionItem : ObservableObject, IContentPlanRow
 {
     private readonly MainViewModel _owner;
     private readonly ModVersionMetadata _release;
@@ -670,6 +727,9 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
+    /// <summary>The vehicle or save install that waits for a confirmation, see <see cref="IContentPlanRow"/>.</summary>
+    public Borea.Core.UserContent.UserContentPlan? PendingContentPlan { get; set; }
+
     public bool IsConfirmingInstall => PendingPlan is not null || Choices is not null;
 
     public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan, ReplacedVersion);
@@ -682,10 +742,10 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     public IReadOnlyList<StepList> PlanSteps => _owner.InstallStepsOf(PendingPlan);
 
     /// <summary>
-    /// Mods install into an instance; a loader is set up from the settings. The installed version has nothing to add,
-    /// and a release whose download is gone can only come from a mirror.
+    /// Mods, vehicles and saves install into an instance; a loader is set up from the settings. The installed version
+    /// has nothing to add, and a release whose download is gone can only come from a mirror.
     /// </summary>
-    public bool CanInstall => _release.Type == ContentType.Mod && !IsInstalled && (_release.Download.UnavailableSince is null || _release.Download.Mirrors.Count > 0);
+    public bool CanInstall => (_release.Type == ContentType.Mod || _release.Type.IsVehicleOrSave()) && !IsInstalled && (_release.Download.UnavailableSince is null || _release.Download.Mirrors.Count > 0);
 
     /// <summary>Since when the download of the release is gone from its host, or null while it downloads.</summary>
     public string? GoneText => _release.Download.UnavailableSince is { } since ? _owner.Localization.FormatContentVersionGone(MainViewModel.DateText(since)) : null;

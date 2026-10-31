@@ -70,12 +70,12 @@ public sealed class LinkViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var requests = harness.Requests.Count;
+        var requests = harness.IndexDocumentRequests;
 
         await viewModel.OpenLinkAsync("borea://mod/OrbitTools");
 
         Assert.True(viewModel.CurrentWindowHome);
-        Assert.Equal(requests + 1, harness.Requests.Count);
+        Assert.Equal(requests + 1, harness.IndexDocumentRequests);
         var toast = Assert.Single(viewModel.Toasts.Items);
         Assert.True(toast.IsFailed);
         Assert.Equal(harness.Localization.FormatLinkNotInIndex("OrbitTools"), toast.Message);

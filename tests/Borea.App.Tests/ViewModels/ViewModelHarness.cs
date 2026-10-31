@@ -49,9 +49,15 @@ internal sealed class ViewModelHarness : IDisposable
     /// <summary>Every request the services sent.</summary>
     public ConcurrentQueue<Uri> Requests { get; } = new();
 
+    /// <summary>The requests for the main document of the index, without the type files next to it.</summary>
+    public int IndexDocumentRequests => Requests.Count(uri => uri.AbsoluteUri == "https://ksamodding.github.io/content-index-releases/v1/index.json");
+
     private Func<HttpRequestMessage, HttpResponseMessage?>? _respond;
 
     private Func<string, string>? _editSnapshot;
+
+    /// <summary>The vehicle and save files the index serves, by file name. A file that is not here answers 404.</summary>
+    private IReadOnlyDictionary<string, string>? _typeFiles;
 
     private Borea.Storage.Launch.IProcessStarter? _processStarter;
     private IGamePlatform? _gamePlatform;
@@ -76,6 +82,7 @@ internal sealed class ViewModelHarness : IDisposable
     private Borea.Core.Updates.IBoreaReleaseCheck? _releaseCheck;
     private Borea.Core.Updates.ISelfUpdater? _selfUpdater;
     private IContentImageSource? _images;
+    private Borea.Core.Sharing.IShareHostClient? _shareHostClient;
 
     public const string OfflineMessage = "The content index host is offline.";
 
@@ -129,10 +136,11 @@ internal sealed class ViewModelHarness : IDisposable
     /// <param name="loaderLauncher">Starts the game through a loader. Null starts it with <paramref name="processStarter"/>.</param>
     /// <param name="sharedProfileLauncher">Starts the game without a loader. Null starts it with <paramref name="processStarter"/>.</param>
     /// <param name="wrapInstallPlanner">Wraps the planner of every service graph, so that a test can watch the plans. Null plans as Borea does.</param>
+    /// <param name="shareHostClient">Signs in and uploads to a share host. Null builds one that sends through <paramref name="respond"/>.</param>
     /// <param name="wrapGameBuilds">Wraps the keeper of the game builds of every service graph, so that a test can hold its checks. Null keeps as Borea does.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, bool indexEtag = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true, string? sharedProfileRoot = null, IGitHubSession? gitHub = null, IListingPublisher? listingPublisher = null, Borea.Core.Updates.IBoreaReleaseCheck? releaseCheck = null, Borea.Core.Updates.ISelfUpdater? selfUpdater = null, Borea.Core.Stewardship.IIndexStatusEditor? indexStatusEditor = null, Borea.Core.Stewardship.IStewardQueue? stewardQueue = null, Borea.Core.Stewardship.IWatcherIssues? watcherIssues = null, Borea.Core.Stewardship.IPullRequestReviews? pullRequestReviews = null, Borea.Core.Stewardship.IPullRequestActions? pullRequestActions = null, Borea.Core.Stewardship.IIndexReports? indexReports = null, Borea.Core.Stewardship.IReportActions? reportActions = null, Borea.Core.Stewardship.IReleaseAmendments? releaseAmendments = null, IContentImageSource? images = null, IGamePlatform? gamePlatform = null, Borea.Core.Launch.ILauncher? loaderLauncher = null, Borea.Core.Launch.ISharedProfileLauncher? sharedProfileLauncher = null, Func<Borea.Core.Planning.IInstallPlanner, Borea.Core.Planning.IInstallPlanner>? wrapInstallPlanner = null, Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null)
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, bool indexEtag = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true, string? sharedProfileRoot = null, IGitHubSession? gitHub = null, IListingPublisher? listingPublisher = null, Borea.Core.Updates.IBoreaReleaseCheck? releaseCheck = null, Borea.Core.Updates.ISelfUpdater? selfUpdater = null, Borea.Core.Stewardship.IIndexStatusEditor? indexStatusEditor = null, Borea.Core.Stewardship.IStewardQueue? stewardQueue = null, Borea.Core.Stewardship.IWatcherIssues? watcherIssues = null, Borea.Core.Stewardship.IPullRequestReviews? pullRequestReviews = null, Borea.Core.Stewardship.IPullRequestActions? pullRequestActions = null, Borea.Core.Stewardship.IIndexReports? indexReports = null, Borea.Core.Stewardship.IReportActions? reportActions = null, Borea.Core.Stewardship.IReleaseAmendments? releaseAmendments = null, IContentImageSource? images = null, IGamePlatform? gamePlatform = null, Borea.Core.Launch.ILauncher? loaderLauncher = null, Borea.Core.Launch.ISharedProfileLauncher? sharedProfileLauncher = null, Func<Borea.Core.Planning.IInstallPlanner, Borea.Core.Planning.IInstallPlanner>? wrapInstallPlanner = null, IReadOnlyDictionary<string, string>? typeFiles = null, Borea.Core.Sharing.IShareHostClient? shareHostClient = null, Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null)
     {
-        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, IndexEtag = indexEtag, _processStarter = processStarter, _sharedProfileRoot = sharedProfileRoot, _gitHub = gitHub, _listingPublisher = listingPublisher, _releaseCheck = releaseCheck, _selfUpdater = selfUpdater, _indexStatusEditor = indexStatusEditor, _stewardQueue = stewardQueue, _watcherIssues = watcherIssues, _pullRequestReviews = pullRequestReviews, _pullRequestActions = pullRequestActions, _indexReports = indexReports, _reportActions = reportActions, _releaseAmendments = releaseAmendments, _images = images, _gamePlatform = gamePlatform, _loaderLauncher = loaderLauncher, _sharedProfileLauncher = sharedProfileLauncher, _wrapInstallPlanner = wrapInstallPlanner, _wrapGameBuilds = wrapGameBuilds };
+        var harness = new ViewModelHarness { _shareHostClient = shareHostClient, _respond = respond, _editSnapshot = editSnapshot, _typeFiles = typeFiles, IndexOffline = indexOffline, IndexEtag = indexEtag, _processStarter = processStarter, _sharedProfileRoot = sharedProfileRoot, _gitHub = gitHub, _listingPublisher = listingPublisher, _releaseCheck = releaseCheck, _selfUpdater = selfUpdater, _indexStatusEditor = indexStatusEditor, _stewardQueue = stewardQueue, _watcherIssues = watcherIssues, _pullRequestReviews = pullRequestReviews, _pullRequestActions = pullRequestActions, _indexReports = indexReports, _reportActions = reportActions, _releaseAmendments = releaseAmendments, _images = images, _gamePlatform = gamePlatform, _loaderLauncher = loaderLauncher, _sharedProfileLauncher = sharedProfileLauncher, _wrapInstallPlanner = wrapInstallPlanner, _wrapGameBuilds = wrapGameBuilds };
         Directory.CreateDirectory(harness.Root);
         candidates?.Invoke(harness);
         harness.Services = await harness.BuildServicesAsync();
@@ -186,6 +194,10 @@ internal sealed class ViewModelHarness : IDisposable
     public static Func<string, string> CuratedTags(params (string Tag, string Name)[] tags) =>
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
+    /// <summary>Adds the share hosts of <paramref name="hosts"/>, a JSON object by key as hosts.toml holds them, to the snapshot.</summary>
+    public static Func<string, string> ShareHosts(string hosts) =>
+        json => "{ \"hosts\": " + hosts + "," + json.TrimStart()[1..];
+
     /// <summary>When <see cref="MarkGone"/> says the download went from its host.</summary>
     public static readonly DateTimeOffset GoneSince = new(2026, 9, 23, 10, 24, 0, TimeSpan.Zero);
 
@@ -235,7 +247,7 @@ internal sealed class ViewModelHarness : IDisposable
     }
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: _images ?? Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => IsGameProcessRunning(), isOtherBoreaRunning: () => IsOtherBoreaRunning(), gitHub: _gitHub, listingPublisher: _listingPublisher, releaseCheck: _releaseCheck, selfUpdater: _selfUpdater, indexStatusEditor: _indexStatusEditor, stewardQueue: _stewardQueue, watcherIssues: _watcherIssues, pullRequestReviews: _pullRequestReviews, pullRequestActions: _pullRequestActions, indexReports: _indexReports, reportActions: _reportActions, releaseAmendments: _releaseAmendments, gamePlatform: _gamePlatform, loaderLauncher: _loaderLauncher, sharedProfileLauncher: _sharedProfileLauncher, wrapInstallPlanner: _wrapInstallPlanner, listingImageHandler: new IndexOnlyHandler(this), wrapGameBuilds: _wrapGameBuilds);
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: _images ?? Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => IsGameProcessRunning(), isOtherBoreaRunning: () => IsOtherBoreaRunning(), gitHub: _gitHub, listingPublisher: _listingPublisher, releaseCheck: _releaseCheck, selfUpdater: _selfUpdater, indexStatusEditor: _indexStatusEditor, stewardQueue: _stewardQueue, watcherIssues: _watcherIssues, pullRequestReviews: _pullRequestReviews, pullRequestActions: _pullRequestActions, indexReports: _indexReports, reportActions: _reportActions, releaseAmendments: _releaseAmendments, gamePlatform: _gamePlatform, loaderLauncher: _loaderLauncher, sharedProfileLauncher: _sharedProfileLauncher, wrapInstallPlanner: _wrapInstallPlanner, listingImageHandler: new IndexOnlyHandler(this), shareHostClient: _shareHostClient, wrapGameBuilds: _wrapGameBuilds);
 
     /// <summary>
     /// Completes when no background work of a view model of this harness is in
@@ -324,6 +336,7 @@ internal sealed class ViewModelHarness : IDisposable
             ("CrashChecked", viewModel.WhenCrashCheckedAsync()),
             ("PlaytimeLoaded", viewModel.WhenPlaytimeLoadedAsync()),
             ("InstanceSizesLoaded", viewModel.WhenInstanceSizesLoadedAsync()),
+            ("RecordedContentCompared", viewModel.WhenRecordedContentComparedAsync()),
             ("GameSettingsPresetsLoaded", viewModel.WhenGameSettingsPresetsLoadedAsync()),
             ("GameBuildChoicesLoaded", viewModel.WhenGameBuildChoicesLoadedAsync()),
             ("KeptGameBuildsLoaded", viewModel.WhenKeptGameBuildsLoadedAsync()),
@@ -387,6 +400,15 @@ internal sealed class ViewModelHarness : IDisposable
 
             if (request.RequestUri?.AbsoluteUri.StartsWith("https://ksamodding.github.io/content-index-releases/", StringComparison.Ordinal) != true)
                 return owner._respond?.Invoke(request) ?? throw new HttpRequestException($"No network in tests: {request.RequestUri}");
+
+            // The vehicle and save files answer 404 until the index publishes them, or a test serves them.
+            if (!request.RequestUri.AbsoluteUri.EndsWith("/index.json", StringComparison.Ordinal))
+            {
+                if (owner._typeFiles?.FirstOrDefault(file => request.RequestUri.AbsoluteUri.EndsWith("/" + file.Key, StringComparison.Ordinal)).Value is { } typeFile)
+                    return Served(typeFile, etag: null);
+
+                return owner._respond?.Invoke(request) ?? new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
 
             if (owner.IndexRequest is { } held)
                 await held();

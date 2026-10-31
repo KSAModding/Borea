@@ -10,6 +10,8 @@ public sealed class MetadataEnumMapperTests
     [InlineData(ContentType.Mod, "mod")]
     [InlineData(ContentType.ModPack, "modpack")]
     [InlineData(ContentType.ModLoader, "mod-loader")]
+    [InlineData(ContentType.Vehicle, "vehicle")]
+    [InlineData(ContentType.Save, "save")]
     [InlineData(ContentType.Unknown, "unknown")]
     public void ContentType_WritesTheFormatSpelling(ContentType type, string expected)
     {

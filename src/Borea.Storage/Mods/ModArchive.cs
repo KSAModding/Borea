@@ -20,12 +20,18 @@ internal static class ModArchive
     /// a mod.toml at the top level included, derives to the archive root, which
     /// is null.
     /// </summary>
-    public static string? DeriveRoot(string archivePath)
+    public static string? DeriveRoot(string archivePath) => DeriveRoot(archivePath, [ModFolders.DefinitionFileName]);
+
+    /// <summary>
+    /// The same rule for content whose root holds several files: the archive root when every marker is
+    /// at the top level, else the one top-level directory that holds every marker, else the archive root.
+    /// </summary>
+    public static string? DeriveRoot(string archivePath, IReadOnlyList<string> markers)
     {
         using var archive = ZipFile.OpenRead(archivePath);
         var names = archive.Entries.Select(entry => Normalize(entry.FullName)).ToList();
 
-        if (names.Contains(ModFolders.DefinitionFileName, StringComparer.Ordinal))
+        if (markers.All(marker => names.Contains(marker, StringComparer.Ordinal)))
             return null;
 
         string? single = null;
@@ -45,7 +51,7 @@ internal static class ModArchive
         if (single is null)
             return null;
 
-        return names.Contains($"{single}/{ModFolders.DefinitionFileName}", StringComparer.Ordinal) ? single : null;
+        return markers.All(marker => names.Contains($"{single}/{marker}", StringComparer.Ordinal)) ? single : null;
     }
 
     /// <summary>
@@ -53,7 +59,9 @@ internal static class ModArchive
     /// <paramref name="destination"/> with the root stripped, and returns how
     /// many files that was. A null root is the archive root. An entry whose
     /// path would land outside the destination fails the whole extraction,
-    /// because the archive is the author's bytes and not ours.
+    /// because the archive is the author's bytes and not ours. So does an
+    /// entry with a ':' below the root, because Windows writes notes.txt:x as
+    /// a hidden stream of notes.txt and Setup.exe::$DATA as Setup.exe.
     /// </summary>
     public static int Extract(string archivePath, string? root, string destination)
     {
@@ -74,6 +82,9 @@ internal static class ModArchive
             var relative = name[prefix.Length..];
             if (relative.Length == 0)
                 continue;
+
+            if (relative.Contains(':'))
+                throw new InvalidOperationException($"The archive entry '{entry.FullName}' has a ':' in its name, which Windows reads as a stream of another file.");
 
             var target = Path.GetFullPath(Path.Combine(destinationRoot, relative));
             if (!target.StartsWith(inside, StringComparison.Ordinal))

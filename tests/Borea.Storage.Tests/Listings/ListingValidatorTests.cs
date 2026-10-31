@@ -111,7 +111,7 @@ public sealed class ListingValidatorTests
 
         var errors = _validator.Validate(document, new ListingCheckContext(null)).Issues;
 
-        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "releases", "needs one of 'github' or 'spacedock'"), errors);
+        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "releases", "needs one of 'github' or 'spacedock' or a share host"), errors);
     }
 
     [Theory]
@@ -525,6 +525,107 @@ public sealed class ListingValidatorTests
         Assert.Equal(ListingSchemaOrigin.Cached, await validator.LoadSchemaAsync());
         Assert.Equal(ListingSchemaOrigin.Cached, validator.SchemaOrigin);
         Assert.Empty(validator.Validate(Valid().ToDocument(), new ListingCheckContext(Snapshot())).Issues);
+    }
+
+    [Fact]
+    public async Task AcceptedTypes_AreTheTypesOfTheSchemaOutsideTheGate()
+    {
+        var ungated = new ListingValidator(new UngatedSchema());
+        await ungated.LoadSchemaAsync();
+
+        Assert.Equal(["mod", "mod-loader", "modpack"], _validator.AcceptedTypes);
+        Assert.Equal(["mod", "mod-loader", "modpack", "vehicle", "save"], ungated.AcceptedTypes);
+    }
+
+    [Fact]
+    public void Validate_VehicleDraftWithTheGatedSchema_IsRefusedWithTheTitleOfTheGate()
+    {
+        var errors = _validator.Validate(Vehicle().ToDocument(), new ListingCheckContext(null)).Issues;
+
+        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "type", $"'vehicle' is {UngatedSchema.GateTitle}"), errors);
+    }
+
+    [Fact]
+    public async Task Validate_WrittenVehicleDraftWithoutForumsAndCompatibility_PassesTheSchemaWithoutTheGate()
+    {
+        var validator = new ListingValidator(new UngatedSchema());
+        await validator.LoadSchemaAsync();
+        var text = _format.Write(Vehicle().ToDocument());
+
+        var result = validator.Validate(_format.Read(text), new ListingCheckContext(SnapshotWithVehiclesAndSaves()));
+
+        Assert.Empty(result.Issues);
+        Assert.DoesNotContain("[links]", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("[compatibility]", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_DependencyOnAVehicle_IsRefused()
+    {
+        var draft = Valid() with { Dependencies = [new ListingDependency("OtherRover", "required")] };
+
+        var errors = _validator.Validate(draft.ToDocument(), new ListingCheckContext(SnapshotWithVehiclesAndSaves())).Issues;
+
+        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "dependencies[0]", "'OtherRover' is listed as a vehicle, and a dependency has to be a mod"), errors);
+    }
+
+    [Fact]
+    public void Validate_IdThatAListedSaveHoldsInAnotherCase_IsRefused()
+    {
+        var errors = _validator.Validate((Vehicle() with { Id = "moonbase" }).ToDocument(), new ListingCheckContext(SnapshotWithVehiclesAndSaves())).Issues;
+
+        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "id", "the id 'moonbase' is already held by saves/MoonBase.toml, and ids compare case-insensitively"), errors);
+    }
+
+    [Fact]
+    public void Validate_VehicleTags_AreNotComparedWithTheCuratedList()
+    {
+        var issues = _validator.Validate((Vehicle() with { Tags = ["rover"] }).ToDocument(), new ListingCheckContext(SnapshotWithVehiclesAndSaves())).Issues;
+
+        Assert.DoesNotContain(issues, issue => issue.Location == "tags");
+    }
+
+    [Fact]
+    public void Validate_InstallFolderOfAnotherVehicle_GivesANoteForAVehicleOnly()
+    {
+        var context = new ListingCheckContext(SnapshotWithVehiclesAndSaves(), InstallFolder: "Example Rover");
+
+        var vehicle = _validator.Validate(Vehicle().ToDocument(), context).Issues;
+        var save = _validator.Validate((Vehicle() with { Type = "save" }).ToDocument(), context).Issues;
+        var own = _validator.Validate((Vehicle() with { Id = "OtherRover" }).ToDocument(), context with { ListedId = "OtherRover" }).Issues;
+
+        var note = Assert.Single(vehicle, issue => issue.Location == "name");
+        Assert.Equal(ListingIssueSeverity.Note, note.Severity);
+        Assert.StartsWith("a release of vehicles/OtherRover.toml already installs into the folder 'Example Rover'", note.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(save, issue => issue.Location == "name");
+        Assert.DoesNotContain(own, issue => issue.Location == "name");
+    }
+
+    private static ListingDraft Vehicle() => new()
+    {
+        Id = "ExampleRover",
+        Type = "vehicle",
+        Name = "Example Rover",
+        Authors = ["Maxi"],
+        Abstract = "A rover.",
+        License = "CC-BY-4.0",
+        Dependencies = [new ListingDependency("AdvancedFlightComputer", "required", "0.8.0")],
+    };
+
+    private static ContentIndexSnapshot SnapshotWithVehiclesAndSaves()
+    {
+        var snapshot = Snapshot();
+        var rover = new ModMetadata(1, "OtherRover", "index", "Other Rover", ["Beik"], "Abstract.", "CC-BY-4.0", new Dictionary<string, string>(), null, ContentType.Vehicle);
+        var roverRelease = new ModVersionMetadata(1, "OtherRover", new ModVersion(1, 0, 0), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.9.10.5438", 5438,
+            new DownloadInfo("https://example.com/OtherRover.zip", new string('a', 64), 1, "application/zip"), 1, [], ContentType.Vehicle,
+            install: new InstallInfo("Example rover", false, folder: "Example rover"));
+        var save = new ModMetadata(1, "MoonBase", "index", "Moon Base", ["Beik"], "Abstract.", "CC-BY-4.0", new Dictionary<string, string>(), null, ContentType.Save);
+        var saveRelease = new ModVersionMetadata(1, "MoonBase", new ModVersion(1, 0, 0), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.9.10.5438", 5438,
+            new DownloadInfo("https://example.com/MoonBase.zip", new string('a', 64), 1, "application/zip"), 1, [], ContentType.Save,
+            install: new InstallInfo("Moon Base", false, folder: "Moon Base"));
+        return new ContentIndexSnapshot(snapshot.SnapshotVersion, snapshot.Listings, snapshot.Packs, snapshot.GameVersions, [], snapshot.Tags,
+            [new ContentIndexListing("OtherRover", rover, [roverRelease], null)],
+            [new ContentIndexListing("MoonBase", save, [saveRelease], null)]);
     }
 
     private List<ListingIssue> Errors(ListingDraft draft) =>

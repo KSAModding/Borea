@@ -234,7 +234,7 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
     }
 
     /// <summary>
-    /// The owners of the listing or pack at the base commit, without the steward, and whether the steward is one of them.
+    /// The owners of the listing, vehicle, save or pack at the base commit, without the steward, and whether the steward is one of them.
     /// A listing's owner is who its host proves, and a pack's is its accepted owner record. An owner that cannot be read names nobody.
     /// </summary>
     private async Task<(IReadOnlyList<string> Owners, bool IsOwner)> OwnersAsync(string id, BaseCommit commit, string login, CancellationToken cancellationToken)
@@ -243,10 +243,9 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         var isOwner = false;
         try
         {
-            if (commit.Contents.ListingId(id) is { } listing)
+            if (commit.Contents.ListingPath(id) is { } listing)
             {
-                var path = $"{ListingDraft.ListingsFolder}/{listing}.toml";
-                if (await _api.ReadFileAsync(Repository, path, commit.Head, cancellationToken).ConfigureAwait(false) is { Text: { } text })
+                if (await _api.ReadFileAsync(Repository, listing, commit.Head, cancellationToken).ConfigureAwait(false) is { Text: { } text })
                     owners = await _ownership.OwnersAsync(ListingDraft.FromDocument(_format.Read(text)), cancellationToken).ConfigureAwait(false);
 
                 isOwner = owners.Contains(login, StringComparer.OrdinalIgnoreCase);

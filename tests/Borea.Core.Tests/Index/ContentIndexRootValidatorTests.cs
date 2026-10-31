@@ -169,4 +169,57 @@ public sealed class ContentIndexRootValidatorTests
     }
 
     #endregion
+    #region type files
+
+    [Fact]
+    public void ValidateTypeFileRoot_StringOverload_ValidFile_ReturnsTrue()
+    {
+        Assert.True(ContentIndexRootValidator.ValidateTypeFileRoot("""{ "snapshot_version": 1, "sources": {}, "vehicles": [] }""", "cache", ContentIndexTypeFiles.Vehicles));
+        Assert.True(ContentIndexRootValidator.ValidateTypeFileRoot("""{ "snapshot_version": 1, "saves": [] }""", "cache", ContentIndexTypeFiles.Saves));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not json")]
+    [InlineData("[]")]
+    [InlineData("""{ "vehicles": [] }""")]
+    [InlineData("""{ "snapshot_version": "1", "vehicles": [] }""")]
+    [InlineData("""{ "snapshot_version": 2, "vehicles": [] }""")]
+    [InlineData("""{ "snapshot_version": 1, "sources": [], "vehicles": [] }""")]
+    [InlineData("""{ "snapshot_version": 1 }""")]
+    [InlineData("""{ "snapshot_version": 1, "vehicles": {} }""")]
+    [InlineData("""{ "snapshot_version": 1, "saves": [] }""")]
+    public void ValidateTypeFileRoot_StringOverload_UnusableFile_ThrowsNamingTheFile(string json)
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() => ContentIndexRootValidator.ValidateTypeFileRoot(json, "cache", ContentIndexTypeFiles.Vehicles));
+
+        Assert.Contains("snapshot-vehicles.json", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ValidateTypeFileRoot_BytesOverload_ArrayThatIsAnObject_ThrowsHttpRequestException()
+    {
+        const string json = """{ "snapshot_version": 1, "vehicles": {} }""";
+
+        Assert.Throws<HttpRequestException>(() => ContentIndexRootValidator.ValidateTypeFileRoot(Bytes(json), JsonResponse(json), ContentIndexTypeFiles.Vehicles));
+        Assert.True(ContentIndexRootValidator.ValidateTypeFileRoot(Bytes("""{ "snapshot_version": 1, "vehicles": [] }"""), JsonResponse("{}"), ContentIndexTypeFiles.Vehicles));
+    }
+
+    [Fact]
+    public void ValidateIndexRoot_DoesNotNeedTheTypeArrays()
+    {
+        Assert.True(ContentIndexRootValidator.ValidateIndexRoot(ValidIndexJson, "cache"));
+    }
+
+    [Fact]
+    public void TypeFiles_SitNextToTheIndex()
+    {
+        var index = new Uri("https://ksamodding.github.io/content-index-releases/v1/index.json");
+
+        Assert.Equal("https://ksamodding.github.io/content-index-releases/v1/snapshot-vehicles.json", ContentIndexTypeFiles.Vehicles.AddressFrom(index).ToString());
+        Assert.Equal("https://ksamodding.github.io/content-index-releases/v1/snapshot-saves.json", ContentIndexTypeFiles.Saves.AddressFrom(index).ToString());
+        Assert.Equal(Path.Combine("cache", "snapshot-saves.json"), ContentIndexTypeFiles.Saves.CachePathFrom(Path.Combine("cache", "index.json")));
+    }
+
+    #endregion
 }

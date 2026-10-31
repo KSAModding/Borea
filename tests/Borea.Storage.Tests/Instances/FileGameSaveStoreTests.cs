@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 using Borea.Storage.Instances;
 using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Paths;
@@ -13,13 +14,15 @@ public sealed class FileGameSaveStoreTests : IDisposable
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
     private readonly FileGameSaveStore _store;
+    private readonly FileInstalledContentRecords _records;
     private readonly Guid _instanceId = Guid.NewGuid();
     private readonly Guid _otherInstanceId = Guid.NewGuid();
 
     public FileGameSaveStoreTests()
     {
         _paths = new TestGamePathProvider(_tempRoot);
-        _store = new FileGameSaveStore(_paths, new FixedTime(new DateTimeOffset(2026, 9, 15, 12, 30, 5, TimeSpan.Zero)));
+        _records = new FileInstalledContentRecords(_paths);
+        _store = new FileGameSaveStore(_paths, new FixedTime(new DateTimeOffset(2026, 9, 15, 12, 30, 5, TimeSpan.Zero)), _records);
         Directory.CreateDirectory(_paths.GetInstanceRoot(_instanceId));
         Directory.CreateDirectory(_paths.GetInstanceRoot(_otherInstanceId));
     }
@@ -469,6 +472,135 @@ public sealed class FileGameSaveStoreTests : IDisposable
         Assert.Null(FileGameSaveStore.WithName(text, "Mun"));
     }
 
+    [Fact]
+    public async Task RenameAsync_RecordedVehicle_MovesTheRecordAndKeepsTheHashes()
+    {
+        var record = await AddRecordedVehicleAsync(_instanceId, "Rover");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+
+        Assert.Equal(GameSaveRenameOutcome.Renamed, await _store.RenameAsync(_instanceId, entry, "Rover Two"));
+
+        var renamed = Assert.Single(await _records.ListAsync(_instanceId));
+        Assert.Equal("Rover Two", renamed.FolderName);
+        Assert.Equal(record.Files, renamed.Files);
+        Assert.Equal(["meta.toml"], (await _records.CompareAsync(_instanceId, renamed)).Changed);
+    }
+
+    [Fact]
+    public async Task RenameAsync_RecordWriteFails_PutsTheFolderAndMetaTomlBack()
+    {
+        var store = new FileGameSaveStore(_paths, records: new RenameFails(_records));
+        await AddRecordedVehicleAsync(_instanceId, "Rover");
+        var entry = Assert.Single(await store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        var metadata = Path.Combine(entry.Path, "meta.toml");
+        var before = File.ReadAllBytes(metadata);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.RenameAsync(_instanceId, entry, "Rover Two"));
+
+        Assert.Equal(before, File.ReadAllBytes(metadata));
+        Assert.Equal(["Rover"], Directory.GetDirectories(_paths.GetInstanceVehiclesFolder(_instanceId)).Select(Path.GetFileName));
+        Assert.Equal("Rover", Assert.Single(await _records.ListAsync(_instanceId)).FolderName);
+    }
+
+    [Fact]
+    public async Task RenameAsync_UnreadableRecords_RefusesBeforeItChangesAnything()
+    {
+        await AddRecordedVehicleAsync(_instanceId, "Rover");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        var metadata = Path.Combine(entry.Path, "meta.toml");
+        var before = File.ReadAllBytes(metadata);
+        await File.WriteAllTextAsync(_paths.GetInstanceInstalledContentPath(_instanceId), "[[Items]\nType = ");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.RenameAsync(_instanceId, entry, "Rover Two"));
+
+        Assert.Equal(before, File.ReadAllBytes(metadata));
+        Assert.Equal(["Rover"], Directory.GetDirectories(_paths.GetInstanceVehiclesFolder(_instanceId)).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task RenameAsync_RecordedVehicleOnlyTheLetterCase_KeepsItsRecord()
+    {
+        await AddRecordedVehicleAsync(_instanceId, "Rover");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+
+        Assert.Equal(GameSaveRenameOutcome.Renamed, await _store.RenameAsync(_instanceId, entry, "ROVER"));
+
+        Assert.Equal("ROVER", Assert.Single(await _records.ListAsync(_instanceId)).FolderName);
+    }
+
+    [Fact]
+    public async Task RenameAsync_NameOfARecordWhoseFolderIsGone_RenamesAndDropsThatRecord()
+    {
+        var rover = await AddRecordedVehicleAsync(_instanceId, "Rover");
+        await AddRecordedVehicleAsync(_instanceId, "Lander");
+        Directory.Delete(Path.Combine(_paths.GetInstanceVehiclesFolder(_instanceId), "Lander"), recursive: true);
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+
+        Assert.Equal(GameSaveRenameOutcome.Renamed, await _store.RenameAsync(_instanceId, entry, "Lander"));
+
+        var renamed = Assert.Single(await _records.ListAsync(_instanceId));
+        Assert.Equal("Lander", renamed.FolderName);
+        Assert.Equal(rover.Files, renamed.Files);
+    }
+
+    [Fact]
+    public async Task CopyAsync_OverARecordedFolder_RemovesItsRecord_BecauseTheCopyIsThePlayersOwn()
+    {
+        var entry = await AddSaveAsync(_instanceId, "Orbit");
+        await AddRecordedSaveAsync(_otherInstanceId, "Orbit");
+
+        Assert.Equal(GameSaveCopyOutcome.Copied, await _store.CopyAsync(entry, _otherInstanceId, replace: true));
+
+        Assert.Empty(await _records.ListAsync(_otherInstanceId));
+    }
+
+    [Fact]
+    public async Task CopyAsync_NameExistsAndNoReplace_KeepsTheRecord()
+    {
+        var entry = await AddSaveAsync(_instanceId, "Orbit");
+        await AddRecordedSaveAsync(_otherInstanceId, "Orbit");
+
+        Assert.Equal(GameSaveCopyOutcome.Exists, await _store.CopyAsync(entry, _otherInstanceId, replace: false));
+
+        Assert.Single(await _records.ListAsync(_otherInstanceId));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RecordedFolder_RemovesItsRecord()
+    {
+        await AddRecordedSaveAsync(_instanceId, "Orbit");
+        await AddRecordedSaveAsync(_instanceId, "Moon");
+        var entry = (await _store.ListAsync(_instanceId, GameSaveKind.Save)).Single(item => item.FolderName == "Orbit");
+
+        await _store.DeleteAsync(_instanceId, entry);
+
+        Assert.Equal("Moon", Assert.Single(await _records.ListAsync(_instanceId)).FolderName);
+    }
+
+    private async Task<InstalledContentRecord> AddRecordedVehicleAsync(Guid instanceId, string name)
+    {
+        WriteItem(_paths.GetInstanceVehiclesFolder(instanceId), name, name, "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10, "vehicle.xml");
+        return await AddRecordAsync(instanceId, ContentType.Vehicle, Path.Combine(_paths.GetInstanceVehiclesFolder(instanceId), name));
+    }
+
+    private async Task<InstalledContentRecord> AddRecordedSaveAsync(Guid instanceId, string name)
+    {
+        await AddSaveAsync(instanceId, name);
+        return await AddRecordAsync(instanceId, ContentType.Save, Path.Combine(_paths.GetInstanceSavesFolder(instanceId), name));
+    }
+
+    private async Task<InstalledContentRecord> AddRecordAsync(Guid instanceId, ContentType type, string folder)
+    {
+        var name = Path.GetFileName(folder);
+        var record = new InstalledContentRecord(
+            FileInstalledContentRecordsTests.Release(type, folder: name),
+            name,
+            DateTimeOffset.UnixEpoch,
+            await InstalledContentHashes.ComputeAsync(folder));
+        await _records.AddAsync(instanceId, record);
+        return record;
+    }
+
     private async Task<GameSaveEntry> AddSaveAsync(Guid instanceId, string name, int universeBytes = 100)
     {
         WriteItem(_paths.GetInstanceSavesFolder(instanceId), name, name, "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", universeBytes);
@@ -484,6 +616,74 @@ public sealed class FileGameSaveStoreTests : IDisposable
     }
 
     /// <summary>A folder the way the game writes it, with a meta.toml in the shape of SaveMetaData.</summary>
+    [Fact]
+    public async Task WriteShareArchiveAsync_Vehicle_HoldsTheFolderUnderItsNameAndGivesTheHashOfTheBytes()
+    {
+        var vehicles = _paths.GetInstanceVehiclesFolder(_instanceId);
+        WriteItem(vehicles, "Example Rover", "Example Rover", "2026-10-01T10:00:00", "v2026.10.19.5638", 40, "vehicle.xml");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        var before = Snapshot(entry.Path);
+        using var destination = new MemoryStream();
+
+        var archive = await _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination);
+
+        var bytes = destination.ToArray();
+        Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)), archive.Sha256);
+        Assert.Equal(bytes.Length, archive.Size);
+        using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+        Assert.Equal(["Example Rover/meta.toml", "Example Rover/vehicle.xml"], zip.Entries.Select(item => item.FullName).Order(StringComparer.Ordinal));
+        Assert.Equal(before, Snapshot(entry.Path));
+    }
+
+    [Fact]
+    public async Task WriteShareArchiveAsync_FolderOfAnotherName_UsesTheNameOfMetaToml()
+    {
+        var saves = _paths.GetInstanceSavesFolder(_instanceId);
+        WriteItem(saves, "ExampleRover_old", "Example Rover", "2026-10-01T10:00:00", "v2026.10.19.5638", 10);
+        Directory.CreateDirectory(Path.Combine(saves, "ExampleRover_old", "empty"));
+        File.WriteAllText(Path.Combine(saves, "ExampleRover_old", "unscience.json"), "{}");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Save));
+        using var destination = new MemoryStream();
+
+        await _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination);
+
+        using var zip = new ZipArchive(new MemoryStream(destination.ToArray()), ZipArchiveMode.Read);
+        Assert.Equal(
+            ["Example Rover/empty/", "Example Rover/meta.toml", "Example Rover/universe.xml", "Example Rover/unscience.json"],
+            zip.Entries.Select(item => item.FullName).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task WriteShareArchiveAsync_FileTimeBefore1980_IsWritten()
+    {
+        var vehicles = _paths.GetInstanceVehiclesFolder(_instanceId);
+        WriteItem(vehicles, "Example Rover", "Example Rover", "2026-10-01T10:00:00", "v2026.10.19.5638", 10, "vehicle.xml");
+        File.SetLastWriteTime(Path.Combine(vehicles, "Example Rover", "meta.toml"), new DateTime(1970, 1, 1));
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        using var destination = new MemoryStream();
+
+        await _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination);
+
+        using var zip = new ZipArchive(new MemoryStream(destination.ToArray()), ZipArchiveMode.Read);
+        Assert.Equal(1980, zip.GetEntry("Example Rover/meta.toml")!.LastWriteTime.Year);
+    }
+
+    [Fact]
+    public async Task WriteShareArchiveAsync_NameChangedSinceTheCheck_IsRefused()
+    {
+        WriteItem(_paths.GetInstanceVehiclesFolder(_instanceId), "Example Rover", "Example Rover 2", "2026-10-01T10:00:00", "v2026.10.19.5638", 10, "vehicle.xml");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        using var destination = new MemoryStream();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination));
+        Assert.Equal(0, destination.Length);
+    }
+
+    private static List<(string Path, DateTime Written, string Hash)> Snapshot(string folder) =>
+        Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal)
+            .Select(path => (path, File.GetLastWriteTimeUtc(path), Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)))))
+            .ToList();
+
     private static void WriteItem(string kindFolder, string folderName, string name, string updated, string version, int dataBytes, string dataFile = "universe.xml")
     {
         var folder = Directory.CreateDirectory(Path.Combine(kindFolder, folderName)).FullName;
@@ -501,5 +701,26 @@ public sealed class FileGameSaveStoreTests : IDisposable
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    /// <summary>Fails the record write of a rename after the folder has moved.</summary>
+    private sealed class RenameFails(IInstalledContentRecords inner) : IInstalledContentRecords
+    {
+        public Task<IReadOnlyList<InstalledContentRecord>> ListAsync(Guid instanceId, CancellationToken cancellationToken = default) => inner.ListAsync(instanceId, cancellationToken);
+
+        public Task<InstalledContentRecord?> FindAsync(Guid instanceId, ContentType type, string folderName, CancellationToken cancellationToken = default) => inner.FindAsync(instanceId, type, folderName, cancellationToken);
+
+        public Task AddAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.AddAsync(instanceId, record, cancellationToken);
+
+        public Task ReplaceAsync(Guid instanceId, string oldFolderName, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.ReplaceAsync(instanceId, oldFolderName, record, cancellationToken);
+
+        public Task<bool> RemoveAsync(Guid instanceId, ContentType type, string folderName, CancellationToken cancellationToken = default) => inner.RemoveAsync(instanceId, type, folderName, cancellationToken);
+
+        public Task<bool> RenameFolderAsync(Guid instanceId, ContentType type, string oldFolderName, string newFolderName, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The record write failed.");
+
+        public Task<InstalledContentChanges> CompareAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.CompareAsync(instanceId, record, cancellationToken);
+
+        public Task<IReadOnlyList<InstalledContentRecord>> DropMissingAsync(Guid instanceId, CancellationToken cancellationToken = default) => inner.DropMissingAsync(instanceId, cancellationToken);
     }
 }

@@ -15,4 +15,7 @@ public sealed class InstallInfoDto
 
     [JsonPropertyName("path")]
     public string? Path { get; set; }
+
+    [JsonPropertyName("folder")]
+    public string? Folder { get; set; }
 }

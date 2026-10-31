@@ -217,6 +217,26 @@ public sealed class IndexStatusDocumentTests
     }
 
     [Fact]
+    public void Apply_VehicleAndSaveIds_ResolveFromTheirFoldersAndAreNoPacks()
+    {
+        var contents = IndexContents.FromPaths(["saves/ExampleSave.toml", "vehicles/ExampleRover.toml", "vehicles/nested/Deep.toml", "saves/README.md", "Vehicles/Upper.toml"]);
+        var document = IndexStatusDocument.Parse(IndexStatusFixtures.Current);
+
+        var delisted = document.Apply(IndexStatusChange.Delist("examplesave", "The author asked for it."), contents, Now);
+
+        Assert.Equal("ExampleSave", delisted.Entries.Single().Id);
+        Assert.Equal("ExampleRover", contents.ListingId("EXAMPLEROVER"));
+        Assert.Equal("vehicles/ExampleRover.toml", contents.ListingPath("examplerover"));
+        Assert.Equal("saves/ExampleSave.toml", contents.ListingPath("ExampleSave"));
+        Assert.Equal("listings/MyMod.toml", Contents.ListingPath("mymod"));
+        Assert.Null(contents.ListingId("Deep"));
+        Assert.Null(contents.ListingId("README"));
+        Assert.Null(contents.ListingId("Upper"));
+        Assert.Null(contents.ListingPath("Missing"));
+        Assert.Equal(IndexStatusRefusal.NotAPack, Assert.Throws<IndexStatusRefusedException>(() => document.Apply(IndexStatusChange.Retract("ExampleRover", "1.0.0", "Broken."), contents, Now)).Refusal);
+    }
+
+    [Fact]
     public void Apply_ReasonWithQuotesBackslashesAndOtherLetters_IsEscapedAndReadBack()
     {
         const string reason = "Der \"Autor\" bat darum, C:\\mods ist kaputt \u00e4\u00f6\u00fc.";

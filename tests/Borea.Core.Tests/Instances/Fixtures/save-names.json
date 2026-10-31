@@ -1,0 +1,154 @@
+{
+  "vectors": [
+    {
+      "name": "a name with a space",
+      "value": "Example Rover",
+      "accepted": true,
+      "why": "letters and one space between words"
+    },
+    {
+      "name": "64 code units",
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accepted": true,
+      "why": "the game keeps at most 64 UTF-16 code units"
+    },
+    {
+      "name": "65 code units",
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accepted": false,
+      "why": "SaveName.Sanitize cuts the name at 64 UTF-16 code units"
+    },
+    {
+      "name": "an empty name",
+      "value": "",
+      "accepted": false,
+      "why": "SaveName.TryAccept refuses an empty name"
+    },
+    {
+      "name": "a leading space",
+      "value": " Rover",
+      "accepted": false,
+      "why": "SaveName.Sanitize drops a space at the start"
+    },
+    {
+      "name": "a trailing space",
+      "value": "Rover ",
+      "accepted": false,
+      "why": "SaveName.Sanitize drops a space at the end"
+    },
+    {
+      "name": "two spaces together",
+      "value": "Example  Rover",
+      "accepted": false,
+      "why": "SaveName.Sanitize keeps one of two spaces"
+    },
+    {
+      "name": "a tab",
+      "value": "Example\tRover",
+      "accepted": false,
+      "why": "a tab is not a space, a letter or a digit"
+    },
+    {
+      "name": "a dot",
+      "value": "Rover.v2",
+      "accepted": false,
+      "why": "a dot is not a letter, a digit, a space, - or _"
+    },
+    {
+      "name": "a slash",
+      "value": "Rover/2",
+      "accepted": false,
+      "why": "a slash is not a letter, a digit, a space, - or _"
+    },
+    {
+      "name": "a device name",
+      "value": "CON",
+      "accepted": false,
+      "why": "SaveName.Sanitize appends _ to a reserved device name"
+    },
+    {
+      "name": "a device name in lowercase",
+      "value": "con",
+      "accepted": false,
+      "why": "device names compare without case"
+    },
+    {
+      "name": "a device name in mixed case",
+      "value": "Com1",
+      "accepted": false,
+      "why": "device names compare without case"
+    },
+    {
+      "name": "the last LPT device name",
+      "value": "LPT9",
+      "accepted": false,
+      "why": "LPT1 to LPT9 are reserved"
+    },
+    {
+      "name": "a device name with _",
+      "value": "CON_",
+      "accepted": true,
+      "why": "what SaveName.Sanitize makes of CON"
+    },
+    {
+      "name": "COM0",
+      "value": "COM0",
+      "accepted": true,
+      "why": "only COM1 to COM9 are reserved"
+    },
+    {
+      "name": "a device name with a digit",
+      "value": "CON1",
+      "accepted": true,
+      "why": "only the exact device names are reserved"
+    },
+    {
+      "name": "- and _",
+      "value": "a-b_c",
+      "accepted": true,
+      "why": "- and _ are kept"
+    },
+    {
+      "name": "a precomposed letter",
+      "value": "\u00e9",
+      "accepted": true,
+      "why": "U+00E9 is Ll"
+    },
+    {
+      "name": "a combining mark",
+      "value": "e\u0301",
+      "accepted": false,
+      "why": "U+0301 is Mn, which char.IsLetterOrDigit refuses"
+    },
+    {
+      "name": "an Arabic-Indic digit",
+      "value": "\u0661",
+      "accepted": true,
+      "why": "U+0661 is Nd"
+    },
+    {
+      "name": "a fullwidth digit",
+      "value": "\uff11",
+      "accepted": true,
+      "why": "U+FF11 is Nd"
+    },
+    {
+      "name": "a superscript two",
+      "value": "\u00b2",
+      "accepted": false,
+      "why": "U+00B2 is No, which str.isalnum of Python accepts and char.IsLetterOrDigit refuses"
+    },
+    {
+      "name": "a Roman numeral",
+      "value": "\u2160",
+      "accepted": false,
+      "why": "U+2160 is Nl, which str.isalnum of Python accepts and char.IsLetterOrDigit refuses"
+    },
+    {
+      "name": "a letter outside the Basic Multilingual Plane",
+      "value": "\ud835\udc00",
+      "accepted": false,
+      "why": "U+1D400 is two surrogates in UTF-16, and a surrogate is Cs"
+    }
+  ]
+}

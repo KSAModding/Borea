@@ -60,6 +60,25 @@ public sealed partial class GitHubIndexStatusEditorTests
     }
 
     [Fact]
+    public async Task OpenAsync_DelistOfASave_WritesItsIdAndMentionsTheOwnerOfSavesFile()
+    {
+        _index.Main["saves/ExampleSave.toml"] = "id = \"ExampleSave\"\ntype = \"save\"\nname = \"Example Save\"\n[releases]\ngithub = \"alice/ExampleSave\"\n";
+        _hosts[Api + "/repos/alice/ExampleSave"] = () => Json("""{"full_name":"alice/ExampleSave","fork":false,"owner":{"id":5,"login":"alice","type":"User"}}""");
+        var editor = await SignedInAsync();
+
+        var check = await editor.CheckAsync(IndexStatusChange.Delist("examplesave", string.Empty));
+        await editor.OpenAsync(IndexStatusChange.Delist("examplesave", "The author asked for it."));
+
+        Assert.Null(check.Refusal);
+        Assert.Equal(["alice"], check.Owners);
+        var written = _index.Branches["steward/delisted-examplesave"].Files["index-status.toml"];
+        Assert.Equal(IndexStatusDocument.Parse(Current).Apply(IndexStatusChange.Delist("ExampleSave", "The author asked for it."), Contents(), Now).Text, written);
+        Assert.Contains("id = \"ExampleSave\"", written, StringComparison.Ordinal);
+        Assert.EndsWith("@alice owns `ExampleSave`.", _index.Pulls.Single().Body, StringComparison.Ordinal);
+        Assert.DoesNotContain(_sent, sent => sent.Url.Contains("listings/ExampleSave", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task OpenAsync_OwnListing_MentionsNobodyAndTheCheckWarns()
     {
         var editor = await SignedInAsync();

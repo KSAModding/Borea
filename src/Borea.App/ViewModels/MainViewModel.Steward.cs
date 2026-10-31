@@ -325,6 +325,8 @@ public partial class MainViewModel
     {
         StewardQueueKind.Listing => Localization.StewardQueueKindListing,
         StewardQueueKind.Pack => Localization.StewardQueueKindPack,
+        StewardQueueKind.Vehicle => Localization.StewardQueueKindVehicle,
+        StewardQueueKind.Save => Localization.StewardQueueKindSave,
         StewardQueueKind.Release => Localization.StewardQueueKindRelease,
         StewardQueueKind.Amendment => Localization.StewardQueueKindAmendment,
         StewardQueueKind.OwnerRecord => Localization.StewardQueueKindOwnerRecord,

@@ -130,6 +130,40 @@ public sealed class ListingPackFromInstanceTests
         Assert.Equal([new ListingLeftOutMod("StarMap", "0.4.1", ListingLeftOutReason.ModLoader)], pack.LeftOut);
     }
 
+    [Fact]
+    public void Of_RecordedVehiclesAndSaves_PinsTheUnchangedOnes_AndNamesTheChangedAndUnrecordedOnes()
+    {
+        var rover = Content("Rover", ContentType.Vehicle, "1.0.0");
+        var moon = Content("MoonBase", ContentType.Save, "2.0.0");
+        var changed = Content("Buggy", ContentType.Vehicle, "1.0.0");
+        var snapshot = new ContentIndexSnapshot(1, [], [], null, [], vehicles: [Listed(rover), Listed(changed)], saves: [Listed(moon)]);
+        var content = new[]
+        {
+            new ListingInstalledContent(ContentType.Vehicle, "Rover", Record(rover), Changed: false),
+            new ListingInstalledContent(ContentType.Vehicle, "Buggy", Record(changed), Changed: true),
+            new ListingInstalledContent(ContentType.Save, "Moon Base", Record(moon, "Moon Base"), Changed: false),
+            new ListingInstalledContent(ContentType.Vehicle, "My Own", null, Changed: false),
+        };
+
+        var pack = ListingPackFromInstance.Of(snapshot, Instance([]), [], content: content);
+
+        Assert.Equal([new ListingPackMember("Rover", "1.0.0") { Type = ContentType.Vehicle }], pack.Vehicles);
+        Assert.Equal([new ListingPackMember("MoonBase", "2.0.0") { Type = ContentType.Save }], pack.Saves);
+        Assert.Empty(pack.Members);
+        Assert.Equal(
+            [new ListingLeftOutMod("Buggy", "1.0.0", ListingLeftOutReason.ChangedSinceInstall, Type: ContentType.Vehicle), new ListingLeftOutMod("My Own", null, ListingLeftOutReason.NotInstalledByBorea, Type: ContentType.Vehicle)],
+            pack.LeftOut);
+    }
+
+    private static ModVersionMetadata Content(string id, ContentType type, string version) =>
+        new(1, id, ModVersion.Parse(version), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.10.19.5638", 5638, new DownloadInfo($"https://example.com/{id}.zip", new string('A', 64), 1, "application/zip"), 1, [], type, install: new InstallInfo(null, derived: true, folder: id));
+
+    private static ContentIndexListing Listed(ModVersionMetadata release) =>
+        new(release.ModId, new ModMetadata(1, release.ModId, "index", release.ModId, ["Author"], "Abstract.", "MIT", new Dictionary<string, string>(), null, release.Type), [release], null);
+
+    private static InstalledContentRecord Record(ModVersionMetadata release, string? folder = null) =>
+        new(release, folder ?? release.ModId, DateTimeOffset.UnixEpoch, new Dictionary<string, string>());
+
     private static ContentIndexSnapshot Snapshot(params ContentIndexListing[] listings) => new(1, listings, [], null, []);
 
     private static ContentIndexListing Mod(string id, params ModVersionMetadata[] releases) => new(id, Listing(id, id), releases, null);

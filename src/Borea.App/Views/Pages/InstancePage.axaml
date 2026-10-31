@@ -93,7 +93,24 @@
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
                         <TextBlock Classes="heading-sm" Text="{Binding Name}" ToolTip.Tip="{Binding FolderName}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedText}" ToolTip.Tip="{Binding UpdatedText}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveDeleteConfirm}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingDelete}" />
+                        <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding HasRecord}">
+                            <Button Classes="link" Margin="-8,0,0,0" Command="{Binding OpenPageCommand}" IsVisible="{Binding ListingName, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingName}">
+                                <TextBlock Classes="action-md" Text="{Binding ListingName}" />
+                            </Button>
+                            <TextBlock Classes="body-sm secondary" Text="{Binding InstalledVersionText}" VerticalAlignment="Center" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding NewerText}" VerticalAlignment="Center" IsVisible="{Binding NewerText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <Border Classes="chip untested" VerticalAlignment="Center" IsVisible="{Binding IsChanged}" ToolTip.Tip="{Binding ChangedFilesText}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Ellipse />
+                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveChangedSinceInstall}" />
+                                </StackPanel>
+                            </Border>
+                        </WrapPanel>
+                        <TextBlock Classes="body-sm danger" Text="{Binding DeleteConfirmText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingDelete}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" TextWrapping="Wrap" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextWrapping="Wrap" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding ReplaceText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
                     </StackPanel>
                     <Border Grid.Column="3" Classes="chip untested" Margin="24,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding IsOlderBuild}" ToolTip.Tip="{Binding OlderBuildText}">
@@ -111,8 +128,11 @@
                         <Button Classes="icon" IsVisible="{Binding IsIdle}" AutomationProperties.Name="{Binding Name}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                    <MenuItem Header="{Binding UpdateText}" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveBackUp}" Command="{Binding BackUpCommand}" />
+                                    <!-- only once the index accepts the type, see GameSaveSection.CanShare -->
+                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShare}" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyToInstance}" Command="{Binding BeginCopyCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
@@ -123,6 +143,7 @@
                     </Panel>
                     <!-- the copy target and the confirmations open below the row, so they do not make the shared columns of every row wider -->
                     <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="5" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <ContentControl Margin="0,4,0,0" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <StackPanel Spacing="4" Margin="0,4,0,0" IsVisible="{Binding IsChoosingTarget}">
                             <TextBlock Classes="body-sm secondary" Text="{Binding CopyNoteText}" TextWrapping="Wrap" IsVisible="{Binding CopyNoteText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <ComboBox ItemsSource="{Binding CopyTargets}" SelectedItem="{Binding CopyTarget}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyToInstance}" Width="240">
@@ -134,6 +155,10 @@
                             </ComboBox>
                         </StackPanel>
                         <Panel Grid.Column="1" Margin="0,4,0,0" VerticalAlignment="Bottom">
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingInstall}">
+                                <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                            </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingDelete}">
                                 <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding ConfirmDeleteCommand}" />
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
@@ -488,6 +513,13 @@
                                     <Button Classes="text" Content="{Binding PackUpdate.Run.PauseText}" Command="{Binding PackUpdate.Run.TogglePauseCommand}" />
                                     <Button Classes="text" Content="{Binding PackUpdate.Run.StopText}" Command="{Binding PackUpdate.Run.StopCommand}" />
                                 </StackPanel>
+                                <!-- the confirmation keeps its buttons on the line of the notice, so a long list below does not push them out of the area -->
+                                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding PackUpdate.IsConfirming, FallbackValue={x:False}}">
+                                    <Panel IsEnabled="{Binding CanChangeContent}">
+                                        <Button Classes="text primary" Content="{Binding PackUpdate.ConfirmText}" Command="{Binding PackUpdate.ConfirmUpdateCommand}" IsEnabled="{Binding PackUpdate.Choices.IsComplete, FallbackValue={x:True}}" />
+                                    </Panel>
+                                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding PackUpdate.CancelUpdateCommand}" />
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
                         <TextBlock Classes="body-md secondary" Text="{Binding PackUpdate.ProgressStatus}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -499,15 +531,18 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
-                                <TextBlock Classes="body-md secondary" Text="{Binding PackUpdate.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
-                                    <Panel IsEnabled="{Binding CanChangeContent}">
-                                        <Button Classes="text primary" Content="{Binding PackUpdate.ConfirmText}" Command="{Binding PackUpdate.ConfirmUpdateCommand}" IsEnabled="{Binding PackUpdate.Choices.IsComplete, FallbackValue={x:True}}" />
-                                    </Panel>
-                                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding PackUpdate.CancelUpdateCommand}" />
-                                </StackPanel>
-                            </Grid>
+                            <!-- the questions about pinned vehicles and saves, each on its own line, because going on can replace an item the player changed -->
+                            <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding PackUpdate.PendingQuestions}" IsVisible="{Binding !!PackUpdate.PendingQuestions.Count, FallbackValue={x:False}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <TextBlock Classes="body-md" Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Classes="link" HorizontalAlignment="Left" Command="{Binding PackUpdate.ChooseContentNameCommand}" IsVisible="{Binding PackUpdate.CanChooseContentName, FallbackValue={x:False}}">
+                                <TextBlock Classes="action-md" Text="{Binding Localization.PackContentChooseName}" />
+                            </Button>
+                            <TextBlock Classes="body-md secondary" Margin="0,8,0,0" Text="{Binding PackUpdate.InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding PackUpdate.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </StackPanel>
                         <ContentControl Margin="0,12,0,0" Content="{Binding PackUpdate.Choices}" IsVisible="{Binding PackUpdate.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md danger" Text="{Binding PackUpdate.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />

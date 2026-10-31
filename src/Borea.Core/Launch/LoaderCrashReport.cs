@@ -84,7 +84,9 @@ public static partial class LoaderCrashReport
     {
         ArgumentNullException.ThrowIfNull(loader);
         var github = loader.Releases?.Hosts.FirstOrDefault(host => string.Equals(host.Host, "github", StringComparison.OrdinalIgnoreCase));
-        return github is null ? loader.ForumUrl : $"https://github.com/{github.Reference}/releases";
+
+        // ModMetadata requires a forums link on every type except a vehicle or a save, so a loader always has one.
+        return github is null ? loader.Links["forums"] : $"https://github.com/{github.Reference}/releases";
     }
 
     /// <summary>

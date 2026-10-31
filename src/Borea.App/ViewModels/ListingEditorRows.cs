@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -181,10 +182,17 @@ public sealed partial class ListingPackMemberRow : ObservableObject
         Releases = releases;
         _selected = releases.FirstOrDefault(release => release.Version == member.Version);
         RetractionNote = owner.RetractionNotes(member.Id) is { Count: > 0 } notes ? string.Join("\n", notes) : null;
-        DisputedNote = owner.DisputedNote(member.Id);
+        DisputedNote = owner.DisputedNote(member.Id, member.Type);
+        TypeText = owner.MemberTypeText(member.Type);
     }
 
     public string Id => _member.Id;
+
+    /// <summary>The section of the pin, mods, vehicles or saves.</summary>
+    internal ContentType Type => _member.Type;
+
+    /// <summary>Names the type of a vehicle or save pin, and is null for a mod.</summary>
+    public string? TypeText { get; }
 
     public string Name { get; }
 
@@ -218,7 +226,7 @@ public sealed partial class ListingPackMemberRow : ObservableObject
     public bool IsDisputed => DisputedNote is not null;
 
     /// <summary>The newest release that is newer than the pin and at least as stable. A hint for the author, the pin stays until they move it.</summary>
-    public ListingReleaseChoice? Newer => _owner.NewerChoice(Id, ToMember().Version, Releases);
+    public ListingReleaseChoice? Newer => _owner.NewerChoice(Id, Type, ToMember().Version, Releases);
 
     public string? NewerText => Newer is { } newer ? _owner.NewerText(newer.Version) : null;
 

@@ -107,6 +107,8 @@ public sealed class DtoMapperTests
     [Theory]
     [InlineData("mod", ContentType.Mod)]
     [InlineData("mod-loader", ContentType.ModLoader)]
+    [InlineData("vehicle", ContentType.Vehicle)]
+    [InlineData("save", ContentType.Save)]
     [InlineData("something-else", ContentType.Unknown)]
     public void MapAuthored_MapsContentType(string type, ContentType expected)
     {
@@ -115,6 +117,56 @@ public sealed class DtoMapperTests
         var result = DtoMapper.MapAuthored(dto, "source");
 
         Assert.Equal(expected, result.Type);
+    }
+
+    [Theory]
+    [InlineData("vehicle")]
+    [InlineData("save")]
+    public void MapAuthored_VehicleOrSaveWithoutCompatibilityAndLinks_HasNoGameMinAndNoForums(string type)
+    {
+        var dto = MinimalAuthoredDto(type: type);
+        dto.Compatibility = null;
+        dto.Links = null;
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.Null(result.GameMin);
+        Assert.Null(result.ForumUrl);
+        Assert.Empty(result.Links);
+    }
+
+    [Fact]
+    public void MapAuthored_VehicleWithOnlyGameMax_KeepsIt()
+    {
+        var dto = MinimalAuthoredDto(type: "vehicle");
+        dto.Compatibility = new CompatibilityDto { GameMax = "2026.10" };
+        dto.Links = new LinksDto();
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.Null(result.GameMin);
+        Assert.Equal("2026.10", result.GameMax);
+    }
+
+    [Theory]
+    [InlineData("mod")]
+    [InlineData("mod-loader")]
+    [InlineData("something-else")]
+    public void MapAuthored_OtherTypesWithoutForumsOrGameMin_Throw(string type)
+    {
+        var withoutForums = MinimalAuthoredDto(type: type);
+        withoutForums.Links = new LinksDto();
+        var withoutLinks = MinimalAuthoredDto(type: type);
+        withoutLinks.Links = null;
+        var withoutGameMin = MinimalAuthoredDto(type: type);
+        withoutGameMin.Compatibility = new CompatibilityDto();
+        var withoutCompatibility = MinimalAuthoredDto(type: type);
+        withoutCompatibility.Compatibility = null;
+
+        Assert.Contains("forums", Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapAuthored(withoutForums, "source")).Message, StringComparison.Ordinal);
+        Assert.Contains("forums", Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapAuthored(withoutLinks, "source")).Message, StringComparison.Ordinal);
+        Assert.Contains("minimum game version", Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapAuthored(withoutGameMin, "source")).Message, StringComparison.Ordinal);
+        Assert.Contains("minimum game version", Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapAuthored(withoutCompatibility, "source")).Message, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -136,7 +188,7 @@ public sealed class DtoMapperTests
     public void MapAuthored_Links_IncludesExtraStringLinksAndSkipsNonStringOnes()
     {
         var dto = MinimalAuthoredDto();
-        dto.Links.OtherLinks = new Dictionary<string, JsonElement>
+        dto.Links!.OtherLinks = new Dictionary<string, JsonElement>
         {
             ["discord"] = JsonSerializer.SerializeToElement("https://discord.example/invite"),
             ["weird"] = JsonSerializer.SerializeToElement(12345),
@@ -336,6 +388,79 @@ public sealed class DtoMapperTests
         };
 
         Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapAuthored(dto, "source"));
+    }
+
+    [Fact]
+    public void MapAuthored_ReleaseSource_ShareHostAlone_IsTheAuthority()
+    {
+        var dto = MinimalAuthoredDto(type: "vehicle");
+        dto.Releases = new ReleasesInfoDto
+        {
+            Hosts = new Dictionary<string, JsonElement> { ["ksamods"] = JsonSerializer.SerializeToElement("ExampleRover") },
+        };
+
+        var host = Assert.Single(DtoMapper.MapAuthored(dto, "source").Releases!.Hosts);
+
+        Assert.Equal(("ksamods", "ExampleRover", ReleaseHostKind.Share), (host.Host, host.Reference, host.Kind));
+    }
+
+    [Fact]
+    public void MapAuthored_ReleaseSource_AuthorityNamesTheShareHost()
+    {
+        var dto = MinimalAuthoredDto(type: "vehicle");
+        dto.Releases = new ReleasesInfoDto
+        {
+            Authority = "ksamods",
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+                ["ksamods"] = JsonSerializer.SerializeToElement("ExampleRover"),
+            },
+        };
+
+        var releases = DtoMapper.MapAuthored(dto, "source").Releases!;
+
+        Assert.Equal(2, releases.Hosts.Count);
+        Assert.Equal(ReleaseHostKind.Share, releases.AuthorityHost.Kind);
+    }
+
+    [Theory]
+    [InlineData("\"My Rover\"")]
+    [InlineData("\"-x\"")]
+    [InlineData("\"CON\"")]
+    [InlineData("\"\"")]
+    [InlineData("\"\\ud800\"")]
+    [InlineData("{ \"id\": \"ExampleRover\" }")]
+    public void MapAuthored_ReleaseSource_ShareKeyWithoutAValidId_IsDropped(string value)
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Releases = new ReleasesInfoDto
+        {
+            Authority = "github",
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+                ["ksamods"] = JsonDocument.Parse(value).RootElement.Clone(),
+            },
+        };
+
+        Assert.Equal("github", Assert.Single(DtoMapper.MapAuthored(dto, "source").Releases!.Hosts).Host);
+    }
+
+    [Fact]
+    public void MapAuthored_ReleaseSource_ShareHostNextToGitHubWithoutAuthority_KeepsGitHubAlone()
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Releases = new ReleasesInfoDto
+        {
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+                ["ksamods"] = JsonSerializer.SerializeToElement("ExampleRover"),
+            },
+        };
+
+        Assert.Equal("github", Assert.Single(DtoMapper.MapAuthored(dto, "source").Releases!.Hosts).Host);
     }
 
     [Theory]
@@ -814,6 +939,57 @@ public sealed class DtoMapperTests
     }
 
     [Fact]
+    public void MapRelease_ModListingLinksWithoutForums_Throws()
+    {
+        var dto = MinimalReleaseDto();
+        dto.Listing = JsonSerializer.SerializeToElement(new { links = new { discord = "https://discord.example/invite" } });
+        var authored = DtoMapper.MapAuthored(MinimalAuthoredDto(), "source");
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dto, null, authored));
+    }
+
+    [Fact]
+    public void MapRelease_VehicleListingLinksWithoutForums_KeepsTheOtherLinks()
+    {
+        var dto = MinimalReleaseDto();
+        dto.Type = "vehicle";
+        dto.Install = new InstallInfoDto { Derived = true, Folder = "Example Rover" };
+        dto.Listing = JsonSerializer.SerializeToElement(new { links = new { discord = "https://discord.example/invite" } });
+        var authoredDto = MinimalAuthoredDto(type: "vehicle");
+        authoredDto.Links = null;
+        var authored = DtoMapper.MapAuthored(authoredDto, "source");
+
+        var result = DtoMapper.MapRelease(dto, null, authored);
+
+        Assert.Equal("https://discord.example/invite", Assert.Single(result.Listing!.Links).Value);
+    }
+
+    [Theory]
+    [InlineData("vehicle", "Example Rover")]
+    [InlineData("save", "Example Rover")]
+    [InlineData("mod", null)]
+    public void MapRelease_InstallFolder_IsReadOnlyOnVehiclesAndSaves(string type, string? expected)
+    {
+        var dto = MinimalReleaseDto();
+        dto.Type = type;
+        dto.Install = new InstallInfoDto { Derived = true, Folder = "Example Rover" };
+
+        var result = DtoMapper.MapRelease(dto, null, authored: null);
+
+        Assert.Equal(expected, result.Install!.Folder);
+    }
+
+    [Fact]
+    public void MapRelease_VehicleWithAFolderTheGameChanges_Throws()
+    {
+        var dto = MinimalReleaseDto();
+        dto.Type = "vehicle";
+        dto.Install = new InstallInfoDto { Derived = true, Folder = "CON" };
+
+        Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapRelease(dto, null, authored: null));
+    }
+
+    [Fact]
     public void MapRelease_PartialListingSnapshot_FallsBackToAuthoredPerField()
     {
         var dto = MinimalReleaseDto();
@@ -896,6 +1072,15 @@ public sealed class DtoMapperTests
         Assert.Equal(new[] { "Solo Author" }, result.Listing.Authors);
         Assert.Equal("Standalone abstract.", result.Listing.Abstract);
         Assert.Equal("MIT", result.Listing.License);
+    }
+
+    [Fact]
+    public void MapPackVersion_NoGameMin_Throws()
+    {
+        var dto = MinimalPackAuthoredDto();
+        dto.Compatibility = new CompatibilityDto();
+
+        Assert.Contains("minimum game version", Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapPackVersion(dto, "source")).Message, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -31,7 +31,7 @@ internal static class ShowCommand
                 ? null
                 : await cli.Mods.GetReleaseAsync(listingId, requestedVersion.Value, ct).ConfigureAwait(false);
             var snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
-            var indexListing = snapshot.Listings.FirstOrDefault(listing => ModIds.Equals(listing.Id, listingId));
+            var indexListing = snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves).FirstOrDefault(listing => ModIds.Equals(listing.Id, listingId));
             var metadata = repositoryListing ?? indexListing?.Authored;
             var diagnostics = MatchingDiagnostics(snapshot, listingId, requestedCanonical);
             var hasUnknownListing = diagnostics.Any(diagnostic =>
@@ -197,6 +197,8 @@ internal static class ShowCommand
                 var gone = release.UnavailableSince is { } since ? $"  download gone since {since:O}" : string.Empty;
                 output.WriteLine($"  {release.Version}  {release.Compatibility}  {release.ReleaseStatus}{yanked}{gone}");
                 output.WriteLine($"    Game: {release.GameMin} to {release.GameMax ?? "open"}");
+                if (release.Folder is not null)
+                    output.WriteLine($"    Folder: {release.Folder}");
                 WriteReleaseDownloads(output, release);
                 WriteChangelog(output, string.IsNullOrWhiteSpace(release.ChangelogText) ? release.Changelog : release.ChangelogText);
                 if (release.Dependencies is not null)
@@ -322,7 +324,8 @@ internal static class ShowCommand
         string? ChangelogText,
         IReadOnlyList<DependencyView>? Dependencies,
         string? Reason,
-        DownloadCountView? Downloads)
+        DownloadCountView? Downloads,
+        string? Folder = null)
     {
         public static ReleaseView From(
             ModVersionMetadata release,
@@ -347,7 +350,8 @@ internal static class ShowCommand
             release.ChangelogText,
             includeDependencies ? release.Dependencies.Select(DependencyView.From).ToArray() : null,
             null,
-            downloads);
+            downloads,
+            release.Install?.Folder);
 
         public static ReleaseView Unknown(DiagnosticView diagnostic, DownloadCountView? downloads) => new(
             "unknown",

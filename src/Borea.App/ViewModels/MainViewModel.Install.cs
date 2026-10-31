@@ -482,6 +482,12 @@ public partial class MainViewModel
     /// </summary>
     internal async Task ConfirmInstallAsync(IInstallRow row)
     {
+        if (row is IContentPlanRow { PendingContentPlan: not null } content)
+        {
+            await ConfirmContentAsync(content);
+            return;
+        }
+
         if (await ExecutePendingPlanAsync(row))
             await ReloadInstancesAsync();
     }
@@ -574,7 +580,7 @@ public partial class MainViewModel
         if (revision != choices.Revision)
             return null;
 
-        if (!choices.Apply(plan) && plan.IsReady && plan.Warnings.All(shown.Contains)
+        if (!choices.Apply(plan) && plan.IsReady && WereShown(plan.Warnings, shown)
             && (row is IUpdateRow || plan.Operations.All(operation => named.Contains(operation.Release.ModId))))
             return plan;
 
@@ -582,8 +588,14 @@ public partial class MainViewModel
         return null;
     }
 
+    /// <summary>Whether the player saw each of <paramref name="warnings"/> in <paramref name="shown"/>.</summary>
+    internal static bool WereShown(IEnumerable<PlanningMessage> warnings, IReadOnlyList<PlanningMessage> shown)
+        => warnings.All(warning => shown.Any(warning.SameAs));
+
     internal static void CancelInstall(IInstallRow row)
     {
+        if (row is IContentPlanRow content)
+            content.PendingContentPlan = null;
         row.PendingPlan = null;
         row.InstallWarning = null;
         row.Choices = null;
@@ -637,6 +649,14 @@ public partial class MainViewModel
     /// <summary>
     /// The planner's messages on one line, each named by its mod.
     /// </summary>
+    /// <summary>
+    /// The messages after the id of their mod. A message about a recorded vehicle or save comes first and names the mod
+    /// itself, so it stays visible where a row shows only the start of the text.
+    /// </summary>
     private static string Describe(IEnumerable<PlanningMessage> messages)
-        => string.Join(" ", messages.Select(message => $"{message.ModId}: {PlanningText.Message(message)}"));
+        => string.Join(" ", messages
+            .OrderBy(message => !BreaksContent(message))
+            .Select(message => BreaksContent(message) ? PlanningText.Message(message) : $"{message.ModId}: {PlanningText.Message(message)}"));
+
+    private static bool BreaksContent(PlanningMessage message) => message.Kind is PlanningMessageKind.BreaksVehicle or PlanningMessageKind.BreaksSave;
 }

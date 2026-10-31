@@ -1,9 +1,11 @@
 using Borea.Core.Index;
 using Borea.Core.Game;
 using Borea.Core.Mods;
+using Borea.Core.Sharing;
 using Borea.Core.Tags;
 using Borea.Storage.Index.Dtos;
 using System.Text.Json;
+using MetadataEnumMapper = Borea.Storage.Mods.MetadataEnumMapper;
 
 namespace Borea.Storage.Index;
 
@@ -16,8 +18,21 @@ public static class SnapshotParser
     public static IndexValidationResult Parse(
         string indexJson,
         string source = "index",
+        CancellationToken cancellationToken = default) =>
+        Parse(indexJson, [], source, cancellationToken);
+
+    /// <summary>
+    /// Parses the main document together with the type files that sit next to it. A type
+    /// file that fails its root check adds one diagnostic and no entries, and leaves the
+    /// main document and the other type files usable.
+    /// </summary>
+    public static IndexValidationResult Parse(
+        string indexJson,
+        IReadOnlyList<(ContentIndexTypeFile File, string Json)> typeFiles,
+        string source,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(typeFiles);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         cancellationToken.ThrowIfCancellationRequested();
         ContentIndexRootValidator.ValidateIndexRoot(indexJson, "content index");
@@ -35,34 +50,34 @@ public static class SnapshotParser
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var validListings = new List<ParsedListing>();
         var unknownListings = new List<UnknownIndexVersionEntry>();
         var malformedListings = new List<RejectedIndexEntry>();
-        var duplicateIds = FindDuplicateIds(snapshot.Listings.Concat(snapshot.Packs), cancellationToken);
-
-        foreach (var listingElement in snapshot.Listings)
+        var typeEntries = new List<(ContentIndexTypeFile File, IReadOnlyList<JsonElement> Entries)>();
+        foreach (var (file, json) in typeFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var id = IndexJsonHelpers.TryExtractString(listingElement, "id");
-            if (id is not null && duplicateIds.Contains(id))
+            try
             {
-                malformedListings.Add(new RejectedIndexEntry(id, $"Content id '{id}' appears more than once in the snapshot."));
-                continue;
+                typeEntries.Add((file, ReadTypeFile(file, json)));
             }
+            catch (InvalidOperationException ex)
+            {
+                malformedListings.Add(new RejectedIndexEntry(null, ex.Message));
+            }
+        }
 
-            var outcome = ListingParser.Parse(listingElement, source, cancellationToken);
-            switch (outcome.Kind)
-            {
-                case ParseOutcomeKind.Valid:
-                    validListings.Add(outcome.Value!);
-                    break;
-                case ParseOutcomeKind.Unknown:
-                    unknownListings.Add(outcome.Unknown!);
-                    break;
-                case ParseOutcomeKind.Malformed:
-                    malformedListings.Add(outcome.Malformed!);
-                    break;
-            }
+        // The ids of every type are one namespace, so an id in two places is rejected in both.
+        var duplicateIds = FindDuplicateIds(
+            snapshot.Listings.Concat(snapshot.Packs).Concat(typeEntries.SelectMany(entry => entry.Entries)),
+            cancellationToken);
+
+        var validListings = ParseListings(snapshot.Listings, null, duplicateIds, source, unknownListings, malformedListings, cancellationToken);
+        var validVehicles = new List<ParsedListing>();
+        var validSaves = new List<ParsedListing>();
+        foreach (var (file, entries) in typeEntries)
+        {
+            var valid = ParseListings(entries, file, duplicateIds, source, unknownListings, malformedListings, cancellationToken);
+            (file.Type == ContentType.Save ? validSaves : validVehicles).AddRange(valid);
         }
 
         var validPacks = new List<ParsedPack>();
@@ -101,7 +116,163 @@ public static class SnapshotParser
         return new IndexValidationResult(
             snapshot.SnapshotVersion, validListings, unknownListings,
             malformedListings, validPacks, unknownPacks, malformedPacks,
-            gameVersions, snapshot.Sources, gameVersionsError, tags, tagsError, unknownTags);
+            gameVersions, snapshot.Sources, gameVersionsError, tags, tagsError, unknownTags,
+            validVehicles, validSaves, ParseHosts(snapshot.Hosts));
+    }
+
+    /// <summary>
+    /// The usable share hosts of the hosts field, which is hosts.toml of content-index as JSON (RFC 0104), by key.
+    /// A table that Borea cannot use is skipped and not the whole field. A host without
+    /// storage and pages is usable too, because Borea reads only the members below and ignores the others.
+    /// </summary>
+    private static IReadOnlyList<ShareHost> ParseHosts(JsonElement? element)
+    {
+        if (element is not { ValueKind: JsonValueKind.Object } root)
+            return [];
+
+        var hosts = new List<ShareHost>();
+        foreach (var table in root.EnumerateObject())
+        {
+            if (TryReadHost(table) is { } host)
+                hosts.Add(host);
+        }
+
+        return hosts.OrderBy(host => host.Key, StringComparer.Ordinal).ToList();
+    }
+
+    // An escaped lone surrogate in a key or a value makes JsonElement throw, and without this catch one such table fails the whole snapshot.
+    private static ShareHost? TryReadHost(JsonProperty table)
+    {
+        try
+        {
+            return ReadHost(table.Name, table.Value);
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    // The token of a player goes to api, so only an https address is taken.
+    private static ShareHost? ReadHost(string key, JsonElement table)
+    {
+        if (table.ValueKind != JsonValueKind.Object || !ReleaseHost.IsShareKey(key) || StringMember(table, "kind") != "share")
+            return null;
+        if (HttpsUri(StringMember(table, "api")) is not { } api)
+            return null;
+        if (!table.TryGetProperty("types", out var typeArray) || typeArray.ValueKind != JsonValueKind.Array
+            || typeArray.EnumerateArray().Any(type => type.ValueKind != JsonValueKind.String))
+            return null;
+
+        var maxBytes = new Dictionary<string, long>(StringComparer.Ordinal);
+        if (table.TryGetProperty("max_bytes", out var limits))
+        {
+            if (limits.ValueKind != JsonValueKind.Object)
+                return null;
+
+            foreach (var limit in limits.EnumerateObject())
+            {
+                if (limit.Value.ValueKind != JsonValueKind.Number || !limit.Value.TryGetInt64(out var bytes) || bytes <= 0)
+                    return null;
+
+                maxBytes[limit.Name] = bytes;
+            }
+        }
+
+        var name = StringMember(table, "name") is { Length: > 0 } text ? text : key;
+        var apiBase = api.AbsoluteUri.EndsWith('/') ? api : new Uri(api.AbsoluteUri + "/");
+        var types = typeArray.EnumerateArray().Select(type => type.GetString()!).ToList();
+        return new ShareHost(key, name, apiBase, types, maxBytes, HttpsUri(StringMember(table, "policy")));
+    }
+
+    private static string? StringMember(JsonElement table, string name) =>
+        table.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    private static Uri? HttpsUri(string? text) =>
+        Uri.TryCreate(text, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && uri.UserInfo.Length == 0 ? uri : null;
+
+    private static List<JsonElement> ReadTypeFile(ContentIndexTypeFile file, string json)
+    {
+        ContentIndexRootValidator.ValidateTypeFileRoot(json, "content index", file);
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.GetProperty(file.ArrayKey).Clone().EnumerateArray().ToList();
+    }
+
+    /// <summary>
+    /// The one parse of listing entries, for the listings of the main document (<paramref name="file"/> is null)
+    /// and for the entries of a type file.
+    /// </summary>
+    private static List<ParsedListing> ParseListings(
+        IReadOnlyList<JsonElement> entries,
+        ContentIndexTypeFile? file,
+        HashSet<string> duplicateIds,
+        string source,
+        List<UnknownIndexVersionEntry> unknownListings,
+        List<RejectedIndexEntry> malformedListings,
+        CancellationToken cancellationToken)
+    {
+        var validListings = new List<ParsedListing>();
+        foreach (var listingElement in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var id = IndexJsonHelpers.TryExtractString(listingElement, "id");
+            if (id is not null && duplicateIds.Contains(id))
+            {
+                malformedListings.Add(new RejectedIndexEntry(id, $"Content id '{id}' appears more than once in the snapshot."));
+                continue;
+            }
+
+            if (MisplacedReason(listingElement, id, file) is { } reason)
+            {
+                malformedListings.Add(new RejectedIndexEntry(id, reason));
+                continue;
+            }
+
+            var outcome = ListingParser.Parse(listingElement, source, cancellationToken);
+            switch (outcome.Kind)
+            {
+                case ParseOutcomeKind.Valid:
+                    validListings.Add(outcome.Value!);
+                    break;
+                case ParseOutcomeKind.Unknown:
+                    unknownListings.Add(outcome.Unknown!);
+                    break;
+                case ParseOutcomeKind.Malformed:
+                    malformedListings.Add(outcome.Malformed!);
+                    break;
+            }
+        }
+
+        return validListings;
+    }
+
+    /// <summary>
+    /// Why an entry does not belong where it is, read from the raw authored type, or null when it does.
+    /// Vehicles and saves have their own files, so a client that knows no such file never lists them.
+    /// </summary>
+    private static string? MisplacedReason(JsonElement entry, string? id, ContentIndexTypeFile? file)
+    {
+        var rawType = IndexJsonHelpers.TryExtractNestedString(entry, "authored", "type");
+        if (file is null)
+        {
+            var type = rawType is null ? ContentType.Mod : MetadataEnumMapper.ParseContentType(rawType);
+            return ContentIndexTypeFiles.All.FirstOrDefault(typeFile => typeFile.Type == type) is { } home
+                ? $"Listing '{id}' is a {rawType}, which belongs in {home.FileName} and not in listings."
+                : null;
+        }
+
+        var hasAuthored = entry.ValueKind == JsonValueKind.Object && entry.TryGetProperty("authored", out var authored) && authored.ValueKind != JsonValueKind.Null;
+        if (hasAuthored)
+        {
+            return rawType is not null && MetadataEnumMapper.ParseContentType(rawType) == file.Type
+                ? null
+                : $"Entry '{id}' in {file.FileName} has type '{rawType}', and that file holds only {MetadataEnumMapper.ToDto(file.Type)} entries.";
+        }
+
+        // Without an authored document nothing says what the releases are, and a tombstone has none.
+        return entry.ValueKind == JsonValueKind.Object && entry.TryGetProperty("releases", out var releases) && releases is { ValueKind: JsonValueKind.Array } && releases.GetArrayLength() > 0
+            ? $"Entry '{id}' in {file.FileName} has releases but no authored document."
+            : null;
     }
 
     private static (CuratedTagVocabulary Value, RejectedIndexEntry? Error, UnknownIndexVersionEntry? Unknown) ParseTags(

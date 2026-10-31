@@ -37,11 +37,13 @@ public sealed class AuthoredDto
     [JsonPropertyName("superseded_by")]
     public string? SupersededBy { get; set; }
 
+    /// <summary>Optional on a vehicle or save only, which ModMetadata checks.</summary>
     [JsonPropertyName("compatibility")]
-    public required CompatibilityDto Compatibility { get; set; }
+    public CompatibilityDto? Compatibility { get; set; }
 
+    /// <summary>Optional on a vehicle or save only, which ModMetadata checks.</summary>
     [JsonPropertyName("links")]
-    public required LinksDto Links { get; set; }
+    public LinksDto? Links { get; set; }
 
     [JsonPropertyName("releases")]
     public ReleasesInfoDto? Releases { get; set; }

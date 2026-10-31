@@ -26,6 +26,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetIndexPath() => Path.Combine(_root, "index.json");
     public string GetAnnouncementsPath() => Path.Combine(_root, "announcements.toml");
     public string GetListingSchemaPath() => Path.Combine(_root, "authored.schema.json");
+
     public string GetImageCacheFolder() => Path.Combine(_root, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_root, "GamePatchNotes");
     public string GetInstancesRoot() => Path.Combine(_root, "Instances");
@@ -48,6 +49,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetInstanceGameLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "KittenSpaceAgency.log");
     public string GetInstanceLaunchLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "borea-launch.log");
     public string GetInstancePlaytimePath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "playtime.toml");
+    public string GetInstanceInstalledContentPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "installed-content.toml");
     public string GetInstanceManifestPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "manifest.toml");
     public string GetInstanceMetadataPath(Guid instanceId)
     {

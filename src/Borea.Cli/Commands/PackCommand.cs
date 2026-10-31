@@ -275,7 +275,8 @@ internal static class PackCommand
                 cli.GamePlatform.Current,
                 Alternatives: chosenAlternatives.Count == 0 ? null : chosenAlternatives,
                 ProceedWithRetractedPack: parseResult.GetValue(proceedWithRetracted),
-                ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer));
+                ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer),
+                UserContent: isDryRun ? cli.ReadOnlyUserContent : cli.UserContent);
 
             Func<ModPackInstallRequest, CancellationToken, Task<ModPackInstallResult>> plan = newInstanceName is null
                 ? cli.ModPackInstaller.PlanAsync
@@ -387,7 +388,8 @@ internal static class PackCommand
                 installed,
                 cli.GamePlatform.Current,
                 Alternatives: chosenAlternatives.Count == 0 ? null : chosenAlternatives,
-                ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer));
+                ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer),
+                UserContent: isDryRun ? cli.ReadOnlyUserContent : cli.UserContent);
 
             ModPackUpdateResult? planned = null;
             if (parseResult.GetValue(recommended))
@@ -847,14 +849,6 @@ internal static class PackCommand
             });
         }
 
-        if (view.Skipped.Count > 0)
-        {
-            var skipped = string.Join(", ", view.Skipped.Select(entry => $"{entry.Id} {entry.Version}"));
-            output.WriteLine(view.DryRun
-                ? $"warning: Borea does not install pinned vehicles and saves yet, so it will skip {skipped}."
-                : $"warning: Borea does not install pinned vehicles and saves yet, so it skipped {skipped}.");
-        }
-
         var planned = view.DryRun ? view.Operations : null;
         foreach (var operation in planned ?? [])
             output.WriteLine($"{(operation.Reason == "dependency" ? "Install dependency" : "Install")} {operation.Id} {operation.Version}.");
@@ -875,10 +869,36 @@ internal static class PackCommand
         foreach (var conflict in view.Conflicts)
             output.WriteLine($"conflict: {conflict.Message}");
 
-        if (planned is { Count: 0 } && view.UnresolvedChoices.Count == 0 && view.Conflicts.Count == 0)
+        WriteContent(output, view.Content, view.DryRun);
+        if (planned is { Count: 0 } && view.UnresolvedChoices.Count == 0 && view.Conflicts.Count == 0 && !view.Content.Any(item => item.Status == "not-attempted"))
             output.WriteLine("Nothing to do.");
 
         ContentOutput.WriteDiagnostics(output, view.Diagnostics);
+    }
+
+    /// <summary>
+    /// One line per pinned vehicle or save. The CLI cannot ask, so a taken name or a changed item names the single-item
+    /// command that finishes it, and the mods of the pack stay installed.
+    /// </summary>
+    private static void WriteContent(TextWriter output, IReadOnlyList<ContentResultView> content, bool dryRun)
+    {
+        foreach (var item in content)
+        {
+            var folder = item.Folder is null ? string.Empty : $" ({(item.Section == "save" ? "saves" : "Vehicles")}/{item.Folder})";
+            if (item.Status is "not-attempted" or "installed" or "updated")
+            {
+                foreach (var id in item.Enables ?? [])
+                    output.WriteLine($"Enable {id} for {item.Section} {item.Id}.");
+            }
+
+            output.WriteLine(item.Status switch
+            {
+                "not-attempted" when dryRun && item.Message is null => $"Install {item.Section} {item.Id} {item.Version}{folder}.",
+                "name-taken" => $"  name-taken  {item.Section} {item.Id} {item.Version}: {item.Message} Run 'borea install {item.Id} --version {item.Version} --name <new name>' to install it under another name.",
+                "changed" => $"  changed  {item.Section} {item.Id} {item.Version}: {item.Message} Run 'borea update {item.Id} --version {item.Version} --discard-changes' to replace it; the old folder stays in the backups.",
+                _ => $"  {item.Status}  {item.Section} {item.Id} {item.Version}{folder}{(item.Message is null ? string.Empty : $": {item.Message}")}",
+            });
+        }
     }
 
     /// <param name="stillInstalled">The mods the update removes that it has not removed.</param>
@@ -895,9 +915,6 @@ internal static class PackCommand
                 _ => $"warning: {warning.Id}: {warning.Message}",
             });
         }
-
-        if (view.Skipped.Count > 0)
-            output.WriteLine($"warning: Borea does not install pinned vehicles and saves yet, so it skips {string.Join(", ", view.Skipped.Select(entry => $"{entry.Id} {entry.Version}"))}.");
 
         foreach (var change in view.Changes)
         {
@@ -931,6 +948,7 @@ internal static class PackCommand
         foreach (var conflict in view.Conflicts)
             output.WriteLine($"conflict: {conflict.Message}");
 
+        WriteContent(output, view.Content, view.DryRun);
         if (view.Changes.Count == 0 && view.UnresolvedChoices.Count == 0 && view.Conflicts.Count == 0)
             output.WriteLine("No mods change.");
 
@@ -1128,7 +1146,8 @@ internal static class PackCommand
         IReadOnlyList<ChoiceView> Choices,
         IReadOnlyList<MessageView> Conflicts,
         IReadOnlyList<SkippedView> Skipped,
-        IReadOnlyList<DiagnosticView> Diagnostics)
+        IReadOnlyList<DiagnosticView> Diagnostics,
+        IReadOnlyList<ContentResultView> Content)
     {
         public static InstallView From(
             ModPackMetadata pack,
@@ -1154,10 +1173,9 @@ internal static class PackCommand
             result.Plan?.UnresolvedChoices.Select(MessageView.From).ToArray() ?? [],
             result.Plan?.Choices.Select(ChoiceView.From).ToArray() ?? [],
             result.Plan?.Conflicts.Select(MessageView.From).ToArray() ?? [],
-            pack.Vehicles.Select(pin => SkippedView.From("vehicle", pin))
-                .Concat(pack.Saves.Select(pin => SkippedView.From("save", pin)))
-                .ToArray(),
-            diagnostics);
+            SkippedView.Of(result.Content),
+            diagnostics,
+            result.Content.Select(ContentResultView.From).ToArray());
     }
 
     private sealed record UpdateView(
@@ -1175,7 +1193,8 @@ internal static class PackCommand
         IReadOnlyList<ChoiceView> Choices,
         IReadOnlyList<MessageView> Conflicts,
         IReadOnlyList<SkippedView> Skipped,
-        IReadOnlyList<DiagnosticView> Diagnostics)
+        IReadOnlyList<DiagnosticView> Diagnostics,
+        IReadOnlyList<ContentResultView> Content)
     {
         /// <summary>An instance whose pack has no newer usable version.</summary>
         public static UpdateView Current(Instance instance, InstanceSource.FromModPack source, bool dryRun) => new(
@@ -1186,6 +1205,7 @@ internal static class PackCommand
             null,
             dryRun,
             true,
+            [],
             [],
             [],
             [],
@@ -1214,10 +1234,9 @@ internal static class PackCommand
             result.Plan?.UnresolvedChoices.Select(MessageView.From).ToArray() ?? [],
             result.Plan?.Choices.Select(ChoiceView.From).ToArray() ?? [],
             result.Plan?.Conflicts.Select(MessageView.From).ToArray() ?? [],
-            result.Target.Vehicles.Select(pin => SkippedView.From("vehicle", pin))
-                .Concat(result.Target.Saves.Select(pin => SkippedView.From("save", pin)))
-                .ToArray(),
-            diagnostics);
+            SkippedView.Of(result.Content),
+            diagnostics,
+            result.Content.Select(ContentResultView.From).ToArray());
     }
 
     private sealed record ChangeView(string Id, string Change, string? From, string? To)
@@ -1258,8 +1277,32 @@ internal static class PackCommand
         public static MessageView From(PlanningMessage message) => new(message.ModId, message.Code, message.Message);
     }
 
-    private sealed record SkippedView(string Section, string Id, string Version)
+    /// <param name="Reason">Why the pinned vehicle or save did not install.</param>
+    private sealed record SkippedView(string Section, string Id, string Version, string? Reason)
     {
-        public static SkippedView From(string section, ModPackEntry pin) => new(section, pin.ContentId, pin.Version.ToString());
+        public static SkippedView[] Of(IReadOnlyList<ModPackContentResult> content) => content
+            .Where(item => item.Status is ModPackContentStatus.Skipped or ModPackContentStatus.NameTaken or ModPackContentStatus.Changed or ModPackContentStatus.Failed)
+            .Select(item => new SkippedView(ContentOutput.Name(item.Type), item.ContentId, item.Version.ToString(), item.Message))
+            .ToArray();
+    }
+
+    /// <param name="Folder">The folder under Vehicles or saves it uses or would use.</param>
+    private sealed record ContentResultView(string Section, string Id, string Version, string Status, string? Folder, string? Message, IReadOnlyList<string>? ChangedFiles, IReadOnlyList<string>? Enables)
+    {
+        public static ContentResultView From(ModPackContentResult item) => new(
+            ContentOutput.Name(item.Type),
+            item.ContentId,
+            item.Version.ToString(),
+            item.Status switch
+            {
+                ModPackContentStatus.AlreadyInstalled => "already-installed",
+                ModPackContentStatus.NameTaken => "name-taken",
+                ModPackContentStatus.NotAttempted => "not-attempted",
+                _ => item.Status.ToString().ToLowerInvariant(),
+            },
+            item.FolderName,
+            item.Message,
+            item.Changes is { } changes ? [.. changes.Added, .. changes.Removed, .. changes.Changed] : null,
+            item.Enables);
     }
 }

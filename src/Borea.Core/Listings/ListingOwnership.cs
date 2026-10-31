@@ -46,6 +46,9 @@ public enum ListingOwnershipProblem
 
     /// <summary>Another listing or pack holds the pack id in another letter case, which <see cref="ListingOwnership.TakenBy"/> holds.</summary>
     PackIdTaken,
+
+    /// <summary>The authority is a share host (RFC 0094), whose owner record and attestations only the checks of content-index read.</summary>
+    ShareHost,
 }
 
 /// <param name="Repository">The GitHub repository the proof or the fix is about.</param>

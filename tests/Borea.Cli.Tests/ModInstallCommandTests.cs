@@ -345,6 +345,23 @@ public sealed class ModInstallCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Remove_ModARecordedVehicleRequires_NamesTheVehicleAndStillRemoves()
+    {
+        await SaveInstalledAsync(ContentCommandFixtures.Release());
+        var instanceId = (await new FileInstanceRepository(_host.Paths).GetAllAsync()).Single().InstanceId;
+        var rover = UserContentCommandTests.Vehicle("1.0.0", [new ModDependency("flight-tools", ModDependencyKind.Required)]);
+        await new FileInstalledContentRecords(_host.Paths).AddAsync(instanceId, new InstalledContentRecord(rover, "Rover", DateTimeOffset.UnixEpoch, new Dictionary<string, string>()));
+        RecordingUninstaller? uninstaller = null;
+        _host.UninstallerFactory = graph => uninstaller = new RecordingUninstaller(graph);
+
+        var run = await _host.RunAsync("remove", "flight-tools", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("warning: The vehicle Rover needs flight-tools, so the game refuses that vehicle.", run.Error);
+        Assert.Equal("flight-tools", Assert.Single(uninstaller!.Removed));
+    }
+
+    [Fact]
     public async Task Remove_ManagedMod_ExecutesUninstaller()
     {
         await SaveInstalledAsync(ContentCommandFixtures.Release());

@@ -1,4 +1,5 @@
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 
 namespace Borea.Core.Tests.Listings;
 
@@ -26,6 +27,69 @@ public sealed class ListingDraftTests
         Assert.Equal("2026.9", document.GetTable("compatibility")!.GetString("game_min"));
         Assert.Equal("listings/MyMod.toml", draft.Path);
         Assert.False(draft.IsEdit);
+    }
+
+    [Theory]
+    [InlineData("vehicle", "vehicles/ExampleRover.toml")]
+    [InlineData("save", "saves/ExampleRover.toml")]
+    public void ToDocument_VehicleOrSaveWithoutForumsAndGameMin_WritesNeitherTableIntoItsFolder(string type, string path)
+    {
+        var draft = new ListingDraft
+        {
+            Id = "ExampleRover",
+            Type = type,
+            Name = "Example Rover",
+            Authors = ["Maxi"],
+            Abstract = "A rover.",
+            License = "CC-BY-4.0",
+        };
+
+        var document = draft.ToDocument();
+
+        Assert.Equal(["spec_version", "id", "type", "name", "authors", "abstract", "license"], document.Entries.Select(entry => entry.Key));
+        Assert.Equal(path, draft.Path);
+        Assert.True(draft.IsVehicleOrSave);
+    }
+
+    [Fact]
+    public void ToDocument_VehicleWithGameMaxOnly_KeepsCompatibilityWithoutGameMin()
+    {
+        var draft = new ListingDraft { Id = "ExampleRover", Type = "vehicle", GameMax = "2026.10.13.5602" };
+
+        var compatibility = draft.ToDocument().GetTable("compatibility")!;
+
+        Assert.Equal(["game_max"], compatibility.Entries.Select(entry => entry.Key));
+    }
+
+    [Fact]
+    public void ToDocument_ModWithoutForumsAndGameMin_StillWritesBothTables()
+    {
+        var document = new ListingDraft { Id = "MyMod" }.ToDocument();
+
+        Assert.NotNull(document.GetTable("links"));
+        Assert.Equal(string.Empty, document.GetTable("compatibility")!.GetString("game_min"));
+    }
+
+    [Fact]
+    public void Pack_VehiclesAndSaves_AreReadWithTheirTypeAndWrittenToTheirSections()
+    {
+        var pack = new ListingDraft
+        {
+            Type = ListingDraft.ModPackType,
+            Id = "RoverPack",
+            Version = "1.0.0",
+            Mods = [new ListingPackMember("PartsMod", "1.0.0")],
+            Vehicles = [new ListingPackMember("ExampleRover", "1.0.0") { Type = ContentType.Vehicle }],
+            Saves = [new ListingPackMember("MoonBase", "2.0.0") { Type = ContentType.Save }],
+        };
+
+        var read = ListingDraft.FromDocument(pack.ToDocument());
+        var withoutSaves = (read with { Saves = [] }).ToDocument();
+
+        Assert.Equal(["PartsMod", "ExampleRover", "MoonBase"], read.Pins.Select(pin => pin.Id));
+        Assert.Equal([ContentType.Mod, ContentType.Vehicle, ContentType.Save], read.Pins.Select(pin => pin.Type));
+        Assert.Equal("ExampleRover", ((AuthoredTable)withoutSaves.GetList("vehicles")![0]).GetString("id"));
+        Assert.False(withoutSaves.Contains("saves"));
     }
 
     [Fact]
@@ -83,6 +147,55 @@ public sealed class ListingDraftTests
         Assert.Equal("release/", written.GetString("tag_prefix"));
         Assert.Equal("kept", written.GetString("x_future"));
         Assert.False(cleared.Contains("tag_prefix"));
+    }
+
+    [Fact]
+    public void FromDocument_ShareHostAlone_IsReadAndWrittenBack()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Remove("github");
+        document.GetTable("releases")!.Set("ksamods", "ExampleRover");
+
+        var draft = ListingDraft.FromDocument(document);
+
+        Assert.Equal(new ListingReleases(null, null, Share: new ListingShareHost("ksamods", "ExampleRover")), draft.Releases);
+        Assert.Equal("ExampleRover", draft.ToDocument().GetTable("releases")!.GetString("ksamods"));
+    }
+
+    [Fact]
+    public void FromDocument_ShareHostNamedByTheAuthority_KeepsEveryKey()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("ksamods", "ExampleRover");
+        document.GetTable("releases")!.Set("authority", "ksamods");
+
+        var written = ListingDraft.FromDocument(document).ToDocument().GetTable("releases")!;
+
+        Assert.Equal(["github", "ksamods", "authority"], written.Entries.Select(entry => entry.Key));
+        Assert.Equal(("StarMapLoader/StarMap", "ExampleRover", "ksamods"), (written.GetString("github"), written.GetString("ksamods"), written.GetString("authority")));
+    }
+
+    [Fact]
+    public void FromDocument_IdShapedKeyNextToGitHubWithoutAuthority_IsNoShareHost()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("until", "2.0");
+
+        var draft = ListingDraft.FromDocument(document);
+
+        Assert.Null(draft.Releases!.Share);
+        Assert.Equal("2.0", draft.ToDocument().GetTable("releases")!.GetString("until"));
+    }
+
+    [Fact]
+    public void FromDocument_AuthorityNamesTheSecondShareKey_ReadsThatKey()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("until", "2.0");
+        document.GetTable("releases")!.Set("ksamods", "ExampleRover");
+        document.GetTable("releases")!.Set("authority", "ksamods");
+
+        Assert.Equal(new ListingShareHost("ksamods", "ExampleRover"), ListingDraft.FromDocument(document).Releases!.Share);
     }
 
     [Fact]

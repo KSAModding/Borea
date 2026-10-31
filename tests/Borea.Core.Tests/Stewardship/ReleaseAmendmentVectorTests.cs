@@ -44,7 +44,7 @@ public sealed class ReleaseAmendmentVectorTests
     [Fact]
     public void TheFile_HasEveryVector()
     {
-        Assert.Equal(55, Vectors().Select(vector => (string)vector["name"]!).Distinct().Count());
+        Assert.Equal(57, Vectors().Select(vector => (string)vector["name"]!).Distinct().Count());
     }
 
     [Theory]

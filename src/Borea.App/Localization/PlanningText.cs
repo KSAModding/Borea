@@ -54,6 +54,10 @@ internal static class PlanningText
             PlanningMessageKind.SearchLimit => Fill(Resources.InstallMessageSearchLimitFormat, message.Limit ?? 0),
             PlanningMessageKind.RetractedPack => WithReason(Resources.InstallMessageRetractedPack, message.Value),
             PlanningMessageKind.UnlistedPin => Resources.InstallMessageUnlistedPin,
+            PlanningMessageKind.MissingForVehicle => Fill(Resources.InstallMessageMissingForVehicleFormat, dependency),
+            PlanningMessageKind.MissingForSave => Fill(Resources.InstallMessageMissingForSaveFormat, dependency),
+            PlanningMessageKind.BreaksVehicle => Fill(Resources.InstallMessageBreaksVehicleFormat, dependency, message.Value),
+            PlanningMessageKind.BreaksSave => Fill(Resources.InstallMessageBreaksSaveFormat, dependency, message.Value),
             _ => message.Message,
         };
     }
@@ -92,7 +96,10 @@ internal static class PlanningText
         return alternative is null ? message.Value : Bounds(alternative.ModId, alternative.MinVersion, alternative.MaxVersion);
     }
 
-    public static string Bounds(string modId, ModVersion? min, ModVersion? max) => (min, max) switch
+    public static string Bounds(string modId, ModVersion? min, ModVersion? max) => Bounds(modId, min?.ToString(), max?.ToString());
+
+    /// <summary>The bounds as a document writes them, before they are read as versions.</summary>
+    public static string Bounds(string modId, string? min, string? max) => (min, max) switch
     {
         (null, null) => modId,
         ({ } low, null) => $"{modId} >= {low}",

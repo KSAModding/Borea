@@ -279,6 +279,17 @@ public sealed class ListingHostClientTests
         Assert.Equal("/KSAModding/content-index/main/listings/MyMod.toml", await fetcher.GetListingAsync("MyMod"));
     }
 
+    [Theory]
+    [InlineData("vehicle", "/KSAModding/content-index/main/vehicles/ExampleRover.toml")]
+    [InlineData("save", "/KSAModding/content-index/main/saves/ExampleRover.toml")]
+    [InlineData("mod-loader", "/KSAModding/content-index/main/listings/ExampleRover.toml")]
+    public async Task GetListingAsync_OfAType_ReadsTheFileInTheFolderOfTheType(string type, string path)
+    {
+        var fetcher = new ListedDocumentFetcher(FakeHttpMessageHandler.BuildClient(request => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(request.RequestUri!.AbsolutePath) }, out _));
+
+        Assert.Equal(path, await fetcher.GetListingAsync("ExampleRover", type));
+    }
+
     [Fact]
     public async Task GetPackVersionAsync_ReadsTheFileOfThatVersion()
     {

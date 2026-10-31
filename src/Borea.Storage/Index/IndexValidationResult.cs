@@ -1,4 +1,5 @@
 using Borea.Storage.Index.Dtos;
+using Borea.Core.Sharing;
 using Borea.Core.Tags;
 
 namespace Borea.Storage.Index;
@@ -31,6 +32,17 @@ public sealed class IndexValidationResult
 
     public UnknownIndexVersionEntry? UnknownTags { get; }
 
+    /// <summary>
+    /// The valid entries of the type files. Their rejected and unknown entries are in
+    /// <see cref="MalformedListings"/> and <see cref="UnknownListings"/>.
+    /// </summary>
+    public IReadOnlyList<ParsedListing> ValidVehicles { get; }
+
+    public IReadOnlyList<ParsedListing> ValidSaves { get; }
+
+    /// <summary>The usable share hosts of the hosts field by key. Empty when the snapshot has no such field.</summary>
+    public IReadOnlyList<ShareHost> ShareHosts { get; }
+
     public IndexValidationResult(
         int snapshotVersion,
         IReadOnlyList<ParsedListing> validListings,
@@ -44,7 +56,10 @@ public sealed class IndexValidationResult
         RejectedIndexEntry? gameVersionsError = null,
         CuratedTagVocabulary? tags = null,
         RejectedIndexEntry? tagsError = null,
-        UnknownIndexVersionEntry? unknownTags = null)
+        UnknownIndexVersionEntry? unknownTags = null,
+        IReadOnlyList<ParsedListing>? validVehicles = null,
+        IReadOnlyList<ParsedListing>? validSaves = null,
+        IReadOnlyList<ShareHost>? shareHosts = null)
     {
         SnapshotVersion = snapshotVersion;
         ValidListings = validListings ?? throw new ArgumentNullException(nameof(validListings));
@@ -59,5 +74,8 @@ public sealed class IndexValidationResult
         Tags = tags ?? CuratedTagVocabulary.Empty;
         TagsError = tagsError;
         UnknownTags = unknownTags;
+        ValidVehicles = validVehicles ?? [];
+        ValidSaves = validSaves ?? [];
+        ShareHosts = shareHosts ?? [];
     }
 }

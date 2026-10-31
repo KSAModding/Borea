@@ -10,7 +10,8 @@ public interface IPullRequestReviews
     /// <summary>
     /// Reads the pull request, its changed files and its verdict with the token of the signed-in account, and each listing or pack document
     /// at its head commit. The status validate of that commit is read without the token, because the App has no Commit statuses permission.
-    /// A listing document also gets the ownership proof of the pull request author against the listing on the base branch (RFC 0048).
+    /// A listing, vehicle or save document also gets the ownership proof of the pull request author against the listing on the base branch (RFC 0048),
+    /// and a vehicle or save also gets its newest release on main of content-index-releases.
     /// </summary>
     /// <param name="repository">An index repository as owner/name.</param>
     /// <exception cref="ArgumentException">The repository is no index repository.</exception>
@@ -27,7 +28,7 @@ public interface IPullRequestReviews
 /// <param name="Validate">The status validate on the head commit, or null when it could not be read.</param>
 /// <param name="ValidateFailure">Why the status could not be read, or null.</param>
 /// <param name="Verdict">The verdict comment of the checks without its marker, or null.</param>
-/// <param name="Documents">The listing and pack documents that the pull request adds or changes, in the order of <paramref name="Files"/>.</param>
+/// <param name="Documents">The listing, pack, vehicle and save documents that the pull request adds or changes, in the order of <paramref name="Files"/>.</param>
 public sealed record PullRequestReview(
     string Repository,
     int Number,
@@ -165,9 +166,16 @@ public sealed record PullRequestFile(string Path, string Status, string? Previou
     }
 }
 
-/// <param name="Kind">Listing or Pack.</param>
+/// <param name="Kind">Listing, Pack, Vehicle or Save.</param>
 /// <param name="Text">The file at the head commit, or null when it is no UTF-8 text.</param>
 /// <param name="Document">The parsed document, or null when it does not parse.</param>
 /// <param name="ParseError">Why <paramref name="Text"/> does not parse, or null.</param>
-/// <param name="Ownership">For a listing that parses, the ownership proof of the pull request author, else null.</param>
-public sealed record PullRequestDocument(string Path, StewardQueueKind Kind, string? Text, AuthoredTable? Document, string? ParseError, ListingOwnership? Ownership);
+/// <param name="Ownership">For a listing, vehicle or save that parses, the ownership proof of the pull request author, else null.</param>
+/// <param name="NewestRelease">For a vehicle or save that parses, its newest release on main of content-index-releases, or null when none is stamped or it could not be read.</param>
+/// <param name="NewestReleaseFailure">Why the newest release could not be read, or null.</param>
+public sealed record PullRequestDocument(string Path, StewardQueueKind Kind, string? Text, AuthoredTable? Document, string? ParseError, ListingOwnership? Ownership,
+    PullRequestRelease? NewestRelease = null, StewardException? NewestReleaseFailure = null);
+
+/// <summary>A stamped release of a vehicle or save.</summary>
+/// <param name="Folder">install.folder, the game folder that the release installs as, or null when the file names none.</param>
+public sealed record PullRequestRelease(string Version, string? Folder);

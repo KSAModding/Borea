@@ -17,7 +17,8 @@ public sealed class ModMetadataTests
         string? supersededBy = null,
         int specVersion = SpecVersions.Highest,
         InstallDescriptor? install = null,
-        LoaderProvides? provides = null) =>
+        LoaderProvides? provides = null,
+        string? gameMin = "2026.7.4.2131") =>
         new(
             specVersion: specVersion,
             modId: modId,
@@ -27,7 +28,7 @@ public sealed class ModMetadataTests
             abstractText: "Abstract.",
             license: license,
             links: links ?? TestFixtures.SampleLinks(),
-            gameMin: "2026.7.4.2131",
+            gameMin: gameMin,
             type: type,
             loader: loader,
             supersededBy: supersededBy,
@@ -187,5 +188,64 @@ public sealed class ModMetadataTests
 
         Assert.Equal(InstallAnchor.Standalone, metadata.Install!.Target);
         Assert.Equal("StarMap.exe", metadata.Provides!.Launch);
+    }
+
+    [Theory]
+    [InlineData(ContentType.Vehicle)]
+    [InlineData(ContentType.Save)]
+    public void Constructor_VehicleOrSaveWithoutForumsAndGameMin_IsAccepted(ContentType type)
+    {
+        var metadata = Build(type: type, links: new Dictionary<string, string>(), gameMin: null);
+
+        Assert.Null(metadata.ForumUrl);
+        Assert.Null(metadata.GameMin);
+    }
+
+    [Theory]
+    [InlineData(ContentType.Vehicle)]
+    [InlineData(ContentType.Save)]
+    public void Constructor_VehicleOrSaveWithAnEmptyForumsLinkOrGameMin_ThrowsArgumentException(ContentType type)
+    {
+        Assert.Throws<ArgumentException>(() => Build(type: type, links: new Dictionary<string, string> { ["forums"] = " " }));
+        Assert.Throws<ArgumentException>(() => Build(type: type, gameMin: " "));
+    }
+
+    [Theory]
+    [InlineData(ContentType.Mod)]
+    [InlineData(ContentType.ModLoader)]
+    [InlineData(ContentType.Unknown)]
+    public void Constructor_OtherTypesWithoutForumsOrGameMin_ThrowArgumentException(ContentType type)
+    {
+        Assert.Throws<ArgumentException>(() => Build(type: type, links: new Dictionary<string, string>()));
+        Assert.Throws<ArgumentException>(() => Build(type: type, gameMin: null));
+    }
+
+    [Theory]
+    [InlineData(ContentType.Vehicle)]
+    [InlineData(ContentType.Save)]
+    public void Constructor_VehicleOrSaveWithLoaderOrProvides_ThrowsArgumentException(ContentType type)
+    {
+        Assert.Throws<ArgumentException>(() => Build(type: type, loader: new LoaderRequirement("StarMap", ModVersion.Parse("0.4.5"))));
+        Assert.Throws<ArgumentException>(() => Build(type: type, provides: new LoaderProvides(launch: "StarMap.exe")));
+    }
+
+    [Theory]
+    [InlineData(ContentType.Vehicle)]
+    [InlineData(ContentType.Save)]
+    public void Constructor_VehicleOrSaveWithTargetPathOrManages_ThrowsArgumentException(ContentType type)
+    {
+        Assert.Throws<ArgumentException>(() => Build(type: type, install: new InstallDescriptor(target: InstallAnchor.UserData)));
+        Assert.Throws<ArgumentException>(() => Build(type: type, install: new InstallDescriptor(path: "Vehicles")));
+        Assert.Throws<ArgumentException>(() => Build(type: type, install: new InstallDescriptor(manages: new[] { "Vehicles/Example Rover" })));
+    }
+
+    [Theory]
+    [InlineData(ContentType.Vehicle)]
+    [InlineData(ContentType.Save)]
+    public void Constructor_VehicleOrSaveWithRootStepsAndUninstall_IsAccepted(ContentType type)
+    {
+        var metadata = Build(type: type, install: new InstallDescriptor(root: "Example Rover", steps: new[] { "Copy it." }, uninstall: new[] { "Delete it." }));
+
+        Assert.Equal("Example Rover", metadata.Install!.Root);
     }
 }

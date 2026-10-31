@@ -11,14 +11,17 @@ internal static class ModInstallCommands
 {
     public static Command BuildInstall(Func<CancellationToken, Task<CliServices>> services)
     {
-        var id = ArgumentRules.Text("mod-id", "The mod id to install.");
+        var id = ArgumentRules.Text("mod-id", "The id of the mod, vehicle or save to install.");
         var version = new Option<string?>("--version") { Description = "Install this exact version." };
         var instance = ArgumentRules.Instance();
         var recommended = ArgumentRules.WithRecommended();
         var alternatives = ArgumentRules.Alternatives();
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
         var channel = ArgumentRules.Channel();
-        var command = new Command("install", "Install a mod and its required dependencies.");
+        var name = NameOption();
+        var allowMissing = AllowMissingOption();
+        var json = ArgumentRules.Json();
+        var command = new Command("install", "Install a mod and its required dependencies, or a vehicle or save and the mods it needs.");
         command.Arguments.Add(id);
         command.Options.Add(version);
         command.Options.Add(instance);
@@ -26,19 +29,29 @@ internal static class ModInstallCommands
         command.Options.Add(alternatives);
         command.Options.Add(dryRun);
         command.Options.Add(channel);
+        command.Options.Add(name);
+        command.Options.Add(allowMissing);
+        command.Options.Add(json);
         command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parse.GetValue(instance)).ConfigureAwait(false);
             var modId = parse.GetRequiredValue(id);
+            var isDryRun = parse.GetValue(dryRun);
+            if (isDryRun)
+                await RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
+            var releaseChannel = ArgumentRules.ChannelOrSaved(parse.GetValue(channel), cli.Settings.ReleaseChannel);
+            if (await (isDryRun ? cli.ReadOnlyUserContent : cli.UserContent).FindAsync(modId, ct).ConfigureAwait(false) is { } content)
+            {
+                var options = new UserContentCommands.Options(parse.GetValue(name), parse.GetValue(version), releaseChannel, parse.GetValue(recommended), ParseAlternatives(parse.GetValue(alternatives)), parse.GetValue(allowMissing), DiscardChanges: false, isDryRun, parse.GetValue(json));
+                return await UserContentCommands.InstallAsync(cli, target, content, options, output, error, ct).ConfigureAwait(false);
+            }
+
+            RequireModOptions(parse, modId, name, allowMissing, json);
             var existing = target.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
             if (existing is { Ownership: not ModInstallOwnership.Borea })
                 throw new InvalidOperationException(NotOwnedMessage(existing.ModId));
             var exactText = parse.GetValue(version);
-            var isDryRun = parse.GetValue(dryRun);
-            if (isDryRun)
-                await RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
             var repository = isDryRun ? cli.ReadOnlyMods : cli.Mods;
-            var releaseChannel = ArgumentRules.ChannelOrSaved(parse.GetValue(channel), cli.Settings.ReleaseChannel);
             var release = exactText is null
                 ? await repository.GetLatestReleaseInChannelAsync(modId, releaseChannel, ct).ConfigureAwait(false)
                 : await repository.GetReleaseAsync(modId, ModVersion.Parse(exactText), ct).ConfigureAwait(false);
@@ -65,27 +78,40 @@ internal static class ModInstallCommands
 
     public static Command BuildRemove(Func<CancellationToken, Task<CliServices>> services)
     {
-        var id = ArgumentRules.Text("mod-id", "The installed mod id to remove.");
+        var id = ArgumentRules.Text("mod-id", "The id of the installed mod, vehicle or save to remove.");
         var instance = ArgumentRules.Instance();
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the operation without writing files." };
-        var command = new Command("remove", "Remove a mod that Borea installed.");
+        var discardChanges = DiscardChangesOption();
+        var json = ArgumentRules.Json();
+        var command = new Command("remove", "Remove a mod, vehicle or save that Borea installed.");
         command.Arguments.Add(id);
         command.Options.Add(instance);
         command.Options.Add(dryRun);
+        command.Options.Add(discardChanges);
+        command.Options.Add(json);
         command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parse.GetValue(instance)).ConfigureAwait(false);
             var modId = parse.GetRequiredValue(id);
+            if (await UserContentCommands.FindRecordAsync(cli, target, modId, ct).ConfigureAwait(false) is { } record)
+            {
+                var options = new UserContentCommands.Options(null, null, cli.Settings.ReleaseChannel, false, new Dictionary<string, string>(), false, parse.GetValue(discardChanges), parse.GetValue(dryRun), parse.GetValue(json));
+                return await UserContentCommands.RemoveAsync(cli, target, record, options, output, ct).ConfigureAwait(false);
+            }
+
+            RequireModOptions(parse, modId, discardChanges, json);
             var installed = target.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId))
                 ?? throw new InvalidOperationException($"Mod '{modId}' is not installed in '{target.Name}'.");
             if (installed.Ownership != ModInstallOwnership.Borea)
                 throw new InvalidOperationException(NotOwnedMessage(installed.ModId));
 
             var active = await cli.ModState.IsActiveAsync(target.InstanceId, installed.ModId, ct).ConfigureAwait(false);
-            var check = new ModDependencyResolver().CheckUninstall(target, installed.ModId, installed.Version, active);
+            var (content, inactive) = await UserContentCommands.RecordedStateAsync(cli, target, ct).ConfigureAwait(false);
+            var check = new ModDependencyResolver().CheckUninstall(target, installed.ModId, installed.Version, active, content, inactive);
             if (check.DependentModIds.Count > 0)
                 throw new InvalidOperationException($"'{installed.ModId}' is required by {string.Join(", ", check.DependentModIds)}.");
 
+            UserContentCommands.WriteNeeding(error, installed.ModId, check.DependentContent);
             output.WriteLine($"Remove {installed.ModId} {installed.Version} from '{target.Name}'.");
             if (!parse.GetValue(dryRun))
                 await cli.Uninstaller.UninstallAsync(target.InstanceId, installed.ModId, ct).ConfigureAwait(false);
@@ -98,23 +124,43 @@ internal static class ModInstallCommands
 
     public static Command BuildUpdate(Func<CancellationToken, Task<CliServices>> services)
     {
-        var id = new Argument<string?>("mod-id") { Description = "The mod id to update. Omit it to update all managed mods.", Arity = ArgumentArity.ZeroOrOne };
+        var id = new Argument<string?>("mod-id") { Description = "The id of the mod, vehicle or save to update. Omit it to update all managed mods; vehicles and saves update one at a time.", Arity = ArgumentArity.ZeroOrOne };
         var instance = ArgumentRules.Instance();
         var recommended = ArgumentRules.WithRecommended();
         var alternatives = ArgumentRules.Alternatives();
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
         var channel = ArgumentRules.Channel();
-        var command = new Command("update", "Update one mod or all managed mods.");
+        var version = new Option<string?>("--version") { Description = "Change a vehicle or save to this exact version, for example the one a pack pins." };
+        var name = NameOption();
+        var allowMissing = AllowMissingOption();
+        var discardChanges = DiscardChangesOption();
+        var json = ArgumentRules.Json();
+        var command = new Command("update", "Update one mod or all managed mods, or one vehicle or save.");
         command.Arguments.Add(id);
+        command.Options.Add(version);
         command.Options.Add(instance);
         command.Options.Add(recommended);
         command.Options.Add(alternatives);
         command.Options.Add(dryRun);
         command.Options.Add(channel);
+        command.Options.Add(name);
+        command.Options.Add(allowMissing);
+        command.Options.Add(discardChanges);
+        command.Options.Add(json);
         command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parse.GetValue(instance)).ConfigureAwait(false);
             var selectedId = parse.GetValue(id);
+            if (selectedId is not null && await UserContentCommands.FindRecordAsync(cli, target, selectedId, ct).ConfigureAwait(false) is { } record)
+            {
+                var dry = parse.GetValue(dryRun);
+                if (dry)
+                    await RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
+                var options = new UserContentCommands.Options(parse.GetValue(name), parse.GetValue(version), ArgumentRules.ChannelOrSaved(parse.GetValue(channel), cli.Settings.ReleaseChannel), parse.GetValue(recommended), ParseAlternatives(parse.GetValue(alternatives)), parse.GetValue(allowMissing), parse.GetValue(discardChanges), dry, parse.GetValue(json));
+                return await UserContentCommands.UpdateAsync(cli, target, record, options, output, error, ct).ConfigureAwait(false);
+            }
+
+            RequireModOptions(parse, selectedId, version, name, allowMissing, discardChanges, json);
             var selected = selectedId is null
                 ? target.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea).ToList()
                 : target.Mods.Where(mod => ModIds.Equals(mod.ModId, selectedId)).ToList();
@@ -218,7 +264,7 @@ internal static class ModInstallCommands
         try
         {
             var snapshot = await cli.IndexReader.ReadAsync(cancellationToken).ConfigureAwait(false);
-            return snapshot.Listings.FirstOrDefault(listing => ModIds.Equals(listing.Id, id))?.Authored;
+            return snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves).FirstOrDefault(listing => ModIds.Equals(listing.Id, id))?.Authored;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or FormatException or UnauthorizedAccessException)
         {
@@ -236,6 +282,29 @@ internal static class ModInstallCommands
         {
             throw new InvalidOperationException("Dry-run needs a usable cached content index. Run 'borea index refresh' first.", exception);
         }
+    }
+
+    private static Option<string?> NameOption()
+    {
+        var option = new Option<string?>("--name") { Description = "Install a vehicle or save under this new name, when its own name is taken." };
+        option.Validators.Add(result =>
+        {
+            if (result.GetValueOrDefault<string?>() is { } value && !GameSaveName.IsValid(value))
+                result.AddError($"'{result.GetValueOrDefault<string?>()}' is a name the game would change. Use letters, digits, spaces, '-' and '_'.");
+        });
+        return option;
+    }
+
+    private static Option<bool> AllowMissingOption() => new("--allow-missing") { Description = "Install a vehicle or save although a mod it needs cannot be installed or enabled." };
+
+    private static Option<bool> DiscardChangesOption() => new("--discard-changes") { Description = "Replace or remove a vehicle or save whose files changed since the install. The old folder stays in the backups." };
+
+    /// <summary>The options of a vehicle or save make no sense for a mod, so a mod command refuses them instead of ignoring them.</summary>
+    private static void RequireModOptions(ParseResult parse, string? id, params Option[] options)
+    {
+        var given = options.Where(option => parse.GetResult(option) is { Implicit: false }).Select(option => option.Name).ToList();
+        if (given.Count > 0)
+            throw new InvalidOperationException($"{string.Join(", ", given)} apply only to a vehicle or a save{(id is null ? "." : $", and Borea knows no vehicle or save '{id}' here.")}");
     }
 
     internal static IReadOnlyDictionary<string, string> ParseAlternatives(string[]? values)

@@ -2,6 +2,7 @@ using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Core.UserContent;
 using Borea.Network.Index;
 using Borea.Network.Tests.Temp;
 
@@ -164,6 +165,43 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         Assert.Single(available);
         Assert.Equal(2, fetcher.CallCount);
         Assert.Equal(1, reader.CallCount);
+    }
+
+    [Fact]
+    public async Task UserContent_ServesVehiclesAndSavesOnly()
+    {
+        var snapshot = new ContentIndexSnapshot(
+            1,
+            [new ContentIndexListing("active-mod", TestFixtures.SampleModMetadata("active-mod", "index"), [Release("active-mod", "1.0.0")], null)],
+            [],
+            null,
+            [],
+            vehicles:
+            [
+                Content("rover", ContentType.Vehicle, Release("rover", "1.0.0", type: ContentType.Vehicle), Release("rover", "2.0.0", type: ContentType.Vehicle, status: ReleaseStatus.Testing), Release("rover", "3.0.0", yanked: true, type: ContentType.Vehicle)),
+                Content("old-rover", ContentType.Vehicle, delisted: true, Release("old-rover", "1.0.0", type: ContentType.Vehicle)),
+            ],
+            saves: [Content("campaign", ContentType.Save, Release("campaign", "1.0.0", type: ContentType.Save))]);
+        var repository = new ContentIndexModRepository(new FakeFetcher(ContentIndexFetchResult.Downloaded), new FakeReader(snapshot), new TestPathProvider());
+        IUserContentRepository content = repository;
+
+        Assert.Equal(ContentType.Vehicle, (await content.FindAsync("ROVER"))!.Type);
+        Assert.Equal(ContentType.Save, (await content.FindAsync("campaign"))!.Type);
+        Assert.Null(await content.FindAsync("old-rover"));
+        Assert.Null(await content.FindAsync("active-mod"));
+        Assert.Null(await repository.GetReleaseAsync("rover", ModVersion.Parse("1.0.0")));
+        Assert.True((await content.GetReleaseAsync("rover", ModVersion.Parse("3.0.0")))!.Yanked);
+        Assert.Equal(ModVersion.Parse("1.0.0"), (await content.GetLatestReleaseAsync("rover", ReleaseChannel.Stable))!.Version);
+        Assert.Equal(ModVersion.Parse("2.0.0"), (await content.GetLatestReleaseAsync("rover", ReleaseChannel.Testing))!.Version);
+        Assert.Equal("rover", Assert.Single(await content.SearchAsync(ContentType.Vehicle, "rov")).ModId);
+        Assert.Empty(await content.SearchAsync(ContentType.Save, "rov"));
+        Assert.DoesNotContain(await repository.SearchAsync("rov"), listing => listing.ModId == "rover");
+        Assert.Contains("old-rover", await repository.GetClaimedModIdsAsync(), ModIds.Comparer);
+        Assert.Contains("campaign", await repository.GetClaimedModIdsAsync(), ModIds.Comparer);
+        Assert.Equal(["rover", "campaign"], (await content.GetAvailableAsync()).Select(listing => listing.ModId));
+        Assert.Equal(["2.0.0", "1.0.0"], (await content.GetReleaseHistoryAsync("rover")).Select(release => release.Version.ToString()));
+        Assert.Empty(await content.GetReleaseHistoryAsync("old-rover"));
+        Assert.Empty(await repository.GetReleaseHistoryAsync("rover"));
     }
 
     [Fact]
@@ -348,11 +386,21 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
 
     private static readonly DateTimeOffset GoneSince = new(2026, 9, 23, 10, 24, 0, TimeSpan.Zero);
 
-    private static ModVersionMetadata Release(string modId, string version, bool yanked = false, bool gone = false) => new(
+    private static ContentIndexListing Content(string id, ContentType type, params ModVersionMetadata[] releases) => Content(id, type, false, releases);
+
+    private static ContentIndexListing Content(string id, ContentType type, bool delisted, params ModVersionMetadata[] releases) => new(
+        id,
+        new ModMetadata(1, id, "index", id, ["Author"], "Something to fly.", "MIT", new Dictionary<string, string>(), null, type),
+        releases,
+        delisted ? new IndexStatus(IndexStatusState.Delisted, "delisted") : null);
+
+    private static ModVersionMetadata Release(string modId, string version, bool yanked = false, bool gone = false, ContentType type = ContentType.Mod, ReleaseStatus status = ReleaseStatus.Stable) => new(
         specVersion: 1,
         modId: modId,
         version: ModVersion.Parse(version),
-        releaseStatus: ReleaseStatus.Stable,
+        type: type,
+        install: type == ContentType.Mod ? null : new InstallInfo(null, derived: false, folder: "Rover"),
+        releaseStatus: status,
         releaseDate: new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero),
         gameMin: "2026.9.7.5402",
         gameMinRevision: 5402,
@@ -415,6 +463,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetIndexPath() => indexPath;
         public string GetAnnouncementsPath() => throw new NotSupportedException();
         public string GetListingSchemaPath() => throw new NotSupportedException();
+
         public string GetImageCacheFolder() => throw new NotSupportedException();
         public string GetGamePatchNotesFolder() => throw new NotSupportedException();
         public string GetAppPreferencesPath() => "app-preferences.json";
@@ -447,6 +496,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetInstanceGameLogPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceLaunchLogPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstancePlaytimePath(Guid instanceId) => throw new NotSupportedException();
+        public string GetInstanceInstalledContentPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceManifestPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceMetadataPath(Guid instanceId) => throw new NotSupportedException();
         public string? GetGameDirectoryPath() => throw new NotSupportedException();

@@ -31,6 +31,48 @@ public sealed class ContentViewModelTests
         Assert.Contains(viewModel.ContentLinks, link => link.Label == harness.Localization.LinkRepository);
         Assert.Contains(viewModel.ContentLinks, link => link.Label == "SpaceDock");
         Assert.True(viewModel.HasContentLinks);
+        Assert.Null(viewModel.ContentShareHostText);
+    }
+
+    [Fact]
+    public async Task Open_ListingOnAShareHost_NamesTheHost()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+        {
+            var root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+            var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "AdvancedFlightComputer")!;
+            var releases = listing["authored"]!["releases"]!.AsObject();
+            releases["ksamods"] = "AdvancedFlightComputer";
+            releases["authority"] = "ksamods";
+            return root.ToJsonString();
+        });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatContentSharedOn("ksamods"), viewModel.ContentShareHostText);
+    }
+
+    [Fact]
+    public async Task Open_ListingOnARegisteredShareHost_LinksTheHostPage()
+    {
+        var hosts = ViewModelHarness.ShareHosts("""{ "ksamods": { "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/", "types": ["vehicle", "mod"] } }""");
+        using var harness = await ViewModelHarness.CreateAsync(
+            editSnapshot: json =>
+            {
+                var root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+                var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "AdvancedFlightComputer")!;
+                listing["authored"]!["releases"] = new System.Text.Json.Nodes.JsonObject { ["ksamods"] = "AdvancedFlightComputer" };
+                return hosts(root.ToJsonString());
+            });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        Assert.Contains(new ContentLink(harness.Localization.FormatContentSharedOn("ksamods.gg"), "https://ksamods.gg/", "share-host"), viewModel.ContentLinks);
+        Assert.Null(viewModel.ContentShareHostText);
     }
 
     [Fact]

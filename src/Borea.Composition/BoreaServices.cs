@@ -16,9 +16,11 @@ using Borea.Core.Paths;
 using Borea.Core.Planning;
 using Borea.Core.Preferences;
 using Borea.Core.Settings;
+using Borea.Core.Sharing;
 using Borea.Core.State;
 using Borea.Core.Stewardship;
 using Borea.Core.Updates;
+using Borea.Core.UserContent;
 using Borea.Network;
 using Borea.Network.Announcements;
 using Borea.Network.Downloads;
@@ -29,6 +31,7 @@ using Borea.Network.Listings;
 using Borea.Network.MasterServer;
 using Borea.Network.Planning;
 using Borea.Network.Sources;
+using Borea.Network.Sharing;
 using Borea.Network.SpaceDock;
 using Borea.Storage.Announcements;
 using Borea.Storage.Files;
@@ -115,6 +118,21 @@ public sealed class BoreaServices : IDisposable
     public required IGameSaveStore GameSaves { get; init; }
 
     public required IGameSaveBackupStore GameSaveBackups { get; init; }
+
+    /// <summary>The vehicles and saves Borea installed. One instance, so one store writes each file.</summary>
+    public required IInstalledContentRecords InstalledContent { get; init; }
+
+    /// <summary>Installs, updates and removes one vehicle or save folder, on the same records as <see cref="InstalledContent"/>.</summary>
+    public required IUserContentInstaller UserContentInstaller { get; init; }
+
+    /// <summary>Installs or updates a vehicle or save with the mods it needs.</summary>
+    public required UserContentInstallation UserContentInstallation { get; init; }
+
+    /// <summary>The ids a vehicle or a save names, for sharing it.</summary>
+    public required IContentIdReader ContentIds { get; init; }
+
+    /// <summary>Which mod of an instance defines which ids, for sharing a vehicle or a save.</summary>
+    public required IContentProviderMap ContentProviders { get; init; }
 
     public required IGameLogReader GameLog { get; init; }
 
@@ -236,6 +254,12 @@ public sealed class BoreaServices : IDisposable
 
     public required IContentIndexRepository ContentIndex { get; init; }
 
+    /// <summary>The listed vehicles and saves, from the same snapshots as <see cref="ContentIndex"/>.</summary>
+    public required IUserContentRepository UserContent { get; init; }
+
+    /// <summary>The listed vehicles and saves of the content index that Borea holds, read without a request.</summary>
+    public required IUserContentRepository ReadOnlyUserContent { get; init; }
+
     /// <summary>Listing images, verified against their records, from the cache or the author hosts.</summary>
     public required IContentImageSource Images { get; init; }
 
@@ -254,6 +278,12 @@ public sealed class BoreaServices : IDisposable
     public required IListingFormat ListingFormat { get; init; }
 
     public required IListingValidator ListingValidator { get; init; }
+
+    /// <summary>The share hosts of the content-index snapshot (RFC 0104).</summary>
+    public required IShareHostSource ShareHosts { get; init; }
+
+    /// <summary>Signs in to a share host, and uploads and publishes a vehicle or a save there.</summary>
+    public required IShareHostClient ShareHostClient { get; init; }
 
     /// <summary>Opens and follows the listing pull request from the signed-in account.</summary>
     public required IListingPublisher ListingPublisher { get; init; }
@@ -304,6 +334,15 @@ public sealed class BoreaServices : IDisposable
         BoreaGitHubApp.Slug,
         secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null))));
 
+    /// <summary>
+    /// The share host sessions of this process, which keep a sign-in like <see cref="ProcessGitHub"/>. The client does not
+    /// follow redirects, which would drop the token, and gives an upload of a large save more time than a page load.
+    /// </summary>
+    private static readonly Lazy<ShareHostClient> ProcessShareHosts = new(() => new ShareHostClient(
+        BuildShareHostHttpClient(),
+        new TomlListingFormat(),
+        secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null))));
+
     private BoreaServices(HttpClient http)
     {
         _http = http;
@@ -329,7 +368,7 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>Builds the services like the overload above, with log lines marked by <paramref name="logSource"/>.</summary>
     public static Task<BoreaServices> BuildAsync(string? boreaRoot, BoreaLogSource logSource, CancellationToken cancellationToken = default)
-        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, ProcessLaunches, cancellationToken, gitHub: ProcessGitHub.Value);
+        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, ProcessLaunches, cancellationToken, gitHub: ProcessGitHub.Value, shareHostClient: ProcessShareHosts.Value);
 
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
@@ -360,6 +399,7 @@ public sealed class BoreaServices : IDisposable
     /// <param name="sharedProfileLauncher">Starts the game without a loader. Null starts it with the process starter.</param>
     /// <param name="wrapInstallPlanner">Wraps the planner that every service of the graph plans with. Null uses it as it is.</param>
     /// <param name="listingImageHandler">Fetches the images that the listing editor measures. Null fetches them from the author hosts.</param>
+    /// <param name="shareHostClient">Signs in and uploads to a share host. Null builds one that keeps no sign-in.</param>
     /// <param name="wrapGameBuilds">Wraps the keeper of the game builds. Null uses it as it is.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
@@ -389,12 +429,13 @@ public sealed class BoreaServices : IDisposable
         ISharedProfileLauncher? sharedProfileLauncher = null,
         Func<IInstallPlanner, IInstallPlanner>? wrapInstallPlanner = null,
         HttpMessageHandler? listingImageHandler = null,
+        IShareHostClient? shareHostClient = null,
         Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, wrapInstallPlanner, listingImageHandler, wrapGameBuilds);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, wrapInstallPlanner, listingImageHandler, shareHostClient, wrapGameBuilds);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -427,6 +468,7 @@ public sealed class BoreaServices : IDisposable
         ISharedProfileLauncher? sharedProfileLauncher = null,
         Func<IInstallPlanner, IInstallPlanner>? wrapInstallPlanner = null,
         HttpMessageHandler? listingImageHandler = null,
+        IShareHostClient? shareHostClient = null,
         Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null)
     {
         // the settings file lives under Borea's own root and needs no
@@ -468,8 +510,9 @@ public sealed class BoreaServices : IDisposable
         // host of its own.
         var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
+        var installedContent = new FileInstalledContentRecords(paths);
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
-        var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader), log);
+        var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader, ContentIndexTypeFiles.All, log), log);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
         var contentIndex = new ContentIndexModRepository(indexSnapshots);
         var readOnlyContentIndex = new ContentIndexModRepository(new ReaderSnapshotProvider(indexReader));
@@ -517,10 +560,11 @@ public sealed class BoreaServices : IDisposable
         var foreignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots);
         var spaceCheck = new DriveInstallSpaceCheck(paths);
         var foreignModHandover = new LoggingForeignModHandover(new FileForeignModHandover(paths, downloader, instances, checkedModState, store: modStore), log);
-        IInstallPlanner installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
+        IInstallPlanner installPlanner = new LoggingInstallPlanner(new RecordedContentPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), installedContent, modState), log);
         if (wrapInstallPlanner is not null)
             installPlanner = wrapInstallPlanner(installPlanner);
         isGameProcessRunning ??= RunningProcesses.IsGameRunning;
+        var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning, instanceGames, log), instances), log);
         // the index lists every loader, and the offline SpaceDock throws on a list of all mods, so the keeper reads only the cached index
         IGameBuildKeeper gameBuilds = new GameBuildKeeper(paths, instances, offlineContentIndex, loaderVersions, isGameProcessRunning, launcher.IsRunning);
@@ -549,8 +593,13 @@ public sealed class BoreaServices : IDisposable
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
             GameData = new FileGameDataReader(paths),
-            GameSaves = new FileGameSaveStore(paths),
+            GameSaves = new FileGameSaveStore(paths, records: installedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
+            InstalledContent = installedContent,
+            UserContentInstaller = userContentInstaller,
+            UserContentInstallation = new UserContentInstallation(installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), checkedModState, userContentInstaller),
+            ContentIds = new XmlContentIdReader(),
+            ContentProviders = new FileContentProviderMap(paths),
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),
@@ -577,8 +626,8 @@ public sealed class BoreaServices : IDisposable
             OfflineContentIndex = offlineContentIndex,
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
-            ModPackInstaller = new LoggingModPackInstaller(new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer, spaceCheck), log),
-            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log)),
+            ModPackInstaller = new LoggingModPackInstaller(new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer, spaceCheck, userContentInstaller, checkedModState), log),
+            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log), userContentInstaller, checkedModState),
             Downloader = downloader,
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck),
@@ -606,6 +655,8 @@ public sealed class BoreaServices : IDisposable
             IndexSnapshots = indexSnapshots,
             IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
+            UserContent = contentIndex,
+            ReadOnlyUserContent = readOnlyContentIndex,
             Images = images ?? new ContentImageSource(new FileContentImageCache(paths)),
             GitHub = gitHubSession,
             ListingSources = new ListingSourceReader(new ListingHostClient(http), downloader),
@@ -614,6 +665,8 @@ public sealed class BoreaServices : IDisposable
             ListedDocuments = listedDocuments,
             ListingFormat = listingFormat,
             ListingValidator = new ListingValidator(new ListingSchemaStore(listedDocuments, paths)),
+            ShareHosts = new ShareHostStore(indexSnapshots),
+            ShareHostClient = shareHostClient ?? new ShareHostClient(http, listingFormat),
             ListingPublisher = new LoggingListingPublisher(listingPublisher ?? new ListingPublisher(gitHubSession, http, listingFormat), log),
             ListingOwnership = listingOwnership,
             StewardRole = stewardRole,
@@ -645,6 +698,13 @@ public sealed class BoreaServices : IDisposable
 
     internal static HttpClient BuildGitHubHttpClient()
         => BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false });
+
+    private static HttpClient BuildShareHostHttpClient()
+    {
+        var http = BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false });
+        http.Timeout = TimeSpan.FromMinutes(30);
+        return http;
+    }
 
     private static HttpClient BuildHttpClient(HttpMessageHandler? handler)
     {

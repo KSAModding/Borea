@@ -55,6 +55,12 @@ public partial class MainViewModel
     /// </summary>
     public bool HasContentDependenciesTab => !IsLoaderContent || ContentDependencyGroups.Count > 0 || HasContentRequiredBy || HasContentConflicts;
 
+    /// <summary>A vehicle or save depends only on mods, so its tab says so.</summary>
+    public string ContentDependenciesTabText => SelectedContent?.Type.IsVehicleOrSave() == true ? Localization.ContentTabNeedsMods : Localization.ContentTabDependencies;
+
+    /// <summary>The oldest game build that loads the file of a vehicle or save, from the release in the header. Null for any other type.</summary>
+    public string? ContentFileBuildText => SelectedContent?.Type.IsVehicleOrSave() == true && LatestVersion?.Release.GameMin is { } build ? Localization.FormatContentFileBuild(build) : null;
+
     [RelayCommand]
     private void ShowContentDependencies() => ContentTab = ContentPageTab.Dependencies;
 
@@ -101,6 +107,8 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasContentRequiredBy));
         OnPropertyChanged(nameof(HasContentConflicts));
         OnPropertyChanged(nameof(HasContentDependenciesTab));
+        OnPropertyChanged(nameof(ContentDependenciesTabText));
+        OnPropertyChanged(nameof(ContentFileBuildText));
     }
 
     private void ShowContentRequiredByRows()
@@ -117,15 +125,21 @@ public partial class MainViewModel
     internal IReadOnlyList<DependencyGroup> BuildDependencyGroups(ModVersionMetadata release)
     {
         var instance = ActiveInstance;
+        var isItem = release.Type.IsVehicleOrSave();
+        var inactive = InactiveForItem(release, instance);
         return Enum.GetValues<DependencyGroupKind>()
             .Select(kind => new DependencyGroup(
                 kind,
                 GroupHeading(kind),
-                GroupHint(kind),
-                release.Dependencies.Where(dependency => GroupOf(dependency) == kind).Select(dependency => Entry(dependency, instance)).ToList()))
+                GroupHint(kind, isItem),
+                release.Dependencies.Where(dependency => GroupOf(dependency) == kind).Select(dependency => Entry(dependency, instance, inactive)).ToList()))
             .Where(group => group.Entries.Count > 0)
             .ToList();
     }
+
+    /// <summary>The mods that the instance holds disabled when <paramref name="release"/> is a vehicle or save, because the game loads no disabled mod and such a page says so. Null for any other type.</summary>
+    private IReadOnlySet<string>? InactiveForItem(ModVersionMetadata? release, InstanceItem? instance)
+        => release?.Type.IsVehicleOrSave() == true && instance is not null ? InactiveModIds(instance).ToHashSet(ModIds.Comparer) : null;
 
     /// <summary>A conflict has no group, because the Conflicts with card lists it.</summary>
     private static DependencyGroupKind? GroupOf(ModDependency dependency) => dependency.Kind switch
@@ -148,25 +162,29 @@ public partial class MainViewModel
         _ => Localization.ContentDependencyOther,
     };
 
-    private string GroupHint(DependencyGroupKind kind) => kind switch
+    /// <param name="isItem">A vehicle or save, whose hints do not call it a mod.</param>
+    private string GroupHint(DependencyGroupKind kind, bool isItem) => kind switch
     {
-        DependencyGroupKind.Required => Localization.ContentDependencyRequiredHint,
-        DependencyGroupKind.AnyOf => Localization.ContentDependencyAnyOfHint,
-        DependencyGroupKind.Recommended => Localization.ContentDependencyRecommendedHint,
+        DependencyGroupKind.Required => isItem ? Localization.ContentDependencyRequiredItemHint : Localization.ContentDependencyRequiredHint,
+        DependencyGroupKind.AnyOf => isItem ? Localization.ContentDependencyAnyOfItemHint : Localization.ContentDependencyAnyOfHint,
+        DependencyGroupKind.Recommended => isItem ? Localization.ContentDependencyRecommendedItemHint : Localization.ContentDependencyRecommendedHint,
         DependencyGroupKind.Suggested => Localization.ContentDependencySuggestedHint,
-        DependencyGroupKind.Optional => Localization.ContentDependencyOptionalHint,
+        DependencyGroupKind.Optional => isItem ? Localization.ContentDependencyOptionalItemHint : Localization.ContentDependencyOptionalHint,
         _ => Localization.ContentDependencyOtherHint,
     };
 
-    private DependencyEntry Entry(ModDependency dependency, InstanceItem? instance) => dependency.IsAnyOf
-        ? new DependencyEntry(true, GroupOf(dependency) != DependencyGroupKind.AnyOf, dependency.AnyOf.Select(member => Member(member.ModId, member.MinVersion, member.MaxVersion, instance)).ToList())
-        : new DependencyEntry(false, false, [Member(dependency.ModId, dependency.MinVersion, dependency.MaxVersion, instance)]);
+    private DependencyEntry Entry(ModDependency dependency, InstanceItem? instance, IReadOnlySet<string>? inactive) => dependency.IsAnyOf
+        ? new DependencyEntry(true, GroupOf(dependency) != DependencyGroupKind.AnyOf, dependency.AnyOf.Select(member => Member(member.ModId, member.MinVersion, member.MaxVersion, instance, inactive)).ToList())
+        : new DependencyEntry(false, false, [Member(dependency.ModId, dependency.MinVersion, dependency.MaxVersion, instance, inactive)]);
 
-    private DependencyMember Member(string modId, ModVersion? min, ModVersion? max, InstanceItem? instance)
+    private DependencyMember Member(string modId, ModVersion? min, ModVersion? max, InstanceItem? instance, IReadOnlySet<string>? inactive)
     {
         var installed = instance?.InstalledVersionOf(modId);
-        return new DependencyMember(this, modId, IndexListing(modId), BoundsText(min, max), InstallStateText(instance, installed), installed is not null, isConflicting: false);
+        return new DependencyMember(this, modId, IndexListing(modId), BoundsText(min, max), NamedStateText(modId, instance, installed, inactive), installed is not null, isConflicting: false);
     }
+
+    private string? NamedStateText(string modId, InstanceItem? instance, ModVersion? installed, IReadOnlySet<string>? inactive)
+        => installed is { } off && inactive?.Contains(modId) == true ? Localization.FormatContentDependencyDisabled(off.ToString()) : InstallStateText(instance, installed);
 
     private string? InstallStateText(InstanceItem? instance, ModVersion? installed) => instance is null ? null
         : installed is { } present ? Localization.FormatContentDependencyInstalled(present.ToString())
@@ -220,9 +238,10 @@ public partial class MainViewModel
     internal IReadOnlyList<DependencyMember> BuildConflictMembers(string modId, ModVersionMetadata? release)
     {
         var instance = ActiveInstance;
+        var inactive = InactiveForItem(release, instance);
         var named = (release?.Dependencies ?? []).Where(dependency => dependency.Kind == ModDependencyKind.Conflict)
             .GroupBy(conflict => conflict.ModId!, ModIds.Comparer)
-            .Select(entries => NamedConflictMember(entries.Key, entries.ToList(), instance));
+            .Select(entries => NamedConflictMember(entries.Key, entries.ToList(), instance, inactive));
         var naming = MostDownloadedFirst(ListingsNaming(modId, ModDependencyKind.Conflict).Where(item => release is null || NamesAsConflict(item, modId, release.Version)))
             .Select(item => ConflictingListingMember(item, release, instance));
 
@@ -234,13 +253,13 @@ public partial class MainViewModel
     }
 
     /// <summary>One row for all the entries that a release has for one mod. An entry without bounds covers every version, so the row then shows no range.</summary>
-    private DependencyMember NamedConflictMember(string modId, IReadOnlyList<ModDependency> entries, InstanceItem? instance)
+    private DependencyMember NamedConflictMember(string modId, IReadOnlyList<ModDependency> entries, InstanceItem? instance, IReadOnlySet<string>? inactive)
     {
         var installed = instance?.InstalledVersionOf(modId);
         var conflicting = installed is { } version && entries.Any(entry => entry.BoundsContain(version));
         var ranges = entries.Select(entry => BoundsText(entry.MinVersion, entry.MaxVersion)).ToList();
         var boundsText = ranges.Contains(null) ? null : string.Join(", ", ranges.Distinct());
-        return new DependencyMember(this, modId, IndexListing(modId), boundsText, InstallStateText(instance, installed), installed is not null, conflicting);
+        return new DependencyMember(this, modId, IndexListing(modId), boundsText, NamedStateText(modId, instance, installed, inactive), installed is not null, conflicting);
     }
 
     private static bool NamesAsConflict(DiscoverItem item, string modId, ModVersion version) => item.LatestInChannel!.Dependencies

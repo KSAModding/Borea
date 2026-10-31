@@ -1,5 +1,6 @@
 ﻿using Borea.Core.Dependencies;
 using Borea.Core.Mods;
+using Borea.Core.Tests.UserContent;
 
 namespace Borea.Core.Tests.Dependencies;
 
@@ -66,5 +67,16 @@ public sealed class UninstallCheckTests
         source.Add("dependent-b");
 
         Assert.Single(check.DependentModIds);
+    }
+
+    [Fact]
+    public void CanUninstall_OnlyDependentContent_IsTrue()
+    {
+        var rover = RecordedContentFixtures.Record(ContentType.Vehicle, "rover", "Rover");
+
+        var check = new UninstallCheck(Guid.NewGuid(), "test-mod", ModVersion.Parse("1.0.0"), Array.Empty<string>(), isActive: true, [rover]);
+
+        Assert.True(check.CanUninstall);
+        Assert.Same(rover, Assert.Single(check.DependentContent));
     }
 }

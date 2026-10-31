@@ -24,6 +24,8 @@ public sealed class ListingValidator : IListingValidator
 
     public ListingSchemaOrigin SchemaOrigin => _loaded.Origin;
 
+    public IReadOnlyList<string> AcceptedTypes => _loaded.Check.AcceptedTypes;
+
     public async Task<ListingSchemaOrigin> LoadSchemaAsync(CancellationToken cancellationToken = default)
     {
         var schema = await _schemas.GetAsync(cancellationToken).ConfigureAwait(false);

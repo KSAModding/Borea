@@ -156,6 +156,12 @@ public interface IGamePathProvider
     /// </summary>
     string GetInstancePlaytimePath(Guid instanceId);
 
+    /// <summary>
+    /// The vehicles and saves Borea installed in the instance, with a hash of each file.
+    /// A file of its own, so a Borea that does not know it keeps every record when it writes instance.toml.
+    /// </summary>
+    string GetInstanceInstalledContentPath(Guid instanceId);
+
     string GetInstanceManifestPath(Guid instanceId);
 
     string GetInstanceMetadataPath(Guid instanceId);

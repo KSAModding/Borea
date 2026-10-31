@@ -325,7 +325,7 @@
             <Setter Property="FontSize" Value="24" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
-        <Style Selector="TextBlock.body-sm">
+        <Style Selector="TextBlock.body-sm, SelectableTextBlock.body-sm">
             <Setter Property="FontSize" Value="12" />
         </Style>
         <Style Selector="TextBlock.action-lg">
@@ -333,7 +333,7 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
         </Style>
-        <Style Selector="TextBlock.secondary">
+        <Style Selector="TextBlock.secondary, SelectableTextBlock.secondary">
             <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
         </Style>
         <Style Selector="TextBlock.positive">

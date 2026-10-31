@@ -3,6 +3,8 @@ using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.State;
+using Borea.Core.UserContent;
 
 namespace Borea.Storage.ModPacks;
 
@@ -15,14 +17,18 @@ public sealed class ModPackInstaller : IModPackInstaller
     private readonly IModInstaller _installer;
     private readonly IModReplacer _replacer;
     private readonly IInstallSpaceCheck? _space;
+    private readonly ModPackUserContent _content;
 
-    public ModPackInstaller(IInstanceRepository instances, IInstallPlanner planner, IModInstaller installer, IModReplacer replacer, IInstallSpaceCheck? space = null)
+    /// <param name="userContent">Installs the pinned vehicles and saves. Null skips each of them with a message.</param>
+    /// <param name="modState">Enables the members a pinned vehicle or save needs. Null leaves them as they are.</param>
+    public ModPackInstaller(IInstanceRepository instances, IInstallPlanner planner, IModInstaller installer, IModReplacer replacer, IInstallSpaceCheck? space = null, IUserContentInstaller? userContent = null, IModStateRepository? modState = null)
     {
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _planner = planner ?? throw new ArgumentNullException(nameof(planner));
         _installer = installer ?? throw new ArgumentNullException(nameof(installer));
         _replacer = replacer ?? throw new ArgumentNullException(nameof(replacer));
         _space = space;
+        _content = new ModPackUserContent(userContent, modState);
     }
 
     public async Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
@@ -58,7 +64,7 @@ public sealed class ModPackInstaller : IModPackInstaller
         cancellationToken.ThrowIfCancellationRequested();
         var draft = new Instance(instanceName, Source(RequireMetadata(request.Pack)));
         var planned = await RunAsync(request, write: false, progress: null, stop, cancellationToken, draft).ConfigureAwait(false);
-        return Result(Guid.Empty, planned.Plan, planned.Members, planned.Warnings, planned.IsComplete, planned.IsStopped);
+        return Result(Guid.Empty, planned.Plan, planned.Members, planned.Warnings, planned.IsComplete, planned.IsStopped, planned.Content);
     }
 
     private async Task<ModPackInstallResult> RunAsync(ModPackInstallRequest request, bool write, IProgress<InstallProgress>? progress, InstallStop? stop, CancellationToken cancellationToken, Instance? draft = null)
@@ -80,11 +86,13 @@ public sealed class ModPackInstaller : IModPackInstaller
 
         var releases = new List<RequestedMod>();
         var members = new List<ModPackMemberResult>();
+        IReadOnlyList<ModPackUserContent.Step> content = [];
         InstallPlan plan;
         using (var planning = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, stop?.Token ?? CancellationToken.None))
         {
             try
             {
+                content = await _content.PlanAsync(instance.InstanceId, metadata, request.UserContent, request.GameVersion, request.ContentNames, request.DiscardChangesOf, warnings, planning.Token).ConfigureAwait(false);
                 var listings = await request.Repository.GetAvailableModsAsync(planning.Token).ConfigureAwait(false);
                 foreach (var pin in metadata.Mods)
                 {
@@ -111,16 +119,20 @@ public sealed class ModPackInstaller : IModPackInstaller
                 {
                     foreach (var pin in metadata.Mods.Where(pin => members.All(value => !ModIds.Equals(value.ModId, pin.ContentId))))
                         members.Add(Member(pin, ModPackMemberStatus.NotAttempted, "Another pack member needs caller action."));
-                    return Result(instance.InstanceId, null, members, warnings, false);
+                    return Result(instance.InstanceId, null, members, warnings, false, content: Planned(content));
                 }
 
                 plan = await _planner.PlanAsync(
-                    new InstallPlanningRequest(instance, releases, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives),
+                    new InstallPlanningRequest(instance, releases, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives)
+                    {
+                        ReplacedContent = ModPackUserContent.Replaced(content),
+                    },
                     planning.Token).ConfigureAwait(false);
+                content = await _content.WithModsAsync(instance, plan, request.Enable, content, warnings, planning.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stop is { IsRequested: true } && !cancellationToken.IsCancellationRequested)
             {
-                return Result(instance.InstanceId, null, metadata.Mods.Select(pin => Member(pin, ModPackMemberStatus.NotAttempted, StoppedMessage)).ToList(), warnings, false, stopped: true);
+                return Result(instance.InstanceId, null, metadata.Mods.Select(pin => Member(pin, ModPackMemberStatus.NotAttempted, StoppedMessage)).ToList(), warnings, false, stopped: true, ModPackUserContent.NotReached(content, StoppedMessage));
             }
         }
 
@@ -134,14 +146,14 @@ public sealed class ModPackInstaller : IModPackInstaller
                     ? Member(selection.Release, ExistingReason(instance, selection.Release.ModId, selection.Reason), ModPackMemberStatus.AlreadyInstalled)
                     : Member(pin, ModPackMemberStatus.Unresolved, "The shared install plan is not ready."));
             }
-            return Result(instance.InstanceId, plan, members, warnings, false);
+            return Result(instance.InstanceId, plan, members, warnings, false, content: Planned(content));
         }
 
         if (!write)
         {
             members.AddRange(plan.Operations.Select(operation => Member(operation.Release, ExistingReason(instance, operation.Release.ModId, operation.Reason), ModPackMemberStatus.NotAttempted)));
             members.AddRange(AlreadyInstalled(instance, plan));
-            return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members));
+            return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members), content: Planned(content));
         }
 
         _space?.EnsureFits(plan);
@@ -151,16 +163,17 @@ public sealed class ModPackInstaller : IModPackInstaller
         if (!plan.InstanceState.Matches(fresh))
         {
             members.AddRange(metadata.Mods.Select(pin => Member(pin, ModPackMemberStatus.NotAttempted, "The instance changed after planning.")));
-            return Result(instance.InstanceId, plan, members, warnings, false);
+            return Result(instance.InstanceId, plan, members, warnings, false, content: ModPackUserContent.NotReached(content, "The instance changed after planning."));
         }
 
         var expectedState = plan.InstanceState;
         var stopped = false;
         var stoppedOnRequest = false;
         var step = 0;
+        var stepCount = plan.Operations.Count + ModPackUserContent.Count(content);
         foreach (var operation in plan.Operations)
         {
-            var operationProgress = progress.ForStep(++step, plan.Operations.Count);
+            var operationProgress = progress.ForStep(++step, stepCount);
             if (stopped)
             {
                 members.Add(Member(operation.Release, operation.Reason, ModPackMemberStatus.NotAttempted, "An earlier operation failed."));
@@ -214,7 +227,12 @@ public sealed class ModPackInstaller : IModPackInstaller
         }
 
         members.AddRange(AlreadyInstalled(instance, plan));
-        return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members), stoppedOnRequest);
+
+        // The vehicles and saves come last, because the mods they need are members of the pack.
+        var contentResults = stopped || stoppedOnRequest
+            ? ModPackUserContent.NotReached(content, stopped ? "An earlier operation failed." : StoppedMessage)
+            : await _content.RunAsync(instance.InstanceId, content, request.ContentNames, request.DiscardChangesOf, progress, step + 1, stepCount, stop, cancellationToken).ConfigureAwait(false);
+        return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members), stoppedOnRequest || (stop?.IsRequested ?? false) && contentResults.Any(item => item.Status == ModPackContentStatus.NotAttempted), contentResults);
     }
 
     private static ModPackMetadata RequireMetadata(ModPackResult pack) => pack.Metadata ?? throw new InvalidOperationException($"Pack '{pack.Id}' does not have usable metadata.");
@@ -248,5 +266,8 @@ public sealed class ModPackInstaller : IModPackInstaller
 
     private static ModPackMemberResult Member(ModVersionMetadata release, InstallReason reason, ModPackMemberStatus status, string? message = null) => new(release.ModId, release.Version, reason, status, message);
 
-    private static ModPackInstallResult Result(Guid instanceId, InstallPlan? plan, IReadOnlyList<ModPackMemberResult> members, IReadOnlyList<PlanningMessage> warnings, bool complete, bool stopped = false) => new(instanceId, plan, members, warnings, complete, stopped);
+    private static ModPackInstallResult Result(Guid instanceId, InstallPlan? plan, IReadOnlyList<ModPackMemberResult> members, IReadOnlyList<PlanningMessage> warnings, bool complete, bool stopped = false, IReadOnlyList<ModPackContentResult>? content = null) =>
+        new(instanceId, plan, members, warnings, complete, stopped) { Content = content ?? [] };
+
+    private static IReadOnlyList<ModPackContentResult> Planned(IReadOnlyList<ModPackUserContent.Step> content) => content.Select(item => item.Planned).ToList();
 }

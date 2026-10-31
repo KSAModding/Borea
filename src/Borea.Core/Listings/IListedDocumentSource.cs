@@ -6,6 +6,10 @@ public interface IListedDocumentSource
     /// <exception cref="HttpRequestException">The document could not be read.</exception>
     Task<string> GetListingAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary>Reads the listing of the type from its folder, such as vehicles/&lt;id&gt;.toml for a vehicle (<see cref="ListingFolders.Of"/>).</summary>
+    /// <exception cref="HttpRequestException">The document could not be read.</exception>
+    Task<string> GetListingAsync(string id, string type, CancellationToken cancellationToken = default);
+
     /// <summary>Reads the file of one pack version, packs/&lt;id&gt;/&lt;version&gt;.toml.</summary>
     /// <exception cref="HttpRequestException">The document could not be read.</exception>
     Task<string> GetPackVersionAsync(string id, string version, CancellationToken cancellationToken = default);

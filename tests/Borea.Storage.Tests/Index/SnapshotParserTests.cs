@@ -1,6 +1,7 @@
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.ModLoaders;
+using Borea.Core.Mods;
 using Borea.Storage.Index;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
@@ -942,5 +943,158 @@ public sealed class SnapshotParserTests
         Assert.Empty(result.UnknownListings);
         Assert.Empty(result.MalformedListings);
         Assert.All(result.ValidListings, listing => Assert.Empty(listing.RejectedReleases));
+    }
+    private static IndexValidationResult ParseWithVehicles(string listings, string vehicles, string packs = "") =>
+        SnapshotParser.Parse(
+            Snapshot(listings, packs),
+            [(ContentIndexTypeFiles.Vehicles, TypeFileJson.File("vehicles", vehicles))],
+            "index");
+
+    [Fact]
+    public void Parse_NoTypeFiles_GivesTheSameResultAsTheMainDocumentAlone()
+    {
+        var json = Snapshot($$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "releases": [{{ValidReleaseJson}}] }""", "");
+
+        var withOverload = SnapshotParser.Parse(json, [], "index");
+        var alone = SnapshotParser.Parse(json);
+
+        Assert.Equal(alone.ValidListings.Select(listing => listing.Id), withOverload.ValidListings.Select(listing => listing.Id));
+        Assert.Equal(alone.MalformedListings, withOverload.MalformedListings);
+        Assert.Empty(withOverload.ValidVehicles);
+        Assert.Empty(withOverload.ValidSaves);
+    }
+
+    [Fact]
+    public void Parse_VehicleWithoutCompatibilityAndForums_IsReadWithItsReleaseFolderAndCounts()
+    {
+        var downloads = """, "downloads": { "total": 7, "hosts": { "github": 7 }, "releases": [{ "version": "1.0.0", "total": 7, "hosts": { "github": 7 } }] }""";
+
+        var result = ParseWithVehicles("", TypeFileJson.Entry(extra: downloads));
+
+        var vehicle = Assert.Single(result.ValidVehicles);
+        Assert.Empty(result.ValidListings);
+        Assert.Empty(result.MalformedListings);
+        Assert.Equal(ContentType.Vehicle, vehicle.Authored!.Type);
+        Assert.Null(vehicle.Authored.GameMin);
+        Assert.Null(vehicle.Authored.ForumUrl);
+        var release = Assert.Single(vehicle.ValidReleases);
+        Assert.Empty(vehicle.RejectedReleases);
+        Assert.Equal("Example Rover", release.Install!.Folder);
+        Assert.Null(release.Install.Root);
+        Assert.Equal(7, vehicle.Downloads!.Total);
+    }
+
+    [Fact]
+    public void Parse_SaveFile_FillsTheSaves()
+    {
+        var result = SnapshotParser.Parse(
+            Snapshot("", ""),
+            [(ContentIndexTypeFiles.Saves, TypeFileJson.File("saves", TypeFileJson.Entry("ExampleSave", "save", TypeFileJson.Release("ExampleSave", "save"))))],
+            "index");
+
+        Assert.Equal(ContentType.Save, Assert.Single(result.ValidSaves).Authored!.Type);
+        Assert.Empty(result.ValidVehicles);
+    }
+
+    [Theory]
+    [InlineData("""{ "derived": true }""")]
+    [InlineData("""{ "derived": true, "folder": "CON" }""")]
+    [InlineData("""{ "derived": true, "folder": "Example  Rover" }""")]
+    [InlineData("""{ "derived": true, "folder": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }""")]
+    [InlineData("""{ "derived": true, "folder": "Example Rover", "target": "user-data" }""")]
+    [InlineData("""{ "derived": true, "folder": "Example Rover", "path": "Vehicles" }""")]
+    public void Parse_VehicleReleaseWithoutAFolderTheGameKeepsOrWithATarget_IsRejectedAndTheListingStays(string install)
+    {
+        var releases = TypeFileJson.Release(install: install, version: "2.0.0") + "," + TypeFileJson.Release();
+
+        var result = ParseWithVehicles("", TypeFileJson.Entry(releases: releases));
+
+        var vehicle = Assert.Single(result.ValidVehicles);
+        Assert.Equal("1.0.0", Assert.Single(vehicle.ValidReleases).Version.ToString());
+        Assert.Equal("2.0.0", Assert.Single(vehicle.RejectedReleases).Version);
+    }
+
+    [Fact]
+    public void Parse_VehicleInListings_IsRejectedAloneAndNamesItsFile()
+    {
+        var listings = TypeFileJson.Entry("WrongPlace") + "," + $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "releases": [{{ValidReleaseJson}}] }""";
+
+        var result = ParseWithVehicles(listings, "");
+
+        Assert.Equal("test-mod", Assert.Single(result.ValidListings).Id);
+        var rejected = Assert.Single(result.MalformedListings);
+        Assert.Equal("WrongPlace", rejected.Id);
+        Assert.Contains("snapshot-vehicles.json", rejected.Reason, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("mod")]
+    [InlineData("save")]
+    [InlineData("something-else")]
+    public void Parse_OtherTypeAmongTheVehicles_IsRejectedAlone(string type)
+    {
+        var vehicles = TypeFileJson.Entry("Stranger", type, TypeFileJson.Release("Stranger", type)) + "," + TypeFileJson.Entry();
+
+        var result = ParseWithVehicles("", vehicles);
+
+        Assert.Equal("ExampleRover", Assert.Single(result.ValidVehicles).Id);
+        Assert.Equal("Stranger", Assert.Single(result.MalformedListings).Id);
+    }
+
+    [Fact]
+    public void Parse_VehicleEntryWithReleasesButNoAuthored_IsRejected_AndATombstoneIsRead()
+    {
+        var vehicles = $$"""{ "id": "NoAuthored", "releases": [{{TypeFileJson.Release("NoAuthored")}}] }"""
+            + "," + """{ "id": "Gone", "index_status": { "state": "delisted" } }""";
+
+        var result = ParseWithVehicles("", vehicles);
+
+        Assert.Equal("NoAuthored", Assert.Single(result.MalformedListings).Id);
+        Assert.Equal("Gone", Assert.Single(result.ValidVehicles).Id);
+    }
+
+    [Fact]
+    public void Parse_IdAmongTheModsAndAmongTheVehicles_IsRejectedInBothPlaces()
+    {
+        var mod = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "releases": [{{ValidReleaseJson}}] }""";
+        var vehicle = TypeFileJson.Entry("TEST-MOD", releases: TypeFileJson.Release("TEST-MOD")) + "," + TypeFileJson.Entry();
+
+        var result = ParseWithVehicles(mod, vehicle);
+
+        Assert.Empty(result.ValidListings);
+        Assert.Equal("ExampleRover", Assert.Single(result.ValidVehicles).Id);
+        Assert.Equal(2, result.MalformedListings.Count(entry => ModIds.Equals(entry.Id, "test-mod") && entry.Reason.Contains("more than once", StringComparison.Ordinal)));
+    }
+
+    [Theory]
+    [InlineData("""{ "snapshot_version": 1, "vehicles": {} }""")]
+    [InlineData("""{ "snapshot_version": 1, "vehicles": [""")]
+    [InlineData("""{ "snapshot_version": 2, "vehicles": [] }""")]
+    [InlineData("""{ "snapshot_version": 1, "sources": [], "vehicles": [] }""")]
+    public void Parse_UnusableVehicleFile_KeepsListingsAndPacksAndAddsOneDiagnostic(string vehicles)
+    {
+        var mod = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "releases": [{{ValidReleaseJson}}] }""";
+        var pack = $$"""{ "id": "test-pack", "versions": [{ "authored": {{PackAuthoredJson}} }] }""";
+
+        var result = SnapshotParser.Parse(Snapshot(mod, pack), [(ContentIndexTypeFiles.Vehicles, vehicles)], "index");
+
+        Assert.Equal("test-mod", Assert.Single(result.ValidListings).Id);
+        Assert.Equal("test-pack", Assert.Single(result.ValidPacks).Id);
+        Assert.Empty(result.ValidVehicles);
+        var rejected = Assert.Single(result.MalformedListings);
+        Assert.Null(rejected.Id);
+        Assert.Contains("snapshot-vehicles.json", rejected.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_ModListingWithoutForums_IsStillRejected()
+    {
+        var authored = ValidAuthoredJson.Replace("""{ "forums": "https://forums.example/thread/1" }""", "{}", StringComparison.Ordinal);
+        Assert.NotEqual(ValidAuthoredJson, authored);
+
+        var result = SnapshotParser.Parse(Snapshot($$"""{ "id": "test-mod", "authored": {{authored}} }""", ""));
+
+        Assert.Empty(result.ValidListings);
+        Assert.Contains("forums", Assert.Single(result.MalformedListings).Reason, StringComparison.Ordinal);
     }
 }

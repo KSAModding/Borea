@@ -2,6 +2,7 @@ using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Tags;
+using Borea.Core.UserContent;
 
 namespace Borea.Network.Index;
 
@@ -9,7 +10,7 @@ namespace Borea.Network.Index;
 /// Serves the community index through <see cref="IModRepository"/>.
 /// The repository uses the snapshot provider shared with other index content.
 /// </summary>
-public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdClaimSource, IModArchiveReleaseLookup
+public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdClaimSource, IModArchiveReleaseLookup, IUserContentRepository
 {
     public const string SourceName = "index";
 
@@ -74,13 +75,16 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
         CancellationToken cancellationToken = default)
     {
         var listing = await FindListingAsync(modId, cancellationToken).ConfigureAwait(false);
-        return listing?.Releases
+        return ReleaseHistory(listing);
+    }
+
+    private static ModVersionMetadata[] ReleaseHistory(ContentIndexListing? listing) =>
+        listing?.Releases
             .Where(release => !release.Yanked)
             .DistinctBy(release => release.Version)
             .OrderByDescending(release => release.Version)
             .ToArray()
-            ?? Array.Empty<ModVersionMetadata>();
-    }
+        ?? [];
 
     public async Task<IReadOnlyList<ModMetadata>> SearchAsync(
         string query,
@@ -124,6 +128,7 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
         var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
         return snapshot.Listings.Select(listing => listing.Id)
             .Concat(snapshot.Packs.Select(pack => pack.Id))
+            .Concat(snapshot.Vehicles.Concat(snapshot.Saves).Select(listing => listing.Id))
             .Concat(snapshot.Diagnostics
                 .Where(diagnostic => diagnostic.Scope is ContentIndexDiagnosticScope.Listing or ContentIndexDiagnosticScope.Pack)
                 .Select(diagnostic => diagnostic.Id)
@@ -131,6 +136,50 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
                 .Select(id => id!))
             .Distinct(ModIds.Comparer)
             .ToArray();
+    }
+
+    public async Task<ModMetadata?> FindAsync(string id, CancellationToken cancellationToken = default)
+        => (await FindContentAsync(id, cancellationToken).ConfigureAwait(false))?.Authored;
+
+    async Task<ModVersionMetadata?> IUserContentRepository.GetReleaseAsync(string id, ModVersion version, CancellationToken cancellationToken)
+    {
+        var listing = await FindContentAsync(id, cancellationToken).ConfigureAwait(false);
+        return listing?.Releases.FirstOrDefault(release => release.Version.Equals(version));
+    }
+
+    async Task<ModVersionMetadata?> IUserContentRepository.GetLatestReleaseAsync(string id, ReleaseChannel channel, CancellationToken cancellationToken)
+    {
+        var listing = await FindContentAsync(id, cancellationToken).ConfigureAwait(false);
+        return listing?.Releases
+            .Where(release => release.IsOffered && channel.Includes(release.ReleaseStatus))
+            .MaxBy(release => release.Version);
+    }
+
+    public async Task<IReadOnlyList<ModMetadata>> GetAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        return AvailableContent(snapshot).Select(listing => listing.Authored!).ToArray();
+    }
+
+    async Task<IReadOnlyList<ModVersionMetadata>> IUserContentRepository.GetReleaseHistoryAsync(string id, CancellationToken cancellationToken)
+    {
+        var listing = await FindContentAsync(id, cancellationToken).ConfigureAwait(false);
+        return ReleaseHistory(listing);
+    }
+
+    public async Task<IReadOnlyList<ModMetadata>> SearchAsync(ContentType type, string query, CancellationToken cancellationToken = default)
+    {
+        var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        return AvailableContent(snapshot)
+            .Select(listing => listing.Authored!)
+            .Where(listing => listing.Type == type && ContentTagFilter.MatchesSearch(listing, query))
+            .ToArray();
+    }
+
+    private async Task<ContentIndexListing?> FindContentAsync(string id, CancellationToken cancellationToken)
+    {
+        var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        return AvailableContent(snapshot).FirstOrDefault(listing => ModIds.Equals(listing.Id, id));
     }
 
     private async Task<ContentIndexListing?> FindListingAsync(
@@ -149,4 +198,9 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
             listing.Authored is { Type: ContentType.Mod or ContentType.ModLoader }
             && listing.IndexStatus?.State != IndexStatusState.Delisted);
 
+    private static IEnumerable<ContentIndexListing> AvailableContent(ContentIndexSnapshot snapshot) =>
+        snapshot.Vehicles.Concat(snapshot.Saves).Where(listing =>
+            listing.Authored is { } authored
+            && authored.Type.IsVehicleOrSave()
+            && listing.IndexStatus?.State != IndexStatusState.Delisted);
 }

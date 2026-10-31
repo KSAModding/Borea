@@ -1008,6 +1008,103 @@ public sealed class RepositoryInstallPlannerTests
     }
 
     [Fact]
+    public async Task PlanAsync_VehicleWithTwoRequiredMods_InstallsTheModsAndLeavesTheVehicleOut()
+    {
+        var vehicle = Content("rover", ContentType.Vehicle, [Required("B"), Required("C")]);
+
+        var plan = await PlanAsync([vehicle], [Release("B"), Release("C")]);
+
+        Assert.True(plan.IsReady);
+        Assert.Equal(["B", "C"], plan.Operations.Select(value => value.Release.ModId).Order());
+        Assert.All(plan.Operations, value => Assert.Equal(InstallReason.Dependency, value.Reason));
+        Assert.DoesNotContain(plan.Selections, value => value.Release.ModId == "rover");
+    }
+
+    [Theory]
+    [InlineData(ContentType.Vehicle, PlanningMessageKind.MissingForVehicle, "missing-for-vehicle", "the game refuses the vehicle file")]
+    [InlineData(ContentType.Save, PlanningMessageKind.MissingForSave, "missing-for-save", "saving again loses those vehicles")]
+    public async Task PlanAsync_UnlistedRequiredModOfContent_WarnsAndInstallsTheRest(ContentType type, PlanningMessageKind kind, string code, string text)
+    {
+        var content = Content("rover", type, [Required("gone"), Required("B")]);
+
+        var plan = await PlanAsync([content], [Release("B")]);
+
+        Assert.True(plan.IsReady);
+        Assert.Equal(["B"], plan.Operations.Select(value => value.Release.ModId));
+        var warning = Assert.Single(plan.Warnings, value => value.Kind == kind);
+        Assert.Equal("rover", warning.ModId);
+        Assert.Equal("gone", warning.Dependency!.ModId);
+        Assert.Equal("unsatisfied-dependency", warning.Value);
+        Assert.Equal(code, warning.Code);
+        Assert.Contains(text, warning.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PlanAsync_RequiredModOfVehiclePinnedOutsideItsBounds_IsMissing()
+    {
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [Owned("B", "1.0.0", pinned: true)], false);
+        var vehicle = Content("rover", ContentType.Vehicle, [Required("B", "2.0.0")]);
+
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(vehicle, InstallReason.Manual)], new FakeRepository([Release("B", "2.0.0")])));
+
+        Assert.True(plan.IsReady);
+        Assert.Empty(plan.Operations);
+        Assert.Equal("pinned-dependency", Assert.Single(plan.Warnings, value => value.Kind == PlanningMessageKind.MissingForVehicle).Value);
+    }
+
+    [Fact]
+    public async Task PlanAsync_RequiredModOfVehicleRecordedForeignOutsideItsBounds_IsMissing()
+    {
+        var vehicle = Content("rover", ContentType.Vehicle, [Required("B", "2.0.0")]);
+
+        var plan = await PlanAsync(new InstallPlanningRequest(InstanceWith([Foreign("B", [])]), [new RequestedMod(vehicle, InstallReason.Manual)], new FakeRepository([Release("B", "2.0.0")])));
+
+        Assert.True(plan.IsReady);
+        Assert.Empty(plan.Operations);
+        Assert.Equal("foreign-owned", Assert.Single(plan.Warnings, value => value.Kind == PlanningMessageKind.MissingForVehicle).Value);
+    }
+
+    [Fact]
+    public async Task PlanAsync_RequiredModOfVehicleWithWarnings_IsStillInstalled()
+    {
+        var vehicle = Content("rover", ContentType.Vehicle, [Required("B")]);
+        var b = Release("B", os: ["linux"]);
+
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(vehicle, InstallReason.Manual)], new FakeRepository([b]), TargetPlatform: Borea.Core.Game.OsPlatform.Windows));
+
+        Assert.Equal(["B"], plan.Operations.Select(value => value.Release.ModId));
+        Assert.DoesNotContain(plan.Warnings, value => value.Kind == PlanningMessageKind.MissingForVehicle);
+    }
+
+    [Fact]
+    public async Task PlanAsync_IncompatibleVehicle_IsAConflict()
+    {
+        var vehicle = Content("rover", ContentType.Vehicle, [Required("B")], gameMinRevision: 9999);
+
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(vehicle, InstallReason.Manual)], new FakeRepository([Release("B")]), Game));
+
+        Assert.False(plan.IsReady);
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal(("rover", PlanningMessageKind.Incompatible), (conflict.ModId, conflict.Kind));
+    }
+
+    [Fact]
+    public async Task PlanAsync_RecommendedModOfVehicle_IsOfferedAsForAMod()
+    {
+        var vehicle = Content("rover", ContentType.Vehicle, [new ModDependency("B", ModDependencyKind.Recommends)]);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(vehicle, InstallReason.Manual)], new FakeRepository([Release("B")]));
+        var planner = new RepositoryInstallPlanner(new ModDependencyResolver());
+
+        var offered = await planner.PlanAsync(request);
+        var included = await planner.PlanAsync(request with { Recommended = new HashSet<string> { "rover:dependency:0:recommendation" } });
+
+        var choice = Assert.Single(offered.Choices);
+        Assert.Equal(("rover:dependency:0:recommendation", PlanningChoiceKind.Recommendation), (choice.Key, choice.Kind));
+        Assert.Empty(offered.Operations);
+        Assert.Equal(["B"], included.Operations.Select(value => value.Release.ModId));
+    }
+
+    [Fact]
     public void Constructor_UndefinedChannel_Throws()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new RepositoryInstallPlanner(new ModDependencyResolver(), (ReleaseChannel)42));
@@ -1028,6 +1125,8 @@ public sealed class RepositoryInstallPlannerTests
     private static readonly DateTimeOffset GoneSince = new(2026, 9, 23, 10, 24, 0, TimeSpan.Zero);
     private static readonly Borea.Core.Game.GameVersion Game = new(2026, 8, 3, 5117);
     private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, bool yanked = false, int gameMinRevision = 2131, IReadOnlyList<string>? os = null, ReleaseStatus status = ReleaseStatus.Stable, DateTimeOffset? unavailableSince = null, int? gameMaxRevision = null) => new(1, id, ModVersion.Parse(version), status, DateTimeOffset.UnixEpoch, gameMinRevision == 2131 ? "2026.7.4.2131" : $"2026.7.4.{gameMinRevision}", gameMinRevision, new DownloadInfo("https://example.com/mod.zip", new string('A', 64), 1, "application/zip", unavailableSince: unavailableSince), 1, dependencies ?? [], gameMax: gameMaxRevision is { } max ? $"2026.8.0.{max}" : null, gameMaxRevision: gameMaxRevision, os: os, yanked: yanked);
+
+    private static ModVersionMetadata Content(string id, ContentType type, IReadOnlyList<ModDependency> dependencies, int gameMinRevision = 2131) => new(1, id, ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, $"2026.7.4.{gameMinRevision}", gameMinRevision, new DownloadInfo("https://example.com/rover.zip", new string('A', 64), 1, "application/zip"), 1, dependencies, type, install: new InstallInfo(null, derived: false, folder: "Rover"));
 
     private sealed class FakeRepository(IReadOnlyList<ModVersionMetadata> releases) : IModRepository
     {

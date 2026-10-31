@@ -61,6 +61,22 @@ public sealed class ContentIndexReaderTests : IDisposable
         }
         """;
 
+    /// <summary>The share host example of RFC 0094 as the snapshot carries it.</summary>
+    private const string StorageHost = """
+        {
+            "kind": "share",
+            "name": "ksamods.gg",
+            "storage": "ksamods-content/share",
+            "bot": 98765432,
+            "api": "https://ksamods.gg/api/share/v1/",
+            "pages": "https://ksamods-content.github.io/share/",
+            "types": ["vehicle", "save"],
+            "max_bytes": { "vehicle": 10485760, "save": 104857600 },
+            "new_listings_per_day": 5,
+            "policy": "https://ksamods.gg/policy"
+        }
+        """;
+
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
     private readonly ContentIndexReader _reader;
@@ -189,6 +205,85 @@ public sealed class ContentIndexReaderTests : IDisposable
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
         Assert.Equal(ContentIndexDiagnosticScope.Tags, diagnostic.Scope);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Hosts_ReadsAStorageHostAndAHostWithoutStorage()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: $$"""
+            "hosts": {
+                "ksamods": {{StorageHost}},
+                "ownhost": {
+                    "kind": "share",
+                    "api": "https://own.example/api",
+                    "data": "https://data.own.example/share/",
+                    "downloads": ["https://cdn.own.example/"],
+                    "key": "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+                    "retired_keys": [],
+                    "types": ["vehicle"]
+                }
+            },
+            """));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Single(result.Listings);
+        Assert.Equal(["ksamods", "ownhost"], result.ShareHosts.Select(host => host.Key));
+        var storage = result.ShareHosts[0];
+        Assert.Equal(("ksamods.gg", "https://ksamods.gg/api/share/v1/"), (storage.Name, storage.Api.AbsoluteUri));
+        Assert.Equal(["vehicle", "save"], storage.Types);
+        Assert.Equal(10485760, storage.MaxBytesFor("vehicle"));
+        Assert.Equal("https://ksamods.gg/", storage.Page.AbsoluteUri);
+        var own = result.ShareHosts[1];
+        Assert.Equal(("ownhost", "https://own.example/api/"), (own.Name, own.Api.AbsoluteUri));
+        Assert.Equal(["vehicle"], own.Types);
+        Assert.Null(own.MaxBytesFor("vehicle"));
+        Assert.Equal("https://own.example/", own.Page.AbsoluteUri);
+    }
+
+    [Theory]
+    [InlineData("\"ksamods\":", "\"github\":")]
+    [InlineData("\"ksamods\":", "\"KSAmods\":")]
+    [InlineData("\"kind\": \"share\"", "\"kind\": \"mirror\"")]
+    [InlineData("https://ksamods.gg/api/share/v1/", "http://ksamods.gg/api/share/v1/")]
+    [InlineData("\"types\": [\"vehicle\", \"save\"]", "\"types\": \"vehicle\"")]
+    [InlineData("\"vehicle\": 10485760", "\"vehicle\": 0")]
+    [InlineData("\"vehicle\": 10485760", "\"vehicle\": 10485760.5")]
+    [InlineData("\"ksamods\":", "\"\\ud800\":")]
+    [InlineData("\"ksamods.gg\"", "\"\\ud800\"")]
+    [InlineData("\"save\"]", "\"\\ud800\"]")]
+    [InlineData("\"vehicle\": 10485760", "\"\\ud800\": 10485760")]
+    [InlineData("\"https://ksamods.gg/policy\"", "\"\\ud800\"")]
+    public async Task ReadAsync_HostTableBoreaCannotUse_IsSkippedAndTheOthersStay(string from, string to)
+    {
+        var hosts = $$"""
+            "hosts": {
+                "ksamods": {{StorageHost}},
+                "other": {{StorageHost}}
+            },
+            """;
+        // Only the first table changes, so the other one stays usable.
+        var at = hosts.IndexOf(from, StringComparison.Ordinal);
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: hosts[..at] + to + hosts[(at + from.Length)..]));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("other", Assert.Single(result.ShareHosts).Key);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\"hosts\": {},")]
+    [InlineData("\"hosts\": \"ksamods\",")]
+    public async Task ReadAsync_NoHostTables_GivesNoHostsAndKeepsTheRest(string hosts)
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: hosts));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Empty(result.ShareHosts);
+        Assert.Single(result.Listings);
+        Assert.Empty(result.Diagnostics);
     }
 
     [Fact]
@@ -434,5 +529,84 @@ public sealed class ContentIndexReaderTests : IDisposable
     {
         if (Directory.Exists(_tempRoot))
             Directory.Delete(_tempRoot, recursive: true);
+    }
+    private async Task WriteTypeFileAsync(ContentIndexTypeFile file, string content)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(IndexPath)!);
+        await File.WriteAllTextAsync(file.CachePathFrom(IndexPath), content);
+    }
+
+    [Fact]
+    public async Task ReadAsync_NoTypeFiles_GivesTheMainDocumentWithNoVehiclesOrSaves()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson)));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("test-mod", Assert.Single(result.Listings).Id);
+        Assert.Empty(result.Vehicles);
+        Assert.Empty(result.Saves);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public async Task ReadAsync_TypeFilesNextToTheIndex_FillVehiclesAndSaves()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson)));
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Vehicles, TypeFileJson.File("vehicles", TypeFileJson.Entry()));
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Saves, TypeFileJson.File("saves", TypeFileJson.Entry("ExampleSave", "save", TypeFileJson.Release("ExampleSave", "save"))));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("test-mod", Assert.Single(result.Listings).Id);
+        Assert.Equal("Example Rover", Assert.Single(Assert.Single(result.Vehicles).Releases).Install!.Folder);
+        Assert.Equal("ExampleSave", Assert.Single(result.Saves).Id);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Theory]
+    [InlineData("""{ "snapshot_version": 1, "vehicles": {} }""")]
+    [InlineData("not json")]
+    [InlineData("""{ "snapshot_version": 2, "vehicles": [] }""")]
+    public async Task ReadAsync_UnusableVehicleFile_KeepsListingsAndPacksAndAddsOneDiagnostic(string vehicles)
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson)));
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Vehicles, vehicles);
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Saves, TypeFileJson.File("saves", TypeFileJson.Entry("ExampleSave", "save", TypeFileJson.Release("ExampleSave", "save"))));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("test-mod", Assert.Single(result.Listings).Id);
+        Assert.Empty(result.Vehicles);
+        Assert.Equal("ExampleSave", Assert.Single(result.Saves).Id);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticScope.Listing, diagnostic.Scope);
+        Assert.Contains("snapshot-vehicles.json", diagnostic.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReadAsync_RejectedVehicleRelease_IsAReleaseDiagnostic()
+    {
+        await WriteIndexAsync(Snapshot(""));
+        var releases = TypeFileJson.Release(install: """{ "derived": true, "folder": "CON" }""", version: "2.0.0") + "," + TypeFileJson.Release();
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Vehicles, TypeFileJson.File("vehicles", TypeFileJson.Entry(releases: releases)));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Single(Assert.Single(result.Vehicles).Releases);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticScope.Release, diagnostic.Scope);
+        Assert.Equal("2.0.0", diagnostic.Version);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ReadsOnlyTheCandidate()
+    {
+        var candidatePath = Path.Combine(_tempRoot, "index.json.tmp");
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllTextAsync(candidatePath, Snapshot(Listing("test-mod", ValidAuthoredJson)));
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Vehicles, "not json");
+
+        await _reader.ValidateAsync(candidatePath);
     }
 }

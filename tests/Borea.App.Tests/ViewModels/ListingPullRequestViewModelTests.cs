@@ -246,6 +246,22 @@ public sealed class ListingPullRequestViewModelTests
     }
 
     [Fact]
+    public async Task SignedIn_ShareHostAuthority_LeavesTheProofToTheChecksWithoutCheckAgain()
+    {
+        _session.SignIn();
+        _publisher.Ownership = new ListingOwnership(ListingOwnershipState.CouldNotEvaluate, Problem: ListingOwnershipProblem.ShareHost);
+        using var harness = await CreateAsync();
+        var editor = await ValidNewListingAsync(harness);
+
+        await editor.OwnershipCheck;
+
+        Assert.Equal(harness.Localization.ListingOwnershipUnknown, editor.OwnershipText);
+        Assert.Equal(harness.Localization.ListingFixShareHost, editor.OwnershipDetail);
+        Assert.Null(editor.OwnershipFixLabel);
+        Assert.False(editor.CanCheckOwnershipAgain);
+    }
+
+    [Fact]
     public async Task SignedIn_ForkWithoutProof_SaysTheMarkerFileDoesNotCountAndOpensTheFork()
     {
         _session.SignIn();

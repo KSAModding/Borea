@@ -5,8 +5,8 @@ using System.Collections.ObjectModel;
 namespace Borea.Core.Mods;
 
 /// <summary>
-/// The authored metadata for a mod or mod loader (RFC 0031). Carries no version:
-/// versions exist per release.
+/// The authored metadata for a mod, mod loader, vehicle or save (RFC 0031, RFC 0085).
+/// Carries no version: versions exist per release.
 /// </summary>
 public sealed class ModMetadata
 {
@@ -57,14 +57,15 @@ public sealed class ModMetadata
     public string? SupersededBy { get; }
 
     /// <summary>
-    /// All listing links. Keys keep their authored casing and compare case-insensitively; "forums" is required.
+    /// All listing links. Keys keep their authored casing and compare case-insensitively.
+    /// "forums" is required except on a vehicle or save.
     /// </summary>
     public IReadOnlyDictionary<string, string> Links { get; }
 
     /// <summary>
-    /// The required KSA forums thread for this listing.
+    /// The KSA forums thread for this listing. Null only on a vehicle or save.
     /// </summary>
-    public string ForumUrl => Links["forums"];
+    public string? ForumUrl => Links.TryGetValue("forums", out var url) ? url : null;
 
     /// <summary>
     /// Where releases appear. Null means releases enter the index by pull request.
@@ -73,8 +74,9 @@ public sealed class ModMetadata
 
     /// <summary>
     /// Oldest game version known to work, as authored. May be a month such as "2026.7".
+    /// Null only on a vehicle or save, whose releases take it from the archive.
     /// </summary>
-    public string GameMin { get; }
+    public string? GameMin { get; }
 
     /// <summary>
     /// Newest tested game version, as authored. Null means no known upper limit.
@@ -110,7 +112,7 @@ public sealed class ModMetadata
         string abstractText,
         string license,
         IReadOnlyDictionary<string, string> links,
-        string gameMin,
+        string? gameMin,
         ContentType type = ContentType.Mod,
         IReadOnlyList<string>? tags = null,
         string? description = null,
@@ -143,6 +145,10 @@ public sealed class ModMetadata
         if (install is not null && install.Target is null && type == ContentType.ModLoader)
             throw new ArgumentException("A mod loader has no default install target, so it must state one.", nameof(install));
 
+        // RFC 0085: the type default places the folder, and the game writes the whole folder on each save.
+        if (type.IsVehicleOrSave() && install is not null && (install.Target is not null || install.Path is not null || install.Manages is not null))
+            throw new ArgumentException("A vehicle or save takes only root, steps and uninstall under install.", nameof(install));
+
         if (install?.Target == InstallAnchor.Standalone && provides?.Launch is null)
             throw new ArgumentException("A standalone install target needs the launch target that reaches it.", nameof(install));
 
@@ -161,14 +167,20 @@ public sealed class ModMetadata
         if (string.IsNullOrWhiteSpace(license))
             throw new ArgumentException("License cannot be null or whitespace.", nameof(license));
 
-        if (links is null || !links.Any(p => string.Equals(p.Key, "forums", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(p.Value)))
+        ArgumentNullException.ThrowIfNull(links);
+
+        var forums = links.Where(p => string.Equals(p.Key, "forums", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (!type.IsVehicleOrSave() && !forums.Any(p => !string.IsNullOrWhiteSpace(p.Value)))
             throw new ArgumentException("The links must contain a forums entry.", nameof(links));
+
+        if (forums.Any(p => string.IsNullOrWhiteSpace(p.Value)))
+            throw new ArgumentException("The forums link cannot be empty.", nameof(links));
 
         var duplicateKey = links.Keys.GroupBy(k => k, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1)?.Key;
         if (duplicateKey is not null)
             throw new ArgumentException($"Link key '{duplicateKey}' appears more than once when compared case-insensitively.", nameof(links));
 
-        if (string.IsNullOrWhiteSpace(gameMin))
+        if (gameMin is null ? !type.IsVehicleOrSave() : string.IsNullOrWhiteSpace(gameMin))
             throw new ArgumentException("The minimum game version is required.", nameof(gameMin));
 
         if (supersededBy is not null)

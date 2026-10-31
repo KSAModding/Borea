@@ -144,7 +144,7 @@ public sealed class ModMetadataMapperTests : IDisposable
     {
         var dto = ModMetadataMapper.ToDto(MetadataFixtures.MinimalMetadata());
         dto.Status = "frozen";
-        dto.Type = "vehicle";
+        dto.Type = "spaceship";
 
         var reloaded = ModMetadataMapper.FromDto(dto);
 

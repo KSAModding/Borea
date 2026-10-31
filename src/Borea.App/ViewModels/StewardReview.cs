@@ -4,9 +4,11 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Borea.App.Localization;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Stewardship;
+using Borea.Core.Tags;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -253,8 +255,8 @@ public sealed record StewardPatchLine(string Text)
 }
 
 /// <summary>
-/// A listing or pack document at the head commit, as the content page would show it, or its text and why it does not parse.
-/// A listing also shows the ownership proof of the pull request author.
+/// A listing, pack, vehicle or save document at the head commit, as the content page would show it, or its text and why it does not parse.
+/// A listing, vehicle or save also shows the ownership proof of the pull request author, and a vehicle or save its dependencies and its newest release.
 /// </summary>
 public sealed partial class StewardReviewDocument
 {
@@ -320,10 +322,32 @@ public sealed partial class StewardReviewDocument
 
     public string? Description => _draft?.Description is { Length: > 0 } text ? text : null;
 
-    /// <summary>The tags as the content page shows them, so the preview reads like the page players will see.</summary>
-    public IReadOnlyList<string> Tags => _draft is { } draft
-        ? DiscoverItem.DisplayTags(_owner, Document.Kind == StewardQueueKind.Pack ? ContentType.ModPack : ContentType.Mod, draft.Tags)
+    /// <summary>
+    /// The tags as the content page shows them, so the preview reads like the page players will see. The tags of a vehicle or save are free,
+    /// so they show as written.
+    /// </summary>
+    public IReadOnlyList<string> Tags => _draft is not { } draft ? []
+        : IsVehicleOrSave ? draft.Tags.Select(TagText.Display).ToList()
+        : DiscoverItem.DisplayTags(_owner, Document.Kind == StewardQueueKind.Pack ? ContentType.ModPack : ContentType.Mod, draft.Tags);
+
+    public bool IsVehicleOrSave => Document.Kind is StewardQueueKind.Vehicle or StewardQueueKind.Save;
+
+    /// <summary>
+    /// One line per [[dependencies]] entry of a vehicle or save, as the document writes it: its kind and its id with the bounds, or each
+    /// alternative of an any_of entry.
+    /// </summary>
+    public IReadOnlyList<string> Dependencies => IsVehicleOrSave && Document.Document?.GetList("dependencies") is { } entries
+        ? entries.OfType<AuthoredTable>().Select(DependencyText).ToList()
         : [];
+
+    /// <summary>The newest stamped release of a vehicle or save with its install folder, that none is stamped yet, or why it could not be read.</summary>
+    public string? ReleaseText => !IsVehicleOrSave || _draft is null ? null
+        : Document.NewestReleaseFailure is { } failure ? _owner.Localization.FormatStewardReviewReleaseUnreadable(_owner.ReleaseAmendmentErrorText(failure))
+        : Document.NewestRelease is not { } release ? _owner.Localization.StewardReviewNoRelease
+        : release.Folder is { } folder ? _owner.Localization.FormatStewardReviewNewestRelease(release.Version, folder)
+        : _owner.Localization.FormatStewardReviewNewestReleaseNoFolder(release.Version);
+
+    public bool IsReleaseUnreadable => ReleaseText is not null && Document.NewestReleaseFailure is not null;
 
     public string? License => _draft?.License is { Length: > 0 } license ? license : null;
 
@@ -361,4 +385,12 @@ public sealed partial class StewardReviewDocument
 
     [RelayCommand]
     private void OpenLink(ContentLink link) => _review.OpenLink(link.Url);
+
+    private static string DependencyText(AuthoredTable entry)
+    {
+        var alternatives = entry.GetList("any_of") is { } anyOf ? anyOf.OfType<AuthoredTable>().ToList() : [entry];
+        var named = PlanningText.OneOf([.. alternatives.Select(alternative =>
+            PlanningText.Bounds(alternative.GetString("id") ?? string.Empty, alternative.GetString("min"), alternative.GetString("max")))]);
+        return entry.GetString("kind") is { } kind ? $"{kind}: {named}" : named;
+    }
 }

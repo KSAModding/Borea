@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Sharing;
 using Borea.Core.Tags;
 
 namespace Borea.Core.Index;
@@ -20,13 +21,25 @@ public sealed class ContentIndexSnapshot
 
     public CuratedTagVocabulary Tags { get; }
 
+    /// <summary>The entries of the vehicle file, see <see cref="ContentIndexTypeFiles"/>. Empty when there is no such file.</summary>
+    public IReadOnlyList<ContentIndexListing> Vehicles { get; }
+
+    /// <summary>The entries of the save file, see <see cref="ContentIndexTypeFiles"/>. Empty when there is no such file.</summary>
+    public IReadOnlyList<ContentIndexListing> Saves { get; }
+
+    /// <summary>The share hosts that the index registers (RFC 0104), by key. Empty when the snapshot has no hosts field.</summary>
+    public IReadOnlyList<ShareHost> ShareHosts { get; }
+
     public ContentIndexSnapshot(
         int snapshotVersion,
         IReadOnlyList<ContentIndexListing> listings,
         IReadOnlyList<ContentIndexPack> packs,
         ContentIndexGameVersions? gameVersions,
         IReadOnlyList<ContentIndexDiagnostic> diagnostics,
-        CuratedTagVocabulary? tags = null)
+        CuratedTagVocabulary? tags = null,
+        IReadOnlyList<ContentIndexListing>? vehicles = null,
+        IReadOnlyList<ContentIndexListing>? saves = null,
+        IReadOnlyList<ShareHost>? shareHosts = null)
     {
         if (snapshotVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(snapshotVersion), "Snapshot version must be a positive integer.");
@@ -37,6 +50,9 @@ public sealed class ContentIndexSnapshot
         GameVersions = gameVersions;
         Diagnostics = Copy(diagnostics, nameof(diagnostics));
         Tags = tags ?? CuratedTagVocabulary.Empty;
+        Vehicles = Copy(vehicles ?? [], nameof(vehicles));
+        Saves = Copy(saves ?? [], nameof(saves));
+        ShareHosts = Copy(shareHosts ?? [], nameof(shareHosts));
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)

@@ -69,6 +69,19 @@ public sealed class ModPackMemberReleasesTests
         Assert.Null(ModPackMemberReleases.NewerRelease(snapshot, "Unlisted", ModVersion.Parse("1.0.0")));
     }
 
+    [Fact]
+    public void Find_PinnedVehicleWithANewerRelease_IsCountedWithItsType_FromTheVehicleList()
+    {
+        var rover = (string version) => new ModVersionMetadata(1, "Rover", ModVersion.Parse(version), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.7.4.2131", 2131, new DownloadInfo("https://example.com/rover.zip", new string('A', 64), 1, "application/zip"), 1, [], ContentType.Vehicle, install: new InstallInfo(null, derived: false, folder: "Rover"));
+        var snapshot = new ContentIndexSnapshot(1, [new ContentIndexListing("A", null, [Release("A", "1.0.0")], null), new ContentIndexListing("B", null, [Release("B", "1.0.0"), Release("B", "1.1.0")], null)], [], null, [], vehicles: [new ContentIndexListing("Rover", null, [rover("1.0.0"), rover("1.1.0")], null)]);
+        var basePack = Pack(("A", "1.0.0"));
+        var pack = new ModPackMetadata(1, basePack.ModPackId, basePack.Source, basePack.Name, basePack.Authors, basePack.Abstract, basePack.License, basePack.Links, basePack.GameMin, basePack.Version, basePack.ReleasedAt, basePack.Mods, vehicles: [new ModPackEntry("Rover", ModVersion.Parse("1.0.0"))], saves: [new ModPackEntry("B", ModVersion.Parse("1.0.0"))]);
+
+        var newer = Assert.Single(ModPackMemberReleases.Find(pack, snapshot));
+
+        Assert.Equal(("Rover", ContentType.Vehicle, "1.1.0"), (newer.ModId, newer.Type, newer.Newer.Version.ToString()));
+    }
+
     private static ContentIndexSnapshot Snapshot(params ModVersionMetadata[] releases) =>
         new(1, releases.GroupBy(release => release.ModId).Select(group => new ContentIndexListing(group.Key, null, group.ToList(), null)).ToList(), [], null, []);
 }
