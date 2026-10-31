@@ -105,6 +105,16 @@ public partial class MainViewModel
         EndTask(run.TaskItem, completed, stopped, error);
     }
 
+    /// <param name="stopped">What the row or the pack update notice shows after a stop, or null.</param>
+    private static void EndRowInstall(IInstallProgressRow row, string? stopped)
+    {
+        row.IsInstalling = false;
+        row.Run = null;
+        row.Progress = 0;
+        row.ProgressStatus = stopped;
+        row.ProgressDetail = null;
+    }
+
     /// <summary>What a stopped install shows where its progress was.</summary>
     private string StoppedText(IInstallProgressRow row, int completed = 0, int total = 0) => row is IUpdateRow or PackUpdateItem
         ? completed == 0 ? Localization.UpdateStopped : Localization.FormatUpdateStoppedAfter(completed, total)
@@ -224,11 +234,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, row.InstallError);
-            row.IsInstalling = false;
-            row.Run = null;
-            row.Progress = 0;
-            row.ProgressStatus = stopped;
-            row.ProgressDetail = null;
+            EndRowInstall(row, stopped);
         }
 
         return executed;
@@ -521,11 +527,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, error);
-            row.IsInstalling = false;
-            row.Run = null;
-            row.Progress = 0;
-            row.ProgressStatus = stopped;
-            row.ProgressDetail = null;
+            EndRowInstall(row, stopped);
             if (error is null)
                 ReplanIfChanged(row, revision);
         }

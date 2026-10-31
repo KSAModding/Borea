@@ -16,7 +16,6 @@ internal static class ReleaseArchive
     /// <exception cref="InvalidOperationException">The archive does not hold exactly one folder and nothing else.</exception>
     public static string Unpack(Stream archive, string archiveName, string destination)
     {
-        ArgumentNullException.ThrowIfNull(archive);
         Directory.CreateDirectory(destination);
 
         if (archiveName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))

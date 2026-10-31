@@ -19,8 +19,6 @@ internal sealed class ContentImageFetcher : IDisposable
 
     public ContentImageFetcher(HttpMessageHandler handler, TimeSpan timeout)
     {
-        ArgumentNullException.ThrowIfNull(handler);
-
         if (timeout <= TimeSpan.Zero || timeout.TotalMilliseconds > uint.MaxValue - 1)
             throw new ArgumentOutOfRangeException(nameof(timeout), "The timeout must be a positive finite timer interval.");
 
@@ -45,7 +43,6 @@ internal sealed class ContentImageFetcher : IDisposable
 
     public Task<ContentImageResult> FetchAsync(ContentImage image, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(image);
         return FetchAsync(image.Url, ContentImageBytes.MaxBytes(image), bytes => ContentImageBytes.Verify(image, bytes), cancellationToken);
     }
 

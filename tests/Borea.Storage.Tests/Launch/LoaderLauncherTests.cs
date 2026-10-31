@@ -47,7 +47,7 @@ public sealed class LoaderLauncherTests : IDisposable
         return executable;
     }
 
-    internal static ModMetadata LoaderListing(string modId = "StarMap", LoaderProvides? provides = null, bool standalone = true) => new(
+    internal static ModMetadata LoaderListing(string modId = "StarMap", LoaderProvides? provides = null, bool standalone = true, ReleaseSource? releases = null) => new(
         specVersion: 1,
         modId: modId,
         source: "TestSource",
@@ -59,6 +59,7 @@ public sealed class LoaderLauncherTests : IDisposable
         gameMin: "2026.8.3.5117",
         type: ContentType.ModLoader,
         install: standalone ? new InstallDescriptor(target: InstallAnchor.Standalone) : null,
+        releases: releases,
         provides: provides);
 
     internal static LoaderProvides StarMapProvides(string launch = "StarMap.exe", InstanceHandover? instance = null, Dictionary<OsPlatform, LoaderPlatformLaunch>? platforms = null) => new(
@@ -130,20 +131,6 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Contains("'-instancepath'", result.Message);
         Assert.Empty(_starter.Plans);
         Assert.False(_launcher.IsRunning(_instance.InstanceId));
-    }
-
-    [Fact]
-    public void Launch_NoEntryForThisPlatform_StartsTheDefaultLaunch()
-    {
-        var executable = PlaceStarMap();
-        PlaceStarMap("StarMap.dll");
-        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.MacOs] = new("StarMap.dll", "dotnet") };
-        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
-
-        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
-
-        Assert.True(result.Started);
-        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
     }
 
     [Fact]
@@ -655,35 +642,21 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.False(launcher.IsRunning(_instance.InstanceId));
     }
 
-    [Fact]
-    public void Launch_UnknownRuntimeInTheOwnEntry_StartsNothing()
+    [Theory]
+    [InlineData("mono", null, LaunchOutcome.UnknownRuntime, "mono")]
+    [InlineData("dotnet", new[] { "arch" }, LaunchOutcome.UnknownPlatformKey, "arch")]
+    public void Launch_UnknownRuntimeOrKeyInTheOwnEntry_StartsNothing(string runtime, string[]? unknownKeys, LaunchOutcome expected, string unknownName)
     {
         PlaceStarMap();
         PlaceStarMap("StarMap.dll");
-        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "mono") };
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", runtime, unknownKeys) };
         using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
 
         var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
 
-        Assert.Equal(LaunchOutcome.UnknownRuntime, result.Outcome);
-        Assert.Equal("mono", result.UnknownName);
-        Assert.Contains("'mono'", result.Message);
-        Assert.Empty(_starter.Plans);
-    }
-
-    [Fact]
-    public void Launch_UnknownKeyInTheOwnEntry_StartsNothing()
-    {
-        PlaceStarMap();
-        PlaceStarMap("StarMap.dll");
-        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "dotnet", ["arch"]) };
-        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
-
-        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
-
-        Assert.Equal(LaunchOutcome.UnknownPlatformKey, result.Outcome);
-        Assert.Equal("arch", result.UnknownName);
-        Assert.Contains("'arch'", result.Message);
+        Assert.Equal(expected, result.Outcome);
+        Assert.Equal(unknownName, result.UnknownName);
+        Assert.Contains($"'{unknownName}'", result.Message);
         Assert.Empty(_starter.Plans);
     }
 
@@ -833,6 +806,35 @@ public sealed class LoaderLauncherTests : IDisposable
 
         Assert.Equal(LaunchOutcome.NoLoaderDirectory, result.Outcome);
         Assert.Contains("StarMap", result.Message);
+        Assert.Empty(_starter.Plans);
+    }
+
+    [Fact]
+    public void Launch_GivenVersionFolder_StartsTheLoaderFromItAndNotFromTheRecordedFolder()
+    {
+        PlaceStarMap();
+        var version = Path.Combine(_tempRoot, "Loaders", "StarMap", "0.4.7");
+        Directory.CreateDirectory(version);
+        File.WriteAllBytes(Path.Combine(version, "StarMap.exe"), []);
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()), version, arguments: null);
+
+        Assert.True(result.Started);
+        var plan = Assert.Single(_starter.Plans);
+        Assert.Equal(Path.Combine(Path.GetFullPath(version), "StarMap.exe"), plan.Executable);
+        Assert.Equal(Path.GetFullPath(version), plan.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Launch_GivenVersionFolderMissing_StartsNothingEvenWithARecordedFolder()
+    {
+        PlaceStarMap();
+        var version = Path.Combine(_tempRoot, "Loaders", "StarMap", "0.4.7");
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()), version, arguments: null);
+
+        Assert.Equal(LaunchOutcome.NoLoaderDirectory, result.Outcome);
+        Assert.Contains(version, result.Message);
         Assert.Empty(_starter.Plans);
     }
 
@@ -1068,13 +1070,8 @@ public sealed class LoaderLauncherTests : IDisposable
         var instance = InstanceWith("kessler-armory");
         var folder = Directory.CreateDirectory(Path.Combine(_paths.GetInstanceModsFolder(instance.InstanceId), "kessler-armory", "bin"));
         File.WriteAllBytes(Path.Combine(folder.FullName, "KSArmory.dll"), []);
-        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
-        var process = Assert.Single(_starter.Processes);
-        process.Output.AddRange(KsArmoryCrash);
-        process.HasExited = true;
-        process.ExitCode = 1;
 
-        var result = await _launcher.WatchStartAsync(instance, started);
+        var result = await CrashAsync(instance, 1, KsArmoryCrash);
 
         Assert.Equal("kessler-armory", result.BlamedModId);
     }
@@ -1084,17 +1081,43 @@ public sealed class LoaderLauncherTests : IDisposable
     {
         PlaceStarMap();
         var instance = InstanceWith("MeasureTools");
-        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
-        var process = Assert.Single(_starter.Processes);
-        process.Output.Add("Could not load file or assembly 'Brutal.Core.Common, Version=1.0.0.0'.");
-        process.HasExited = true;
-        process.ExitCode = 3;
 
-        var result = await _launcher.WatchStartAsync(instance, started);
+        var result = await CrashAsync(instance, 3, "Could not load file or assembly '0Harmony, Version=2.3.0.0'.");
 
         Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
         Assert.Null(result.BlamedModId);
         Assert.Contains("exit code 3", result.Message);
+    }
+
+    private static readonly string[] StarMap5638Crash =
+    [
+        "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+        "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
+        "   at System.Reflection.RuntimeModule.GetDefinedTypes()",
+        "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+        "   at StarMap.Program.Main(String[] args)",
+    ];
+
+    [Fact]
+    public async Task WatchStart_LoaderCannotLoadAGameAssembly_SaysItWasMadeForAnotherBuild()
+    {
+        PlaceStarMap();
+        var game = Directory.CreateDirectory(_paths.GetGameDirectoryPath()!).FullName;
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+        var instance = InstanceWith("MeasureTools");
+        var releases = new ReleaseSource([new ReleaseHost("github", "StarMapLoader/StarMap")]);
+        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides(), releases: releases));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.AddRange(StarMap5638Crash);
+        process.HasExited = true;
+        process.ExitCode = -532462766;
+
+        var result = await _launcher.WatchStartAsync(instance, started);
+
+        Assert.Equal(LoaderCrashCause.GameAssembly, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+        Assert.Contains("2026.8.3.5117", result.Message);
+        Assert.Contains("https://github.com/StarMapLoader/StarMap/releases", result.Message);
     }
 
     private static readonly string[] ClrCrash =
@@ -1172,6 +1195,203 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal("KSArmory", result.BlamedModId);
         Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
         Assert.Contains("StarMap stopped while it loaded KSArmory 0.8.44, so that mod is the likely cause.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_GameAssemblyNamedWhileLoadingMods_KeepsTheModLoadingCause()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("KSArmory");
+
+        var result = await CrashAsync(instance, -532462766, ["Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0'.", .. ClrCrash]);
+
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+    }
+
+    private const string MissingNumerics = "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.";
+
+    // what StarMap 0.4.8 wrote on KSA 2026.10.19.5638 when GetTypes failed on a mod built for an older build
+    private static readonly string[] StaleModCrash =
+    [
+        "StarMap - Using Instance Path: C:\\Instances\\Main",
+        "StarMap - Delaying load of mod: AdvancedFlightComputer due to missing dependencies: KittenExtensions",
+        "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+        MissingNumerics,
+        MissingNumerics,
+        "   at System.Reflection.RuntimeModule.GetDefinedTypes()",
+        "   at System.Reflection.RuntimeModule.GetTypes()",
+        "   at StarMap.Core.ModRepository.RuntimeMod.InitializeMod(ModRegistry modRegistry)",
+        "   at StarMap.Core.ModRepository.ModLoader.PrepareMods()",
+        "   at StarMap.Core.ModRepository.ModLoader.Init()",
+        "   at StarMap.Core.StarMapCore.Init()",
+        "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+        "   at StarMap.Program.Main(String[] args)",
+        "System.IO.FileNotFoundException: " + MissingNumerics,
+        "File name: 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'",
+    ];
+
+    // the last 200 lines of the same error for a mod with many types, which hold no frame and no StarMap line
+    private static readonly string[] CutStaleModCrash = Enumerable.Range(0, 100)
+        .SelectMany(_ => new[] { "System.IO.FileNotFoundException: " + MissingNumerics, "File name: 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'" })
+        .ToArray();
+
+    /// <summary>Places a mod whose entry assembly references the named assemblies, and the manifest that enables the mods in this order.</summary>
+    private void PlaceCodeMods(Instance instance, params (string ModId, string[] References)[] mods)
+    {
+        foreach (var (modId, references) in mods)
+        {
+            PlaceMod(instance, modId, $"name = \"{modId}\"");
+            ReferencingAssembly.Write(Path.Combine(_paths.GetInstanceModsFolder(instance.InstanceId), modId, modId + ".dll"), references);
+        }
+
+        WriteManifest(instance, string.Join("\n\n", mods.Select(mod => $"[[mods]]\nid = \"{mod.ModId}\"")));
+    }
+
+    [Fact]
+    public async Task WatchStart_CutErrorOfAModThatNeedsAMissingGameAssembly_BlamesThatModAndNotTheLoader()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "StarMap.Core.dll"), "KSA", "Brutal.Numerics");
+        var instance = InstanceWith("ModMenu", "KSArmory");
+        PlaceCodeMods(instance, ("ModMenu", ["KSA", "Brutal.Core.Logging"]), ("KSArmory", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.ModAssembly, result.CrashCause);
+        Assert.Equal("KSArmory", result.BlamedModId);
+        Assert.Empty(result.OtherBlamedModIds);
+        Assert.Contains("KSArmory 0.8.44 stopped StarMap from starting.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_MissingGameAssemblyThatTheLoaderNeeds_SaysItWasMadeForAnotherBuild()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "StarMap.Core.dll"), "KSA", "Brutal.Core.Numerics");
+        var instance = InstanceWith("KSArmory");
+        PlaceCodeMods(instance, ("KSArmory", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.GameAssembly, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+        Assert.Empty(result.OtherBlamedModIds);
+    }
+
+    [Fact]
+    public async Task WatchStart_GameAssemblyNamedWithoutAFrame_BlamesNeitherTheLoaderNorAMod()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("MeasureTools");
+        PlaceCodeMods(instance, ("MeasureTools", ["KSA", "Brutal.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.Unknown, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+        Assert.Contains("StarMap stopped right after starting", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_ModsThatNeedAMissingAssemblyWhileLoadingMods_BlamesTheLoadingModAndNamesTheOthers()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("AdvancedFlightComputer", "Compendium", "DeltaVMap", "ModMenu");
+        PlaceCodeMods(
+            instance,
+            ("AdvancedFlightComputer", ["KSA", "Brutal.Core.Numerics"]),
+            ("Compendium", ["KSA", "Brutal.Core.Numerics"]),
+            ("ModMenu", ["KSA", "Brutal.Core.Logging"]),
+            ("DeltaVMap", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, StaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+        Assert.Equal("Compendium", result.BlamedModId);
+        Assert.Equal(["AdvancedFlightComputer", "DeltaVMap"], result.OtherBlamedModIds);
+        Assert.Contains("These mods need parts of KSA that this version does not have, so they will likely fail too: AdvancedFlightComputer, DeltaVMap.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoadingFrameWithoutTheInstancePath_BlamesTheFirstModThatNeedsTheMissingAssembly()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("ModMenu", "DeltaVMap", "KSArmory");
+        PlaceCodeMods(instance, ("ModMenu", ["KSA", "Brutal.Core.Logging"]), ("DeltaVMap", ["KSA", "Brutal.Core.Numerics"]), ("KSArmory", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, [.. StaleModCrash.Skip(2)]);
+
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+        Assert.Equal("DeltaVMap", result.BlamedModId);
+        Assert.Equal(["KSArmory"], result.OtherBlamedModIds);
+    }
+
+    [Fact]
+    public async Task WatchStart_CutErrorWithModsMadeForAnotherBuild_NamesEveryModThatNeedsAGameAssemblyTheGameLacks()
+    {
+        PlaceStarMap();
+        var game = Directory.CreateDirectory(_paths.GetGameDirectoryPath()!).FullName;
+        foreach (var assembly in new[] { "KSA", "Brutal.Numerics", "Brutal.Logging" })
+            ReferencingAssembly.Write(Path.Combine(game, assembly + ".dll"));
+        var instance = InstanceWith("KSArmory", "ModMenu", "MeasureTools", "Helper");
+        PlaceCodeMods(
+            instance,
+            ("KSArmory", ["KSA", "Brutal.Core.Numerics"]),
+            ("ModMenu", ["KSA", "Brutal.Core.Logging"]),
+            ("MeasureTools", ["KSA", "Brutal.Numerics", "KSA.Helper"]),
+            ("Helper", ["KSA"]));
+        ReferencingAssembly.Write(Path.Combine(_paths.GetInstanceModsFolder(instance.InstanceId), "Helper", "KSA.Helper.dll"));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.ModAssembly, result.CrashCause);
+        Assert.Equal("KSArmory", result.BlamedModId);
+        Assert.Equal(["ModMenu"], result.OtherBlamedModIds);
+        Assert.EndsWith("These mods need parts of KSA that this version does not have, so they will likely fail too: ModMenu.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_CutErrorThatNamesAMissingAssemblyOfNoGame_BlamesNoMod()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "0Harmony.dll"));
+        var instance = InstanceWith("ModMenu", "KSArmory");
+        PlaceCodeMods(instance, ("ModMenu", ["KSA", "0Harmony"]), ("KSArmory", ["KSA", "0Harmony"]));
+        const string missingHarmony = "Could not load file or assembly '0Harmony, Version=2.4.0.0, Culture=neutral, PublicKeyToken=null'.";
+
+        var result = await CrashAsync(instance, -532462766, [.. Enumerable.Repeat("System.IO.FileLoadException: " + missingHarmony, 100)]);
+
+        Assert.Equal(LoaderCrashCause.Unknown, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+        Assert.Empty(result.OtherBlamedModIds);
+    }
+
+    [Fact]
+    public async Task WatchStart_CutErrorThatNamesAMissingAssemblyOfTheLoaderItself_DoesNotSayItWasMadeForAnotherBuild()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "StarMap.Core.dll"), "KSA", "StarMap.API");
+        var instance = InstanceWith("KSArmory");
+
+        var result = await CrashAsync(instance, -532462766, ["Could not load file or assembly 'StarMap.API, Version=0.4.8.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified."]);
+
+        Assert.Equal(LoaderCrashCause.Unknown, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoaderSubfolderReferencesTheMissingAssembly_BlamesTheModAndNotTheLoader()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "StarMap.Core.dll"), "KSA", "Brutal.Numerics");
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "Content", "OldMod", "OldMod.dll"), "KSA", "Brutal.Core.Numerics");
+        var instance = InstanceWith("KSArmory");
+        PlaceCodeMods(instance, ("KSArmory", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.ModAssembly, result.CrashCause);
+        Assert.Equal("KSArmory", result.BlamedModId);
     }
 
     [Fact]

@@ -25,7 +25,6 @@ public partial class MainViewModel
     /// <summary>Shows an exception in the error bar, with its type in front of its message.</summary>
     internal void ShowUnexpectedError(Exception exception)
     {
-        ArgumentNullException.ThrowIfNull(exception);
         _unexpectedErrorDetails = exception.ToString();
         UnexpectedError = $"{exception.GetType().Name}: {exception.Message}";
     }

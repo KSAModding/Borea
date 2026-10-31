@@ -14,8 +14,6 @@ namespace Borea.Storage.Index;
 /// <summary>
 /// Maps parsed index DTOs into the RFC 0031/0035 domain types. Each mapper
 /// assumes its input already passed <see cref="SnapshotParser"/> validation.
-/// <br></br><br></br>
-/// All the mappers are in one file since only the index will use these.
 /// </summary>
 public static class DtoMapper
 {
@@ -48,7 +46,6 @@ public static class DtoMapper
             provides: dto.Provides is null ? null : MapProvides(dto.Provides)));
     }
 
-    // Requires the authored ModMetadata to make sure listing has all the correct info
     public static ModVersionMetadata MapRelease(ReleasesEntryDto dto, string? source, ModMetadata? authored, string? changelogText = null)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -147,8 +144,6 @@ public static class DtoMapper
             id, dto.Url, dto.Sha256, dto.Width, dto.Height, dto.Size, dto.License, dto.Attribution, dto.Source));
     }
 
-    // Enum / value mappings
-
     private static ModStatus MapModStatus(string? status) =>
         status is null ? ModStatus.Active : MetadataEnumMapper.ParseModStatus(status);
 
@@ -186,8 +181,6 @@ public static class DtoMapper
         return mapped;
     }
 
-    // Object mappings
-
     private static ModPackEntry MapPackEntry(IndexModPackItemEntryDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -212,7 +205,7 @@ public static class DtoMapper
                 // rather than failing the whole listing over an unrelated field.
                 if (value.ValueKind == JsonValueKind.String)
                 {
-                    links[key] = value.GetString()!;
+                    links[key] = IndexJsonHelpers.ReadText(value);
                 }
             }
         }
@@ -234,8 +227,10 @@ public static class DtoMapper
         // A share host names the listing id (RFC 0094). Without an authority it counts only alone, because an id can look like
         // a version, and a key such as until = "2.0" next to github must not make two hosts without an authority.
         var shares = entries
-            .Where(kvp => ReleaseHost.IsShareKey(kvp.Key) && kvp.Value.ValueKind == JsonValueKind.String && ModIds.IsValid(kvp.Value.GetString()))
-            .Select(kvp => new ReleaseHost(kvp.Key, kvp.Value.GetString()!))
+            .Where(kvp => ReleaseHost.IsShareKey(kvp.Key) && kvp.Value.ValueKind == JsonValueKind.String)
+            .Select(kvp => (kvp.Key, Id: IndexJsonHelpers.TryReadText(kvp.Value)))
+            .Where(share => ModIds.IsValid(share.Id))
+            .Select(share => new ReleaseHost(share.Key, share.Id!))
             .ToList();
         if (dto.Authority is not null || (hosts.Count == 0 && shares.Count == 1))
             hosts.AddRange(shares);
@@ -246,18 +241,18 @@ public static class DtoMapper
     // "owner/repo" on GitHub and the numeric mod id on SpaceDock.
     private static string? MapHostReference(JsonElement value) => value.ValueKind switch
     {
-        JsonValueKind.String when value.GetString()!.Contains('/', StringComparison.Ordinal) => value.GetString(),
+        JsonValueKind.String when IndexJsonHelpers.TryReadText(value) is { } reference && reference.Contains('/', StringComparison.Ordinal) => reference,
         JsonValueKind.Number when value.TryGetInt64(out var id) && id > 0 => value.GetRawText(),
         _ => null,
     };
 
     // The watcher stamps as if since were absent when it is not a version, so Borea reads it the same way.
     private static ModVersion? MapSince(JsonElement? value) =>
-        value is { ValueKind: JsonValueKind.String } text && ModVersion.TryParseAuthored(text.GetString(), out var since) ? since : null;
+        value is { ValueKind: JsonValueKind.String } text && ModVersion.TryParseAuthored(IndexJsonHelpers.TryReadText(text), out var since) ? since : null;
 
     // The schema takes a non-empty ASCII string without whitespace, and Borea reads nothing else as a prefix.
     private static string? MapTagPrefix(JsonElement? value) =>
-        value is { ValueKind: JsonValueKind.String } text && text.GetString() is { Length: > 0 } prefix && prefix.All(c => c is > ' ' and <= '~') ? prefix : null;
+        value is { ValueKind: JsonValueKind.String } text && IndexJsonHelpers.TryReadText(text) is { Length: > 0 } prefix && prefix.All(c => c is > ' ' and <= '~') ? prefix : null;
 
     // A release file carries its bounds in full, while an authored listing reaches Borea verbatim and may write them shorter.
     private static ModDependency MapDependency(DependencyEntryDto dto, Func<string, ModVersion> parseBound)

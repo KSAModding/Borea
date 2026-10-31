@@ -72,13 +72,9 @@ public sealed class TagChipRow : Panel
         set => SetValue(LeadTipProperty, value);
     }
 
-    /// <summary>How many tags the last layout shows as chips, without the lead chip.</summary>
-    internal int ShownCount => Math.Max(0, _shown - LeadCount);
-
     /// <summary>The chip that names the left out tags, which the layout shows only when there are some.</summary>
     internal Border MoreChip => _more;
 
-    /// <summary>The green chip before the tags.</summary>
     internal Border LeadChip => _lead;
 
     internal bool ShowsMore { get; private set; }

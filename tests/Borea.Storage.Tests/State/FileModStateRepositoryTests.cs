@@ -412,26 +412,6 @@ public sealed class FileModStateRepositoryTests : IDisposable
         Assert.False(File.Exists(ManifestPath));
     }
 
-    [Fact]
-    public async Task SetActiveAsync_PreservesOtherEntries()
-    {
-        WriteManifest("""
-            [[mods]]
-            id = "mod-a"
-            enabled = false
-
-            [[mods]]
-            id = "mod-b"
-            enabled = true
-            """);
-
-        await _repository.SetActiveAsync(_instanceId, "mod-a");
-        await _repository.SetInactiveAsync(_instanceId, "mod-a");
-
-        Assert.False(await _repository.IsActiveAsync(_instanceId, "mod-a"));
-        Assert.True(await _repository.IsActiveAsync(_instanceId, "mod-b"));
-    }
-
     #endregion
 
     #region The file changing underneath

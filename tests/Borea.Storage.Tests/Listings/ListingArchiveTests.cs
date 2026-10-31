@@ -76,6 +76,7 @@ public sealed class ListingArchiveTests : IDisposable
     [InlineData("StarMap = \"x\"\n", "[StarMap] of the mod.toml is not a table")]
     [InlineData("[[StarMap.ModDependencies]]\nModId = 5\n", "a [[StarMap.ModDependencies]] block has a ModId that is not text")]
     [InlineData("[[StarMap.ModDependencies]]\nModId = 0\n", "a [[StarMap.ModDependencies]] block carries no ModId")]
+    [InlineData("[[StarMap.ModDependencies]]\nModId = \" \"\n", "a [[StarMap.ModDependencies]] block carries no ModId")]
     public void Read_ModDependenciesTheStamperCannotRead_AreRefused(string modToml, string message)
     {
         var exception = Assert.Throws<InvalidDataException>(() => Read(("MyMod/mod.toml", modToml)));
@@ -119,14 +120,6 @@ public sealed class ListingArchiveTests : IDisposable
         var exception = Assert.Throws<InvalidDataException>(() => Read(installRoot, ("MyMod/mod.toml", "name = \"MyMod\"\n")));
 
         Assert.Equal(message, exception.Message);
-    }
-
-    [Fact]
-    public void Read_ModDependencyWithoutModId_IsRefusedAsTheStamperRefusesIt()
-    {
-        var exception = Assert.Throws<InvalidDataException>(() => Read(("MyMod/mod.toml", "[[StarMap.ModDependencies]]\nModId = \" \"\n")));
-
-        Assert.Equal("a [[StarMap.ModDependencies]] block carries no ModId", exception.Message);
     }
 
     [Fact]

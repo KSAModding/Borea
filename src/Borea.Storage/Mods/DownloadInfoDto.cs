@@ -1,8 +1,5 @@
 ﻿namespace Borea.Storage.Mods;
 
-/// <summary>
-/// Flat, TOML-serializable representation of a DownloadInfo.
-/// </summary>
 public sealed class DownloadInfoDto
 {
     public string Url { get; set; } = string.Empty;

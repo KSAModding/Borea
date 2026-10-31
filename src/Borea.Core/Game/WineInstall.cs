@@ -5,7 +5,6 @@ namespace Borea.Core.Game;
 /// macOS.
 /// </summary>
 /// <param name="PrefixRoot">The prefix folder, which holds dosdevices and system.reg, with its links resolved.</param>
-/// <param name="Drives">The drives of the prefix.</param>
 /// <param name="Wrapper">The macOS wrapper app the prefix is part of, or null when it is a plain prefix.</param>
 public sealed record WineInstall(string PrefixRoot, WineDriveMap Drives, WineWrapper? Wrapper);
 

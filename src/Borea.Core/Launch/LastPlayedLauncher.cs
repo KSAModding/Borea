@@ -22,6 +22,9 @@ public sealed class LastPlayedLauncher : ILauncher, IDisposable
 
     public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) => Inner.Launch(instance, loader, arguments);
 
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments) =>
+        Inner.Launch(instance, loader, loaderDirectory, arguments);
+
     public async Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(instance);

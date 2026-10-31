@@ -180,14 +180,20 @@ public sealed class BoreaReleaseCheckTests
     [Fact]
     public async Task GetReleasesAsync_CallerCancelsDuringTheRequest_Throws()
     {
+        var started = new TaskCompletionSource();
         var client = FakeHttpMessageHandler.BuildClient(async (_, token) =>
         {
+            started.SetResult();
             await Task.Delay(Timeout.Infinite, token);
             return FakeHttpMessageHandler.JsonResponse(ReleasesJson(ReleaseJson("v0.4.0")));
         }, out _);
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+        using var cancellation = new CancellationTokenSource();
+        var pending = new BoreaReleaseCheck(client).GetReleasesAsync(BoreaUpdateChannel.Stable, cancellation.Token);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new BoreaReleaseCheck(client).GetReleasesAsync(BoreaUpdateChannel.Stable, cancellation.Token));
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
     }
 
     [Theory]

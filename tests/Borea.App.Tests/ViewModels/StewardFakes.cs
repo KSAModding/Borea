@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
 using Borea.Core.GitHub;
+using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Secrets;
 using Borea.Core.Stewardship;
@@ -83,6 +84,79 @@ internal sealed class FakeIndexStatusEditor : IIndexStatusEditor
         return OwnedFailure is { } failure
             ? Task.FromException<IReadOnlyList<string>>(failure)
             : Task.FromResult<IReadOnlyList<string>>(ids.Where(id => Owned.Contains(id, StringComparer.OrdinalIgnoreCase)).ToList());
+    }
+
+    /// <summary>The versions of each pack with the mods they pin.</summary>
+    public Dictionary<string, List<PackVersionPins>> Packs { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The ids of the mods whose listing names the reporter in its ownership proof.</summary>
+    public HashSet<string> ReporterOwns { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public List<PackLeave> LeaveChecked { get; } = [];
+
+    public List<PackLeave> LeaveOpened { get; } = [];
+
+    /// <summary>When set, the next read of the mods of a pack fails with it.</summary>
+    public StewardException? MembersFailure { get; set; }
+
+    /// <summary>When set, the next check of a leave waits for it.</summary>
+    public TaskCompletionSource? HoldLeaveCheck { get; set; }
+
+    /// <summary>When set, the open of a leave gives this ownership in place of the one that <see cref="ReporterOwns"/> gives.</summary>
+    public ListingOwnership? OwnershipAtOpen { get; set; }
+
+    /// <summary>Adds tools-pack in three versions, of which 1.0.0 and 1.2.0 pin MeasureTools.</summary>
+    public void AddToolsPack() =>
+        Packs["tools-pack"] = [new("1.0.0", ["MeasureTools", "Other"]), new("1.1.0", ["Other"]), new("1.2.0", ["MeasureTools"])];
+
+    public Task<IReadOnlyList<string>> PackMembersAsync(string packId, CancellationToken cancellationToken = default)
+    {
+        if (MembersFailure is { } failure)
+        {
+            MembersFailure = null;
+            return Task.FromException<IReadOnlyList<string>>(failure);
+        }
+
+        IReadOnlyList<string> members = (Packs.GetValueOrDefault(packId) ?? []).SelectMany(version => version.Mods).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+        return Task.FromResult(members);
+    }
+
+    public async Task<PackLeaveCheck> CheckLeaveAsync(PackLeave leave, CancellationToken cancellationToken = default)
+    {
+        LeaveChecked.Add(leave);
+        if (HoldLeaveCheck is { } hold)
+        {
+            HoldLeaveCheck = null;
+            await hold.Task;
+        }
+
+        return LeaveCheckOf(leave, null);
+    }
+
+    public Task<IndexStatusPullRequest> OpenLeaveAsync(PackLeave leave, CancellationToken cancellationToken = default)
+    {
+        var check = LeaveCheckOf(leave, OwnershipAtOpen);
+        if (check.Refusal is { } refusal)
+            throw new IndexStatusRefusedException(refusal, leave.PackId);
+        if (!check.IsProven && !leave.ConfirmedByForums)
+            throw new IndexStatusRefusedException(IndexStatusRefusal.NotConfirmed, leave.PackId);
+
+        LeaveOpened.Add(leave);
+        Opened.AddRange(check.Versions.Select(leave.ChangeOf));
+        var pull = new IndexStatusPullRequest(Pulls.Count + 1, new Uri($"https://github.com/KSAModding/content-index/pull/{Pulls.Count + 1}"), leave.Title, "octocat", Conflicts: false);
+        Pulls.Add(pull);
+        return Task.FromResult(pull);
+    }
+
+    private PackLeaveCheck LeaveCheckOf(PackLeave leave, ListingOwnership? given)
+    {
+        var plan = Packs.TryGetValue(leave.PackId, out var versions)
+            ? leave.Plan(versions, Entries)
+            : new PackLeavePlan([], [], IndexStatusRefusal.NotAPack);
+        var ownership = given ?? (ReporterOwns.Contains(leave.ModId)
+            ? new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: $"{leave.Reporter?.Login}/{leave.ModId}")
+            : new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.NoProof, Repository: $"someone/{leave.ModId}", ForumsThread: new Uri("https://forums.ahwoo.com/threads/my-mod.42/")));
+        return new PackLeaveCheck(plan.Refusal, plan.Versions, plan.Retracted, ownership, [.. Pulls], ["bob"], IsOwner: false);
     }
 }
 
@@ -355,6 +429,10 @@ internal sealed class FakeIndexReports : IIndexReports
 
     public static IndexReport Dispute(int number, string listing, string author = "bob") =>
         Report(number, $"[Dispute] {listing}", string.Format(System.Globalization.CultureInfo.InvariantCulture, DisputeBody, listing), author);
+
+    /// <summary>A takedown of alice (account 5) that asks to take <paramref name="mod"/> out of <paramref name="pack"/>.</summary>
+    public static IndexReport LeavePack(int number, string pack, string mod) =>
+        Report(number, $"[Takedown] {pack}", $"### Listing id\n\n{pack}\n\n### Ground\n\n{IndexReport.LeavePackGround}\n\n### What is wrong\n\nPlease take {mod} out of the pack.\n\n### Who you are\n\nThe author.") with { AuthorId = 5 };
 
     public static IndexReport Report(int number, string title, string body, string author = "alice") =>
         IndexReport.FromIssue(number, new Uri($"https://github.com/{IndexReport.Repository}/issues/{number}"), title, author, DateTimeOffset.UtcNow.AddDays(-2), body)!;

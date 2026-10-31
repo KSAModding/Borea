@@ -20,23 +20,14 @@ public sealed class InstanceSourceTests
         Assert.Equal(a, b);
     }
 
-    [Fact]
-    public void FromModPack_DifferentVersion_AreNotEqual()
+    [Theory]
+    [InlineData("pack-a", "2.0.0")]
+    [InlineData("pack-b", "1.0.0")]
+    public void FromModPack_DifferentModPackIdOrVersion_AreNotEqual(string modPackId, string version)
     {
-        // This is the exact distinction "update in place" vs "new instance"
-        // depends on — worth pinning down explicitly, not just incidentally
-        // covered by other tests.
+        // Borea tells an update in place from a new instance by this equality.
         var a = new InstanceSource.FromModPack("pack-a", ModVersion.Parse("1.0.0"));
-        var b = new InstanceSource.FromModPack("pack-a", ModVersion.Parse("2.0.0"));
-
-        Assert.NotEqual(a, b);
-    }
-
-    [Fact]
-    public void FromModPack_DifferentModPackId_AreNotEqual()
-    {
-        var a = new InstanceSource.FromModPack("pack-a", ModVersion.Parse("1.0.0"));
-        var b = new InstanceSource.FromModPack("pack-b", ModVersion.Parse("1.0.0"));
+        var b = new InstanceSource.FromModPack(modPackId, ModVersion.Parse(version));
 
         Assert.NotEqual(a, b);
     }
@@ -58,7 +49,6 @@ public sealed class InstanceSourceTests
 
         Assert.NotSame(a.Detached, b.Detached);
         Assert.Equal(a, b);
-        Assert.True(a == b);
         Assert.Equal(a.GetHashCode(), b.GetHashCode());
     }
 

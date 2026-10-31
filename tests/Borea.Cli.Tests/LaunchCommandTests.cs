@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
@@ -14,9 +15,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_StarMapStartsWithTheHandoverItsListingNames()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
 
         var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
@@ -32,9 +31,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_HeldIndexListsTheLoader_StartsWithoutAskingTheSources()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.IndexReader.Snapshot = new ContentIndexSnapshot(1, [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release()], null)], [], null, []);
         _host.Mods.AvailableMods = _ => new TaskCompletionSource<IReadOnlyList<ModMetadata>>().Task;
@@ -42,6 +39,33 @@ public sealed class LaunchCommandTests : IDisposable
         var run = await _host.RunAsync("launch", "Flight Test").WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Equal(0, run.ExitCode);
+        Assert.Single(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_InstalledLoaderDoesNotSupportTheGame_WarnsAndStillStarts()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"""
+            [LoaderInstallations.StarMap]
+            DirectoryPath = '{loaderDirectory}'
+            Version = '0.4.7'
+            IsAdopted = false
+            """);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        _host.IndexReader.Snapshot = new ContentIndexSnapshot(
+            1,
+            [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.7", gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638")], null)],
+            [],
+            null,
+            []);
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("warning: StarMap 0.4.7 does not support KSA 2026.10.19.5638. Run 'borea loader install StarMap' to install 0.4.8.", run.Error);
         Assert.Single(_host.ProcessStarter.Plans);
     }
 
@@ -69,9 +93,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_LoaderStopsRightAway_FailsWithWhatItWrote()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.ProcessStarter.CrashExitCode = -532462766;
         _host.ProcessStarter.CrashOutput.Add("Unhandled exception. System.TypeLoadException: Method 'DrawAxes' from assembly 'KSArmory, Version=0.8.44.0' does not have an implementation.");
@@ -85,11 +107,39 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_LoaderCannotLoadAGameAssembly_NamesTheInstallCommand()
+    {
+        await RecordStarMapAsync();
+        await _host.RunAsync("instance", "create", "Flight Test");
+        _host.ProcessStarter.CrashExitCode = -532462766;
+        _host.ProcessStarter.CrashOutput.Add("Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.");
+        _host.ProcessStarter.CrashOutput.Add("   at StarMap.GameSurveyer.TryLoadCoreAndGame()");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'borea loader install StarMap'", run.Error);
+    }
+
+    [Fact]
+    public async Task Launch_GameAssemblyNamedWithoutALoaderFrame_NamesNoInstallCommand()
+    {
+        await RecordStarMapAsync();
+        await _host.RunAsync("instance", "create", "Flight Test");
+        _host.ProcessStarter.CrashExitCode = -532462766;
+        _host.ProcessStarter.CrashOutput.Add("File name: 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'");
+        _host.ProcessStarter.CrashOutput.Add("System.IO.FileNotFoundException: Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.DoesNotContain("borea loader install", run.Error);
+    }
+
+    [Fact]
     public async Task Launch_GameStarts_RecordsWhenTheInstanceWasPlayed()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         var before = DateTimeOffset.UtcNow;
 
@@ -104,9 +154,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_LoaderStopsRightAway_RecordsNoPlay()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.ProcessStarter.CrashExitCode = -532462766;
 
@@ -205,9 +253,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_WithoutLoaderId_UsesTheOneLoaderTheModsNeed()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"), NeedsLoader("orbit-tools", "starmap"), ContentCommandFixtures.Release("parts-pack"));
 
         var run = await _host.RunAsync("launch", "Flight Test");
@@ -221,9 +267,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_WithoutLoaderId_ArgumentsAfterTheSeparator_GoToTheLoaderNotTheLoaderId()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"));
 
         var run = await _host.RunAsync("launch", "Flight Test", "--", "-windowed", "a b");
@@ -235,9 +279,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_SavedAndGivenArguments_FollowTheHandoverAsSeparateArguments()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         await _host.RunAsync("instance", "set-arguments", "Flight Test", "--", "-saved", "saved value");
 
@@ -252,9 +294,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_HandoverFlagAfterTheSeparator_FailsWithoutStarting()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
 
         var run = await _host.RunAsync("launch", "Flight Test", "StarMap", "--", "-INSTANCEPATH", "D:/Other");
@@ -325,9 +365,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_WithoutLoaderId_ModsNeedNoLoader_UsesAndNamesTheInstalledLoaderThatTakesAnInstance()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
 
         var run = await _host.RunAsync("launch", "Flight Test");
@@ -340,9 +378,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_Json_CarriesTheLoaderAndWhetherTheModsNeedIt()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
 
         var run = await _host.RunAsync("launch", "Flight Test", "--json");
@@ -356,9 +392,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_Json_ModsNeedTheLoader_SaysTheModsRequireIt()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"));
 
         var run = await _host.RunAsync("launch", "Flight Test", "--json");
@@ -371,9 +405,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_Json_CarriesTheArgumentsOfTheStartedProcess()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         await _host.RunAsync("instance", "create", "Flight Test");
         await _host.RunAsync("instance", "set-arguments", "Flight Test", "--", "-saved");
 
@@ -427,9 +459,7 @@ public sealed class LaunchCommandTests : IDisposable
     [Fact]
     public async Task Launch_WithoutLoaderId_InstalledLoaderNoSourceLists_NamesIt()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing());
-        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await RecordStarMapAsync();
         _host.Mods.Listings.Clear();
         await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
 
@@ -507,6 +537,90 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.Empty(_host.ProcessStarter.Plans);
     }
 
+    [Fact]
+    public async Task Launch_RecordedFolderWasDeleted_ReportsItAndMakesNoFolder()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "game", Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        Directory.Delete(loaderDirectory, recursive: true);
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains($"The folder '{loaderDirectory}' of StarMap is not there.", run.Error);
+        Assert.False(Directory.Exists(loaderDirectory));
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_PinnedVersionBesideTheRecordedOne_StartsThePinnedFolder()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var versions = Path.Combine(_host.Paths.GetLoadersRoot(), "StarMap");
+        var recorded = LoaderCommandTests.CreateLoaderDirectory("0.4.8", "not a program", versions);
+        var pinned = LoaderCommandTests.CreateLoaderDirectory("0.4.7", "not a program", versions);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"""
+            [LoaderInstallations.StarMap]
+            DirectoryPath = '{recorded}'
+            Version = '0.4.8'
+            IsAdopted = false
+            """);
+        await SavePinnedInstanceAsync("0.4.7");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("0.4.7", run.Json.GetProperty("loaderVersion").GetString());
+        var plan = Assert.Single(_host.ProcessStarter.Plans);
+        Assert.Equal(Path.GetFullPath(pinned), plan.WorkingDirectory);
+        Assert.Equal(Path.Combine(Path.GetFullPath(pinned), "StarMap.exe"), plan.Executable);
+    }
+
+    [Fact]
+    public async Task Launch_PinnedVersionNotInstalled_NamesTheVersionToInstall()
+    {
+        _host.IndexReader.Snapshot = StarMapIndex();
+        await SavePinnedInstanceAsync("0.4.7");
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'borea loader install StarMap --version 0.4.7'", run.Error);
+        Assert.DoesNotContain("Mod loader 'StarMap' is not installed", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_NoLoaderInstalledForAnEmptyInstance_NamesTheNewestStarMapThatFitsTheGame()
+    {
+        _host.IndexReader.Snapshot = StarMapIndex();
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'borea loader install StarMap --version 0.4.8'", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    internal static ContentIndexSnapshot StarMapIndex() => new(
+        1,
+        [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.7", gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638")], null)],
+        [],
+        null,
+        []);
+
+    private async Task SavePinnedInstanceAsync(string version)
+    {
+        var instance = new Instance("Flight Test", InstanceSource.Custom.Value);
+        instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse(version)));
+        await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
+    }
+
     /// <summary>Records each refresh with the number of processes started before it, and throws <paramref name="failure"/> when set.</summary>
     private sealed class RefreshRecorder(FakeProcessStarter starter, Exception? failure = null) : ILoaderConfigurator
     {
@@ -520,6 +634,9 @@ public sealed class LaunchCommandTests : IDisposable
             Refreshes.Add((loader.ModId, loaderDirectory, gameDirectory, starter.Plans.Count));
             return failure is null ? Task.FromResult<string?>(null) : Task.FromException<string?>(failure);
         }
+
+        public Task<string?> PrepareForLaunchAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, bool isAdopted, CancellationToken cancellationToken = default) =>
+            RefreshForWineAsync(loader, loaderDirectory, gameDirectory, cancellationToken);
 
         public string GamePathValue(string gameDirectory) => gameDirectory;
     }
@@ -535,6 +652,13 @@ public sealed class LaunchCommandTests : IDisposable
 
     private static ModVersionMetadata NeedsLoader(string id, string loaderId) =>
         ContentCommandFixtures.Release(id, loader: new LoaderRequirement(loaderId, ModVersion.Parse("0.4.0")));
+
+    private async Task RecordStarMapAsync()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+    }
 
     public void Dispose() => _host.Dispose();
 }

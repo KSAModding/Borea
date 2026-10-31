@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -318,7 +317,6 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
     internal void BeginRenameGameSave(GameSaveItem item)
     {
         item.CloseEdits();
@@ -706,7 +704,7 @@ public sealed partial class GameSaveItem : ObservableObject
 
     public bool IsVehicle => Entry.Kind == GameSaveKind.Vehicle;
 
-    public string UpdatedText => _owner.Localization.FormatGameSaveUpdated(Entry.UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
+    public string UpdatedText => _owner.Localization.FormatGameSaveUpdated(MainViewModel.DateTimeText(Entry.UpdatedAt));
 
     public string? BuildText => _build?.ToString() ?? Entry.GameBuild;
 

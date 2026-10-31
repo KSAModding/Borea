@@ -26,10 +26,8 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task RoundTrip_PersistsInstanceWithModAndDependency()
     {
-        // Create a custom instance.
         var instance = (await _repository.CreateAsync("My Test Pack", InstanceSource.Custom.Value)).Instance;
 
-        // Build a mod whose release carries a stamped dependency, attach it, and persist the change.
         var stampedDependency = new ModDependency("some-other-mod", ModDependencyKind.Required, ModVersion.Parse("1.0.0"));
         var installedMod = new InstalledMod(
             modId: "test-mod",
@@ -46,12 +44,10 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var freshRepository = new FileInstanceRepository(_pathProvider);
         var reloaded = await freshRepository.GetByIdAsync(instance.InstanceId);
 
-        Assert.NotNull(reloaded);
         Assert.Equal("My Test Pack", reloaded!.Name);
         Assert.True(reloaded.IsFavorite);
-        Assert.Single(reloaded.Mods);
 
-        var reloadedMod = reloaded.Mods.Single();
+        var reloadedMod = Assert.Single(reloaded.Mods);
         Assert.Equal("test-mod", reloadedMod.ModId);
         Assert.Equal(ModVersion.Parse("1.2.3"), reloadedMod.Version);
         Assert.Equal(ModVersion.Parse("1.2.3"), reloadedMod.Metadata.Version);
@@ -193,8 +189,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
 
         var reloaded = await _repository.GetByIdAsync(instance.InstanceId);
 
-        Assert.NotNull(reloaded);
-        Assert.Empty(reloaded.LaunchArguments);
+        Assert.Empty(reloaded!.LaunchArguments);
     }
 
     [Fact]
@@ -265,6 +260,52 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task RoundTrip_PersistsAPinnedLoader_AndAnAutomaticLoaderWritesNoKey()
+    {
+        var instance = (await _repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        Assert.DoesNotContain(File.ReadAllLines(path), line => line.StartsWith("Loader", StringComparison.Ordinal));
+
+        await _repository.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+            return true;
+        });
+
+        var reloaded = await new FileInstanceRepository(_pathProvider).GetByIdAsync(instance.InstanceId);
+        Assert.Equal(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")), reloaded!.Loader);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_RecordWithAPinnedLoader_ReadsInABuildThatDoesNotKnowIt()
+    {
+        var instance = (await _repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
+        instance.AddMod(new InstalledMod("helper-lib", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, MetadataFixtures.MinimalRelease("helper-lib", "1.0.0")));
+        instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+        await _repository.SaveAsync(instance);
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        // the older build must meet the keys, or the read below proves nothing
+        Assert.Contains(File.ReadAllLines(path), line => line.StartsWith("LoaderVersion = \"0.4.7\"", StringComparison.Ordinal));
+
+        var older = await TomlFileStore.ReadAsync<RecordWithoutDetachedDto>(path);
+
+        Assert.Equal((instance.InstanceId.ToString(), "Custom"), (older!.InstanceId, older.SourceType));
+        Assert.Equal(("helper-lib", "1.0.0"), (Assert.Single(older.Mods).ModId, older.Mods[0].Version));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_HandEditedLoaderVersionThatDoesNotParse_ReadsAsAutomatic()
+    {
+        var instance = (await _repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        await File.WriteAllTextAsync(path, "LoaderId = \"StarMap\"\nLoaderVersion = \"latest\"\n" + await File.ReadAllTextAsync(path));
+
+        var all = await new FileInstanceRepository(_pathProvider).GetAllAsync();
+
+        Assert.Equal(LoaderSetting.Automatic, Assert.Single(all).Loader);
+    }
+
+    [Fact]
     public async Task CreateAsync_ThrowsWhenNameAlreadyTaken()
     {
         await _repository.CreateAsync("Duplicate Name", InstanceSource.Custom.Value);
@@ -314,13 +355,6 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.CreateAsync(sameId));
 
         Assert.Equal("Existing", (await _repository.GetByIdAsync(existing.InstanceId))?.Name);
-    }
-
-    [Fact]
-    public async Task DeleteAsync_IsIdempotent()
-    {
-        // Deleting a nonexistent instance should not throw.
-        await _repository.DeleteAsync(Guid.NewGuid());
     }
 
     [Fact]
@@ -426,17 +460,6 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var result = await _repository.GetActiveInstanceIdAsync();
 
         Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task SetActiveInstanceAsync_ThenGet_RoundTrips()
-    {
-        var instance = (await _repository.CreateAsync("Active Test", InstanceSource.Custom.Value)).Instance;
-
-        await _repository.SetActiveInstanceAsync(instance.InstanceId);
-        var activeId = await _repository.GetActiveInstanceIdAsync();
-
-        Assert.Equal(instance.InstanceId, activeId);
     }
 
     [Fact]

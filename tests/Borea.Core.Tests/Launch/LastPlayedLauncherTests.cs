@@ -49,6 +49,17 @@ public sealed class LastPlayedLauncherTests
         Assert.Null(instances.Saved);
     }
 
+    [Fact]
+    public void Launch_GivenLoaderFolder_PassesItOn()
+    {
+        var inner = new DirectoryRecorder();
+        ILauncher launcher = new LastPlayedLauncher(inner, new MemoryInstances(_instance), new FixedTime(Now));
+
+        launcher.Launch(_instance, loader: null, "D:/Loaders/StarMap/0.4.7", arguments: null);
+
+        Assert.Equal(["D:/Loaders/StarMap/0.4.7"], inner.Directories);
+    }
+
     private static LaunchResult Started() => LaunchResult.Success(Plan(), 42, "Started StarMap.");
 
     private static LaunchPlan Plan()
@@ -61,6 +72,27 @@ public sealed class LastPlayedLauncherTests
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    /// <summary>Records the loader folder of each launch, the way only a launcher that implements the overload sees it.</summary>
+    private sealed class DirectoryRecorder : ILauncher
+    {
+        public List<string?> Directories { get; } = [];
+
+        public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
+            Launch(instance, loader, loaderDirectory: null, arguments);
+
+        public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments)
+        {
+            Directories.Add(loaderDirectory);
+            return LaunchResult.Failed(LaunchOutcome.NoLaunchTarget, "Not started.");
+        }
+
+        public Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default) => Task.FromResult(started);
+
+        public Task<GameExit> WatchExitAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default) => Task.FromResult(GameExit.Unknown);
+
+        public bool IsRunning(Guid instanceId) => false;
     }
 
     private sealed class WatchedLauncher(LaunchResult watched) : ILauncher

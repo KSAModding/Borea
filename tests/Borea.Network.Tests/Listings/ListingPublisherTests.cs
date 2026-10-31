@@ -670,10 +670,13 @@ public sealed class ListingPublisherTests
         Assert.Equal(["GET " + Installations, "GET " + InstalledRepositories], _sent.Select(sent => sent.Line));
     }
 
-    [Fact]
-    public async Task CheckOwnershipAsync_RepositoryOfTheAuthor_ProvesItByTheOwner()
+    [Theory]
+    [InlineData(false)]
+    // The owner of a fork is the account that forked it, so a fork of the signed-in account is verified by the owner id too.
+    [InlineData(true)]
+    public async Task CheckOwnershipAsync_RepositoryOfTheAuthor_ProvesItByTheOwner(bool fork)
     {
-        On("GET", Api + "/repos/octocat/MyMod", () => Json(Repository("octocat/MyMod", ownerId: 1)));
+        On("GET", Api + "/repos/octocat/MyMod", () => Json(Repository("octocat/MyMod", ownerId: 1, fork: fork)));
         var (publisher, _) = await SignedInAsync();
 
         var ownership = await publisher.CheckOwnershipAsync(Draft("octocat/MyMod"), null);
@@ -747,17 +750,6 @@ public sealed class ListingPublisherTests
         Assert.Equal(1, _sent.Count(sent => sent.Url.EndsWith("/contents/.github/ksa-content-index.toml", StringComparison.Ordinal)));
     }
 
-    [Fact]
-    public async Task CheckOwnershipAsync_ForkOfTheSignedInAccount_VerifiesByTheOwnerId()
-    {
-        On("GET", Api + "/repos/octocat/MyMod", () => Json(Repository("octocat/MyMod", ownerId: 1, fork: true)));
-        var (publisher, _) = await SignedInAsync();
-
-        var ownership = await publisher.CheckOwnershipAsync(Draft("octocat/MyMod"), null);
-
-        Assert.Equal(new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: "octocat/MyMod"), ownership);
-    }
-
     [Theory]
     [InlineData("ksa-index-octocat", true)]
     [InlineData("ksa", false)]
@@ -798,17 +790,6 @@ public sealed class ListingPublisherTests
         var ownership = await publisher.CheckOwnershipAsync(Draft(spaceDock: 4253), null);
 
         Assert.Equal(new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: "octocat/MyMod", SpaceDockMod: "4253"), ownership);
-    }
-
-    [Fact]
-    public async Task CheckOwnershipAsync_RepositoryUnavailableForLegalReasons_CouldNotEvaluate()
-    {
-        On("GET", Api + "/repos/octocat/MyMod", () => Json("""{"message":"Repository access blocked"}""", HttpStatusCode.UnavailableForLegalReasons));
-        var (publisher, _) = await SignedInAsync();
-
-        var ownership = await publisher.CheckOwnershipAsync(Draft("octocat/MyMod"), null);
-
-        Assert.Equal(ListingOwnership.Unknown, ownership);
     }
 
     [Fact]
@@ -1021,15 +1002,20 @@ public sealed class ListingPublisherTests
         Assert.Equal(new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Topic, Repository: "Studio/NewName"), ownership);
     }
 
-    [Fact]
-    public async Task CheckOwnershipAsync_HostDoesNotAnswer_CouldNotEvaluate()
+    [Theory]
+    [InlineData(HttpStatusCode.UnavailableForLegalReasons, """{"message":"Repository access blocked"}""")]
+    [InlineData(HttpStatusCode.BadGateway, """{"message":"Server Error"}""")]
+    // The mod repository is read without the token, so its 401 does not sign the session out the way a 401 to the token does.
+    [InlineData(HttpStatusCode.Unauthorized, """{"message":"Requires authentication"}""")]
+    public async Task CheckOwnershipAsync_HostAnswersWithAnError_CouldNotEvaluateAndKeepsTheSession(HttpStatusCode status, string answer)
     {
-        On("GET", Api + "/repos/Studio/MyMod", () => Json("""{"message":"Server Error"}""", HttpStatusCode.BadGateway));
-        var (publisher, _) = await SignedInAsync();
+        On("GET", Api + "/repos/Studio/MyMod", () => Json(answer, status));
+        var (publisher, session) = await SignedInAsync();
 
         var ownership = await publisher.CheckOwnershipAsync(Draft("Studio/MyMod"), null);
 
         Assert.Equal(ListingOwnership.Unknown, ownership);
+        Assert.Equal(GitHubSessionStatus.SignedIn, session.State.Status);
     }
 
     [Fact]
@@ -1042,18 +1028,6 @@ public sealed class ListingPublisherTests
 
         Assert.Equal(ListingPublishFailure.SignedOut, failure.Failure);
         Assert.Equal(GitHubSessionStatus.SignedOut, session.State.Status);
-    }
-
-    [Fact]
-    public async Task CheckOwnershipAsync_UnauthorizedWithoutTheToken_KeepsTheSession()
-    {
-        On("GET", Api + "/repos/Studio/MyMod", () => Json("""{"message":"Requires authentication"}""", HttpStatusCode.Unauthorized));
-        var (publisher, session) = await SignedInAsync();
-
-        var ownership = await publisher.CheckOwnershipAsync(Draft("Studio/MyMod"), null);
-
-        Assert.Equal(ListingOwnership.Unknown, ownership);
-        Assert.Equal(GitHubSessionStatus.SignedIn, session.State.Status);
     }
 
     [Theory]

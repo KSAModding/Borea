@@ -10,9 +10,8 @@ public sealed class GitHubBranchAddressTests
     [InlineData("https://raw.githubusercontent.com/owner/repo/release%2F1/docs/a%20b.png", "release/1", "docs/a%20b.png", false)]
     public void Of_BranchAddress_NamesTheBranchAndThePath(string url, string branch, string path, bool isSure)
     {
-        var address = GitHubBranchAddress.Of(url);
+        var address = GitHubBranchAddress.Of(url)!;
 
-        Assert.NotNull(address);
         Assert.Equal((branch, path, isSure), (address.Branch, address.Path, address.IsSure));
         Assert.Equal($"https://raw.githubusercontent.com/{address.Owner}/{address.Repository}/0123456789abcdef0123456789abcdef01234567/{path}", address.AtCommit("0123456789abcdef0123456789abcdef01234567"));
     }

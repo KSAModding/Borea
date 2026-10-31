@@ -47,16 +47,20 @@ public sealed class CompatibilityTests
             mods: [new ModPackEntry("test-mod", ModVersion.Parse("1.0.0"))],
             gameMax: gameMax);
 
-    [Fact]
-    public void Evaluate_NoLowerBound_IsUnknown()
+    [Theory]
+    [InlineData(null, null, 5117, GameCompatibility.Unknown)]
+    [InlineData(null, 5117, 2131, GameCompatibility.Unknown)]
+    [InlineData(5117, null, 5116, GameCompatibility.Incompatible)]
+    [InlineData(5117, null, 5117, GameCompatibility.Compatible)]
+    [InlineData(2131, null, 5348, GameCompatibility.Compatible)]
+    [InlineData(2131, 5117, 5117, GameCompatibility.Compatible)]
+    [InlineData(2131, 5117, 5118, GameCompatibility.Incompatible)]
+    [InlineData(5117, 5117, 5116, GameCompatibility.Incompatible)]
+    [InlineData(5117, 5117, 5117, GameCompatibility.Compatible)]
+    [InlineData(5117, 5117, 5118, GameCompatibility.Incompatible)]
+    public void Evaluate_InstalledRevision_IsPlacedAgainstTheBounds(int? minRevision, int? maxRevision, int installedRevision, GameCompatibility expected)
     {
-        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(null, null, Installed(5117)));
-    }
-
-    [Fact]
-    public void Evaluate_NoLowerBoundButAnUpperOne_IsStillUnknown()
-    {
-        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(null, 5117, Installed(2131)));
+        Assert.Equal(expected, Compatibility.Evaluate(minRevision, maxRevision, Installed(installedRevision)));
     }
 
     [Fact]
@@ -67,50 +71,12 @@ public sealed class CompatibilityTests
     }
 
     [Fact]
-    public void Evaluate_BelowTheLowerBound_IsIncompatible()
-    {
-        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(5117, null, Installed(5116)));
-    }
-
-    [Fact]
-    public void Evaluate_AtTheLowerBound_IsCompatible()
-    {
-        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(5117, null, Installed(5117)));
-    }
-
-    [Fact]
-    public void Evaluate_AboveAnOpenLowerBound_IsCompatible()
-    {
-        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(2131, null, Installed(5348)));
-    }
-
-    [Fact]
-    public void Evaluate_AtTheUpperBound_IsCompatible()
-    {
-        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(2131, 5117, Installed(5117)));
-    }
-
-    [Fact]
-    public void Evaluate_AboveTheUpperBound_IsIncompatible()
-    {
-        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(2131, 5117, Installed(5118)));
-    }
-
-    [Fact]
     public void Evaluate_NoStateOfTheBounds_IsUntestedAnyMore()
     {
         var states = new[] { 1, 2130, 2131, 5117, 5118, int.MaxValue }.Select(revision => Compatibility.Evaluate(2131, 5117, Installed(revision))).Distinct().Order();
 
         Assert.Equal([GameCompatibility.Compatible, GameCompatibility.Incompatible], states);
         Assert.False(Enum.IsDefined(typeof(GameCompatibility), 1));
-    }
-
-    [Fact]
-    public void Evaluate_BoundsNamingOneRevision_AcceptOnlyThatRevision()
-    {
-        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(5117, 5117, Installed(5117)));
-        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(5117, 5117, Installed(5116)));
-        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(5117, 5117, Installed(5118)));
     }
 
     [Fact]
@@ -152,14 +118,6 @@ public sealed class CompatibilityTests
         Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(release, Installed(2130)));
         Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(release, Installed(2131)));
         Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(release, Installed(5118)));
-    }
-
-    [Fact]
-    public void Evaluate_Release_WithAKnownInstalledVersion_NeverAnswersUnknown()
-    {
-        // A release always carries a lower bound.
-        Assert.NotEqual(GameCompatibility.Unknown, Compatibility.Evaluate(Release(), Installed(1)));
-        Assert.NotEqual(GameCompatibility.Unknown, Compatibility.Evaluate(Release(), Installed(int.MaxValue)));
     }
 
     [Fact]

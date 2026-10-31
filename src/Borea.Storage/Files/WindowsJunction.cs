@@ -16,6 +16,13 @@ internal static class WindowsJunction
     private const int SetReparsePoint = 0x000900A4;
     private const uint MountPointTag = 0xA0000003;
     private const int MaximumReparseDataLength = 16 * 1024;
+    private const int ReparseHeaderLength = 8;
+
+    /// <summary>The offset and the length of both names, which come between the header and the path buffer.</summary>
+    private const int NameFieldsLength = 8;
+
+    private const int PathBufferOffset = ReparseHeaderLength + NameFieldsLength;
+    private const int NameTerminatorLength = 2;
 
     private const uint GenericWrite = 0x40000000;
     private const uint ShareReadWriteDelete = 0x00000007;
@@ -65,22 +72,22 @@ internal static class WindowsJunction
     {
         var substituteName = Encoding.Unicode.GetBytes(@"\??\" + targetPath);
         var printName = Encoding.Unicode.GetBytes(targetPath);
-        var pathBufferLength = substituteName.Length + 2 + printName.Length + 2;
-        var reparseDataLength = 8 + pathBufferLength;
-        if (8 + reparseDataLength > MaximumReparseDataLength)
+        var pathBufferLength = substituteName.Length + NameTerminatorLength + printName.Length + NameTerminatorLength;
+        var reparseDataLength = NameFieldsLength + pathBufferLength;
+        if (ReparseHeaderLength + reparseDataLength > MaximumReparseDataLength)
             throw new IOException($"The junction target '{targetPath}' is too long for a reparse point.");
 
-        var buffer = new byte[8 + reparseDataLength];
+        var buffer = new byte[ReparseHeaderLength + reparseDataLength];
         var fields = buffer.AsSpan();
         BinaryPrimitives.WriteUInt32LittleEndian(fields, MountPointTag);
         BinaryPrimitives.WriteUInt16LittleEndian(fields[4..], (ushort)reparseDataLength);
         BinaryPrimitives.WriteUInt16LittleEndian(fields[6..], 0);
         BinaryPrimitives.WriteUInt16LittleEndian(fields[8..], 0);
         BinaryPrimitives.WriteUInt16LittleEndian(fields[10..], (ushort)substituteName.Length);
-        BinaryPrimitives.WriteUInt16LittleEndian(fields[12..], (ushort)(substituteName.Length + 2));
+        BinaryPrimitives.WriteUInt16LittleEndian(fields[12..], (ushort)(substituteName.Length + NameTerminatorLength));
         BinaryPrimitives.WriteUInt16LittleEndian(fields[14..], (ushort)printName.Length);
-        substituteName.CopyTo(fields[16..]);
-        printName.CopyTo(fields[(16 + substituteName.Length + 2)..]);
+        substituteName.CopyTo(fields[PathBufferOffset..]);
+        printName.CopyTo(fields[(PathBufferOffset + substituteName.Length + NameTerminatorLength)..]);
         return buffer;
     }
 

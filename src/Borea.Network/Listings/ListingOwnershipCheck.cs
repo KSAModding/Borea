@@ -164,7 +164,7 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
         }
     }
 
-    private static Uri? ForumsThreadOf(ListingDraft? draft) =>
+    internal static Uri? ForumsThreadOf(ListingDraft? draft) =>
         draft?.LinkOf("forums") is { } link && ForumsThreadLink.ThreadOf(link) is not null ? new Uri(link) : null;
 
     /// <summary>RFC 0048: an edit proves control of the listed host, and of the new one when it moves.</summary>

@@ -219,6 +219,8 @@ public sealed class InstanceHintTests
         viewModel.FollowInstanceHintCommand.Execute(null);
         viewModel.ModalInstanceName = "Career";
         await viewModel.CreateInstanceCommand.ExecuteAsync(null);
+        // the reload of the instances starts background loads that raise PropertyChanged on another thread while the list is read
+        await harness.WhenIdleAsync();
 
         Assert.True(viewModel.HasInstances);
         Assert.Equal(harness.Localization.HomeNoActiveInstance, viewModel.HomeInstanceHintText);
@@ -240,16 +242,19 @@ public sealed class InstanceHintTests
         viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
         await viewModel.Instances.Single().ActivateCommand.ExecuteAsync(null);
+        await harness.WhenIdleAsync();
         Assert.True(viewModel.HasActiveInstance);
         Assert.Contains(nameof(MainViewModel.HasActiveInstance), changed);
 
         await viewModel.ActiveInstance!.ToggleActiveCommand.ExecuteAsync(null);
+        await harness.WhenIdleAsync();
         Assert.False(viewModel.HasActiveInstance);
         Assert.Equal(harness.Localization.HomeNoActiveInstance, viewModel.HomeInstanceHintText);
 
         changed.Clear();
         viewModel.Instances.Single().BeginDeleteCommand.Execute(null);
         await viewModel.ConfirmDeleteModalCommand.ExecuteAsync(null);
+        await harness.WhenIdleAsync();
         Assert.False(viewModel.HasInstances);
         Assert.Equal(harness.Localization.HomeNoInstance, viewModel.HomeInstanceHintText);
         Assert.Equal(harness.Localization.DiscoverNoInstance, viewModel.InstanceHintText);
@@ -270,6 +275,7 @@ public sealed class InstanceHintTests
         viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
         harness.Localization.TrySetCulture("de");
+        await harness.WhenIdleAsync();
 
         Assert.NotEqual(english, viewModel.InstanceHintText);
         Assert.Equal(harness.Localization.HomeNoActiveInstance, viewModel.HomeInstanceHintText);
@@ -321,6 +327,7 @@ public sealed class InstanceHintTests
         viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
         await viewModel.Instances.Single(item => item.Name == "Beta").ActivateCommand.ExecuteAsync(null);
+        await harness.WhenIdleAsync();
 
         Assert.Equal(harness.Localization.FormatDiscoverAddingTo("Beta"), viewModel.AddingToText);
         Assert.Equal(harness.Localization.FormatDiscoverAddTo("Beta"), viewModel.AddToText);
@@ -329,6 +336,7 @@ public sealed class InstanceHintTests
 
         changed.Clear();
         await viewModel.RenameInstanceAsync(viewModel.ActiveInstance!, "Career");
+        await harness.WhenIdleAsync();
 
         Assert.Equal(harness.Localization.FormatDiscoverAddingTo("Career"), viewModel.AddingToText);
         Assert.Equal(harness.Localization.FormatDiscoverAddTo("Career"), viewModel.AddToText);
@@ -349,6 +357,7 @@ public sealed class InstanceHintTests
         viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
         harness.Localization.TrySetCulture("de");
+        await harness.WhenIdleAsync();
 
         Assert.NotEqual(english, (viewModel.AddingToText, viewModel.AddToText));
         Assert.Equal(harness.Localization.FormatDiscoverAddingTo("Alpha"), viewModel.AddingToText);

@@ -18,7 +18,7 @@ public sealed class RunningLaunches
     /// </summary>
     internal Dictionary<Guid, IStartedProcess> Processes { get; } = new();
 
-    internal Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName)> Starts { get; } = new();
+    internal Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases)> Starts { get; } = new();
 
     /// <summary>
     /// The last launch per instance that ended, until the next launch of the

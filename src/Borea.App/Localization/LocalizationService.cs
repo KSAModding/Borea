@@ -12,7 +12,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
     private static readonly SupportedCulture English = new("en", "English");
     private static readonly SupportedCulture German = new("de", "Deutsch");
     private static readonly SupportedCulture Pirate = new("en-QP", "Pirate speak");
-    private static readonly IReadOnlyList<SupportedCulture> BuiltCultures = [English, German, Pirate];
+    private static readonly SupportedCulture SimplifiedChinese = new("zh-Hans", "\u7B80\u4F53\u4E2D\u6587");
+    private static readonly IReadOnlyList<SupportedCulture> BuiltCultures = [English, German, Pirate, SimplifiedChinese];
+
+    /// <summary>The languages packaged with the App, without local translation previews.</summary>
+    internal static IReadOnlyList<SupportedCulture> BuiltInCultures => BuiltCultures;
 
     private readonly IReadOnlyList<SupportedCulture> _cultures;
 
@@ -239,6 +243,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastLaunchArgumentsFailed(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastLaunchArgumentsFailedFormat, instanceName);
+
+    public string FormatToastInstanceLoaderFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstanceLoaderFailedFormat, instanceName);
 
     public string FormatToastEnableFailed(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastEnableFailedFormat, content);
@@ -574,6 +581,36 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatStewardReviewProofSpaceDockLink(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewProofSpaceDockLinkFormat, mod);
 
+    public string StewardReviewOwnerRecords => Resources.StewardReviewOwnerRecords;
+
+    public string StewardOwnerRecordFirstClaim => Resources.StewardOwnerRecordFirstClaim;
+
+    public string FormatStewardOwnerRecordBefore(string login, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerRecordBeforeFormat, login, id);
+
+    public string StewardOwnerRecordNoneBefore => Resources.StewardOwnerRecordNoneBefore;
+
+    public string StewardOwnerRecordUnreadableBefore => Resources.StewardOwnerRecordUnreadableBefore;
+
+    public string FormatStewardOwnerRecordAfter(string login, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerRecordAfterFormat, login, id);
+
+    public string StewardOwnerRecordRemoved => Resources.StewardOwnerRecordRemoved;
+
+    public string StewardOwnerRecordUnreadableAfter => Resources.StewardOwnerRecordUnreadableAfter;
+
+    public string FormatStewardOwnerAccountSame(string id, string login)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountSameFormat, id, login);
+
+    public string FormatStewardOwnerAccountOtherLogin(string id, string login, string recorded)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountOtherLoginFormat, id, login, recorded);
+
+    public string FormatStewardOwnerAccountGone(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountGoneFormat, id);
+
+    public string FormatStewardOwnerAccountUnknown(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardOwnerAccountUnknownFormat, id);
+
     public string FormatStewardReviewFiles(string count)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewFilesFormat, count);
 
@@ -760,6 +797,35 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardReportNoIssuesPermission => Resources.StewardReportNoIssuesPermission;
 
+    public string StewardReportLeavePack => Resources.StewardReportLeavePack;
+
+    public string FormatStewardLeavePackTitle(string pack)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeavePackTitleFormat, pack);
+
+    public string FormatStewardLeaveTitle(string pack, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveTitleFormat, pack, mod);
+
+    public string StewardLeaveEffect => Resources.StewardLeaveEffect;
+
+    public string StewardLeaveMod => Resources.StewardLeaveMod;
+
+    public string StewardLeaveChooseMod => Resources.StewardLeaveChooseMod;
+
+    public string FormatStewardLeaveVersions(string versions)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveVersionsFormat, versions);
+
+    public string FormatStewardLeaveRetracted(string versions)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveRetractedFormat, versions);
+
+    public string FormatStewardLeaveReporterOwns(string reporter, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveReporterOwnsFormat, reporter, mod);
+
+    public string FormatStewardLeaveReporterUnproven(string reporter, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveReporterUnprovenFormat, reporter, mod);
+
+    public string FormatStewardLeaveConfirm(string reporter, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardLeaveConfirmFormat, reporter, mod);
+
     public string StewardTabWatcher => Resources.StewardTabWatcher;
 
     public string StewardWatcherHint => Resources.StewardWatcherHint;
@@ -899,6 +965,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardRefusedUnknownVersionFormat, id, version);
 
     public string StewardRefusedNotInFile => Resources.StewardRefusedNotInFile;
+
+    public string FormatStewardRefusedNotPinned(string pack, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardRefusedNotPinnedFormat, pack, mod);
+
+    public string FormatStewardRefusedNotConfirmed(string reporter, string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardRefusedNotConfirmedFormat, reporter, mod);
 
     public string StewardErrorSignedOut => Resources.StewardErrorSignedOut;
 
@@ -1245,6 +1317,34 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateStartAgainFormat, version);
 
     public string GameBuildAvailable => Resources.GameBuildAvailable;
+
+    public string FormatLoaderUpdateUrgent(string loader, string installed, string game, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentFormat, loader, installed, game, offer);
+
+    public string FormatLoaderUpdateNone(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateNoneFormat, loader, installed, game);
+
+    public string FormatLoaderNeedsNewerGame(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderNeedsNewerGameFormat, loader, installed, game);
+
+    public string FormatLoaderUpdateAvailable(string loader, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateAvailableFormat, loader, offer);
+
+    public string FormatLoaderUpdateAction(string loader, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateActionFormat, loader, offer);
+
+    public string LoaderUpdateGameRunning => Resources.LoaderUpdateGameRunning;
+
+    public string FormatLoaderPinnedMissing(string loader, string version, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderPinnedMissingFormat, loader, version, instance);
+
+    public string FormatLoaderPinnedIncompatible(string loader, string version, string instance, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderPinnedIncompatibleFormat, loader, version, instance, game);
+
+    public string FormatLoaderInstallAction(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderInstallActionFormat, loader, version);
+
+    public string LoaderChangeAction => Resources.LoaderChangeAction;
 
     public string GameBuildDownload => Resources.GameBuildDownload;
 
@@ -1608,7 +1708,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <summary>"3 mods of this instance are not on disk."</summary>
     public string FormatInstanceModsMissing(int count)
         => FormatCount(count, Resources.InstanceModsMissingOne, Resources.InstanceModsMissingFormat);
-    public string ContentEnabled => Resources.ContentEnabled;
 
     public string ContentOpenPage => Resources.ContentOpenPage;
 
@@ -1694,8 +1793,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverSortRecentlyListed => Resources.DiscoverSortRecentlyListed;
 
     public string DiscoverSortName => Resources.DiscoverSortName;
-
-    public string DiscoverAll => Resources.DiscoverAll;
 
     public string DiscoverEmpty => Resources.DiscoverEmpty;
 
@@ -2333,6 +2430,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutCredits => Resources.AboutCredits;
 
+    public string AboutTranslators => Resources.AboutTranslators;
+
+    public string AboutTranslatorNotListed => Resources.AboutTranslatorNotListed;
+
+    public string AboutOriginalRepository => Resources.AboutOriginalRepository;
+
     public string AboutCreditsHint => Resources.AboutCreditsHint;
 
     public string AboutOpenNotices => Resources.AboutOpenNotices;
@@ -2484,8 +2587,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentPublishedHeader => Resources.ContentPublishedHeader;
 
-    public string ContentDownloads => Resources.ContentDownloads;
-
     public string ContentDownloadSize => Resources.ContentDownloadSize;
 
     public string ContentSizeHeader => Resources.ContentSizeHeader;
@@ -2505,8 +2606,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string InstanceLoaderVersionUnknown => Resources.InstanceLoaderVersionUnknown;
 
     public string InstanceLoaderConflict => Resources.InstanceLoaderConflict;
-
-    public string InstanceLoaderOpenSettings => Resources.InstanceLoaderOpenSettings;
 
     public string InstanceLoaderConflictShort => Resources.InstanceLoaderConflictShort;
 
@@ -2538,6 +2637,42 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatInstanceLoaderWrongVersion(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderWrongVersionFormat, version);
+
+    public string FormatInstanceLoaderIncompatible(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderIncompatibleFormat, version);
+
+    public string InstanceLoaderChange => Resources.InstanceLoaderChange;
+
+    public string InstanceLoaderInfo => Resources.InstanceLoaderInfo;
+
+    public string InstanceLoaderAutomatic => Resources.InstanceLoaderAutomatic;
+
+    public string InstanceLoaderPinChoice => Resources.InstanceLoaderPinChoice;
+
+    public string InstanceLoaderSaveAndInstall => Resources.InstanceLoaderSaveAndInstall;
+
+    public string InstanceLoaderMenu => Resources.InstanceLoaderMenu;
+
+    public string FormatInstanceLoaderAutomatic(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticFormat, version);
+
+    public string FormatInstanceLoaderPinned(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderPinnedFormat, version);
+
+    public string FormatInstanceLoaderInstall(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstallFormat, version);
+
+    public string FormatInstanceLoaderModalHint(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderModalHintFormat, instanceName);
+
+    public string FormatInstanceLoaderAutomaticTarget(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticTargetFormat, loader, version);
+
+    public string FormatInstanceLoaderAutomaticNotInstalled(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticNotInstalledFormat, loader, version);
+
+    public string FormatInstanceLoaderAutomaticNone(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderAutomaticNoneFormat, loader);
 
     public string ContentShowVersions => Resources.ContentShowVersions;
 
@@ -2781,7 +2916,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupNoLoaderSelected => Resources.SetupNoLoaderSelected;
 
-    public string SetupReinstallLoader => Resources.SetupReinstallLoader;
+    public string SettingsLoadersTitle => Resources.SettingsLoadersTitle;
+
+    public string SettingsLoadersHint => Resources.SettingsLoadersHint;
+
+    public string SettingsLoaderUnused => Resources.SettingsLoaderUnused;
+
+    public string SettingsLoaderForget => Resources.SettingsLoaderForget;
+
+    public string SettingsLoaderInstallAnother => Resources.SettingsLoaderInstallAnother;
+
+    public string SettingsLoaderRemoveConfirm => Resources.SettingsLoaderRemoveConfirm;
 
     public string SetupLoaderInstalledUnknownVersion => Resources.SetupLoaderInstalledUnknownVersion;
 
@@ -2829,6 +2974,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLaunchInstallLoader(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchInstallLoaderFormat, loader);
+
+    public string FormatLaunchLoaderUpdate(string loader, string installed, string game, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderUpdateFormat, loader, installed, game, offer);
+
+    public string FormatLaunchLoaderIncompatible(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderIncompatibleFormat, loader, installed, game);
+
+    public string LaunchUpdateAndPlay => Resources.LaunchUpdateAndPlay;
+
+    public string LaunchPlayAnyway => Resources.LaunchPlayAnyway;
+
+    public string FormatLaunchPinnedLoaderNotInstallable(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchPinnedLoaderNotInstallableFormat, loader, version);
+
+    public string LaunchUseAutomaticLoader => Resources.LaunchUseAutomaticLoader;
 
     public string FormatLaunchSetUpGameFirst(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchSetUpGameFirstFormat, loader);
@@ -2903,8 +3063,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatSetupLoaderInstalled(string loaderName, string version, string directory)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledFormat, loaderName, version, directory);
 
-    public string FormatSetupLoaderInstalledVersion(string version)
-        => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledVersionFormat, version);
+    public string FormatSettingsLoaderUsedBy(string instances)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderUsedByFormat, instances);
+
+    public string FormatSettingsLoaderInUse(string instances)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderInUseFormat, instances);
+
+    public string FormatSettingsLoaderYourFolder(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderYourFolderFormat, loader);
+
+    public string FormatSettingsLoaderRemoved(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRemovedFormat, loader, version);
 
     public string FormatSetupUpdateLoader(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupUpdateLoaderFormat, version);
@@ -3580,11 +3749,20 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchModLikelyBroke(string mod, string version, string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModLikelyBrokeFormat, mod, version, loader);
 
+    public string FormatLaunchOtherModsNeedMissing(string mods)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchOtherModsNeedMissingFormat, mods);
+
     public string FormatLaunchExitedEarly(string loader, int exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitedEarlyFormat, loader, exitCode);
 
     public string FormatLaunchStoppedLoadingMods(string loader, int exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStoppedLoadingModsFormat, loader, exitCode);
+
+    public string FormatLaunchLoaderTooOld(string loader, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldFormat, loader, build);
+
+    public string FormatLaunchLoaderReleases(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderReleasesFormat, loader);
 
     public string FormatLaunchExitCode(string exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitCodeFormat, exitCode);
@@ -3648,8 +3826,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchDisableMod(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModFormat, mod);
 
+    public string FormatLaunchDisableMods(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModsFormat, count);
+
     public string FormatLaunchModDisabled(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModDisabledFormat, mod);
+
+    public string FormatLaunchModsDisabled(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModsDisabledFormat, count);
 
     public string FormatLaunchArgumentsHandoverFlag(string loader, string flag)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchArgumentsHandoverFlagFormat, loader, flag);

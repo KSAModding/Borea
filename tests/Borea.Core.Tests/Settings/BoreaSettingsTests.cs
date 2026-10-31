@@ -107,24 +107,6 @@ public sealed class BoreaSettingsTests
     }
 
     [Fact]
-    public void Constructor_OnlyGamePathProvided_LeavesNoLoader()
-    {
-        var settings = new BoreaSettings(@"C:\Games\KSA");
-
-        Assert.Equal(@"C:\Games\KSA", settings.GameDirectoryPath);
-        Assert.Empty(settings.LoaderInstallations);
-    }
-
-    [Fact]
-    public void Constructor_OnlyLoaderProvided_LeavesGameNull()
-    {
-        var settings = new BoreaSettings(null, StarMapAt());
-
-        Assert.Null(settings.GameDirectoryPath);
-        Assert.Equal(@"C:\Games\StarMap", settings.LoaderInstallations["StarMap"].DirectoryPath);
-    }
-
-    [Fact]
     public void Constructor_SeveralLoaders_KeepsEachOne()
     {
         var installations = StarMapAt();

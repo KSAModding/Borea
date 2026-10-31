@@ -53,7 +53,6 @@ public static class ContentIndexRootValidator
 
     private static bool ValidateDownloaded(byte[] body, HttpResponseMessage response, string name, Func<JsonDocument, bool> validate)
     {
-        // Make sure index is JSON or plain text
         if (response.Content.Headers.ContentType?.MediaType != "application/json" && response.Content.Headers.ContentType?.MediaType != "text/plain")
         {
             throw new HttpRequestException($"Expected content type 'application/json' or 'text/plain' but got '{response.Content.Headers.ContentType?.MediaType}'");
@@ -69,8 +68,6 @@ public static class ContentIndexRootValidator
             throw new HttpRequestException($"Failed to parse {name} as JSON", ex);
         }
 
-        // try-catch converts the InvalidOperationException
-        // into a HttpRequestException
         bool result;
         try
         {
@@ -78,7 +75,7 @@ public static class ContentIndexRootValidator
         }
         catch (InvalidOperationException ex)
         {
-            throw new HttpRequestException($"{ex}");
+            throw new HttpRequestException(ex.Message, ex);
         }
 
         return result;
@@ -102,12 +99,10 @@ public static class ContentIndexRootValidator
     }
 
     /// <summary>
-    /// Validates the Root structure of the Content Index.
-    /// Rejects non-object roots, unsupported snapshot_version,
-    /// non array listing or packs, and a non-object game_versions.
+    /// Validates the root of the content index. It rejects a root that is not an object,
+    /// a missing or unsupported snapshot_version, a sources that is not an object,
+    /// listings or packs that are missing or not arrays, and a game_versions that is not an object.
     /// </summary>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
     private static bool ValidateIndexRoot(JsonDocument document)
     {
         using (document)

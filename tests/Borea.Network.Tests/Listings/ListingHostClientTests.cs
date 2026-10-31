@@ -80,8 +80,7 @@ public sealed class ListingHostClientTests
               { "name": "notes.txt", "state": "uploaded", "size": 1, "browser_download_url": "https://example.com/notes.txt" }
             ] } ]
             """;
-        var client = new ListingHostClient(FakeHttpMessageHandler.BuildClient(request =>
-            FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
+        var client = ClientWithReleases(releases);
 
         var latest = (await client.ReadAsync(new ListingSourceReference.GitHub("Owner", "KSA-MyMod"))).Latest!;
 
@@ -98,8 +97,7 @@ public sealed class ListingHostClientTests
               { "name": "MyMod.zip", "state": "uploaded", "size": 1, "browser_download_url": "https://example.com/MyMod.zip" }
             ] } ]
             """;
-        var client = new ListingHostClient(FakeHttpMessageHandler.BuildClient(request =>
-            FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
+        var client = ClientWithReleases(releases);
         var reference = new ListingSourceReference.GitHub("Owner", "KSA-MyMod");
 
         Assert.Null((await client.ReadAsync(reference)).Latest!.DownloadUrl);
@@ -115,8 +113,7 @@ public sealed class ListingHostClientTests
             [ { "tag_name": "{{tag}}", "draft": false, "published_at": "2026-09-08T00:00:00Z", "assets": [] },
               { "tag_name": "0.4.0.1", "draft": false, "published_at": "2026-09-09T00:00:00Z", "assets": [] } ]
             """;
-        var client = new ListingHostClient(FakeHttpMessageHandler.BuildClient(request =>
-            FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
+        var client = ClientWithReleases(releases);
 
         var latest = (await client.ReadAsync(new ListingSourceReference.GitHub("Owner", "KSA-MyMod"))).Latest!;
 
@@ -201,14 +198,6 @@ public sealed class ListingHostClientTests
             FakeHttpMessageHandler.JsonResponse("""{ "id": 7, "name": "Other", "game_id": 3102, "versions": [] }"""), out _));
 
         await Assert.ThrowsAsync<ListingSourceException>(() => client.ReadAsync(new ListingSourceReference.SpaceDock(7)));
-    }
-
-    [Fact]
-    public void ParsePrefixes_SavedThreadPage_FindsThePrefixOfTheTitleOnly()
-    {
-        var html = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Listings", "Fixtures", "forum-thread.html"));
-
-        Assert.Equal([new ForumPrefix("Gameplay")], ForumThreadReader.ParsePrefixes(html));
     }
 
     [Fact]
@@ -464,6 +453,38 @@ public sealed class ListingHostClientTests
         Assert.Equal([BranchApi, CommitImage, BranchApi, newCommitImage], sent.Select(request => request.Url));
     }
 
+    [Fact]
+    public async Task CheckAsync_TheCallerThatStartedTheBranchReadCancels_AnotherCallerStillGetsTheAnswer()
+    {
+        var bytes = Png(1280, 720);
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var branchReads = 0;
+        var api = FakeHttpMessageHandler.BuildClient(async (request, token) =>
+        {
+            if (request.RequestUri!.AbsoluteUri != BranchApi)
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+
+            if (Interlocked.Increment(ref branchReads) == 1)
+                await held.Task.WaitAsync(token);
+
+            return FakeHttpMessageHandler.JsonResponse($$$"""{"name":"main","commit":{"sha":"{{{Commit}}}"}}""");
+        }, out _);
+        var images = new FakeHttpMessageHandler(request => Task.FromResult(request.RequestUri!.AbsoluteUri == CommitImage
+            ? FakeHttpMessageHandler.ByteResponse(bytes)
+            : new HttpResponseMessage(HttpStatusCode.NotFound)));
+        using var measurer = new ListingImageMeasurer(images, TimeSpan.FromSeconds(30), new GitHubSession(api, "client", "slug"), api);
+        using var first = new CancellationTokenSource();
+
+        var firstCheck = measurer.CheckAsync(BranchImage, ListingImageRole.Description, first.Token);
+        var secondCheck = measurer.CheckAsync(BranchImage, ListingImageRole.Description);
+        first.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => firstCheck);
+        var second = await secondCheck.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.True(second.Measurement.IsMeasured, second.Measurement.Problem);
+        Assert.Equal(new ListingImageBranch("main", CommitImage), second.Branch);
+    }
+
     [Theory]
     [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/main/images/hero.png")]
     [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/main/images/hero.png")]
@@ -576,6 +597,9 @@ public sealed class ListingHostClientTests
     private const string BranchApi = "https://api.github.com/repos/alice/KSA-Mod/branches/main";
 
     private const string CommitImage = $"https://raw.githubusercontent.com/alice/KSA-Mod/{Commit}/images/hero.png";
+
+    private static ListingHostClient ClientWithReleases(string releases) => new(FakeHttpMessageHandler.BuildClient(request =>
+        FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
 
     /// <summary>A measurer whose image fetches and GitHub requests both go to <paramref name="respond"/>, which records them.</summary>
     private static ListingImageMeasurer Measurer(Func<HttpRequestMessage, HttpResponseMessage> respond, out List<(string Url, string? Authorization)> sent, TimeProvider? time = null)

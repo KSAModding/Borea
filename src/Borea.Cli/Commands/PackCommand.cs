@@ -111,7 +111,7 @@ internal static class PackCommand
     private static Command BuildShow(Func<CancellationToken, Task<CliServices>> services)
     {
         var id = ArgumentRules.ContentId("id", "The pack id.");
-        var version = VersionOption("Show only this pack version and the content it pins.");
+        var version = ArgumentRules.Version("Show only this pack version and the content it pins.");
         var json = ArgumentRules.Json();
         var show = new Command("show", "Show one mod pack or one of its versions.");
         show.Arguments.Add(id);
@@ -170,7 +170,7 @@ internal static class PackCommand
                 .Where(diagnostic => versions.All(known =>
                     !string.Equals(known.Version, diagnostic.Version, StringComparison.OrdinalIgnoreCase)))
                 .Select(VersionView.Unknown));
-            versions.Sort(CompareVersionsNewestFirst);
+            versions.Sort((left, right) => ContentOutput.CompareVersionsNewestFirst(left.Version, right.Version));
 
             var packStatus = entry?.IndexStatus ?? identity?.PackStatus;
             var state = metadata is not null
@@ -202,24 +202,16 @@ internal static class PackCommand
     private static Command BuildInstall(Func<CancellationToken, Task<CliServices>> services)
     {
         var id = ArgumentRules.ContentId("id", "The pack id to install.");
-        var version = VersionOption("Install this exact pack version. The newest usable version when absent.");
+        var version = ArgumentRules.Version("Install this exact pack version. The newest usable version when absent.");
         var instance = ArgumentRules.Instance();
-        var newInstance = new Option<string?>("--new-instance")
-        {
-            Description = "Create an instance with this name from the pack, instead of installing into an existing one.",
-        };
-        newInstance.Validators.Add(result =>
-        {
-            if (string.IsNullOrWhiteSpace(result.GetValueOrDefault<string?>()))
-                result.AddError("The --new-instance value cannot be empty.");
-        });
+        var newInstance = ArgumentRules.TextOption("--new-instance", "Create an instance with this name from the pack, instead of installing into an existing one.");
         var proceedWithRetracted = new Option<bool>("--proceed-with-retracted")
         {
             Description = "Install the selected pack version even though the index retracted it.",
         };
         var proceedWithYanked = ProceedWithYankedOption();
-        var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
-        var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
+        var recommended = ArgumentRules.WithRecommended();
+        var alternatives = ArgumentRules.Alternatives();
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
         var json = ArgumentRules.Json();
         var install = new Command("install", "Install the mods one mod pack version pins into an instance.");
@@ -243,8 +235,8 @@ internal static class PackCommand
         {
             var newInstanceName = parseResult.GetValue(newInstance)?.Trim();
             var target = newInstanceName is null ? await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false) : null;
-            if (newInstanceName is not null && !await cli.Instances.IsNameAvailableAsync(newInstanceName).ConfigureAwait(false))
-                throw new InvalidOperationException($"Instance name '{newInstanceName}' is already in use.");
+            if (newInstanceName is not null)
+                await InstanceLookup.RequireFreeNameAsync(cli.Instances, newInstanceName).ConfigureAwait(false);
 
             var chosenAlternatives = ModInstallCommands.ParseAlternatives(parseResult.GetValue(alternatives));
             var isDryRun = parseResult.GetValue(dryRun);
@@ -348,8 +340,8 @@ internal static class PackCommand
     {
         var instance = ArgumentRules.Text("instance", "The instance to update, by name or id.");
         var proceedWithYanked = ProceedWithYankedOption();
-        var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
-        var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
+        var recommended = ArgumentRules.WithRecommended();
+        var alternatives = ArgumentRules.Alternatives();
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the changes from the cached index without writing files." };
         var json = ArgumentRules.Json();
         var update = new Command("update", "Update an instance to the newest version of the mod pack it was created from.");
@@ -509,22 +501,10 @@ internal static class PackCommand
             foreach (var value in result.GetValueOrDefault<string[]>() ?? [])
             {
                 if (!ModIds.IsValid(value))
-                    result.AddError($"'{value}' is not a valid content id.");
+                    result.AddError(ArgumentRules.ContentIdError(value));
             }
         });
         return option;
-    }
-
-    private static Option<string?> VersionOption(string description)
-    {
-        var version = new Option<string?>("--version") { Description = description };
-        version.Validators.Add(result =>
-        {
-            var value = result.GetValueOrDefault<string?>();
-            if (string.IsNullOrWhiteSpace(value) || !ModVersion.TryParse(value, out _))
-                result.AddError($"'{value}' is not a valid semantic version.");
-        });
-        return version;
     }
 
     private static ContentIndexPackVersion? Newest(ContentIndexPack? entry) =>
@@ -598,9 +578,6 @@ internal static class PackCommand
         return warnings;
     }
 
-    /// <summary>
-    /// Throws when the authored bounds of the pack do not admit the installed game, and names the bound that does not.
-    /// </summary>
     /// <returns>The state the authored bounds put the installed game in.</returns>
     private static GameCompatibility ThrowIfIncompatible(ModPackMetadata metadata, GameVersion? installed, GameReleaseList releases)
     {
@@ -745,24 +722,6 @@ internal static class PackCommand
         return $"The pack was not updated completely, because {incomplete} of {view.Members.Count} steps did not finish. The instance still names pack version {view.CurrentVersion}.";
     }
 
-    private static int CompareVersionsNewestFirst(VersionView left, VersionView right)
-    {
-        var leftParsed = ModVersion.TryParse(left.Version, out var leftVersion);
-        var rightParsed = ModVersion.TryParse(right.Version, out var rightVersion);
-        if (leftParsed && rightParsed)
-        {
-            var precedence = rightVersion.CompareTo(leftVersion);
-            if (precedence != 0)
-                return precedence;
-        }
-        else if (leftParsed != rightParsed)
-        {
-            return leftParsed ? -1 : 1;
-        }
-
-        return StringComparer.Ordinal.Compare(left.Version, right.Version);
-    }
-
     private static string Name(ModPackMemberStatus status) => status switch
     {
         ModPackMemberStatus.Installed => "installed",
@@ -773,14 +732,6 @@ internal static class PackCommand
         ModPackMemberStatus.NotAttempted => "not-attempted",
         ModPackMemberStatus.Removed => "removed",
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
-    };
-
-    private static string Name(InstallReason reason) => reason switch
-    {
-        InstallReason.Manual => "manual",
-        InstallReason.ModPack => "modpack",
-        InstallReason.Dependency => "dependency",
-        _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
     };
 
     private static void WriteHuman(TextWriter output, SearchView view)
@@ -825,12 +776,7 @@ internal static class PackCommand
         }
 
         if (view.IndexStatus is { } status)
-        {
-            var since = status.Since is null ? string.Empty : $" since {status.Since:O}";
-            output.WriteLine($"Index status: {status.State}{since}");
-            if (status.Reason is not null)
-                output.WriteLine($"Index reason: {status.Reason}");
-        }
+            ContentOutput.WriteIndexStatus(output, status);
 
         if (view.Versions.Count == 0)
         {
@@ -1306,7 +1252,7 @@ internal static class PackCommand
         public static MemberResultView From(ModPackMemberResult member) => new(
             member.ModId,
             member.Version.ToString(),
-            Name(member.Reason),
+            ContentOutput.Name(member.Reason),
             Name(member.Status),
             member.Message,
             member.Location);
@@ -1317,7 +1263,7 @@ internal static class PackCommand
         public static OperationView From(PlannedInstall operation) => new(
             operation.Release.ModId,
             operation.Release.Version.ToString(),
-            Name(operation.Reason));
+            ContentOutput.Name(operation.Reason));
     }
 
     private sealed record ChoiceView(string Key, string OwnerId, string Kind, IReadOnlyList<string> Options, string? Selected)

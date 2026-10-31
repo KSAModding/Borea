@@ -12,9 +12,6 @@ public abstract record InstanceSource
     {
     }
 
-    /// <summary>
-    /// An instance materialized from a specific modpack at a specific version.
-    /// </summary>
     public sealed record FromModPack(string ModPackId, ModVersion Version) : InstanceSource
     {
         private static readonly IReadOnlySet<string> None = new HashSet<string>(ModIds.Comparer);
@@ -46,7 +43,6 @@ public abstract record InstanceSource
         /// </summary>
         protected override bool PrintMembers(System.Text.StringBuilder builder)
         {
-            ArgumentNullException.ThrowIfNull(builder);
             builder.Append("ModPackId = ").Append(ModPackId)
                 .Append(", Version = ").Append(Version.ToString())
                 .Append(", Detached = [").AppendJoin(", ", Detached.Order(ModIds.Comparer)).Append(']');
@@ -54,9 +50,6 @@ public abstract record InstanceSource
         }
     }
 
-    /// <summary>
-    /// A user-curated instance with no modpack origin.
-    /// </summary>
     public sealed record Custom : InstanceSource
     {
         public static readonly Custom Value = new();

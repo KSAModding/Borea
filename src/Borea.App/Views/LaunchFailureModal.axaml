@@ -17,6 +17,9 @@
                 <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
                 <StackPanel Margin="36,32,24,32" Spacing="16">
                     <TextBlock Classes="body-md" Text="{Binding LaunchMessage}" TextWrapping="Wrap" />
+                    <Button Classes="link" HorizontalAlignment="Left" Command="{Binding OpenLaunchLoaderReleasesCommand}" ToolTip.Tip="{Binding LaunchLoaderReleases.Url}" IsVisible="{Binding LaunchLoaderReleases, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.ControlTypeOverride="Hyperlink">
+                        <TextBlock Classes="action-md" Text="{Binding LaunchLoaderReleases.Label}" />
+                    </Button>
                     <Border Classes="card" Padding="16" IsVisible="{Binding IsLaunchOutputShown}">
                         <ScrollViewer MaxHeight="240">
                             <SelectableTextBlock Classes="log-line" Text="{Binding LaunchOutputText}" TextWrapping="Wrap" />

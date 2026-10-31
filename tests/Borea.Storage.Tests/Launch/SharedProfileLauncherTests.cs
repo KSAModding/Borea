@@ -22,7 +22,6 @@ public sealed class SharedProfileLauncherTests : IDisposable
 
     private string ExpectedExecutable => Path.Combine(Path.GetFullPath(GameDirectory), "KSA.exe");
 
-    /// <summary>Puts an empty file where the game's executable would be.</summary>
     private void PlaceGame()
     {
         Directory.CreateDirectory(GameDirectory);
@@ -31,12 +30,15 @@ public sealed class SharedProfileLauncherTests : IDisposable
 
     private SharedProfileLauncher Launcher(OsPlatform platform = OsPlatform.Windows) => new(_paths, _starter, platform);
 
-    [Fact]
-    public void Launch_Windows_StartsKsaExeInTheGameDirectoryWithNothingAdded()
+    [Theory]
+    [InlineData(OsPlatform.Windows, "KSA.exe")]
+    [InlineData(OsPlatform.Linux, "KSA")]
+    public void Launch_BuildOfTheSystem_StartsItsExecutableInTheGameDirectoryWithNothingAdded(OsPlatform platform, string executable)
     {
-        PlaceGame();
+        Directory.CreateDirectory(GameDirectory);
+        File.WriteAllBytes(Path.Combine(GameDirectory, executable), Array.Empty<byte>());
 
-        var result = Launcher().Launch();
+        var result = Launcher(platform).Launch();
 
         Assert.True(result.Started);
         Assert.Equal(SharedProfileLaunchOutcome.Started, result.Outcome);
@@ -45,7 +47,7 @@ public sealed class SharedProfileLauncherTests : IDisposable
 
         var plan = Assert.Single(_starter.Plans);
         Assert.Same(plan, result.Plan);
-        Assert.Equal(ExpectedExecutable, plan.Executable);
+        Assert.Equal(Path.Combine(Path.GetFullPath(GameDirectory), executable), plan.Executable);
         Assert.Equal(Path.GetFullPath(GameDirectory), plan.WorkingDirectory);
         Assert.Empty(plan.Arguments);
         Assert.Empty(plan.EnvironmentVariables);
@@ -82,20 +84,6 @@ public sealed class SharedProfileLauncherTests : IDisposable
         Assert.Contains("game directory", result.Message);
         Assert.Null(result.Plan);
         Assert.Empty(_starter.Plans);
-    }
-
-    [Fact]
-    public void Launch_Linux_StartsKsaInTheGameDirectory()
-    {
-        Directory.CreateDirectory(GameDirectory);
-        File.WriteAllBytes(Path.Combine(GameDirectory, "KSA"), Array.Empty<byte>());
-
-        var result = Launcher(OsPlatform.Linux).Launch();
-
-        Assert.True(result.Started);
-        var plan = Assert.Single(_starter.Plans);
-        Assert.Equal(Path.Combine(Path.GetFullPath(GameDirectory), "KSA"), plan.Executable);
-        Assert.Equal(Path.GetFullPath(GameDirectory), plan.WorkingDirectory);
     }
 
     [Fact]

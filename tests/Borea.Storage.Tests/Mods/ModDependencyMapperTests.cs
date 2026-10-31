@@ -41,14 +41,6 @@ public sealed class ModDependencyMapperTests
     }
 
     [Fact]
-    public void FromDto_UnknownKind_ParsesToUnknown()
-    {
-        var dto = new ModDependencyDto { ModId = "cool-lib", Kind = "breaks" };
-
-        Assert.Equal(ModDependencyKind.Unknown, ModDependencyMapper.FromDto(dto).Kind);
-    }
-
-    [Fact]
     public void FromDto_UnknownSource_ParsesToUnknown()
     {
         var dto = new ModDependencyDto { ModId = "cool-lib", Kind = "required", Source = "handwritten" };
@@ -56,32 +48,22 @@ public sealed class ModDependencyMapperTests
         Assert.Equal(MetadataSource.Unknown, ModDependencyMapper.FromDto(dto).Source);
     }
 
-    [Fact]
-    public void FromDto_NoModIdAndNoAnyOf_ThrowsFormatException()
+    public static TheoryData<ModDependencyDto> EntriesWithoutExactlyOneTarget => new()
     {
-        var dto = new ModDependencyDto { Kind = "required" };
-
-        Assert.Throws<FormatException>(() => ModDependencyMapper.FromDto(dto));
-    }
-
-    [Fact]
-    public void FromDto_BothModIdAndAnyOf_ThrowsFormatException()
-    {
-        var dto = new ModDependencyDto
+        new ModDependencyDto { Kind = "required" },
+        new ModDependencyDto
         {
             ModId = "cool-lib",
             Kind = "required",
             AnyOf = new List<ModDependencyAlternativeDto> { new() { ModId = "lib-a" } },
-        };
+        },
+        new ModDependencyDto { Kind = "required", AnyOf = new List<ModDependencyAlternativeDto>() },
+    };
 
-        Assert.Throws<FormatException>(() => ModDependencyMapper.FromDto(dto));
-    }
-
-    [Fact]
-    public void FromDto_EmptyAnyOfList_ThrowsFormatException()
+    [Theory]
+    [MemberData(nameof(EntriesWithoutExactlyOneTarget))]
+    public void FromDto_NotExactlyOneOfModIdAndAnyOf_ThrowsFormatException(ModDependencyDto dto)
     {
-        var dto = new ModDependencyDto { Kind = "required", AnyOf = new List<ModDependencyAlternativeDto>() };
-
         Assert.Throws<FormatException>(() => ModDependencyMapper.FromDto(dto));
     }
 
@@ -99,10 +81,12 @@ public sealed class ModDependencyMapperTests
     }
 
     [Theory]
+    [InlineData("breaks")]
+    // Enum.TryParse would read numeric and comma-joined tokens as a kind, so they have rows of their own.
     [InlineData("1")]
     [InlineData("4")]
     [InlineData("required,optional")]
-    public void FromDto_NumericOrCompositeKindTokens_ParseToUnknown(string kind)
+    public void FromDto_UnknownKindToken_ParsesToUnknown(string kind)
     {
         var dto = new ModDependencyDto { ModId = "cool-lib", Kind = kind };
 

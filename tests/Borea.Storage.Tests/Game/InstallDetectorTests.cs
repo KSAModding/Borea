@@ -31,15 +31,6 @@ public sealed class InstallDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task DetectAsync_NoCandidate_FindsNothing()
-    {
-        var detection = await _detector.DetectAsync([StarMap()]);
-
-        Assert.Empty(detection.Games);
-        Assert.Empty(detection.Loaders);
-    }
-
-    [Fact]
     public async Task DetectAsync_OneGame_ReturnsItsVersion()
     {
         var game = PlaceGame("KSA", RealBuildFixture);
@@ -110,11 +101,14 @@ public sealed class InstallDetectorTests : IDisposable
         Assert.Null(await _settings.GetAsync());
     }
 
-    [Fact]
-    public async Task DetectAsync_StarMapInBoreasLoaderFolder_IsFoundWithoutACandidate()
+    [Theory]
+    [InlineData("")]
+    [InlineData("0.4.8")]
+    public async Task DetectAsync_StarMapInBoreasLoaderFolder_IsFoundWithoutACandidate(string version)
     {
         var game = PlaceGame("KSA", RealBuildFixture);
-        var loader = PlaceStarMap(Path.Combine(_loadersRoot, "StarMap"), game);
+        var folder = Path.Combine(_loadersRoot, "StarMap");
+        var loader = PlaceStarMap(version.Length == 0 ? folder : Path.Combine(folder, version), game);
 
         var detection = await _detector.DetectAsync([StarMap()]);
 

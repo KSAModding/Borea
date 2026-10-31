@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
-using Borea.Core.Game;
 using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
@@ -118,7 +117,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed: false, stopped is not null, item.InstallError);
-            item.EndInstall(stopped);
+            EndRowInstall(item, stopped);
         }
 
         return false;
@@ -237,7 +236,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, error);
-            item.EndInstall(stopped);
+            EndRowInstall(item, stopped);
         }
 
         return executed;
@@ -392,16 +391,6 @@ public sealed partial class PackUpdateItem : ObservableObject, IInstallRow
         InstallError = null;
         ProgressStatus = null;
         CancelUpdate();
-    }
-
-    /// <param name="stopped">What the notice shows after a stop, or null.</param>
-    internal void EndInstall(string? stopped = null)
-    {
-        IsInstalling = false;
-        Run = null;
-        Progress = 0;
-        ProgressStatus = stopped;
-        ProgressDetail = null;
     }
 
     internal void RefreshText()

@@ -17,7 +17,7 @@ public sealed class ImageViewModelTests
     [Fact]
     public async Task Icon_Loaded_ShowsItsBytesOnTheRowTheTileAndTheHeader()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        using var harness = await CreateWithIconAsync();
         harness.Images.Respond = _ => ContentImageResult.Loaded(IconBytes);
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -45,7 +45,7 @@ public sealed class ImageViewModelTests
     [Fact]
     public async Task Icon_FailedToLoad_KeepsThePlaceholderAndIsNotRequestedAgain()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        using var harness = await CreateWithIconAsync();
         harness.Images.Respond = _ => ContentImageResult.Failed(ContentImageFailure.FactsMismatch, "The sha256 differs.");
         var clock = new ManualClock();
         harness.ViewModel.ImageClock = clock;
@@ -64,7 +64,7 @@ public sealed class ImageViewModelTests
     [Fact]
     public async Task Icon_HostUnavailable_IsRequestedAgainAfterTheRetryDelay()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        using var harness = await CreateWithIconAsync();
         harness.Images.Respond = _ => ContentImageResult.Failed(ContentImageFailure.Unavailable, "The host timed out.");
         var clock = new ManualClock();
         harness.ViewModel.ImageClock = clock;
@@ -88,7 +88,7 @@ public sealed class ImageViewModelTests
     [Fact]
     public async Task Icon_ImagesFromAuthorHostsOff_AsksOnlyTheCacheAndKeepsThePlaceholder()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        using var harness = await CreateWithIconAsync();
         harness.Images.Respond = _ => ContentImageResult.Loaded(IconBytes);
         var icon = await DiscoverIconAsync(harness);
         harness.ViewModel.LoadImagesFromAuthorHosts = false;
@@ -103,7 +103,7 @@ public sealed class ImageViewModelTests
     [Fact]
     public async Task TurningImagesFromAuthorHostsOn_LoadsTheIconItHeldBack()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        using var harness = await CreateWithIconAsync();
         harness.Images.Respond = _ => ContentImageResult.Loaded(IconBytes);
         var icon = await DiscoverIconAsync(harness);
         harness.ViewModel.LoadImagesFromAuthorHosts = false;
@@ -140,7 +140,7 @@ public sealed class ImageViewModelTests
     [Fact]
     public async Task DiscoverFilters_ThatKeepTheRows_LeaveTheRowsAndTheirLoadedIconsAlone()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        using var harness = await CreateWithIconAsync();
         harness.Images.Respond = _ => ContentImageResult.Loaded(IconBytes);
         var viewModel = harness.ViewModel;
         var icon = await DiscoverIconAsync(harness);
@@ -161,7 +161,7 @@ public sealed class ImageViewModelTests
     [Fact]
     public async Task DiscoverFilter_RowThatComesBack_IsTheSameRowWithItsLoadedIcon()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        using var harness = await CreateWithIconAsync();
         harness.Images.Respond = _ => ContentImageResult.Loaded(IconBytes);
         var viewModel = harness.ViewModel;
         var icon = await DiscoverIconAsync(harness);
@@ -255,7 +255,7 @@ public sealed class ImageViewModelTests
     [InlineData(ModInstallOwnership.Foreign)]
     public async Task InstanceRow_OfAListedMod_SharesTheIconOfItsListing(ModInstallOwnership ownership)
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        using var harness = await CreateWithIconAsync();
         var viewModel = harness.ViewModel;
         await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ownership);
         await viewModel.LoadAsync();
@@ -286,6 +286,9 @@ public sealed class ImageViewModelTests
         Assert.Equal("https://images.example/starter-pack-1.1.0-shot.png", viewModel.PackDescriptionImages.Find("shot")?.Record.Url);
         Assert.Empty(harness.Images.Requests);
     }
+
+    private static Task<ViewModelHarness> CreateWithIconAsync() =>
+        ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
 
     private static async Task<ListingImage> DiscoverIconAsync(ViewModelHarness harness)
     {

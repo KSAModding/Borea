@@ -219,6 +219,7 @@ public sealed class DownloadCountsParserTests : IDisposable
     [InlineData("{ \"version\": \"1.0.0\", \"total\": 5 }", "1.0.0", "must contain hosts")]
     [InlineData("{ \"total\": 5, \"hosts\": { \"github\": 5 } }", null, "must contain a string version")]
     [InlineData("7", null, "must be an object")]
+    [InlineData("{ \"version\": \"\\ud800\", \"total\": 5, \"hosts\": { \"github\": 5 } }", null, "not valid Unicode text")]
     public void Parse_InvalidReleaseEntry_DropsOnlyThatEntry(string badEntry, string? version, string reason)
     {
         var downloads = $$"""

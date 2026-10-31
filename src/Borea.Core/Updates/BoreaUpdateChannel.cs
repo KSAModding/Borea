@@ -21,11 +21,11 @@ public static class BoreaUpdateChannels
     public static bool Includes(this BoreaUpdateChannel channel, ModVersion version) => channel switch
     {
         // A preview build comes from a feature branch, so no channel offers it and its testers download it by hand.
-        BoreaUpdateChannel.Dev => version.PreRelease is null || !Starts(version.PreRelease, "preview"),
-        BoreaUpdateChannel.Testing => version.PreRelease is null || Starts(version.PreRelease, "beta"),
+        BoreaUpdateChannel.Dev => version.PreRelease is null || !HasFirstIdentifier(version.PreRelease, "preview"),
+        BoreaUpdateChannel.Testing => version.PreRelease is null || HasFirstIdentifier(version.PreRelease, "beta"),
         _ => version.PreRelease is null,
     };
 
-    private static bool Starts(string preRelease, string label)
+    private static bool HasFirstIdentifier(string preRelease, string label)
         => string.Equals(preRelease.Split('.')[0], label, StringComparison.OrdinalIgnoreCase);
 }

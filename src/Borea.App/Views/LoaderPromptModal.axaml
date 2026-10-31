@@ -4,7 +4,7 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.LoaderPromptModal"
              x:DataType="vm:MainViewModel">
-    <!-- a launch that needs a mod loader which is not installed -->
+    <!-- a launch that needs a mod loader which is not installed, or a newer one for the game -->
     <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
             <StackPanel>
@@ -35,8 +35,16 @@
                     <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                         <Button Classes="text tall" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelLoaderPromptCommand}" IsEnabled="{Binding !IsSetupBusy}" VerticalAlignment="Center" />
-                        <Button Classes="cta" Command="{Binding InstallPromptedLoaderCommand}" IsVisible="{Binding !NeedsGameSetup}">
-                            <TextBlock Classes="action-lg" Text="{Binding Localization.SetupInstallLoader}" VerticalAlignment="Center" />
+                        <Button Classes="text tall" Content="{Binding Localization.LaunchPlayAnyway}" Command="{Binding PlayAnywayCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding IsLoaderUpdatePrompt}" VerticalAlignment="Center" />
+                        <!-- a pinned version changes only when the player changes the setting of the instance -->
+                        <Button Classes="cta" Command="{Binding ChangeLoaderFromPromptCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding ShowChangeLoaderPromptAction}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.LoaderChangeAction}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="cta" Command="{Binding UseAutomaticLoaderCommand}" IsVisible="{Binding ShowUseAutomaticLoaderAction}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.LaunchUseAutomaticLoader}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="cta" Command="{Binding InstallPromptedLoaderCommand}" IsVisible="{Binding ShowLoaderPromptAction}">
+                            <TextBlock Classes="action-lg" Text="{Binding LoaderPromptActionText}" VerticalAlignment="Center" />
                         </Button>
                         <Button Classes="cta" Command="{Binding SetUpGameForLoaderCommand}" IsVisible="{Binding NeedsGameSetup}">
                             <TextBlock Classes="action-lg" Text="{Binding Localization.SetupBannerAction}" VerticalAlignment="Center" />

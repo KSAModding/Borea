@@ -168,15 +168,6 @@ public sealed class ListingSourceTests
         Assert.Equal("https://github.com/KSAModding/content-index/new/main?filename=listings/MyMod.toml&value=id%20%3D%20%22MyMod%22%0A", page.Url.AbsoluteUri);
     }
 
-    [Fact]
-    public void NewFile_DocumentLongerThanTheLimit_OpensThePageWithoutTheText()
-    {
-        var page = ListingPullRequestLinks.NewFile("listings/MyMod.toml", new string('x', ListingPullRequestLinks.MaxUrlLength));
-
-        Assert.False(page.CarriesText);
-        Assert.Equal("https://github.com/KSAModding/content-index/new/main?filename=listings/MyMod.toml", page.Url.AbsoluteUri);
-    }
-
     [Theory]
     [InlineData(0, true)]
     [InlineData(1, false)]

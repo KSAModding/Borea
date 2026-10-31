@@ -31,7 +31,6 @@ public sealed class InstallDescriptorTests
     [Fact]
     public void Constructor_EmptyProseList_StaysDistinctFromAbsent()
     {
-        // Absent is not empty.
         var install = new InstallDescriptor(steps: Array.Empty<string>());
 
         Assert.Empty(install.Steps!);
@@ -75,23 +74,12 @@ public sealed class InstallDescriptorTests
             new InstallDescriptor(target: InstallAnchor.UserData, manages: new[] { claimed }));
     }
 
-    [Fact]
-    public void Constructor_ManifestBelowAPath_IsSomebodyElsesFile()
+    [Theory]
+    [InlineData(InstallAnchor.UserData, "Saves")] // Saves/manifest.toml, which the game does not own.
+    [InlineData(InstallAnchor.Standalone, null)]  // The rule is about the game's file, not the name.
+    public void Constructor_ManifestTomlThatIsNotTheGames_IsAccepted(InstallAnchor target, string? path)
     {
-        // This claims Saves/manifest.toml, which the game does not own.
-        var install = new InstallDescriptor(
-            target: InstallAnchor.UserData,
-            path: "Saves",
-            manages: new[] { "manifest.toml" });
-
-        Assert.Single(install.Manages!);
-    }
-
-    [Fact]
-    public void Constructor_ManifestUnderAnotherAnchor_IsAccepted()
-    {
-        // The rule is about the game's file, not the name.
-        var install = new InstallDescriptor(target: InstallAnchor.Standalone, manages: new[] { "manifest.toml" });
+        var install = new InstallDescriptor(target: target, path: path, manages: new[] { "manifest.toml" });
 
         Assert.Single(install.Manages!);
     }

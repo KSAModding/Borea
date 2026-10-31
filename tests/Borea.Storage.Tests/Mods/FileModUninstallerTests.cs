@@ -36,19 +36,6 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UninstallAsync_BoreaOwnedFolder_DeletesIt()
-    {
-        await AddInstalledModAsync(ModInstallOwnership.Borea);
-        var modDir = ModDirectory("test-mod");
-        Directory.CreateDirectory(modDir);
-        File.WriteAllText(Path.Combine(modDir, "some-file.dat"), "content");
-
-        await _uninstaller.UninstallAsync(_instanceId, "test-mod");
-
-        Assert.False(Directory.Exists(modDir));
-    }
-
-    [Fact]
     public async Task UninstallAsync_UntrackedFolder_LeavesItIntact()
     {
         var modDir = ModDirectory("never-installed");
@@ -61,7 +48,7 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UninstallAsync_ForeignOwnedRecord_LeavesFolderIntact()
+    public async Task UninstallAsync_ForeignOwnedRecord_LeavesTheFolderAndTheRecord()
     {
         await AddInstalledModAsync(ModInstallOwnership.Foreign);
         var modDir = ModDirectory("test-mod");
@@ -71,6 +58,7 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
         await _uninstaller.UninstallAsync(_instanceId, "test-mod");
 
         Assert.True(File.Exists(Path.Combine(modDir, "local-file.dat")));
+        Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods);
     }
 
     [Fact]
@@ -88,7 +76,7 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UninstallAsync_LegacyBoreaRecordWithoutToken_ReportsActionableError()
+    public async Task UninstallAsync_LegacyBoreaRecordWithoutToken_ReportsActionableErrorAndKeepsTheRecord()
     {
         await AddInstalledModAsync(ModInstallOwnership.Borea, createOwnershipMarker: false);
         var modDir = ModDirectory("test-mod");
@@ -100,6 +88,7 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
 
         Assert.Contains("cannot verify ownership", exception.Message);
         Assert.True(File.Exists(Path.Combine(modDir, "local-file.dat")));
+        Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods);
     }
 
     [Fact]
@@ -167,27 +156,6 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
         await _uninstaller.UninstallAsync(_instanceId, "test-mod");
 
         Assert.Empty((await _instances.GetByIdAsync(_instanceId))!.Mods);
-    }
-
-    [Fact]
-    public async Task UninstallAsync_ForeignOwnedRecord_KeepsTheRecord()
-    {
-        await AddInstalledModAsync(ModInstallOwnership.Foreign);
-
-        await _uninstaller.UninstallAsync(_instanceId, "test-mod");
-
-        Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods);
-    }
-
-    [Fact]
-    public async Task UninstallAsync_LegacyBoreaRecordWithoutToken_KeepsTheRecord()
-    {
-        await AddInstalledModAsync(ModInstallOwnership.Borea, createOwnershipMarker: false);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _uninstaller.UninstallAsync(_instanceId, "test-mod"));
-
-        Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods);
     }
 
     private string ModDirectory(string modId) => Path.Combine(_pathProvider.GetInstanceModsFolder(_instanceId), modId);

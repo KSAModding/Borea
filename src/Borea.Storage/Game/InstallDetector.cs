@@ -30,7 +30,7 @@ public sealed class InstallDetector : IInstallDetector
 
         // Borea's own loader folders come first, so a loader Borea placed wins over a copy elsewhere
         var loaderDirectories = loaders
-            .Select(loader => Path.Combine(_loadersRoot, loader.ModId))
+            .SelectMany(BoreaLoaderDirectories)
             .Concat(_candidates.GetLoaderDirectories());
         foreach (var directory in ExistingDirectories(loaderDirectories))
         {
@@ -69,6 +69,40 @@ public sealed class InstallDetector : IInstallDetector
         }
 
         return new InstallDetection(games, detectedLoaders);
+    }
+
+    // The flat folder of Borea 0.5.1 comes first, then the newest version folder, so one probe finds either layout.
+    private IEnumerable<string> BoreaLoaderDirectories(ModMetadata loader)
+    {
+        var folder = Path.Combine(_loadersRoot, loader.ModId);
+        yield return folder;
+        if (NewestVersionFolder(folder, loader.Provides?.Launch) is { } newest)
+            yield return newest;
+    }
+
+    // A staging folder starts with a dot and names no version, so a half-unpacked install is never probed.
+    private static string? NewestVersionFolder(string folder, string? launch)
+    {
+        if (launch is null)
+            return null;
+
+        try
+        {
+            if (!Directory.Exists(folder))
+                return null;
+
+            var launchFile = launch.Replace('/', Path.DirectorySeparatorChar);
+            return Directory.EnumerateDirectories(folder)
+                .Select(directory => (Directory: directory, Name: Path.GetFileName(directory)))
+                .Where(entry => ModVersion.TryParse(entry.Name, out _) && File.Exists(Path.Combine(entry.Directory, launchFile)))
+                .OrderByDescending(entry => ModVersion.Parse(entry.Name))
+                .Select(entry => entry.Directory)
+                .FirstOrDefault();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     // StarMap accepts the path of KSA.dll as well as the game folder

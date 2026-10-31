@@ -11,9 +11,7 @@ public sealed class GameLogViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
-        var path = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, "Loading mods\nGame started\n");
+        var path = WriteGameLog(harness, instance, "Loading mods\nGame started\n");
 
         await viewModel.ShowInstanceLogCommand.ExecuteAsync(null);
 
@@ -48,9 +46,7 @@ public sealed class GameLogViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
-        var path = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, "11:30:03.330  INFO loaded settings\n11:30:04.064  WARN slow start\n");
+        WriteGameLog(harness, instance, "11:30:03.330  INFO loaded settings\n11:30:04.064  WARN slow start\n");
 
         await viewModel.ShowInstanceLogCommand.ExecuteAsync(null);
 
@@ -64,9 +60,7 @@ public sealed class GameLogViewModelTests
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
         await viewModel.ShowInstanceLogCommand.ExecuteAsync(null);
-        var path = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, "Game started\n");
+        WriteGameLog(harness, instance, "Game started\n");
 
         await viewModel.ReloadGameLogCommand.ExecuteAsync(null);
 
@@ -81,9 +75,7 @@ public sealed class GameLogViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
-        var path = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, "Game started\n");
+        WriteGameLog(harness, instance, "Game started\n");
         await viewModel.ShowInstanceLogCommand.ExecuteAsync(null);
 
         viewModel.ReportGameLogCopied();
@@ -137,9 +129,7 @@ public sealed class GameLogViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
-        var path = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, "Game started\n");
+        var path = WriteGameLog(harness, instance, "Game started\n");
         var opened = new List<string>();
         viewModel.OpenWithSystem = opened.Add;
         await viewModel.ShowInstanceLogCommand.ExecuteAsync(null);
@@ -158,9 +148,7 @@ public sealed class GameLogViewModelTests
         var instance = await OpenAsync(harness, "Main");
         await viewModel.ShowInstanceLogCommand.ExecuteAsync(null);
         Assert.False(viewModel.HasGameLog);
-        var path = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, "Game started\n");
+        WriteGameLog(harness, instance, "Game started\n");
 
         await viewModel.LoadAsync();
 
@@ -174,5 +162,13 @@ public sealed class GameLogViewModelTests
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
         return instance;
+    }
+
+    private static string WriteGameLog(ViewModelHarness harness, Instance instance, string text)
+    {
+        var path = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+        return path;
     }
 }

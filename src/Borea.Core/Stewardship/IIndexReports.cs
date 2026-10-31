@@ -78,6 +78,9 @@ public sealed record IndexReport(int Number, Uri Url, string Title, string? Auth
 
     public const string OtherPartyLabel = "The other party";
 
+    /// <summary>The ground of the takedown form that a mod author chooses to take their mod out of a pack (RFC 0080).</summary>
+    public const string LeavePackGround = "I am the author of a mod and want it out of this pack";
+
     private const string NoResponse = "_No response_";
 
     private static readonly string[] TakedownLabels = [ListingLabel, GroundLabel, WhatIsWrongLabel, ReporterLabel];
@@ -91,6 +94,9 @@ public sealed record IndexReport(int Number, Uri Url, string Title, string? Auth
 
     /// <summary>When the report was closed, or null when it is open.</summary>
     public DateTimeOffset? Closed { get; init; }
+
+    /// <summary>The account id that filed the report, or null when GitHub names none. A login can change hands, so a proof compares the id.</summary>
+    public long? AuthorId { get; init; }
 
     /// <summary>The listing id field as the reporter typed it.</summary>
     public string? ListingText { get; init; }
@@ -129,6 +135,37 @@ public sealed record IndexReport(int Number, Uri Url, string Title, string? Auth
         ForumsThreadLink.ThreadOf(ForumsThread) is not null && Uri.TryCreate(ForumsThread, UriKind.Absolute, out var url) ? url : null;
 
     /// <summary>
+    /// A takedown by which a mod author asks to take their mod out of the pack that the listing id field names. The form puts the id
+    /// of the mod under What is wrong.
+    /// </summary>
+    public bool IsLeavePack =>
+        Kind == IndexReportKind.Takedown && string.Equals(Ground?.Trim(), LeavePackGround, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The ids of <paramref name="candidates"/> that What is wrong names as a word of its own, in the order of the candidates.
+    /// Ids compare case-insensitively, and a word ends at any character that an id cannot hold.
+    /// </summary>
+    public IReadOnlyList<string> MentionedIds(IEnumerable<string> candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        var words = new HashSet<string>(ModIds.Comparer);
+        var text = WhatIsWrong ?? string.Empty;
+        var start = 0;
+        for (var index = 0; index <= text.Length; index++)
+        {
+            if (index < text.Length && (char.IsAsciiLetterOrDigit(text[index]) || text[index] is '.' or '_' or '-'))
+                continue;
+
+            if (index > start)
+                words.Add(text[start..index].Trim('.', '_', '-'));
+
+            start = index + 1;
+        }
+
+        return candidates.Where(words.Contains).Distinct(ModIds.Comparer).ToList();
+    }
+
+    /// <summary>
     /// Whether the title starts with the tag of a report form. The tag compares ignoring case and the space after it,
     /// so a reporter who changed them still shows up.
     /// </summary>
@@ -141,7 +178,8 @@ public sealed record IndexReport(int Number, Uri Url, string Title, string? Auth
     }
 
     /// <summary>The report that an issue holds, or null when its title is no report.</summary>
-    public static IndexReport? FromIssue(int number, Uri url, string title, string? author, DateTimeOffset created, string? body)
+    /// <param name="authorId">The account id that filed the report, or null.</param>
+    public static IndexReport? FromIssue(int number, Uri url, string title, string? author, DateTimeOffset created, string? body, long? authorId = null)
     {
         if (KindOf(title) is not { } kind)
             return null;
@@ -152,6 +190,7 @@ public sealed record IndexReport(int Number, Uri Url, string Title, string? Auth
         var (id, version) = IdOf(listing);
         return new IndexReport(number, url, title, author, created, kind)
         {
+            AuthorId = authorId is > 0 ? authorId : null,
             ListingText = listing,
             Id = id,
             Version = version,

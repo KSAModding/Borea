@@ -45,7 +45,7 @@ public sealed class ModPackInstallerTests
         var first = Release("First");
         var second = Release("Second");
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var stop = new InstallStop();
         var installer = new FakeInstaller(instances)
         {
@@ -59,7 +59,7 @@ public sealed class ModPackInstallerTests
             },
         };
         var log = new RecordingLog();
-        var services = new LoggingModPackInstaller(new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances)), log);
+        var services = new LoggingModPackInstaller(Services(instances, installer), log);
 
         var result = await services.InstallAsync(Request(instance.InstanceId, Pack(first, second), new FakeModRepository([first, second])), stop: stop);
 
@@ -76,7 +76,7 @@ public sealed class ModPackInstallerTests
     {
         var member = Release("Member");
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var stop = new InstallStop();
         var installer = new FakeInstaller(instances);
         var services = new ModPackInstaller(instances, new StoppingPlanner(stop), installer, new FakeReplacer(instances));
@@ -97,7 +97,7 @@ public sealed class ModPackInstallerTests
         var second = Release("Second");
         var repository = new FakeModRepository([member, dependency, second]);
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var reports = new List<InstallProgress>();
 
         var result = await Services(instances).InstallAsync(Request(instance.InstanceId, Pack(member, second), repository), new SynchronousProgress<InstallProgress>(reports.Add));
@@ -121,7 +121,7 @@ public sealed class ModPackInstallerTests
         var valid = Release("Valid");
         var repository = new FakeModRepository([valid], [Listing("Missing")]);
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var services = Services(instances);
 
         var result = await services.InstallAsync(Request(instance.InstanceId, Pack(valid, Release("Missing")), repository));
@@ -158,7 +158,7 @@ public sealed class ModPackInstallerTests
         var yanked = Release("Yanked", yanked: true);
         var repository = new FakeModRepository([valid, yanked]);
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var log = new RecordingLog();
         var services = new LoggingModPackInstaller(Services(instances), log);
 
@@ -194,7 +194,7 @@ public sealed class ModPackInstallerTests
         var yanked = Release("Member", yanked: true);
         var repository = new FakeModRepository([yanked]);
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var services = Services(instances);
         var status = new IndexStatus(IndexStatusState.Retracted, "retracted", reason: "Broken pack.");
         var pack = Pack(yanked, status);
@@ -217,9 +217,9 @@ public sealed class ModPackInstallerTests
         var second = Release("Second");
         var repository = new FakeModRepository([first, second]);
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var installer = new FakeInstaller(instances) { FailOnceFor = "Second" };
-        var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
+        var service = Services(instances, installer);
         var request = Request(instance.InstanceId, Pack(first, second), repository);
 
         var failed = await service.InstallAsync(request);
@@ -237,9 +237,9 @@ public sealed class ModPackInstallerTests
         var member = Release("Member");
         var repository = new FakeModRepository([member]);
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var installer = new FakeInstaller(instances) { AddConcurrentMod = Release("Concurrent") };
-        var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
+        var service = Services(instances, installer);
 
         var result = await service.InstallAsync(Request(instance.InstanceId, Pack(member), repository));
 
@@ -257,9 +257,9 @@ public sealed class ModPackInstallerTests
         var second = Release("Second");
         var repository = new FakeModRepository([first, second]);
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var installer = new FakeInstaller(instances) { AddAfterGuardedResultFor = "First", AddConcurrentMod = Release("Concurrent") };
-        var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
+        var service = Services(instances, installer);
 
         var result = await service.InstallAsync(Request(instance.InstanceId, Pack(first, second), repository));
 
@@ -303,7 +303,7 @@ public sealed class ModPackInstallerTests
         var repository = new FakeModRepository([installedRelease, foreignRelease]);
         var installer = new FakeInstaller(instances);
         var log = new RecordingLog();
-        var service = new LoggingModPackInstaller(new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances)), log);
+        var service = new LoggingModPackInstaller(Services(instances, installer), log);
 
         var result = await service.InstallAsync(Request(instance.InstanceId, Pack(installedRelease, foreignRelease), repository));
 
@@ -323,9 +323,9 @@ public sealed class ModPackInstallerTests
         var member = Release("Member", dependencies: [new ModDependency("Dependency", ModDependencyKind.Required)]);
         var repository = new FakeModRepository([member, dependency]);
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var installer = new FakeInstaller(instances);
-        var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
+        var service = Services(instances, installer);
 
         var result = await service.PlanAsync(Request(instance.InstanceId, Pack(member), repository));
 
@@ -370,7 +370,7 @@ public sealed class ModPackInstallerTests
     {
         var member = Release("Member");
         var instances = new MemoryInstanceRepository();
-        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var instance = await TargetAsync(instances);
         var installer = new FakeInstaller(instances);
         var services = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances), new FullDisk());
 
@@ -396,7 +396,9 @@ public sealed class ModPackInstallerTests
         Assert.Empty(await instances.GetAllAsync());
     }
 
-    private static ModPackInstaller Services(MemoryInstanceRepository instances) => new(instances, new FakePlanner(), new FakeInstaller(instances), new FakeReplacer(instances));
+    private static ModPackInstaller Services(MemoryInstanceRepository instances, FakeInstaller? installer = null) => new(instances, new FakePlanner(), installer ?? new FakeInstaller(instances), new FakeReplacer(instances));
+
+    private static async Task<Instance> TargetAsync(MemoryInstanceRepository instances) => (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
 
     private static ModPackInstallRequest Request(Guid instanceId, ModPackResult pack, IModRepository repository) => new(instanceId, pack, repository);
 

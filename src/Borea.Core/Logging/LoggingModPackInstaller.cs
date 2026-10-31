@@ -60,7 +60,8 @@ public sealed class LoggingModPackInstaller : IModPackInstaller
         var done = result.Members.Count(member => member.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced or ModPackMemberStatus.AlreadyInstalled);
         var outcome = result.IsStopped ? "stopped on request" : "did not complete";
         var blockers = result.DescribeBlockers();
-        _log.Write($"Pack {pack} into {target} {outcome}, {done} of {result.Members.Count} members done.{(blockers.Length == 0 ? string.Empty : $" Blocked by: {blockers}")}");
+        var blockedBy = blockers.Length == 0 ? string.Empty : $" Blocked by: {blockers}";
+        _log.Write($"Pack {pack} into {target} {outcome}, {done} of {result.Members.Count} members done.{blockedBy}");
         return result;
     }
 }

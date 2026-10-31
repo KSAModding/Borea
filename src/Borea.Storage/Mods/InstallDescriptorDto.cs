@@ -1,8 +1,5 @@
 namespace Borea.Storage.Mods;
 
-/// <summary>
-/// TOML-serializable representation of the authored InstallDescriptor.
-/// </summary>
 public sealed class InstallDescriptorDto
 {
     public string? Root { get; set; }

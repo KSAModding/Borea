@@ -47,6 +47,8 @@ public sealed partial class StewardReview : ObservableObject
 
     public ObservableCollection<StewardReviewDocument> Documents { get; } = [];
 
+    public ObservableCollection<StewardReviewOwnerRecord> OwnerRecords { get; } = [];
+
     public string NumberText => MainViewModel.RepositoryNumberText(_item.Repository, _item.Number);
 
     public string Title => PullRequest?.Title ?? _item.Title;
@@ -113,6 +115,8 @@ public sealed partial class StewardReview : ObservableObject
     public string FilesHeading => _owner.Localization.FormatStewardReviewFiles(Files.Count.ToString(CultureInfo.CurrentCulture));
 
     public bool HasDocuments => Documents.Count > 0;
+
+    public bool HasOwnerRecords => OwnerRecords.Count > 0;
 
     /// <summary>The actions show for an open pull request of a repository whose ruleset the account bypasses.</summary>
     public bool CanAct => !IsLoading && PullRequest is { State: PullRequestState.Open } pull && _owner.IsStewardOf(pull.Repository);
@@ -202,6 +206,10 @@ public sealed partial class StewardReview : ObservableObject
         PullRequest = pull;
         Files.Clear();
         Documents.Clear();
+        OwnerRecords.Clear();
+        foreach (var record in pull?.OwnerRecords ?? [])
+            OwnerRecords.Add(new StewardReviewOwnerRecord(_owner, record));
+
         foreach (var file in pull?.Files ?? [])
             Files.Add(new StewardReviewFile(_owner, this, file));
 
@@ -344,7 +352,7 @@ public sealed partial class StewardReviewDocument
     public string? License => _draft?.License is { Length: > 0 } license ? license : null;
 
     public string? GameVersionText => _draft is { GameMin.Length: > 0 } draft
-        ? draft.GameMax is null ? $">= {draft.GameMin}" : $"{draft.GameMin} - {draft.GameMax}"
+        ? MainViewModel.GameBoundsText(draft.GameMin, draft.GameMax)
         : null;
 
     public string? VersionText => Document.Kind == StewardQueueKind.Pack && Document.Document?.GetString("version") is { Length: > 0 } version
@@ -370,39 +378,7 @@ public sealed partial class StewardReviewDocument
     public bool IsOwnershipVerified => Document.Ownership?.State == ListingOwnershipState.Verified;
 
     /// <summary>The proof that the checks find, or the one that is missing, told about the author and not to the author.</summary>
-    public string? OwnershipDetail
-    {
-        get
-        {
-            if (Document.Ownership is not { } ownership || Author is not { } login)
-                return null;
-
-            var repository = ownership.Repository ?? string.Empty;
-            var detail = ownership.State == ListingOwnershipState.Verified
-                ? ownership.Proof switch
-                {
-                    ListingOwnershipProof.Owner => _owner.Localization.FormatStewardReviewProofOwner(login, repository),
-                    ListingOwnershipProof.Topic => _owner.Localization.FormatListingProofTopic(repository, ListingOwnership.TopicFor(login)),
-                    ListingOwnershipProof.MarkerFile => _owner.Localization.FormatStewardReviewProofMarker(login, repository),
-                    _ => null,
-                }
-                : ownership.Problem switch
-                {
-                    ListingOwnershipProblem.NoProof => _owner.Localization.FormatStewardReviewProofNone(login, repository, ListingOwnership.TopicFor(login)),
-                    ListingOwnershipProblem.NoHost => _owner.Localization.StewardReviewProofNoHost,
-                    ListingOwnershipProblem.RepositoryMissing => _owner.Localization.FormatListingFixMissing(repository),
-                    ListingOwnershipProblem.RepositoryFork => _owner.Localization.FormatStewardReviewProofFork(login, repository, ListingOwnership.TopicFor(login)),
-                    ListingOwnershipProblem.RepositoryRenamed => _owner.Localization.FormatStewardReviewProofRenamed(repository, ownership.RenamedTo ?? string.Empty),
-                    ListingOwnershipProblem.SpaceDockModUnusable => _owner.Localization.FormatListingFixSpaceDockMod(ownership.SpaceDockMod ?? string.Empty),
-                    ListingOwnershipProblem.SpaceDockNoSourceLink => _owner.Localization.FormatStewardReviewProofSpaceDockLink(ownership.SpaceDockMod ?? string.Empty),
-                    _ => null,
-                };
-
-            return ownership.IsThroughSpaceDockLink && detail is not null
-                ? _owner.Localization.FormatListingProofSpaceDockLink(ownership.SpaceDockMod!, repository) + " " + detail
-                : detail;
-        }
-    }
+    public string? OwnershipDetail => Document.Ownership is { } ownership && Author is { } login ? _owner.OwnershipProofText(ownership, login) : null;
 
     /// <summary>The repository, the SpaceDock mod and the forums thread that the proof is about.</summary>
     public IReadOnlyList<ContentLink> OwnershipLinks { get; }

@@ -219,6 +219,100 @@ public sealed partial class GitHubIndexStatusEditorTests
     }
 
     [Fact]
+    public async Task OpenLeaveAsync_PackWithThreeVersionsOfWhichTwoPinTheMod_RetractsBothInOnePullRequest()
+    {
+        ThreeVersions();
+        var editor = await SignedInAsync();
+        var leave = new PackLeave("MY-PACK", "mymod", 12) { Reporter = new GitHubAccount("alice", 5) };
+
+        var check = await editor.CheckLeaveAsync(leave);
+        var pull = await editor.OpenLeaveAsync(leave);
+
+        Assert.Equal((null, true), (check.Refusal, check.IsProven));
+        Assert.Equal(["1.0.0", "1.2.0"], check.Versions);
+        Assert.Empty(check.Retracted);
+        Assert.Equal((ListingOwnershipProof.Owner, "alice/MyMod"), (check.Ownership.Proof, check.Ownership.Repository));
+        Assert.Equal(["bob"], check.Owners);
+        Assert.Equal("Retract every version of my-pack that pins MyMod", pull.Title);
+        var branch = _index.Branches["steward/retracted-my-pack-without-mymod"];
+        var listed = leave with { PackId = "my-pack", ModId = "MyMod" };
+        var expected = IndexStatusDocument.Parse(Current)
+            .Apply(listed.ChangeOf("1.0.0"), Contents(), Now)
+            .Apply(listed.ChangeOf("1.2.0"), Contents(), Now);
+        Assert.Equal(expected.Text, branch.Files["index-status.toml"]);
+        Assert.Equal(
+            [("my-pack", "1.0.0"), ("my-pack", "1.2.0")],
+            IndexStatusDocument.Parse(branch.Files["index-status.toml"]).Entries.Select(entry => (entry.Id, entry.Version)));
+        Assert.All(expected.Entries, entry => Assert.Equal("The author of MyMod asked to take it out of this pack in https://github.com/KSAModding/content-index/issues/12", entry.Reason));
+        var opened = _index.Pulls.Single();
+        Assert.Equal(("Retract every version of my-pack that pins MyMod", "steward/retracted-my-pack-without-mymod", "main"), (opened.Title, opened.Head, opened.Base));
+        Assert.Equal(
+            "Sets `retracted` on versions `1.0.0`, `1.2.0` of `my-pack` in `index-status.toml`, because each of them pins `MyMod`.\n\n"
+            + "Reason: The author of MyMod asked to take it out of this pack in https://github.com/KSAModding/content-index/issues/12\n\n"
+            + "@alice owns `MyMod` by the ownership proof of its listing.\n\nCloses #12\n\n@bob owns `my-pack`.",
+            opened.Body);
+        Assert.Single(_index.Puts);
+    }
+
+    [Fact]
+    public async Task LeaveOfAReporterWhoDoesNotOwnTheListing_NeedsTheStewardToConfirmItByTheForumsAccount()
+    {
+        ThreeVersions();
+        var editor = await SignedInAsync();
+        var leave = new PackLeave("my-pack", "MyMod", 12) { Reporter = new GitHubAccount("mallory", 9) };
+
+        var check = await editor.CheckLeaveAsync(leave);
+        var refused = await Assert.ThrowsAsync<IndexStatusRefusedException>(() => editor.OpenLeaveAsync(leave));
+        var writesBefore = _sent.Count(sent => sent.Method != "GET");
+        await editor.OpenLeaveAsync(leave with { ConfirmedByForums = true });
+
+        Assert.Null(check.Refusal);
+        Assert.False(check.IsProven);
+        Assert.Equal((ListingOwnershipState.NotVerified, ListingOwnershipProblem.NoProof), (check.Ownership.State, check.Ownership.Problem));
+        Assert.Equal(new Uri("https://forums.ahwoo.com/threads/my-mod.42/"), check.Ownership.ForumsThread);
+        Assert.Equal(["1.0.0", "1.2.0"], check.Versions);
+        Assert.Equal(IndexStatusRefusal.NotConfirmed, refused.Refusal);
+        Assert.Equal(0, writesBefore);
+        Assert.Contains("A steward confirmed by the forums account of its listing that @mallory owns `MyMod`.", _index.Pulls.Single().Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LeaveOfAPackThatNoLongerPinsTheMod_IsRefused_AndWritesNothing()
+    {
+        _index.Main["packs/my-pack/1.0.0.toml"] = "id = \"my-pack\"\nversion = \"1.0.0\"\n[[mods]]\nid = \"MyMod\"\nversion = \"1.0.0\"\n";
+        _index.Main["packs/my-pack/1.1.0.toml"] = "id = \"my-pack\"\nversion = \"1.1.0\"\n[[mods]]\nid = \"Other\"\nversion = \"2.0.0\"\n";
+        _index.Main["index-status.toml"] = IndexStatusDocument.Parse(Current).Apply(IndexStatusChange.Retract("my-pack", "1.0.0", "Broken."), Contents(), Now).Text;
+        var editor = await SignedInAsync();
+        var leave = new PackLeave("my-pack", "MyMod", 12) { Reporter = new GitHubAccount("alice", 5) };
+
+        var check = await editor.CheckLeaveAsync(leave);
+        var refused = await Assert.ThrowsAsync<IndexStatusRefusedException>(() => editor.OpenLeaveAsync(leave with { ConfirmedByForums = true }));
+        var unknown = await editor.CheckLeaveAsync(leave with { PackId = "missing-pack" });
+
+        Assert.Equal(IndexStatusRefusal.NotPinned, check.Refusal);
+        Assert.Empty(check.Versions);
+        Assert.Equal(["1.0.0"], check.Retracted);
+        Assert.Equal(IndexStatusRefusal.NotPinned, refused.Refusal);
+        Assert.Equal(IndexStatusRefusal.NotAPack, unknown.Refusal);
+        Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+        Assert.Empty(_index.Branches);
+    }
+
+    [Fact]
+    public async Task PackMembersAsync_NamesEachPinnedModOnce_AndAPackThatIsNotThereNone()
+    {
+        ThreeVersions();
+        var editor = await SignedInAsync();
+
+        var members = await editor.PackMembersAsync("my-pack");
+        var none = await editor.PackMembersAsync("missing-pack");
+
+        Assert.Equal(["MyMod", "Other"], members);
+        Assert.Empty(none);
+        Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+    }
+
+    [Fact]
     public async Task OpenAsync_BranchTaken_TakesTheNextFreeName()
     {
         _index.Branches["steward/delisted-mymod"] = new FakeBranch("old", new Dictionary<string, string>(_index.Main));
@@ -301,6 +395,15 @@ public sealed partial class GitHubIndexStatusEditorTests
     }
 
     private IndexContents Contents() => IndexContents.FromPaths(_index.Main.Keys);
+
+    /// <summary>my-pack in three versions, of which 1.0.0 and 1.2.0 pin MyMod, whose listing has a forums thread.</summary>
+    private void ThreeVersions()
+    {
+        _index.Main["listings/MyMod.toml"] = "id = \"MyMod\"\nname = \"My Mod\"\n[releases]\ngithub = \"alice/MyMod\"\n[links]\nforums = \"https://forums.ahwoo.com/threads/my-mod.42/\"\n";
+        _index.Main["packs/my-pack/1.0.0.toml"] = "id = \"my-pack\"\nversion = \"1.0.0\"\n[[mods]]\nid = \"MyMod\"\nversion = \"1.0.0\"\n[[mods]]\nid = \"Other\"\nversion = \"2.0.0\"\n";
+        _index.Main["packs/my-pack/1.1.0.toml"] = "id = \"my-pack\"\nversion = \"1.1.0\"\n[[mods]]\nid = \"Other\"\nversion = \"2.0.0\"\n";
+        _index.Main["packs/my-pack/1.2.0.toml"] = "id = \"my-pack\"\nversion = \"1.2.0\"\n[[mods]]\nid = \"MyMod\"\nversion = \"1.1.0\"\n";
+    }
 
     private async Task<GitHubIndexStatusEditor> SignedInAsync(string login = "octocat")
     {
@@ -475,7 +578,7 @@ public sealed partial class GitHubIndexStatusEditorTests
         public Task<StewardAccess?> CheckAsync(CancellationToken cancellationToken = default) => Task.FromResult<StewardAccess?>(Access);
     }
 
-    /// <summary>Reads <c>key = "value"</c> lines under <c>[table]</c> headers.</summary>
+    /// <summary>Reads <c>key = "value"</c> lines under <c>[table]</c> and <c>[[array]]</c> headers.</summary>
     private sealed class TableFormat : IListingFormat
     {
         public string Write(AuthoredTable document, string? original = null) => throw new NotSupportedException();
@@ -486,6 +589,16 @@ public sealed partial class GitHubIndexStatusEditorTests
             var table = root;
             foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
+                if (line.StartsWith("[[", StringComparison.Ordinal))
+                {
+                    table = new AuthoredTable();
+                    var key = line[2..^2];
+                    var list = root.GetList(key) is List<object> existing ? existing : [];
+                    list.Add(table);
+                    root.Set(key, list);
+                    continue;
+                }
+
                 if (line.StartsWith('['))
                 {
                     table = new AuthoredTable();

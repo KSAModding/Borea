@@ -3,7 +3,6 @@ using Borea.Core.Index;
 
 namespace Borea.Cli.Output;
 
-/// <summary>Shapes download counts from the index for text and JSON output.</summary>
 internal static class DownloadCountOutput
 {
     public static DownloadCountView? From(ListingDownloadCounts? counts) => counts is null

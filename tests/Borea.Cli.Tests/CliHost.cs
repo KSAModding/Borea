@@ -207,6 +207,5 @@ internal sealed class CliHost : IDisposable
 
 internal sealed record CliRun(int ExitCode, string Output, string Error)
 {
-    /// <summary>The output parsed as JSON.</summary>
     public JsonElement Json => JsonDocument.Parse(Output).RootElement;
 }

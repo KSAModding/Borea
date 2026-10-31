@@ -478,6 +478,67 @@ public sealed class LoaderConfiguratorTests : IDisposable
 
     #endregion
 
+    #region Launch preparation
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PrepareForLaunchAsync_NoFile_WritesTheGamePath(bool isAdopted)
+    {
+        var written = await _configurator.PrepareForLaunchAsync(Loader(Json()), _loaderDirectory, _gameDirectory, isAdopted);
+
+        Assert.Equal(ConfigPath(), written);
+        Assert.Equal(_gameDirectory, (string?)(await ReadJsonAsync())["GameLocation"]);
+    }
+
+    [Fact]
+    public async Task PrepareForLaunchAsync_BoreaFolderPointsAtAnotherGame_WritesTheGameOfTheInstance()
+    {
+        await WriteConfigAsync(new JsonObject { ["GameLocation"] = PlaceGame("Other game"), ["Other"] = "kept" }.ToJsonString());
+
+        var written = await _configurator.PrepareForLaunchAsync(Loader(Json()), _loaderDirectory, _gameDirectory, isAdopted: false);
+
+        Assert.Equal(ConfigPath(), written);
+        var json = await ReadJsonAsync();
+        Assert.Equal(_gameDirectory, (string?)json["GameLocation"]);
+        Assert.Equal("kept", (string?)json["Other"]);
+    }
+
+    [Fact]
+    public async Task PrepareForLaunchAsync_AdoptedFolderPointsAtAFolderWithoutTheGame_WritesTheGameOfTheInstance()
+    {
+        await WriteConfigAsync(new JsonObject { ["GameLocation"] = Directory.CreateDirectory(Path.Combine(_tempRoot, "Empty")).FullName }.ToJsonString());
+
+        var written = await _configurator.PrepareForLaunchAsync(Loader(Json()), _loaderDirectory, _gameDirectory, isAdopted: true);
+
+        Assert.Equal(ConfigPath(), written);
+        Assert.Equal(_gameDirectory, (string?)(await ReadJsonAsync())["GameLocation"]);
+    }
+
+    [Theory]
+    [InlineData(false, "Game")]
+    [InlineData(true, "Other game")]
+    public async Task PrepareForLaunchAsync_ValueTheFolderKeeps_LeavesTheFile(bool isAdopted, string configuredGame)
+    {
+        PlaceGame("Game");
+        var text = new JsonObject { ["GameLocation"] = PlaceGame(configuredGame) }.ToJsonString();
+        await WriteConfigAsync(text);
+
+        var written = await _configurator.PrepareForLaunchAsync(Loader(Json()), _loaderDirectory, _gameDirectory, isAdopted);
+
+        Assert.Null(written);
+        Assert.Equal(text, await File.ReadAllTextAsync(ConfigPath()));
+    }
+
+    private string PlaceGame(string name)
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(_tempRoot, name)).FullName;
+        File.WriteAllText(Path.Combine(directory, "KSA.dll"), "game");
+        return directory;
+    }
+
+    #endregion
+
     #region Nothing to write, and refusals
 
     [Fact]
@@ -515,18 +576,11 @@ public sealed class LoaderConfiguratorTests : IDisposable
     }
 
     [Theory]
-    [InlineData("relative/loader")]
+    [InlineData("relative/directory")]
     [InlineData("")]
-    public async Task ConfigureAsync_RelativeLoaderDirectory_ThrowsArgumentException(string directory)
+    public async Task ConfigureAsync_RelativeDirectory_ThrowsArgumentException(string directory)
     {
         await Assert.ThrowsAsync<ArgumentException>(() => _configurator.ConfigureAsync(Loader(Json()), directory, _gameDirectory));
-    }
-
-    [Theory]
-    [InlineData("relative/game")]
-    [InlineData("")]
-    public async Task ConfigureAsync_RelativeGameDirectory_ThrowsArgumentException(string directory)
-    {
         await Assert.ThrowsAsync<ArgumentException>(() => _configurator.ConfigureAsync(Loader(Json()), _loaderDirectory, directory));
     }
 

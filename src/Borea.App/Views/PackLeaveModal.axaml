@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.PackLeaveModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: a mod author's request to take their mod out of a pack, which retracts the pack versions that pin it in one pull request of content-index -->
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" MaxWidth="640" HorizontalAlignment="Stretch" Margin="104,32,24,32" DataContext="{Binding StewardLeave}" x:DataType="vm:PackLeaveDialog">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Title}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CloseCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="36,16,24,24">
+                    <Button Classes="text tall" Content="{Binding Localization.LibraryCancel}" Command="{Binding CloseCommand}" VerticalAlignment="Center" IsVisible="{Binding !IsOpened}" />
+                    <Button Classes="text tall" Content="{Binding Localization.DiscoverIndexRetry}" Command="{Binding RetryCommand}" VerticalAlignment="Center" IsVisible="{Binding CanRetry}" />
+                    <Button Classes="cta" Command="{Binding OpenPullRequestCommand}" IsVisible="{Binding !IsOpened}">
+                        <TextBlock Classes="action-lg" Text="{Binding Localization.ListingPublish}" VerticalAlignment="Center" />
+                    </Button>
+                    <Button Classes="text tall" Content="{Binding Localization.ModalClose}" Command="{Binding CloseCommand}" VerticalAlignment="Center" IsVisible="{Binding IsOpened}" />
+                    <Button Classes="cta" Command="{Binding ShowPullRequestCommand}" IsVisible="{Binding IsOpened}">
+                        <TextBlock Classes="action-lg" Text="{Binding Localization.ListingOpenPullRequest}" VerticalAlignment="Center" />
+                    </Button>
+                </StackPanel>
+                <ScrollViewer>
+                    <StackPanel Margin="36,32,24,16" Spacing="16">
+                        <TextBlock Classes="body-md" Text="{Binding Localization.StewardLeaveEffect}" TextWrapping="Wrap" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding Localization.StewardPullRequestExplanation}" TextWrapping="Wrap" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding ReportText}" TextWrapping="Wrap" />
+                        <TextBlock Classes="body-md" Text="{Binding ReporterText}" TextWrapping="Wrap" IsVisible="{Binding ReporterText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                        <!-- the mod, which the report names or the steward chooses from the mods that the pack pins -->
+                        <StackPanel Spacing="6" IsEnabled="{Binding CanEdit}">
+                            <TextBlock Classes="heading-md heading" Text="{Binding Localization.StewardLeaveMod}" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding MembersText}" TextWrapping="Wrap" IsVisible="{Binding MembersText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <ComboBox ItemsSource="{Binding Members}" SelectedItem="{Binding ModId}" PlaceholderText="{Binding Localization.StewardLeaveMod}" AutomationProperties.Name="{Binding Localization.StewardLeaveMod}" HorizontalAlignment="Stretch" MaxDropDownHeight="300" IsVisible="{Binding HasMembers}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding IsChecking}">
+                            <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                            <TextBlock Classes="body-md" Text="{Binding Localization.StewardChecking}" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <TextBlock Classes="body-md" Text="{Binding VersionsText}" TextWrapping="Wrap" IsVisible="{Binding VersionsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding RetractedText}" TextWrapping="Wrap" IsVisible="{Binding RetractedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                        <!-- whether the reporter owns the listing of the mod, by its ownership proof or by the steward's look at the forums account -->
+                        <StackPanel Spacing="6" IsVisible="{Binding OwnershipText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="heading-md heading" Text="{Binding Localization.StewardReviewOwnership}" />
+                            <TextBlock Classes="body-md" Classes.positive="{Binding IsProven}" Text="{Binding OwnershipText}" TextWrapping="Wrap" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding OwnershipDetail}" TextWrapping="Wrap" IsVisible="{Binding OwnershipDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <Button Classes="text" HorizontalAlignment="Left" Content="{Binding Localization.StewardReportOpenForums}" Command="{Binding OpenForumsCommand}" IsVisible="{Binding CanOpenForums}" />
+                            <CheckBox IsChecked="{Binding ConfirmedByForums}" IsVisible="{Binding NeedsConfirmation}" AutomationProperties.Name="{Binding ConfirmText}">
+                                <TextBlock Classes="body-sm" Text="{Binding ConfirmText}" TextWrapping="Wrap" />
+                            </CheckBox>
+                        </StackPanel>
+
+                        <StackPanel Spacing="6" IsVisible="{Binding ModId, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="heading-md heading" Text="{Binding Localization.StewardReason}" />
+                            <SelectableTextBlock Classes="body-md" Text="{Binding Reason}" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <TextBlock Classes="body-md danger" Text="{Binding Refusal}" TextWrapping="Wrap" IsVisible="{Binding Refusal, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md" Text="{Binding OwnerText}" TextWrapping="Wrap" IsVisible="{Binding OwnerText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md" Text="{Binding OpenPullRequestsText}" TextWrapping="Wrap" IsVisible="{Binding OpenPullRequestsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding MentionText}" TextWrapping="Wrap" IsVisible="{Binding MentionText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding IsOpening}">
+                            <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                            <TextBlock Classes="body-md" Text="{Binding Localization.StewardOpening}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Classes="body-md" Text="{Binding OpenedText}" TextWrapping="Wrap" IsVisible="{Binding IsOpened}" />
+                        <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Panel>
+</UserControl>

@@ -706,11 +706,7 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
         var stated = !IsMissing && _dialog.States(files, values => values.Dependency(id) is not null);
         Func<ReleaseFileValues, string?>? min = stated ? values => values.Dependency(id)!.Min : null;
         Func<ReleaseFileValues, string?>? max = stated ? values => values.Dependency(id)!.Max : null;
-        IdHint = IsMissing
-            ? _dialog.HintWithNow(files, null, new ReleaseChange { AddedDependencies = added })
-            : stated
-                ? new ReleaseAmendmentHint(_dialog.NowText(files, values => values.Dependency(id)!.Kind, _dialog.Localization.FormatStewardAmendStated), null, NeedsAuthor: false)
-                : files.Count > 0 ? new ReleaseAmendmentHint(_dialog.Localization.StewardAmendNotStated, null, NeedsAuthor: false) : ReleaseAmendmentHint.None;
+        IdHint = IdHintFor(files, id, added, stated);
         MinHint = _dialog.Hint(files, min,
             TypedMin is { } typedMin ? new ReleaseChange { AddedDependencies = added, DependencyBounds = [new ReleaseDependencyBounds(id, typedMin, null)] } : null);
         MaxHint = _dialog.Hint(files, max,
@@ -723,6 +719,17 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
             : ReleaseAmendmentHint.None;
         MinVersions = _dialog.Marked(_versions, _dialog.Current(files, min), MinVersions);
         MaxVersions = _dialog.Marked(_versions, _dialog.Current(files, max), MaxVersions);
+    }
+
+    private ReleaseAmendmentHint IdHintFor(IReadOnlyList<ReleaseFile> files, string id, IReadOnlyList<ReleaseDependencyAddition> added, bool stated)
+    {
+        if (IsMissing)
+            return _dialog.HintWithNow(files, null, new ReleaseChange { AddedDependencies = added });
+
+        if (stated)
+            return new ReleaseAmendmentHint(_dialog.NowText(files, values => values.Dependency(id)!.Kind, _dialog.Localization.FormatStewardAmendStated), null, NeedsAuthor: false);
+
+        return files.Count > 0 ? new ReleaseAmendmentHint(_dialog.Localization.StewardAmendNotStated, null, NeedsAuthor: false) : ReleaseAmendmentHint.None;
     }
 
     /// <summary>Clears what only the author changes once the amendment is no longer on the author's behalf.</summary>

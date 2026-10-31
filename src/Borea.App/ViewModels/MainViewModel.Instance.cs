@@ -12,6 +12,7 @@ using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
@@ -42,6 +43,7 @@ public partial class MainViewModel
     private int _contentUpdateCheckGeneration;
     private Guid? _launchInstanceId;
     private string? _launchBlamedModName;
+    private IReadOnlyList<string> _launchOtherModIds = [];
     private string? _launchLoaderName;
     private HomeLaunchOption? _homeLaunch;
 
@@ -121,7 +123,9 @@ public partial class MainViewModel
 
     public bool CanDisableBlamedMod => LaunchBlamedModId is not null;
 
-    public string? DisableBlamedModText => _launchBlamedModName is null ? null : Localization.FormatLaunchDisableMod(_launchBlamedModName);
+    public string? DisableBlamedModText => _launchBlamedModName is null ? null
+        : _launchOtherModIds.Count > 0 ? Localization.FormatLaunchDisableMods(_launchOtherModIds.Count + 1)
+        : Localization.FormatLaunchDisableMod(_launchBlamedModName);
 
     /// <summary>The modal that shows why the loader stopped, with the way out.</summary>
     [ObservableProperty]
@@ -132,6 +136,10 @@ public partial class MainViewModel
     /// <summary>Why an action of the launch modal failed, shown in the modal because it covers the toasts.</summary>
     [ObservableProperty]
     private string? _launchFailureError;
+
+    /// <summary>The releases page of the loader, offered when the loader was made for another KSA build.</summary>
+    [ObservableProperty]
+    private ContentLink? _launchLoaderReleases;
 
     [RelayCommand]
     internal async Task OpenInstanceAsync(InstanceItem item)
@@ -189,7 +197,7 @@ public partial class MainViewModel
         _contentPack = await ResolveSourcePackAsync(_selectedInstanceEntity?.Source);
         ShowPackUpdate(item.InstanceId, await FindPackUpdateAsync(_selectedInstanceEntity));
         RefreshContentGroups();
-        RefreshInstanceLoader();
+        await LoadInstanceLoaderAsync();
         OnPropertyChanged(nameof(HasUpdates));
         await LoadGameSavesAsync();
         await LoadManualInstallsAsync();
@@ -313,9 +321,7 @@ public partial class MainViewModel
     /// </summary>
     private void StartContentUpdateCheck()
     {
-        var previous = _contentUpdateCheck;
-        var check = RefreshContentUpdatesAsync(++_contentUpdateCheckGeneration);
-        _contentUpdateCheck = previous.IsCompleted ? check : Task.WhenAll(previous, check);
+        _contentUpdateCheck = Chain(_contentUpdateCheck, RefreshContentUpdatesAsync(++_contentUpdateCheckGeneration));
     }
 
     /// <summary>Completes when the update checks have finished.</summary>
@@ -630,7 +636,7 @@ public partial class MainViewModel
     [RelayCommand]
     private Task PlayHomeAsync() => IsHomeLaunchActiveInstance ? PlayActiveInstanceAsync() : PlayWithoutModLoader();
 
-    /// <summary>Starts the instance through the loader that <see cref="LaunchLoaderChoice"/> picks and watches the start.</summary>
+    /// <summary>Starts the instance through the loader version that <see cref="InstanceLoaderResolver"/> picks and watches the start.</summary>
     private async Task LaunchAsync(Guid instanceId)
     {
         if (_services is not { } services || IsLaunching)
@@ -650,12 +656,10 @@ public partial class MainViewModel
         {
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.LaunchInstanceMissing);
-            LaunchLoaderChoice choice;
-            IReadOnlyList<ModMetadata> listings;
+            InstanceLoaderResolution resolution;
             try
             {
-                // only the index lists mod loaders, so SpaceDock cannot change the choice and is not asked
-                (choice, listings) = await LaunchLoaderChoice.ChooseAsync(instance, services.Settings.LoaderInstallations, services.OfflineContentIndex, services.ContentIndex);
+                resolution = await ResolveLaunchLoaderAsync(services, instance);
             }
             catch (Exception exception) when (exception is InvalidOperationException or IOException)
             {
@@ -666,18 +670,38 @@ public partial class MainViewModel
                 return;
             }
 
-            if (!choice.Succeeded)
+            var choice = resolution.Choice;
+            if (resolution.Start is not { } start)
             {
                 var loaderIds = choice.LoaderIds.Count == 0 ? "" : ": " + string.Join(", ", choice.LoaderIds);
-                services.Log.Write($"Launch of instance {instance.InstanceId} did not start, {choice.Failure}{loaderIds}.");
-                if (LoaderToInstall(choice, listings) is { } missing)
-                    OpenLoaderPrompt(instanceId, missing);
-                else
+                services.Log.Write(choice.Succeeded
+                    ? $"Launch of instance {instance.InstanceId} did not start, no installed version of {choice.Loader.ModId} starts it: {resolution.Version?.Problem}."
+                    : $"Launch of instance {instance.InstanceId} did not start, {choice.Failure}{loaderIds}.");
+
+                // the prompt installs the exact release that the setting or the mods of the instance ask for
+                if (resolution.Version?.Missing is { } release && resolution.Loader is { } missingLoader)
+                    OpenLoaderPrompt(instanceId, missingLoader, release: release);
+                else if (resolution.Version is { Problem: LoaderVersionProblem.NotInstallable } && instance.Loader.Version is { } pin && resolution.Loader is { } pinnedLoader)
+                    OpenLoaderPrompt(instanceId, pinnedLoader, pin: pin);
+                else if (!choice.Succeeded)
                     LaunchMessage = LaunchLoaderFailureText(choice);
+                else
+                    LaunchMessage = Localization.FormatLaunchLoaderNotInstalled(instance.Loader.IsPinned ? $"{choice.Loader.Name} {instance.Loader.Version}" : choice.Loader.Name);
                 return;
             }
 
-            var loader = choice.Loader;
+            var loader = choice.Loader!;
+            var version = resolution.Version!;
+            if (LoaderUpdateBeforeLaunch(instance, loader, version, start) is { } update)
+            {
+                services.Log.Write(update.Offer is { } offer
+                    ? $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and {offer.Version} does."
+                    : version.IsPinned
+                        ? $"Launch of instance {instance.InstanceId} waits, the pinned {loader.ModId} {update.InstalledVersion} does not support the game."
+                        : $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and no release fits the game and the mods.");
+                OpenLoaderPrompt(instanceId, loader, update, pin: version.IsPinned ? instance.Loader.Version : null);
+                return;
+            }
 
             // The load order is a write, so it waits for a shape Borea trusts.
             // This is the shape of the instance that starts, which is not the
@@ -693,15 +717,14 @@ public partial class MainViewModel
                 services.Log.Write($"Instance {instance.InstanceId}: the game's own content now loads before the mods.");
             }
 
-            // an older Borea wrote the host path of the game, which a loader in a Wine prefix cannot open
-            if (services.Paths.GetGameDirectoryPath() is { } game
-                && services.Paths.GetLoaderDirectoryPath(loader.ModId) is { } loaderDirectory
-                && await services.LoaderConfiguration.RefreshForWineAsync(loader, loaderDirectory, game) is { } refreshed)
+            // each version folder keeps its own game path, and a loader in a Wine prefix needs the path of the prefix
+            if (services.InstanceGames.Resolve(instance).GameDirectory is { } game
+                && await services.LoaderConfiguration.PrepareForLaunchAsync(loader, start.DirectoryPath, game, start.IsAdopted) is { } prepared)
             {
-                services.Log.Write($"Wrote the game path of the Wine prefix to '{refreshed}' before the launch.");
+                services.Log.Write($"Wrote the game path to '{prepared}' before the launch.");
             }
 
-            var result = services.Launcher.Launch(instance, loader);
+            var result = services.Launcher.Launch(instance, loader, start.DirectoryPath, arguments: null);
             if (result.Outcome == LaunchOutcome.WrapperRuntimeMissing)
             {
                 OpenRuntimePrompt(instanceId, result, loader);
@@ -775,9 +798,15 @@ public partial class MainViewModel
         var loaderName = _launchLoaderName = loader?.Name ?? string.Empty;
         var blamed = result.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, result.BlamedModId));
         var loadingMods = result.CrashCause == LoaderCrashCause.ModLoading;
+        _launchOtherModIds = blamed is null ? [] : result.OtherBlamedModIds;
         if (result.Wine?.Wrapper is { } wrapper)
         {
             LaunchMessage = Localization.FormatLaunchWrapperStopped(wrapper.BundlePath, loaderName);
+        }
+        else if (result.CrashCause == LoaderCrashCause.GameAssembly && blamed is null && InstalledVersionText is { } build && loader is not null)
+        {
+            LaunchMessage = Localization.FormatLaunchLoaderTooOld(loaderName, build);
+            LaunchLoaderReleases = new ContentLink(Localization.FormatLaunchLoaderReleases(loaderName), LoaderCrashReport.ReleasesPage(loader));
         }
         else if (blamed is null)
         {
@@ -792,6 +821,16 @@ public partial class MainViewModel
             LaunchMessage = loadingMods
                 ? Localization.FormatLaunchModLikelyBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName)
                 : Localization.FormatLaunchModBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName);
+
+            var others = new List<string>();
+            foreach (var modId in result.OtherBlamedModIds)
+            {
+                var other = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
+                others.Add(other?.Metadata.Listing?.Name ?? (await ResolveListingAsync(modId))?.Name ?? modId);
+            }
+
+            if (others.Count > 0)
+                LaunchMessage += " " + Localization.FormatLaunchOtherModsNeedMissing(string.Join(", ", others));
         }
 
         IReadOnlyList<string> output = result.Output.Count == 0 ? [Localization.LaunchNoOutput] : result.Output;
@@ -812,7 +851,9 @@ public partial class MainViewModel
         LaunchOutputText = null;
         IsLaunchOutputShown = false;
         LaunchBlamedModId = null;
+        LaunchLoaderReleases = null;
         _launchBlamedModName = null;
+        _launchOtherModIds = [];
         _launchLoaderName = null;
         OnPropertyChanged(nameof(DisableBlamedModText));
         OnPropertyChanged(nameof(LaunchFailureTitle));
@@ -840,14 +881,26 @@ public partial class MainViewModel
         if (_launchInstanceId is not { } instanceId || LaunchBlamedModId is not { } modId || _launchBlamedModName is not { } name)
             return;
 
-        LaunchFailureError = await TrySetContentEnabledAsync(instanceId, modId, enabled: false);
-        if (LaunchFailureError is not null)
-            return;
+        // the mods that the message says will likely fail too go with the blamed mod, so one launch shows if that was all
+        string[] modIds = [modId, .. _launchOtherModIds];
+        foreach (var id in modIds)
+        {
+            LaunchFailureError = await TrySetContentEnabledAsync(instanceId, id, enabled: false);
+            if (LaunchFailureError is not null)
+                return;
+        }
 
         if (CurrentWindowInstance && SelectedInstance is { } shown && shown.InstanceId == instanceId)
             await OpenInstanceAsync(shown);
         ClearLaunchFailure();
-        LaunchMessage = Localization.FormatLaunchModDisabled(name);
+        LaunchMessage = modIds.Length > 1 ? Localization.FormatLaunchModsDisabled(modIds.Length) : Localization.FormatLaunchModDisabled(name);
+    }
+
+    [RelayCommand]
+    private void OpenLaunchLoaderReleases()
+    {
+        if (LaunchLoaderReleases is { } link)
+            LaunchFailureError = TryOpenWithSystem(link.Url);
     }
 
     [RelayCommand]
@@ -1174,11 +1227,11 @@ public partial class MainViewModel
         if (dependencies.Plan is not { } plan)
             return text;
 
-        if (!plan.IsReady)
-            return $"{text} {Localization.FormatContentManageCannotInstall(Describe(plan.Conflicts.Concat(plan.UnresolvedChoices)))}";
-
         if (dependencies.NotOwned.Count > 0)
             return $"{text} {Localization.FormatContentManageNotOwned(string.Join(", ", dependencies.NotOwned.Select(ContentName)))}";
+
+        if (!plan.IsReady)
+            return $"{text} {Localization.FormatContentManageCannotInstall(Describe(plan.Conflicts.Concat(plan.UnresolvedChoices)))}";
 
         return plan.Warnings.Count > 0 ? $"{text} {Describe(plan.Warnings)}" : text;
     }
@@ -1242,11 +1295,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, error);
-            item.IsInstalling = false;
-            item.Run = null;
-            item.Progress = 0;
-            item.ProgressStatus = stopped;
-            item.ProgressDetail = null;
+            EndRowInstall(item, stopped);
         }
 
         return true;
@@ -1428,7 +1477,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     [NotifyPropertyChangedFor(nameof(RemoveSteps))]
     private bool _isMissing;
 
-    private bool _isOpening;
+    private readonly OpeningGate _opening = new();
 
     /// <summary>What the mod's folder takes on disk, or null until it is measured or when the folder is gone.</summary>
     [ObservableProperty]
@@ -1575,24 +1624,10 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     /// <summary>
     /// The whole row is this command, so it stays executable while the page
     /// loads, because a command that cannot execute greys out every control on
-    /// the row. The flag takes over the job of dropping a second click.
+    /// the row. The gate takes over the job of dropping a second click.
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task OpenAsync()
-    {
-        if (_page is null || _isOpening)
-            return;
-
-        _isOpening = true;
-        try
-        {
-            await _owner.OpenContentFromInstanceAsync(_page);
-        }
-        finally
-        {
-            _isOpening = false;
-        }
-    }
+    private Task OpenAsync() => _page is not { } page ? Task.CompletedTask : _opening.RunAsync(() => _owner.OpenContentFromInstanceAsync(page));
 
     internal void RefreshText()
     {

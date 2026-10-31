@@ -4,6 +4,7 @@ using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
 using Borea.Storage.Mods;
+using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Paths;
 
 namespace Borea.Storage.Tests.Mods;
@@ -43,8 +44,7 @@ public sealed class FileForeignModReleaseMatcherTests : IAsyncLifetime
 
         var result = await _matcher.AdoptMatchingReleaseAsync(_instanceId, "LocalMod");
 
-        Assert.NotNull(result);
-        Assert.True(result.Matched);
+        Assert.True(result!.Matched);
         Assert.Equal(ModVersion.Parse("1.0.0"), result.InstalledMod!.Version);
         Assert.Equal(ModInstallOwnership.Foreign, result.InstalledMod.Ownership);
         Assert.Equal(2, _downloader.ArchivePaths.Count);
@@ -113,7 +113,36 @@ public sealed class FileForeignModReleaseMatcherTests : IAsyncLifetime
         Assert.Empty(_downloader.ArchivePaths);
     }
 
+    [WindowsFact("Only Windows refuses to delete a read-only file.")]
+    public async Task AdoptMatchingReleaseAsync_ArchiveThatCannotBeDeleted_StillDeletesTheUnpackedFolder()
+    {
+        var marker = Guid.NewGuid().ToString("N");
+        _downloader.Add("1.0.0", ("mod.toml", "name = \"LocalMod\""), ("LocalMod.dll", marker));
+        WriteFolder(("mod.toml", "name = \"LocalMod\""), ("LocalMod.dll", "patched"));
+        _downloader.ReadOnlyArchives = true;
+        try
+        {
+            Assert.Null(await _matcher.AdoptMatchingReleaseAsync(_instanceId, "LocalMod"));
+
+            Assert.Empty(UnpackedFoldersHolding(marker));
+        }
+        finally
+        {
+            foreach (var archive in _downloader.ArchivePaths.Where(File.Exists))
+            {
+                File.SetAttributes(archive, FileAttributes.Normal);
+                File.Delete(archive);
+            }
+        }
+    }
+
     private string ModsFolder => _paths.GetInstanceModsFolder(_instanceId);
+
+    /// <summary>The unpacked folders the matcher left in the temp folder whose LocalMod.dll holds <paramref name="marker"/>.</summary>
+    private static List<string> UnpackedFoldersHolding(string marker)
+        => Directory.EnumerateDirectories(Path.GetTempPath(), "borea-match-*")
+            .Where(folder => Directory.EnumerateFiles(folder, "LocalMod.dll", SearchOption.AllDirectories).Any(file => File.ReadAllText(file) == marker))
+            .ToList();
 
     private void WriteFolder(params (string Path, string Content)[] files)
     {
@@ -135,6 +164,8 @@ public sealed class FileForeignModReleaseMatcherTests : IAsyncLifetime
         public List<ModVersionMetadata> Releases { get; } = new();
 
         public List<string> ArchivePaths { get; } = new();
+
+        public bool ReadOnlyArchives { get; set; }
 
         public ModVersionMetadata Add(string version, params (string Path, string Content)[] entries)
             => Add(version, yanked: false, entries);
@@ -169,6 +200,9 @@ public sealed class FileForeignModReleaseMatcherTests : IAsyncLifetime
             ArchivePaths.Add(archivePath);
             var bytes = _archives[release.Download.Url];
             await File.WriteAllBytesAsync(archivePath, bytes, cancellationToken);
+            if (ReadOnlyArchives)
+                File.SetAttributes(archivePath, FileAttributes.ReadOnly);
+
             return new DownloadResult(release.Download.Url, bytes.Length, Convert.ToHexString(SHA256.HashData(bytes)));
         }
 

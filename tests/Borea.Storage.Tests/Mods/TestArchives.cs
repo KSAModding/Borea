@@ -2,9 +2,6 @@ using System.IO.Compression;
 
 namespace Borea.Storage.Tests.Mods;
 
-/// <summary>
-/// Builds the zip archives the install tests use.
-/// </summary>
 internal static class TestArchives
 {
     public static byte[] Build(params (string Path, string Content)[] entries)

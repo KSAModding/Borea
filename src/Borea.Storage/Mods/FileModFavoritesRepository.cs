@@ -4,10 +4,6 @@ using Borea.Storage.Toml;
 
 namespace Borea.Storage.Mods;
 
-/// <summary>
-/// File-backed implementation of IModFavoritesRepository. Stores only bare
-/// ModIds, per IModFavoritesRepository's own contract.
-/// </summary>
 public sealed class FileModFavoritesRepository : IModFavoritesRepository
 {
     private readonly IGamePathProvider _pathProvider;

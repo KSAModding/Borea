@@ -468,7 +468,7 @@ public sealed class LibraryFolderChangerTests : IDisposable
             () => _gameProcessRunning,
             () => _boreaRunning,
             (_, _) => sameVolume,
-            moveDirectory ?? Directory.Move);
+            moveDirectory ?? DirectoryRename.Move);
 
     private GamePathProvider Paths(string? libraryFolder = null)
         => new(gameDirectory: null, boreaRoot: BoreaRoot, sharedProfileRoot: SharedProfile, libraryFolder: libraryFolder);

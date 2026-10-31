@@ -744,6 +744,36 @@
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>A fresher game build awaits ye:</value>
   </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}. {0} {3} will.</value>
+  </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}, and no newer {0} will yet.</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} needs a newer KSA build than {2}. Refit KSA afore ye sail.</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} be ready fer haulin'.</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>Refit {0} to {1}</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>Drop anchor on KSA first. The Borea can't refit the mod loader while the game be sailin'.</value>
+  </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>The {2} sea be nailed down to {0} {1}, but that one ain't aboard.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>The {2} sea be nailed down to {0} {1}, which won't sail with KSA {3}.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>Haul {0} {1} aboard</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Change the mod loader</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Haul it in</value>
   </data>
@@ -1118,6 +1148,9 @@
   </data>
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Couldn't stow the orders fer settin' sail o' {0}</value>
+  </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Couldn't bottle up the mod loader o' {0}</value>
   </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>Couldn't bring {0} back from the island</value>
@@ -2653,7 +2686,7 @@
     <value>Loader o' the direc'try</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>Leave empty to let Borea pick a folder when installing.</value>
+    <value>A hold that already carries the loader o' barrels o' fun. Use sum'thin' already in the hold, an' Borea sails it from there.</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>Haul onboard</value>
@@ -2676,8 +2709,47 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>Hauled {0} {1} aboard {2}.</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>Hauled aboard {0}</value>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}, not fit fer this KSA build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Swap</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>The mod loader hoists the game with the mods o' this crew. Automatic hoists the newest stowed version that fits the game an' the mods. A nailed-down version stays put till ye change it, even when a newer one fits.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatic: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Nailed down at {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>Haul aboard {0}</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Pick which version o' the mod loader hoists {0}. Other crews keep their own say.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatic (the wise choice)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Hoists {0} {1}, the newest stowed version that fits the game an' the mods.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} fits the game an' the mods, but it ain't aboard. Borea hauls it aboard when ye bottle up.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>No release o' {0} fits this game build an' the mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Always sail with this version</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Haul aboard an' bottle up</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod loader</value>
   </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Hauled aboard, version a dead man's tale</value>
@@ -2685,11 +2757,38 @@
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>Update to {0}</value>
   </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>Haul onboard all o'er again</value>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>Loaders o' barrels o' fun</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea stows every version in its own hold. Each sea sails with the version its Loader row names, so one sea can keep an old version aboard.</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>Sailed by {0}</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>Nobody sails it</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>Sailed by {0}. Set them seas to another version first, matey.</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}, yer own hold</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>Forget it</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>Haul another version aboard</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>Make this version walk the plank?</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>{0} {1} walked the plank.</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>Loaders o' barrels o' fun are set up from the Game settings.</value>
+    <value>Each sea picks its loader version in the Loader row o' its page. The rigging lists the versions aboard.</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Tavern</value>
@@ -3010,13 +3109,31 @@
     <value>The map o' this sea be lost to time.</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The loader o' barrels o' fun {0} ain't hauled onboard. Loaders o' barrels o' fun are set up from the Game settings.</value>
+    <value>The loader o' barrels o' fun {0} ain't hauled onboard. Haul it aboard in the Loader row o' the sea's page.</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The barrels o' fun in this sea be needin' the loader o' barrels o' fun {0}, and it ain't hauled onboard. Loaders o' barrels o' fun are set up from the Game settings.</value>
+    <value>The barrels o' fun in this sea be needin' the loader o' barrels o' fun {0}, and it ain't hauled onboard. Haul it aboard in the Loader row o' the sea's page.</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>This sea be needin' {0}. Haul it onboard now?</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}. Refit it to {3} afore ye play?</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}, so the game may not leave port. Sail anyway?</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>Refit and sail</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>Sail anyway</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>This sea be nailed down to {0} {1}. That one ain't aboard, and the index don't offer it no more. Let the Borea pick the newest one that fits?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Let the Borea pick</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This sea be needin' {0}. Draw up the game treasure chest first.</value>
@@ -3054,8 +3171,17 @@
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} made {2} keel over before it could take off. It may not work with this version o' KSA. Maroon it and try again, or look fer an new tide.</value>
   </data>
+  <data name="LaunchOtherModsNeedMissingFormat" xml:space="preserve">
+    <value>These barrels o' fun be needin' bits o' KSA this version ain't got, so they'll likely sink too: {0}.</value>
+  </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} keeled over right after takin' off (exit code {1}). The d'tails show what it scribbled down.</value>
+  </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} were rigged fer another KSA build than yer {1} an' can't haul the game aboard. When a {0} release fer {1} makes port, haul it aboard in the Loader row o' the sea's page. If yer {1} be older than the build {0} were rigged fer, refit KSA instead.</value>
+  </data>
+  <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
+    <value>{0} releases o' the seven seas</value>
   </data>
   <data name="LaunchStoppedTitleFormat" xml:space="preserve">
     <value>{0} keeled over</value>
@@ -3108,8 +3234,14 @@
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>Maroon {0}</value>
   </data>
+  <data name="LaunchDisableModsFormat" xml:space="preserve">
+    <value>Maroon {0} barrels o' fun</value>
+  </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
     <value>{0} is marooned. Take off on the sea again.</value>
+  </data>
+  <data name="LaunchModsDisabledFormat" xml:space="preserve">
+    <value>{0} barrels o' fun be marooned. Take off on the sea again.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Show more d'tail</value>

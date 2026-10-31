@@ -8,8 +8,5 @@ public static class SpecVersions
     /// </summary>
     public const int Highest = 1;
 
-    /// <summary>
-    /// Whether the document is from a newer format than this build implements.
-    /// </summary>
     public static bool IsAboveHighest(int specVersion) => specVersion > Highest;
 }

@@ -133,7 +133,7 @@ public sealed class GitHubStewardRole : IStewardRole, IDisposable
 
                 // Only a single ruleset carries its conditions and current_user_can_bypass.
                 var ruleset = await _api.GetAsync<RulesetDto>($"{rulesets}/{listed.Id.ToString(CultureInfo.InvariantCulture)}", cancellationToken).ConfigureAwait(false);
-                if (ruleset.Enforcement != "active" || ruleset.Conditions?.RefName?.Include?.Contains(DefaultBranch, StringComparer.Ordinal) != true)
+                if (!IsActiveOnDefaultBranch(ruleset))
                     continue;
 
                 if (!BypassModes.Contains(ruleset.CurrentUserCanBypass, StringComparer.Ordinal))
@@ -149,6 +149,9 @@ public sealed class GitHubStewardRole : IStewardRole, IDisposable
 
         return found;
     }
+
+    private static bool IsActiveOnDefaultBranch(RulesetDto ruleset) =>
+        ruleset.Enforcement == "active" && ruleset.Conditions?.RefName?.Include?.Contains(DefaultBranch, StringComparer.Ordinal) == true;
 
     private void OnSessionChanged(object? sender, EventArgs e)
     {
