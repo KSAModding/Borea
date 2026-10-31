@@ -661,6 +661,21 @@ public sealed class UserContentViewModelTests
         Assert.Equal(harness.Localization.GameSaveDeleteConfirm, row.DeleteConfirmText);
     }
 
+    [Theory]
+    [InlineData(1, "a.xml")]
+    [InlineData(3, "a.xml, b.xml, c.xml")]
+    [InlineData(4, "a.xml, b.xml, c.xml and 1 more")]
+    [InlineData(6, "a.xml, b.xml, c.xml and 3 more")]
+    public async Task ShortChangedFilesText_NamesThreeFilesAndCountsTheRest(int count, string expected)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        string[] files = ["a.xml", "b.xml", "c.xml", "d.xml", "e.xml", "f.xml"];
+
+        var text = harness.ViewModel.ShortChangedFilesText(new InstalledContentChanges(files[..1], [], files[1..count]));
+
+        Assert.Equal(expected, text);
+    }
+
     [Fact]
     public async Task InstancePage_UpdateOfARecordedVehicle_WaitsForTheGo_AndInstallsTheNewerRelease()
     {

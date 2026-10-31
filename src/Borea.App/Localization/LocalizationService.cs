@@ -1675,6 +1675,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentRemoveChanged(string name, string files)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveChangedFormat, name, files);
 
+    public string FormatChangedFilesMore(string files, int more)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ChangedFilesMoreFormat, files, more);
+
     public string FormatGameSaveDeleteChanged(string name, string files)
         => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveDeleteChangedFormat, name, files);
 

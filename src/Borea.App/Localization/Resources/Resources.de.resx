@@ -2073,6 +2073,9 @@
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
   </data>
+  <data name="ChangedFilesMoreFormat" xml:space="preserve">
+    <value>{0} und {1} weitere</value>
+  </data>
   <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
     <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Trotzdem löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
   </data>

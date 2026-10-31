@@ -25,6 +25,8 @@ internal interface IContentPlanRow : IInstallRow
 /// </summary>
 public partial class MainViewModel
 {
+    private const int ChangedFilesNamed = 3;
+
     /// <summary>Plans the install of a vehicle or save into an instance, or the update of the record that the instance has of it.</summary>
     /// <param name="name">A new name the player chose in the name modal, or null.</param>
     internal async Task PlanContentAsync(IContentPlanRow row, Guid instanceId, ModVersionMetadata release, string? name = null, bool discardChanges = false)
@@ -225,7 +227,7 @@ public partial class MainViewModel
         if (plan.Enables.Count > 0)
             notes.Add(Localization.FormatPackContentEnables(string.Join(", ", plan.Enables.Select(ContentName)), name));
         if (plan.Check.Outcome == UserContentOutcome.Changed && plan.Check.Changes is { } changes)
-            notes.Add(Localization.FormatPackContentChanged(name, ChangedFilesText(changes)));
+            notes.Add(Localization.FormatPackContentChanged(name, ShortChangedFilesText(changes)));
         row.InstallWarning = notes.Count > 0 ? string.Join(" ", notes) : null;
     }
 
@@ -252,7 +254,7 @@ public partial class MainViewModel
         UserContentOutcome.AlreadyInstalled => Localization.FormatLinkAlreadyInstalled(ContentName(release.ModId), Instances.FirstOrDefault(instance => instance.InstanceId == instanceId)?.Name ?? string.Empty),
         UserContentOutcome.NameTaken => release.Type == ContentType.Save ? Localization.GameSaveSaveNameTaken : Localization.GameSaveVehicleNameTaken,
         UserContentOutcome.InvalidName => Localization.GameSaveNameNeedsLetter,
-        UserContentOutcome.Changed when result.Changes is { } changes => Localization.FormatPackContentChanged(ContentName(release.ModId), ChangedFilesText(changes)),
+        UserContentOutcome.Changed when result.Changes is { } changes => Localization.FormatPackContentChanged(ContentName(release.ModId), ShortChangedFilesText(changes)),
         _ => Localization.ContentGoneFromInstance,
     };
 
@@ -285,7 +287,7 @@ public partial class MainViewModel
             var result = await services.UserContentInstaller.RemoveAsync(instance.InstanceId, record, discardChanges: item.RemoveChanges is not null);
             if (result.Outcome == UserContentOutcome.Changed && result.Changes is { } changes)
             {
-                item.RemoveChanges = ChangedFilesText(changes);
+                item.RemoveChanges = ShortChangedFilesText(changes);
                 asksAgain = true;
             }
             else if (result.IsDone)
@@ -318,4 +320,12 @@ public partial class MainViewModel
 
     internal static string ChangedFilesText(InstalledContentChanges changes)
         => string.Join(", ", changes.Added.Concat(changes.Removed).Concat(changes.Changed));
+
+    /// <summary>The changed files for a sentence, because a full list can push the rest of the sentence off the row.</summary>
+    internal string ShortChangedFilesText(InstalledContentChanges changes)
+    {
+        var files = changes.Added.Concat(changes.Removed).Concat(changes.Changed).ToList();
+        var named = string.Join(", ", files.Take(ChangedFilesNamed));
+        return files.Count > ChangedFilesNamed ? Localization.FormatChangedFilesMore(named, files.Count - ChangedFilesNamed) : named;
+    }
 }

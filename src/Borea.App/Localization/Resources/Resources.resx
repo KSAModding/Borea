@@ -2073,6 +2073,9 @@
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Delete it? Borea moves the folder into the Backups folder, and Restore brings it back.</value>
   </data>
+  <data name="ChangedFilesMoreFormat" xml:space="preserve">
+    <value>{0} and {1} more</value>
+  </data>
   <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
     <value>You changed {0} since Borea installed it: {1}. Delete it anyway? Borea moves the folder into the Backups folder, and Restore brings it back.</value>
   </data>

@@ -241,7 +241,7 @@ public sealed class InstallChoicesTests
         await item.ConfirmInstallCommand.ExecuteAsync(null);
 
         Assert.Same(choices, item.Choices);
-        Assert.StartsWith("AdvancedFlightComputer: ", choices.BlockedText, StringComparison.Ordinal);
+        Assert.StartsWith("Advanced Flight Computer: ", choices.BlockedText, StringComparison.Ordinal);
         Assert.Empty(await ModIdsAsync(harness, instance));
     }
 

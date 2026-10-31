@@ -115,7 +115,7 @@ public partial class MainViewModel
             if (item.Status == ModPackContentStatus.NameTaken)
                 questions.Add(NameTakenText(item));
             else if (item.Status == ModPackContentStatus.Changed && item.Changes is { } changes)
-                questions.Add(Localization.FormatPackContentChanged(UserContentName(item.ContentId), string.Join(", ", changes.Added.Concat(changes.Removed).Concat(changes.Changed))));
+                questions.Add(Localization.FormatPackContentChanged(UserContentName(item.ContentId), ShortChangedFilesText(changes)));
             if (item.Enables is { Count: > 0 } enables)
                 questions.Add(Localization.FormatPackContentEnables(string.Join(", ", enables.Select(ContentName)), UserContentName(item.ContentId)));
         }
