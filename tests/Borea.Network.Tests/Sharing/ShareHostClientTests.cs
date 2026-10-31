@@ -300,27 +300,46 @@ public sealed class ShareHostClientTests
     }
 
     [Theory]
-    [InlineData("""{"version":"1.1.0"}""")]
-    [InlineData("""{"id":"ExampleRover"}""")]
-    public async Task PublishAsync_WithoutIdOrVersion_IsUnexpected(string body)
+    [MemberData(nameof(ShareHostReplies.Published), MemberType = typeof(ShareHostReplies))]
+    public async Task PublishAsync_AnyTwoHundredAnswer_CountsAsPublished(ShareHostReplies.PublishReply reply)
     {
-        _apiAnswer = _ => Json(body);
+        _apiAnswer = _ => Json(reply.Body, HttpStatusCode.Created);
         var client = await SignedInAsync();
+        var listing = new ListingDraft { Id = "ExampleRover", Name = "Example Rover", Authors = ["Maxi"], Abstract = "A rover.", License = "CC0-1.0" };
 
-        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.PublishAsync(Host, "u42", "1.1.0", "stable", null));
+        var published = await client.PublishAsync(Host, "u42", "1.0.0", "stable", listing);
 
-        Assert.Equal(ShareHostFailure.UnexpectedResponse, exception.Failure);
+        Assert.Equal(reply.Expected, published);
     }
 
     [Fact]
-    public async Task PublishAsync_PullRequestOutsideGitHub_IsUnexpected()
+    public async Task PublishAsync_NewVersionAnswerWithoutId_GivesNoId()
     {
-        _apiAnswer = _ => Json(PublishedJson.Replace("https://github.com/", "https://evil.example/", StringComparison.Ordinal));
+        _apiAnswer = _ => Json("""{"version":"1.1.0"}""");
         var client = await SignedInAsync();
 
-        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.PublishAsync(Host, "u42", "1.0.0", "stable", null));
+        var published = await client.PublishAsync(Host, "u42", "1.1.0", "stable", null);
 
-        Assert.Equal(ShareHostFailure.UnexpectedResponse, exception.Failure);
+        Assert.Equal(new SharePublished(null, "1.1.0", null), published);
+    }
+
+    [Theory]
+    [InlineData(Api, "https://ksamods.gg/vehicles/TheGuy", true)]
+    [InlineData(Api, "https://www.ksamods.gg/vehicles/TheGuy", true)]
+    [InlineData("https://api.ksamods.gg/share/v1/", "https://ksamods.gg/vehicles/TheGuy", true)]
+    [InlineData("https://api.ksamods.gg/share/v1/", "https://www.ksamods.gg/vehicles/TheGuy", false)]
+    [InlineData(Api, "http://ksamods.gg/vehicles/TheGuy", false)]
+    [InlineData(Api, "https://evil.example/vehicles/TheGuy", false)]
+    [InlineData(Api, "https://notksamods.gg/vehicles/TheGuy", false)]
+    [InlineData(Api, "https://ksamods.gg.evil.example/vehicles/TheGuy", false)]
+    [InlineData(Api, "https://gg/vehicles/TheGuy", false)]
+    [InlineData(Api, "/vehicles/TheGuy", false)]
+    [InlineData(Api, null, false)]
+    public void PageOnHost_IsAcceptedOnlyAsHttpsOnTheHostOfTheApi(string api, string? address, bool accepted)
+    {
+        var page = ShareHostClient.PageOnHost(Host with { Api = new Uri(api) }, address);
+
+        Assert.Equal(accepted ? new Uri(address!) : null, page);
     }
 
     [Fact]

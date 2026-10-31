@@ -312,9 +312,12 @@ public sealed partial class ListingEditor
             _shareUpload = null;
             OnPropertyChanged(nameof(HasShareUpload));
             SharePullRequest = published.PullRequest;
+
+            // A publish without an id in its answer is a new version, which always has the id of the listing on the host.
+            var id = published.Id ?? shared.ListingId!;
             ShareHostOutcome = published.PullRequest is null
-                ? Localization.FormatListingShareHostReleased(published.Id, published.Version)
-                : Localization.FormatListingShareHostPublished(published.Id, published.Version);
+                ? Localization.FormatListingShareHostReleased(id, published.Version)
+                : Localization.FormatListingShareHostPublished(id, published.Version);
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {

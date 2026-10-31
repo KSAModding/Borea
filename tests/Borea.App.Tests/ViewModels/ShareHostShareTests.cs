@@ -212,6 +212,19 @@ public sealed class ShareHostShareTests
     }
 
     [Fact]
+    public async Task NewVersionAnswerWithoutId_ShowsTheIdOfTheListing()
+    {
+        var host = new FakeHost { PublishedId = null, PullRequest = null };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatListingShareHostReleased("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
+    }
+
+    [Fact]
     public async Task NoHostInContentIndex_OffersNone()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: Serve(), shareHostClient: new FakeHost());
@@ -283,6 +296,8 @@ public sealed class ShareHostShareTests
 
         public Uri? PullRequest { get; init; } = new("https://github.com/KSAModding/content-index/pull/250");
 
+        public string? PublishedId { get; init; } = "ExampleRover";
+
         public bool IsSignedIn(ShareHost host) => _signedIn;
 
         public Task SignInAsync(ShareHost host, IProgress<GitHubDeviceCode>? progress = null, bool keepSignedIn = false, CancellationToken cancellationToken = default)
@@ -304,7 +319,7 @@ public sealed class ShareHostShareTests
         public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
         {
             Publishes.Enqueue(new Publish(uploadId, version, status, listing));
-            return Task.FromResult(new SharePublished("ExampleRover", version, PullRequest));
+            return Task.FromResult(new SharePublished(PublishedId, version, PullRequest));
         }
     }
 }

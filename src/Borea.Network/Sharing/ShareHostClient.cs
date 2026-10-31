@@ -175,23 +175,37 @@ public sealed class ShareHostClient : IShareHostClient
 
         using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
         var reply = await SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, cancellationToken).ConfigureAwait(false);
-        var published = Parse<ShareHostJson.Published>(reply.Body);
-
-        if (published?.Id is not { Length: > 0 } id || published.Version is not { Length: > 0 } released)
-            throw Unexpected(host, reply);
+        var published = Parse<ShareHostJson.Published>(reply.Body) ?? new ShareHostJson.Published();
 
         // Borea opens this page in the browser, and the host opens every listing pull request on GitHub.
-        Uri? pullRequest = null;
-        if (published.PullRequest is not null
-            && (!Uri.TryCreate(published.PullRequest, UriKind.Absolute, out pullRequest)
-                || pullRequest.Scheme != Uri.UriSchemeHttps
-                || !string.Equals(pullRequest.Host, "github.com", StringComparison.OrdinalIgnoreCase)))
-        {
-            throw Unexpected(host, reply);
-        }
-
-        return new SharePublished(id, released, pullRequest);
+        var pullRequest = Https(ShareHostJson.Text(published.PullRequest)) is { } link && string.Equals(link.Host, "github.com", StringComparison.OrdinalIgnoreCase) ? link : null;
+        return new SharePublished(
+            ShareHostJson.Text(published.Id) is { Length: > 0 } id ? id : listing?.Id,
+            ShareHostJson.Text(published.Version) is { Length: > 0 } released ? released : version,
+            pullRequest,
+            PageOnHost(host, ShareHostJson.Text(published.Page)));
     }
+
+    /// <summary>
+    /// The address when it is https on the host of the api, or on a sub-domain or a parent of it, because a host may serve its pages
+    /// and its api from different names. A top-level name such as gg counts as no parent.
+    /// </summary>
+    internal static Uri? PageOnHost(ShareHost host, string? address)
+    {
+        if (Https(address) is not { } page)
+            return null;
+
+        var api = host.Api.Host;
+        var site = page.Host;
+        return string.Equals(site, api, StringComparison.OrdinalIgnoreCase)
+            || site.EndsWith("." + api, StringComparison.OrdinalIgnoreCase)
+            || (site.Contains('.') && api.EndsWith("." + site, StringComparison.OrdinalIgnoreCase))
+                ? page
+                : null;
+    }
+
+    private static Uri? Https(string? address) =>
+        Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps ? uri : null;
 
     /// <summary>Signs in with the kept token. A refresh token that the host refuses is deleted.</summary>
     private async Task<bool> ResumeAsync(ShareHost host, CancellationToken cancellationToken)

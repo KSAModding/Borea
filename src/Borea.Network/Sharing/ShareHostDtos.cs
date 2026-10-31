@@ -51,6 +51,9 @@ internal static class ShareHostJson
 
     public const string Tags = "tags";
 
+    /// <summary>The text of a member that takes any JSON value, or null when it holds anything else.</summary>
+    public static string? Text(JsonElement value) => value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
     public sealed class DeviceCode
     {
         [JsonPropertyName("device_code")]
@@ -113,14 +116,18 @@ internal static class ShareHostJson
 
     public sealed class Published
     {
+        // A 2xx is a release that is live, so these take any JSON value, and a malformed one costs only itself.
         [JsonPropertyName("id")]
-        public string? Id { get; set; }
+        public JsonElement Id { get; set; }
 
         [JsonPropertyName("version")]
-        public string? Version { get; set; }
+        public JsonElement Version { get; set; }
 
         [JsonPropertyName("pull_request")]
-        public string? PullRequest { get; set; }
+        public JsonElement PullRequest { get; set; }
+
+        [JsonPropertyName("page")]
+        public JsonElement Page { get; set; }
     }
 
     public sealed class Error

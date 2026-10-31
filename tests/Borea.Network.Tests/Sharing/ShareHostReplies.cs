@@ -31,6 +31,8 @@ public static class ShareHostReplies
     /// <summary>The live answer to a token that the host no longer takes.</summary>
     public const string Unauthorized = """{"error":"unauthorized","message":"Sign in first: the token is missing or has expired."}""";
 
+    private const string PullRequest = "https://github.com/KSAModding/content-index/pull/123";
+
     private const string FailedChecks = """[{"name":"archive","passed":true,"message":"A zip archive with safe paths."},{"name":"folder","passed":false,"message":"Another vehicle installs as \"Example Rover\"."}]""";
 
     private static readonly ShareCheck[] FailedCheckList =
@@ -74,6 +76,23 @@ public static class ShareHostReplies
         new(HttpStatusCode.TooManyRequests, """{"error":"rate_limited","message":"m","retry_after":-5}""", "rate_limited", "m"),
         new(HttpStatusCode.TooManyRequests, """{"error":"rate_limited","message":"m","retry_after":1e30}""", "rate_limited", "m"),
     };
+
+    /// <summary>The answers to a publish of version 1.0.0 of the new listing ExampleRover, which is live whatever else the 2xx says.</summary>
+    public static TheoryData<PublishReply> Published => new()
+    {
+        new($$"""{"id":"ExampleRover","type":"vehicle","version":"1.0.0","pull_request":"{{PullRequest}}"}""", new SharePublished("ExampleRover", "1.0.0", new Uri(PullRequest))),
+        new("""{"id":"ExampleRover","type":"vehicle","version":"1.1.0","pull_request":null}""", new SharePublished("ExampleRover", "1.1.0", null)),
+        new($$"""{"id":"TheGuy","type":"vehicle","version":"1.0.0","pull_request":"{{PullRequest}}","page":"https://ksamods.gg/vehicles/TheGuy"}""", new SharePublished("TheGuy", "1.0.0", new Uri(PullRequest), new Uri("https://ksamods.gg/vehicles/TheGuy"))),
+        new("""{"id":"TheGuy","version":"1.0.0","page":"https://evil.example/vehicles/TheGuy"}""", new SharePublished("TheGuy", "1.0.0", null)),
+        new("""{"id":"TheGuy","version":"1.0.0","pull_request":"https://evil.example/KSAModding/content-index/pull/123"}""", new SharePublished("TheGuy", "1.0.0", null)),
+        new($$"""{"id":"TheGuy","version":"1.0.0","pull_request":"{{PullRequest}}","page":5}""", new SharePublished("TheGuy", "1.0.0", new Uri(PullRequest))),
+        new("""{"id":5,"version":{},"pull_request":7,"page":[]}""", new SharePublished("ExampleRover", "1.0.0", null)),
+        new("""{"version":"1.1.0"}""", new SharePublished("ExampleRover", "1.1.0", null)),
+        new("""{"id":"TheGuy"}""", new SharePublished("TheGuy", "1.0.0", null)),
+        new("<html>Created</html>", new SharePublished("ExampleRover", "1.0.0", null)),
+    };
+
+    public sealed record PublishReply(string Body, SharePublished Expected);
 
     public sealed record ErrorReply(HttpStatusCode Status, string Body, string Code, string Message)
     {
