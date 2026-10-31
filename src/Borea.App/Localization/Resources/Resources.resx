@@ -3771,6 +3771,27 @@
   <data name="InstallStepsDismiss" xml:space="preserve">
     <value>Dismiss</value>
   </data>
+  <data name="InstalledWhereFormat" xml:space="preserve">
+    <value>Where to find {0}</value>
+  </data>
+  <data name="InstalledStartFormat" xml:space="preserve">
+    <value>Start the game from {0}.</value>
+  </data>
+  <data name="InstalledVehicleMenu" xml:space="preserve">
+    <value>Press Esc and choose LAUNCH VEHICLE.</value>
+  </data>
+  <data name="InstalledVehiclePickFormat" xml:space="preserve">
+    <value>Pick {0} under Vehicle Save.</value>
+  </data>
+  <data name="InstalledSaveMenu" xml:space="preserve">
+    <value>Press Esc and choose SAVE/LOAD.</value>
+  </data>
+  <data name="InstalledSavePickFormat" xml:space="preserve">
+    <value>Double-click {0}. The game asks once before it loads the save.</value>
+  </data>
+  <data name="InstalledPlayFormat" xml:space="preserve">
+    <value>Play {0}</value>
+  </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Release {0} has the status {1}, which your release channel does not offer.</value>
   </data>

@@ -163,6 +163,21 @@
         <StackPanel Spacing="8" />
     </ItemsPanelTemplate>
 
+    <!-- the Play button under the steps of a new vehicle or save, built only for a row that shows them, because every control of a row costs each time the list shows the row -->
+    <DataTemplate x:Key="InstalledPlayButton" x:DataType="vm:DiscoverItem">
+        <StackPanel Spacing="4">
+            <Button Classes="cta with-icon" HorizontalAlignment="Left" Command="{Binding PlayInstalledCommand}" IsEnabled="{Binding CanPlayInstalled}" ToolTip.Tip="{Binding InstalledPlayText}">
+                <!-- a dock panel gives the name the width that is left, so it trims inside the button -->
+                <DockPanel>
+                    <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" DockPanel.Dock="Left" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <TextBlock Classes="action-lg" Text="{Binding InstalledPlayText}" MaxWidth="320" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </DockPanel>
+            </Button>
+            <!-- the launch line shows on Home, in the Library and on the instance page, and this button is on none of them -->
+            <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).LaunchMessage}" TextWrapping="Wrap" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).IsLaunching}" />
+        </StackPanel>
+    </DataTemplate>
+
     <!-- the body of one row of c/table-versions, which the row shows inside its button or, without a page, on its own.
          The columns after the name share their widths with the other rows of the page, so each column starts at the same place in every row -->
     <DataTemplate x:Key="ContentRowBody" x:DataType="vm:ContentItem">
@@ -452,11 +467,14 @@
                                 </StackPanel>
                             </WrapPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
-                            <!-- what the author still asks for after an install, until the player dismisses it -->
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding HasInstallStepsNotice}">
+                            <!-- what the author still asks for after an install and where a new vehicle or save is in the game, until the player dismisses it -->
+                            <StackPanel Spacing="8" Margin="0,0,4,8" IsVisible="{Binding HasInstallStepsNotice}">
                                 <ItemsControl ItemsSource="{Binding InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
-                                <Button Grid.Column="1" Classes="text" VerticalAlignment="Top" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallStepsDismiss}" Command="{Binding DismissInstallStepsNoticeCommand}" />
-                            </Grid>
+                                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                    <ContentControl Content="{Binding InstalledPlayRow}" ContentTemplate="{StaticResource InstalledPlayButton}" />
+                                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallStepsDismiss}" Command="{Binding DismissInstallStepsNoticeCommand}" />
+                                </WrapPanel>
+                            </StackPanel>
                         </StackPanel>
                         <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
                             <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">

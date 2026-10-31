@@ -814,6 +814,10 @@ public partial class MainViewModel
         LaunchMessage = text;
         HasLaunchFailed = true;
         LaunchGameBuildMissingItem = missingBuild;
+
+        // the line shows only on these pages, and the steps of a new vehicle or save start a launch from other pages
+        if (!CurrentWindowHome && !CurrentWindowLibrary && !CurrentWindowInstance)
+            Toasts.ShowMessage(ToastKind.Error, () => text);
     }
 
     /// <summary>Names the kept build and its folder. Null without services.</summary>

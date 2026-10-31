@@ -141,11 +141,14 @@
                                 <TextBlock Classes="label-md" Text="{Binding SelectedContent.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </WrapPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                            <!-- what the author still asks for after an install, until the player dismisses it -->
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
+                            <!-- what the author still asks for after an install and where a new vehicle or save is in the game, until the player dismisses it -->
+                            <StackPanel Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
                                 <ItemsControl ItemsSource="{Binding SelectedContent.InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
-                                <Button Grid.Column="1" Classes="text" VerticalAlignment="Top" Content="{Binding Localization.InstallStepsDismiss}" Command="{Binding SelectedContent.DismissInstallStepsNoticeCommand}" />
-                            </Grid>
+                                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                    <ContentControl Content="{Binding SelectedContent.InstalledPlayRow}" ContentTemplate="{StaticResource InstalledPlayButton}" />
+                                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.InstallStepsDismiss}" Command="{Binding SelectedContent.DismissInstallStepsNoticeCommand}" />
+                                </WrapPanel>
+                            </StackPanel>
                         </StackPanel>
                         <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Top">
                             <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->

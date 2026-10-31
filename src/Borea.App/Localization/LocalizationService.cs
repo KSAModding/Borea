@@ -2399,6 +2399,25 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallStepsDismiss => Resources.InstallStepsDismiss;
 
+    public string FormatInstalledWhere(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledWhereFormat, name);
+
+    public string FormatInstalledStart(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledStartFormat, instance);
+
+    public string InstalledVehicleMenu => Resources.InstalledVehicleMenu;
+
+    public string FormatInstalledVehiclePick(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledVehiclePickFormat, name);
+
+    public string InstalledSaveMenu => Resources.InstalledSaveMenu;
+
+    public string FormatInstalledSavePick(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledSavePickFormat, name);
+
+    public string FormatInstalledPlay(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledPlayFormat, instance);
+
     public string InstallChoicesRecommended => Resources.InstallChoicesRecommended;
 
     public string InstallChoicesSuggested => Resources.InstallChoicesSuggested;

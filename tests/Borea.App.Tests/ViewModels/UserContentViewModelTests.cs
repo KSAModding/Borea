@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using Borea.App.ViewModels;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.Mods;
 using static Borea.App.Tests.ViewModels.UserContentFixtures;
 
@@ -327,6 +329,7 @@ public sealed class UserContentViewModelTests
         var record = Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
         Assert.Equal(("Example Rover 2", ModVersion.Parse("1.1.0")), (record.FolderName, record.Version));
         Assert.True(viewModel.DiscoverItems.Single().IsInstalled);
+        Assert.Equal("Where to find Example Rover 2", Assert.Single(row.InstallStepsNotice).Heading);
     }
 
     [Fact]
@@ -408,6 +411,154 @@ public sealed class UserContentViewModelTests
 
         Assert.Null(newer.InstallError);
         Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+    }
+
+    [Theory]
+    [InlineData("ExampleRover", "Example Rover", "Press Esc and choose LAUNCH VEHICLE.", "Pick Example Rover under Vehicle Save.")]
+    [InlineData("CampaignSave", "Campaign", "Press Esc and choose SAVE/LOAD.", "Double-click Campaign. The game asks once before it loads the save.")]
+    public async Task Install_New_LeavesWhereItIsInTheGame_UntilDismiss(string id, string name, string menu, string pick)
+    {
+        var rover = RoverArchive();
+        var campaign = SaveArchive("<Universe />");
+        var types = new Dictionary<string, string>(TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")));
+        foreach (var (file, content) in TypeFiles(ContentIndexTypeFiles.Saves, SaveEntry(("1.0.0", campaign))))
+            types[file] = content;
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri switch
+            {
+                RoverUrl => ArchiveResponse(rover),
+                SaveUrl => ArchiveResponse(campaign),
+                _ => null,
+            },
+            typeFiles: types);
+        await ActiveInstanceAsync(harness);
+        var row = harness.ViewModel.IndexListing(id)!;
+
+        await row.InstallCommand.ExecuteAsync(null);
+        Assert.False(row.HasInstallStepsNotice);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        var notice = Assert.Single(row.InstallStepsNotice);
+        Assert.Equal($"Where to find {name}", notice.Heading);
+        Assert.Equal(["1.", "2.", "3."], notice.Steps.Select(step => step.Number));
+        Assert.Equal(["Start the game from Main.", menu, pick], notice.Steps.Select(step => step.Text));
+        Assert.Equal("Play Main", row.InstalledPlayText);
+
+        row.DismissInstallStepsNoticeCommand.Execute(null);
+
+        Assert.False(row.HasInstallStepsNotice);
+        Assert.Null(row.InstalledPlayText);
+    }
+
+    [Fact]
+    public async Task Update_OfARecordedVehicle_LeavesNoSteps()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        await ActiveInstanceWithRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+
+        await row.UpdateCommand.ExecuteAsync(null);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(viewModel.ActiveInstance!.InstanceId)).Version);
+        Assert.False(viewModel.IndexListing("ExampleRover")!.HasInstallStepsNotice);
+    }
+
+    [Fact]
+    public async Task Remove_OfANewVehicle_TakesItsStepsAway()
+    {
+        using var harness = await VehicleHarnessAsync();
+        await ActiveInstanceAsync(harness);
+        var row = harness.ViewModel.IndexListing("ExampleRover")!;
+        await row.InstallCommand.ExecuteAsync(null);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+        Assert.True(row.HasInstallStepsNotice);
+        var changed = new ConcurrentQueue<string?>();
+        row.PropertyChanged += (_, e) => changed.Enqueue(e.PropertyName);
+
+        row.BeginRemoveCommand.Execute(null);
+        await row.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Contains(nameof(DiscoverItem.HasInstallStepsNotice), changed);
+        Assert.False(row.HasInstallStepsNotice);
+    }
+
+    [Fact]
+    public async Task Rename_OfANewVehicle_TheStepsUseTheNewName()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        await ActiveInstanceAsync(harness);
+        var row = viewModel.IndexListing("ExampleRover")!;
+        await row.InstallCommand.ExecuteAsync(null);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Single(viewModel.VehiclesSection.Items).BeginRenameCommand.Execute(null);
+        viewModel.ModalInstanceName = "Rover 2";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.InstanceError);
+        Assert.Equal("Where to find Rover 2", Assert.Single(row.InstallStepsNotice).Heading);
+        Assert.Equal("Rover 2", Assert.Single(viewModel.VehiclesSection.Items).FolderName);
+    }
+
+    [Fact]
+    public async Task Play_OfTheSteps_StartsTheInstanceThatGotTheItem_AndWaitsForTheGameToEnd()
+    {
+        var starter = new GameCrashToastTests.GameStarter();
+        using var harness = await VehicleHarnessAsync(seed: GameSavesViewModelTests.WithStarMap, processStarter: starter);
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceAsync(harness);
+        starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        var row = viewModel.IndexListing("ExampleRover")!;
+        await row.InstallCommand.ExecuteAsync(null);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(other.InstanceId);
+        await viewModel.LoadAsync();
+        Assert.True(row.CanPlayInstalled);
+        var changed = new ConcurrentQueue<string?>();
+        row.PropertyChanged += (_, e) => changed.Enqueue(e.PropertyName);
+
+        await row.PlayInstalledCommand.ExecuteAsync(null);
+
+        Assert.True(harness.Services.Launcher.IsRunning(instance.InstanceId));
+        Assert.False(harness.Services.Launcher.IsRunning(other.InstanceId));
+        Assert.Contains(nameof(DiscoverItem.CanPlayInstalled), changed);
+        Assert.False(row.CanPlayInstalled);
+        changed.Clear();
+
+        starter.Exit(0);
+        await viewModel.WhenGameExitCheckedAsync().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Contains(nameof(DiscoverItem.CanPlayInstalled), changed);
+        Assert.True(row.CanPlayInstalled);
+    }
+
+    [Fact]
+    public async Task Play_OfTheSteps_RefusedLaunch_SaysWhyInAToast_WhereThePageHasNoLaunchLine()
+    {
+        using var harness = await VehicleHarnessAsync(seed: GameSavesViewModelTests.WithStarMap, loaderLauncher: new LaunchFailureTests.FixedLauncher(LaunchResult.Failed(LaunchOutcome.GameBuildMissing, "English text.")));
+        var viewModel = harness.ViewModel;
+        await ActiveInstanceAsync(harness);
+        var row = viewModel.IndexListing("ExampleRover")!;
+        await row.InstallCommand.ExecuteAsync(null);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        viewModel.SetMainWindowHome();
+        await row.PlayInstalledCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasLaunchFailed);
+        Assert.DoesNotContain(viewModel.Toasts.Items, toast => toast.IsFailed);
+
+        viewModel.SetMainWindowDiscover();
+        await row.PlayInstalledCommand.ExecuteAsync(null);
+
+        Assert.Equal(viewModel.LaunchMessage, Assert.Single(viewModel.Toasts.Items, toast => toast.IsFailed).Message);
     }
 
     [Fact]
@@ -663,7 +814,9 @@ public sealed class UserContentViewModelTests
         Func<string, string>? editSnapshot = null,
         string dependencies = "",
         Func<Borea.Composition.BoreaServices, Task>? seed = null,
-        Func<Borea.Core.Planning.IInstallPlanner, Borea.Core.Planning.IInstallPlanner>? wrapInstallPlanner = null)
+        Func<Borea.Core.Planning.IInstallPlanner, Borea.Core.Planning.IInstallPlanner>? wrapInstallPlanner = null,
+        Borea.Storage.Launch.IProcessStarter? processStarter = null,
+        ILauncher? loaderLauncher = null)
     {
         var rover = RoverArchive();
         var entry = EntryNeeding("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, dependencies, ["1.0.0", "1.1.0"])
@@ -673,6 +826,8 @@ public sealed class UserContentViewModelTests
             respond: request => request.RequestUri?.AbsoluteUri == RoverUrl ? ArchiveResponse(rover) : null,
             editSnapshot: editSnapshot,
             wrapInstallPlanner: wrapInstallPlanner,
+            processStarter: processStarter,
+            loaderLauncher: loaderLauncher,
             typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, entry));
     }
 

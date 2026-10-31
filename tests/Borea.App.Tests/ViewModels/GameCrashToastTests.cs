@@ -168,7 +168,7 @@ public sealed class GameCrashToastTests
     /// Hands out a game process that keeps running, writes <see cref="GameLog"/>
     /// when its start is watched, and ends when <see cref="Exit"/> is called.
     /// </summary>
-    private sealed class GameStarter : IProcessStarter
+    internal sealed class GameStarter : IProcessStarter
     {
         public const int ProcessId = 4244;
 

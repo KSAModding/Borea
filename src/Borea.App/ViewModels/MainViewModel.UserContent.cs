@@ -184,6 +184,8 @@ public partial class MainViewModel
 
         await ReloadInstancesAsync();
         row.InstallError = error;
+        if (completed && plan.Installed is null)
+            LeaveInstalledWhereNotice(plan.Release.ModId, instanceId);
     }
 
     /// <summary>Repeats the plan until it names no recommendation that is neither selected nor deselected, as a mod install does.</summary>

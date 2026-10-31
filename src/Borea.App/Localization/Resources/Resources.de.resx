@@ -3771,6 +3771,27 @@
   <data name="InstallStepsDismiss" xml:space="preserve">
     <value>Ausblenden</value>
   </data>
+  <data name="InstalledWhereFormat" xml:space="preserve">
+    <value>So findest du {0}</value>
+  </data>
+  <data name="InstalledStartFormat" xml:space="preserve">
+    <value>Starte das Spiel mit {0}.</value>
+  </data>
+  <data name="InstalledVehicleMenu" xml:space="preserve">
+    <value>Drücke Esc und wähle LAUNCH VEHICLE.</value>
+  </data>
+  <data name="InstalledVehiclePickFormat" xml:space="preserve">
+    <value>Wähle {0} unter Vehicle Save.</value>
+  </data>
+  <data name="InstalledSaveMenu" xml:space="preserve">
+    <value>Drücke Esc und wähle SAVE/LOAD.</value>
+  </data>
+  <data name="InstalledSavePickFormat" xml:space="preserve">
+    <value>Klicke doppelt auf {0}. Das Spiel fragt einmal nach, bevor es den Spielstand lädt.</value>
+  </data>
+  <data name="InstalledPlayFormat" xml:space="preserve">
+    <value>{0} spielen</value>
+  </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Version {0} hat den Status {1}, den dein Release-Kanal nicht anbietet.</value>
   </data>

@@ -257,7 +257,7 @@ public sealed class ButtonStyleTests
     private static bool StartsWithAnIcon(XElement button)
     {
         var content = FirstContent(button);
-        if (content?.Name.LocalName == "StackPanel")
+        if (content?.Name.LocalName is "StackPanel" or "DockPanel")
             content = FirstContent(content);
         return content?.Name.LocalName is "Path" or "PathIcon";
     }
