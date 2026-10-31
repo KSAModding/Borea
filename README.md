@@ -138,7 +138,7 @@ If Borea does not start after an update, rename `borea.exe.old` (`borea.old` on 
 
 1. In **Settings**, **General**, turn off **Open borea:// links with this Borea**, so that Borea removes its link registration.
 2. Close Borea and delete the folder that you unpacked it into, or `Borea.app` on macOS.
-3. Delete Borea's own folder. It holds the settings, caches, logs and mod loaders, and also the instances and backups unless you moved the library:
+3. Delete Borea's own folder. It holds the settings, caches, logs and mod loaders, and also the instances, backups and kept game builds unless you moved the library:
    - Windows: `%LocalAppData%\Borea`
    - Linux: `~/.local/share/Borea`, or `$XDG_DATA_HOME/Borea` when that variable is set
    - macOS: `~/Library/Application Support/Borea`

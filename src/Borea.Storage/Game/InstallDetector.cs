@@ -1,6 +1,7 @@
 using Borea.Core.Game;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Game;
 
@@ -115,18 +116,16 @@ public sealed class InstallDetector : IInstallDetector
 
     private static bool IsSameOrInside(string path, string folder)
     {
-        if (string.Equals(path, folder, PathComparison))
+        if (string.Equals(path, folder, FileSystemPaths.PathComparison))
             return true;
 
         var prefix = folder + Path.DirectorySeparatorChar;
-        return path.Length > prefix.Length && path.StartsWith(prefix, PathComparison);
+        return path.Length > prefix.Length && path.StartsWith(prefix, FileSystemPaths.PathComparison);
     }
-
-    private static StringComparison PathComparison => OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
     private static List<string> ExistingDirectories(IEnumerable<string> candidates)
     {
-        var comparer = StringComparer.FromComparison(PathComparison);
+        var comparer = StringComparer.FromComparison(FileSystemPaths.PathComparison);
         var seen = new HashSet<string>(comparer);
         var directories = new List<string>();
         foreach (var candidate in candidates)

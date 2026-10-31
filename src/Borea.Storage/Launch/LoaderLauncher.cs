@@ -7,6 +7,7 @@ using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Storage.Files;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.ModLoaders;
@@ -385,7 +386,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             if (isAdopted && game.KeptBuild is not null)
             {
                 playerGamePath = _keptBuilds.Values.FirstOrDefault(kept => kept.PlayerGamePath is not null
-                    && string.Equals(kept.LoaderDirectory, loaderDirectory, PathComparison)
+                    && string.Equals(kept.LoaderDirectory, loaderDirectory, FileSystemPaths.PathComparison)
                     && SameGamePath(kept.GamePath, wanted)).PlayerGamePath;
             }
 
@@ -430,7 +431,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         && File.Exists(assembly)
         && !IsBelow(_pathProvider.GetGameBuildsRoot(), assembly)
         && !(ReadsAnotherForm(gameDirectory)
-            && string.Equals(Path.GetFullPath(assembly), Path.Combine(Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameDirectory)), "KSA.dll"), PathComparison));
+            && string.Equals(Path.GetFullPath(assembly), Path.Combine(Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameDirectory)), "KSA.dll"), FileSystemPaths.PathComparison));
 
     /// <summary>Whether the loader reads <paramref name="gameDirectory"/> by another path than the host path, as a loader in a Wine prefix does.</summary>
     private bool ReadsAnotherForm(string gameDirectory)
@@ -484,11 +485,11 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     private static bool IsBelow(string root, string path)
     {
         var prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
-        return Path.GetFullPath(path).StartsWith(prefix, PathComparison);
+        return Path.GetFullPath(path).StartsWith(prefix, FileSystemPaths.PathComparison);
     }
 
     internal static bool SameGamePath(string? held, string wanted) =>
-        held is not null && string.Equals(GameFolderOf(held), GameFolderOf(wanted), PathComparison);
+        held is not null && string.Equals(GameFolderOf(held), GameFolderOf(wanted), FileSystemPaths.PathComparison);
 
     // StarMap accepts the path of KSA.dll as well as the game folder, and a
     // Windows path of a Wine prefix is not a full path on the host
@@ -496,10 +497,8 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     {
         var folder = (Path.IsPathFullyQualified(path) ? Path.GetFullPath(path) : path.Replace('/', '\\')).TrimEnd('/', '\\');
         var name = folder[(folder.LastIndexOfAny(['/', '\\']) + 1)..];
-        return string.Equals(name, "KSA.dll", PathComparison) ? folder[..^name.Length].TrimEnd('/', '\\') : folder;
+        return string.Equals(name, "KSA.dll", FileSystemPaths.PathComparison) ? folder[..^name.Length].TrimEnd('/', '\\') : folder;
     }
-
-    private static StringComparison PathComparison => OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
     public async Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default)
     {

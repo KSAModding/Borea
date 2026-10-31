@@ -1398,13 +1398,8 @@ public sealed class LoaderLauncherTests : IDisposable
         var game = Directory.CreateDirectory(_paths.GetGameDirectoryPath()!).FullName;
         File.Copy(Path.Combine(AppContext.BaseDirectory, "LoaderVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
         KeepBuild();
-        var started = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
-        var process = Assert.Single(_starter.Processes);
-        process.Output.AddRange(StarMap5638Crash);
-        process.HasExited = true;
-        process.ExitCode = -532462766;
 
-        var result = await _launcher.WatchStartAsync(_instance, started);
+        var result = await CrashAsync(_instance, -532462766, StarMap5638Crash);
 
         Assert.Equal(LoaderCrashCause.GameAssembly, result.CrashCause);
         Assert.Contains(KeptVersion.ToString(), result.Message);

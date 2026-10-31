@@ -179,7 +179,7 @@ gh attestation verify <archive> --repo KSAModding/Borea \
 | `borea game version` | 输出已安装的构建版本，以及主服务器报告的当前公开构建版本。 |
 | `borea game check` | 检查游戏安装是否符合 Borea 对其结构和状态的预期。不符合时以退出码 1 退出。 |
 | `borea instance list` | 输出所有实例，并标记当前活动实例。 |
-| `borea instance show <instance>` | 输出某个实例、其模组所需的加载器及启动时使用的加载器版本、启动参数、上次游玩时间和游玩时长。 |
+| `borea instance show <instance>` | 输出某个实例、the game build it runs on、其模组所需的加载器及启动时使用的加载器版本、启动参数、上次游玩时间和游玩时长。 |
 | `borea instance create <name>` | 创建空实例。 |
 | `borea instance duplicate <instance> [--name <name>]` | 创建具有相同模组、版本和启用标记的实例。 |
 | `borea instance export <instance> [file]` | 将实例中的模组及其版本和启用标记写入模组列表。 |

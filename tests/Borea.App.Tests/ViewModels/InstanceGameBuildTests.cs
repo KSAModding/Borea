@@ -576,6 +576,11 @@ public sealed class InstanceGameBuildTests
         Assert.Equal(incompatible ? harness.Localization.FormatModalKeepGameBuildIncompatible(1, 1, KeptBuild.ToString()) : null, viewModel.KeepGameBuildIncompatibleText);
 
         viewModel.CancelKeepGameBuildCommand.Execute(null);
+
+        // macOS has no executable of its own, so GameBuildKeeper.PlanFolder refuses a chosen folder there
+        if (OperatingSystem.IsMacOS())
+            return;
+
         await viewModel.BeginAddGameBuildAsync(folder);
 
         Assert.Equal(harness.Localization.FormatModalAddGameBuildShared(KeptBuild.ToString(), folder), viewModel.KeepGameBuildText);

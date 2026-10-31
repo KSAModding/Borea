@@ -790,9 +790,7 @@ public partial class MainViewModel
 
     private Task StartKeptGameBuildLoad()
     {
-        var previous = _keptGameBuildLoad;
-        var load = LoadKeptGameBuildsAsync();
-        _keptGameBuildLoad = previous.IsCompleted ? load : Task.WhenAll(previous, load);
+        _keptGameBuildLoad = Chain(_keptGameBuildLoad, LoadKeptGameBuildsAsync());
         return _keptGameBuildLoad;
     }
 
