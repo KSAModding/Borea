@@ -207,7 +207,9 @@ public partial class MainViewModel
         _pinnedLoaderProblem = pinned;
         LoaderUpdate = shown;
         RefreshLoaderUpdateText();
-        RefreshInstanceLoader();
+
+        // the page that is open rates its loader again, because the build or the index that it was rated against changed
+        await LoadInstanceLoaderAsync();
     }
 
     /// <summary>The banners follow the active instance, so another active instance, a new loader setting or another kept build rates again.</summary>

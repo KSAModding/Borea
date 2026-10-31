@@ -387,6 +387,42 @@
   <data name="StewardReviewProofSpaceDockLinkFormat" xml:space="preserve">
     <value>SpaceDock 模组 {0} 的源代码链接未指向 GitHub 仓库。</value>
   </data>
+  <data name="StewardReviewOwnerRecords" xml:space="preserve">
+    <value>所有者记录</value>
+  </data>
+  <data name="StewardOwnerRecordFirstClaim" xml:space="preserve">
+    <value>此 PR 随整合包的首个版本一并添加此记录。这类首次所有权声明的 PR 会在检查通过后自动合并。</value>
+  </data>
+  <data name="StewardOwnerRecordBeforeFormat" xml:space="preserve">
+    <value>目标分支上的所有者：{0}，账户 ID 为 {1}</value>
+  </data>
+  <data name="StewardOwnerRecordNoneBefore" xml:space="preserve">
+    <value>目标分支上没有此整合包的所有者记录。</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableBefore" xml:space="preserve">
+    <value>目标分支上的记录未指定登录名和账户 ID。</value>
+  </data>
+  <data name="StewardOwnerRecordAfterFormat" xml:space="preserve">
+    <value>合并后的所有者：{0}，账户 ID 为 {1}</value>
+  </data>
+  <data name="StewardOwnerRecordRemoved" xml:space="preserve">
+    <value>此 PR 会移除所有者记录，因此合并后整合包将没有所有者。</value>
+  </data>
+  <data name="StewardOwnerRecordUnreadableAfter" xml:space="preserve">
+    <value>新记录未指定登录名和账户 ID。</value>
+  </data>
+  <data name="StewardOwnerAccountSameFormat" xml:space="preserve">
+    <value>ID 为 {0} 的 GitHub 账户的登录名仍为 {1}。</value>
+  </data>
+  <data name="StewardOwnerAccountOtherLoginFormat" xml:space="preserve">
+    <value>ID 为 {0} 的 GitHub 账户的登录名现为 {1}，不再是 {2}。检查会比较账户 ID，因此合并后整合包归 {1} 所有。</value>
+  </data>
+  <data name="StewardOwnerAccountGoneFormat" xml:space="preserve">
+    <value>GitHub 上已没有 ID 为 {0} 的账户，因此合并后将无人能为此整合包添加版本。</value>
+  </data>
+  <data name="StewardOwnerAccountUnknownFormat" xml:space="preserve">
+    <value>Borea 无法向 GitHub 查询 ID 为 {0} 的账户当前使用的登录名。</value>
+  </data>
   <data name="StewardReviewFilesFormat" xml:space="preserve">
     <value>变更文件（{0}）</value>
   </data>
@@ -633,6 +669,39 @@
   <data name="StewardReportNoIssuesPermission" xml:space="preserve">
     <value>GitHub 拒绝了更改，可能是因为 Borea GitHub 应用尚无 Issues 权限。请改为在 GitHub 上回复。你的文字会保留在此，可供复制。</value>
   </data>
+  <data name="StewardReportLeavePack" xml:space="preserve">
+    <value>从整合包中移除此模组</value>
+  </data>
+  <data name="StewardLeavePackTitleFormat" xml:space="preserve">
+    <value>从 {0} 中移除模组</value>
+  </data>
+  <data name="StewardLeaveTitleFormat" xml:space="preserve">
+    <value>撤回 {0} 中固定了 {1} 的所有版本</value>
+  </data>
+  <data name="StewardLeaveEffect" xml:space="preserve">
+    <value>整合包中每个固定了此模组的版本都会各自添加一条撤回记录，所有记录会放在同一个 PR 中。撤回不会卸载已安装的版本，但客户端将不再提供这些版本。整合包作者需发布不含此模组的版本。</value>
+  </data>
+  <data name="StewardLeaveMod" xml:space="preserve">
+    <value>要移除的模组</value>
+  </data>
+  <data name="StewardLeaveChooseMod" xml:space="preserve">
+    <value>选择报告中要求从整合包移除的模组。</value>
+  </data>
+  <data name="StewardLeaveVersionsFormat" xml:space="preserve">
+    <value>将撤回的版本：{0}</value>
+  </data>
+  <data name="StewardLeaveRetractedFormat" xml:space="preserve">
+    <value>已撤回的版本：{0}</value>
+  </data>
+  <data name="StewardLeaveReporterOwnsFormat" xml:space="preserve">
+    <value>根据所有权证明，{0} 拥有 {1} 的条目。</value>
+  </data>
+  <data name="StewardLeaveReporterUnprovenFormat" xml:space="preserve">
+    <value>{1} 条目的所有权证明未指定 {0}。继续前，请通过条目关联的论坛账户确认 {0} 拥有该条目。</value>
+  </data>
+  <data name="StewardLeaveConfirmFormat" xml:space="preserve">
+    <value>我已通过论坛账户确认 {0} 拥有 {1}</value>
+  </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>监测器</value>
   </data>
@@ -815,6 +884,12 @@
   </data>
   <data name="StewardRefusedNotInFile" xml:space="preserve">
     <value>index-status.toml 中已无此状态。请刷新列表。</value>
+  </data>
+  <data name="StewardRefusedNotPinnedFormat" xml:space="preserve">
+    <value>{0} 尚未撤回的版本中，没有任何版本固定了 {1}。</value>
+  </data>
+  <data name="StewardRefusedNotConfirmedFormat" xml:space="preserve">
+    <value>请先通过论坛账户确认 {0} 拥有 {1}。</value>
   </data>
   <data name="StewardErrorSignedOut" xml:space="preserve">
     <value>GitHub 登录已失效，请在设置中重新登录。</value>
@@ -3088,7 +3163,7 @@
     <value>GitHub 会在你的 content-index 派生(fork)中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面并创建 PR。由整合包所有者账户提交的版本会自动合并。</value>
   </data>
   <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub 会在你的 content-index 派生(fork)中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面中。新整合包的首个版本还需在同一 PR 中添加 {1}。检查通过后，首次所有权声明由管理员接受；新 GitHub 账户的检查可能需要等待管理员启动。</value>
+    <value>GitHub 会在你的 content-index 派生(fork)中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面中。新整合包的首个版本还需在同一 PR 中添加 {1}，此 PR 会在检查通过后自动合并。新 GitHub 账户的检查可能需要等待管理员启动。</value>
   </data>
   <data name="ListingOwnerFileTextFormat" xml:space="preserve">
     <value>新整合包的首个版本还需添加 {0}，其中指定你的 GitHub 账户为整合包所有者。通过你的账户创建 PR 时，Borea 会自动写入此文件。使用浏览器时，请通过 Add file 将其添加到同一 PR 的分支中，填入 GitHub 登录名，以及 https://api.github.com/users/&lt;your GitHub name&gt; 显示的数字 ID。</value>
@@ -3157,7 +3232,7 @@
     <value>Borea 无法读取整合包 ID 的所有者。创建 PR 后将由检查作出判断。</value>
   </data>
   <data name="ListingOwnershipFirstClaim" xml:space="preserve">
-    <value>此整合包 ID 尚未被占用。PR 会以你的账户声明所有权；检查通过后，首次声明由管理员接受。</value>
+    <value>此整合包 ID 尚未被占用。PR 会以你的账户声明所有权，并在检查通过后自动合并。</value>
   </data>
   <data name="ListingProofOwnerFormat" xml:space="preserve">
     <value>你拥有 {0}。</value>

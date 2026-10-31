@@ -454,11 +454,7 @@
                             <!-- an installed row leads its tags with a green Installed chip -->
                             <views:TagChipRow Grid.Column="1" Tags="{Binding AllTags}" Lead="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" ShowsLead="{Binding IsInstalled}" LeadTip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" VerticalAlignment="Center" Margin="0,0,24,0" />
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="8,0,0,0">
-                                <!-- c/meta: the size, the downloads and the age of the newest release, when the index reports them -->
-                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloadSize}">
-                                    <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
-                                    <TextBlock Classes="label-md" Text="{Binding DownloadSizeText}" VerticalAlignment="Center" />
-                                </StackPanel>
+                                <!-- c/meta: the downloads and the age of the newest release, when the index reports them -->
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding DownloadsExactText}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
                                     <TextBlock Classes="label-md" Text="{Binding DownloadsText}" VerticalAlignment="Center" />

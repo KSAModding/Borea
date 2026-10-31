@@ -112,8 +112,8 @@ public partial class MainViewModel
         if (await UpdateLoaderToAsync(loaderId, release, replaced))
             return true;
 
-        // the modal shows the error itself, and a row has no place for it
-        if (SetupError is { } error && !IsLoaderSettingModalOpen && !IsLoaderPromptOpen)
+        // the modal shows the error itself, a row has no place for it, and a running game already got its toast from the update
+        if (SetupError is { } error && error != Localization.LoaderUpdateGameRunning && !IsLoaderSettingModalOpen && !IsLoaderPromptOpen)
             ShowErrorToast(() => Localization.FormatToastInstallFailed($"{loaderId} {release.Version}"), error);
         return false;
     }

@@ -165,11 +165,13 @@
 
             <TextBlock Classes="heading-sm" Text="{Binding Localization.SetupLoaderDirectory}" Margin="0,16,0,0" />
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupLoaderDirectoryHint}" TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,6,0,0">
+            <StackPanel Margin="0,6,0,0" Spacing="8">
                 <TextBox Classes="field" Text="{Binding LoaderDirectoryInput}" AutomationProperties.Name="{Binding Localization.SetupLoaderDirectory}" />
-                <Button Grid.Column="2" Classes="text" Content="{Binding Localization.SetupBrowse}" Click="BrowseLoaderDirectory" />
-                <Button Grid.Column="4" Classes="text" Content="{Binding Localization.SetupUseExisting}" Command="{Binding AdoptLoaderCommand}" />
-            </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="text" Content="{Binding Localization.SetupBrowse}" Click="BrowseLoaderDirectory" />
+                    <Button Classes="text" Content="{Binding Localization.SetupUseExisting}" Command="{Binding AdoptLoaderCommand}" />
+                </StackPanel>
+            </StackPanel>
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupFoundLoader}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding IsLoaderDirectorySuggested}" />
             <TextBlock Classes="body-md secondary" Text="{Binding SetupMessage}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
