@@ -36,6 +36,7 @@
                             <Button Classes="tab quiet" Classes.active="{Binding IsReportsTab}" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardTabReports}" Command="{Binding ShowReportsCommand}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsStatusTab}" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardTabStatus}" Command="{Binding ShowStatusCommand}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsWatcherTab}" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardTabWatcher}" Command="{Binding ShowWatcherCommand}" />
+                            <Button Classes="tab quiet" Classes.active="{Binding IsStatisticsTab}" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardTabStatistics}" Command="{Binding ShowStatisticsCommand}" />
                         </StackPanel>
                     </Border>
 
@@ -404,6 +405,67 @@
                                                                 <TextBlock Classes="body-md" Text="{Binding Version}" VerticalAlignment="Center" />
                                                                 <TextBlock Classes="body-sm secondary" Text="{Binding SinceText}" VerticalAlignment="Center" />
                                                             </WrapPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Panel>
+
+                    <!-- Statistics: what the index holds, counted from the snapshot that Borea read, in cards with the most useful first -->
+                    <Panel IsVisible="{Binding IsStatisticsTab}">
+                        <StackPanel DataContext="{Binding Statistics}" x:DataType="vm:StewardStatisticsTab">
+                            <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsHint}" TextWrapping="Wrap" Margin="0,16,0,0" />
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0" IsVisible="{Binding IsLoading}">
+                                <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                                <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsLoading}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <ItemsControl ItemsSource="{Binding Cards}" Margin="0,16,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StewardStatisticsCard">
+                                        <Border Classes="card" Padding="24,16">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Classes="heading-md" Text="{Binding Heading}" />
+                                                <TextBlock Classes="body-md" Text="{Binding Summary}" TextWrapping="Wrap" IsVisible="{Binding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                <ItemsControl ItemsSource="{Binding Sections}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Spacing="12" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:StewardStatisticsSection">
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="label-md secondary" Text="{Binding Title}" TextWrapping="Wrap" />
+                                                                <ItemsControl ItemsSource="{Binding Rows}">
+                                                                    <ItemsControl.ItemsPanel>
+                                                                        <ItemsPanelTemplate>
+                                                                            <StackPanel Spacing="2" />
+                                                                        </ItemsPanelTemplate>
+                                                                    </ItemsControl.ItemsPanel>
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate x:DataType="vm:StewardStatisticsRow">
+                                                                            <WrapPanel ItemSpacing="12" LineSpacing="2">
+                                                                                <Button Classes="link" Padding="0" Height="NaN" MinHeight="32" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}">
+                                                                                    <TextBlock Classes="action-md" Text="{Binding Name}" TextWrapping="Wrap" />
+                                                                                </Button>
+                                                                                <TextBlock Classes="body-md" Text="{Binding Name}" TextWrapping="Wrap" VerticalAlignment="Center" IsVisible="{Binding !CanOpen}" />
+                                                                                <TextBlock Classes="body-sm secondary" Text="{Binding Detail}" VerticalAlignment="Center" IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                                            </WrapPanel>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>

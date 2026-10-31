@@ -892,6 +892,60 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatStewardWatcherGoneFailed(string reason)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardWatcherGoneFailedFormat, reason);
 
+    public string StewardTabStatistics => Resources.StewardTabStatistics;
+
+    public string StewardStatisticsHint => Resources.StewardStatisticsHint;
+
+    public string StewardStatisticsLoading => Resources.StewardStatisticsLoading;
+
+    public string StewardStatisticsGameSupport => Resources.StewardStatisticsGameSupport;
+
+    public string StewardStatisticsNoBuild => Resources.StewardStatisticsNoBuild;
+
+    public string FormatStewardStatisticsSupport(string supporting, string total, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsSupportFormat, supporting, total, build);
+
+    public string FormatStewardStatisticsUnsupported(string count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsUnsupportedFormat, count);
+
+    public string StewardStatisticsDependencies => Resources.StewardStatisticsDependencies;
+
+    public string StewardStatisticsMostDependencies => Resources.StewardStatisticsMostDependencies;
+
+    public string StewardStatisticsMostDependedOn => Resources.StewardStatisticsMostDependedOn;
+
+    public string FormatStewardStatisticsDependencyCount(string required, string optional)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsDependencyCountFormat, required, optional);
+
+    public string FormatStewardStatisticsDependentCount(string required, string optional)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsDependentCountFormat, required, optional);
+
+    public string StewardStatisticsUpkeep => Resources.StewardStatisticsUpkeep;
+
+    public string FormatStewardStatisticsNoCurrentRelease(string count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoCurrentReleaseFormat, count);
+
+    public string FormatStewardStatisticsNoUpdate(string days, string count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoUpdateFormat, days, count);
+
+    public string FormatStewardStatisticsNoImage(string count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoImageFormat, count);
+
+    public string FormatStewardStatisticsNoForumsThread(string count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoForumsThreadFormat, count);
+
+    public string StewardStatisticsOverview => Resources.StewardStatisticsOverview;
+
+    public string StewardStatisticsTypes => Resources.StewardStatisticsTypes;
+
+    public string StewardStatisticsTags => Resources.StewardStatisticsTags;
+
+    public string StewardStatisticsLicenses => Resources.StewardStatisticsLicenses;
+
+    public string StewardStatisticsReleaseHosts => Resources.StewardStatisticsReleaseHosts;
+
+    public string StewardStatisticsMostDownloaded => Resources.StewardStatisticsMostDownloaded;
+
     public string StewardTabStatus => Resources.StewardTabStatus;
 
     public string StewardStatusHint => Resources.StewardStatusHint;

@@ -777,6 +777,75 @@
   <data name="StewardWatcherGoneFailedFormat" xml:space="preserve">
     <value>Der Inhaltsindex ist nicht lesbar. {0}</value>
   </data>
+  <data name="StewardTabStatistics" xml:space="preserve">
+    <value>Statistik</value>
+  </data>
+  <data name="StewardStatisticsHint" xml:space="preserve">
+    <value>Gezählt aus dem Inhaltsindex, den Borea gelesen hat. Die Zahlen beschreiben Inhalte und umfassen, was Spieler sehen können, also fehlt ein ausgetragener Eintrag.</value>
+  </data>
+  <data name="StewardStatisticsLoading" xml:space="preserve">
+    <value>Der Inhaltsindex wird gezählt...</value>
+  </data>
+  <data name="StewardStatisticsGameSupport" xml:space="preserve">
+    <value>Spielunterstützung</value>
+  </data>
+  <data name="StewardStatisticsNoBuild" xml:space="preserve">
+    <value>Der Inhaltsindex nennt keinen Spiel-Build, also ist die Spielunterstützung nicht bekannt.</value>
+  </data>
+  <data name="StewardStatisticsSupportFormat" xml:space="preserve">
+    <value>{0} von {1} Mods unterstützen den Spiel-Build {2}.</value>
+  </data>
+  <data name="StewardStatisticsUnsupportedFormat" xml:space="preserve">
+    <value>Mods, die ihn nicht unterstützen ({0})</value>
+  </data>
+  <data name="StewardStatisticsDependencies" xml:space="preserve">
+    <value>Abhängigkeiten</value>
+  </data>
+  <data name="StewardStatisticsMostDependencies" xml:space="preserve">
+    <value>Meiste direkte Abhängigkeiten</value>
+  </data>
+  <data name="StewardStatisticsMostDependedOn" xml:space="preserve">
+    <value>Wovon die meisten Einträge abhängen</value>
+  </data>
+  <data name="StewardStatisticsDependencyCountFormat" xml:space="preserve">
+    <value>{0} erforderlich, {1} optional</value>
+  </data>
+  <data name="StewardStatisticsDependentCountFormat" xml:space="preserve">
+    <value>erforderlich für {0}, optional für {1}</value>
+  </data>
+  <data name="StewardStatisticsUpkeep" xml:space="preserve">
+    <value>Pflege</value>
+  </data>
+  <data name="StewardStatisticsNoCurrentReleaseFormat" xml:space="preserve">
+    <value>Kein Release für den aktuellen Spiel-Build ({0})</value>
+  </data>
+  <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
+    <value>Seit {0} Tagen kein Update ({1})</value>
+  </data>
+  <data name="StewardStatisticsNoImageFormat" xml:space="preserve">
+    <value>Kein Bild ({0})</value>
+  </data>
+  <data name="StewardStatisticsNoForumsThreadFormat" xml:space="preserve">
+    <value>Kein Forenthread ({0})</value>
+  </data>
+  <data name="StewardStatisticsOverview" xml:space="preserve">
+    <value>Übersicht</value>
+  </data>
+  <data name="StewardStatisticsTypes" xml:space="preserve">
+    <value>Nach Typ</value>
+  </data>
+  <data name="StewardStatisticsTags" xml:space="preserve">
+    <value>Nach Tag</value>
+  </data>
+  <data name="StewardStatisticsLicenses" xml:space="preserve">
+    <value>Nach Lizenz</value>
+  </data>
+  <data name="StewardStatisticsReleaseHosts" xml:space="preserve">
+    <value>Nach Release-Host</value>
+  </data>
+  <data name="StewardStatisticsMostDownloaded" xml:space="preserve">
+    <value>Am häufigsten heruntergeladen</value>
+  </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>Status</value>
   </data>

@@ -777,6 +777,75 @@
   <data name="StewardWatcherGoneFailedFormat" xml:space="preserve">
     <value>Cannot read the content index. {0}</value>
   </data>
+  <data name="StewardTabStatistics" xml:space="preserve">
+    <value>Statistics</value>
+  </data>
+  <data name="StewardStatisticsHint" xml:space="preserve">
+    <value>Counted from the content index that Borea read. The numbers are about content and cover what a player can see, so a delisted entry is not in them.</value>
+  </data>
+  <data name="StewardStatisticsLoading" xml:space="preserve">
+    <value>Counting what the content index holds...</value>
+  </data>
+  <data name="StewardStatisticsGameSupport" xml:space="preserve">
+    <value>Game support</value>
+  </data>
+  <data name="StewardStatisticsNoBuild" xml:space="preserve">
+    <value>The content index names no game build, so game support is not known.</value>
+  </data>
+  <data name="StewardStatisticsSupportFormat" xml:space="preserve">
+    <value>{0} of {1} mods support game build {2}.</value>
+  </data>
+  <data name="StewardStatisticsUnsupportedFormat" xml:space="preserve">
+    <value>Mods that do not support it ({0})</value>
+  </data>
+  <data name="StewardStatisticsDependencies" xml:space="preserve">
+    <value>Dependencies</value>
+  </data>
+  <data name="StewardStatisticsMostDependencies" xml:space="preserve">
+    <value>Most direct dependencies</value>
+  </data>
+  <data name="StewardStatisticsMostDependedOn" xml:space="preserve">
+    <value>What most listings depend on</value>
+  </data>
+  <data name="StewardStatisticsDependencyCountFormat" xml:space="preserve">
+    <value>{0} required, {1} optional</value>
+  </data>
+  <data name="StewardStatisticsDependentCountFormat" xml:space="preserve">
+    <value>required by {0}, optional for {1}</value>
+  </data>
+  <data name="StewardStatisticsUpkeep" xml:space="preserve">
+    <value>Upkeep</value>
+  </data>
+  <data name="StewardStatisticsNoCurrentReleaseFormat" xml:space="preserve">
+    <value>No release for the current game build ({0})</value>
+  </data>
+  <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
+    <value>No update for {0} days ({1})</value>
+  </data>
+  <data name="StewardStatisticsNoImageFormat" xml:space="preserve">
+    <value>No image ({0})</value>
+  </data>
+  <data name="StewardStatisticsNoForumsThreadFormat" xml:space="preserve">
+    <value>No forums thread ({0})</value>
+  </data>
+  <data name="StewardStatisticsOverview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="StewardStatisticsTypes" xml:space="preserve">
+    <value>By type</value>
+  </data>
+  <data name="StewardStatisticsTags" xml:space="preserve">
+    <value>By tag</value>
+  </data>
+  <data name="StewardStatisticsLicenses" xml:space="preserve">
+    <value>By license</value>
+  </data>
+  <data name="StewardStatisticsReleaseHosts" xml:space="preserve">
+    <value>By release host</value>
+  </data>
+  <data name="StewardStatisticsMostDownloaded" xml:space="preserve">
+    <value>Most downloaded</value>
+  </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>Status</value>
   </data>

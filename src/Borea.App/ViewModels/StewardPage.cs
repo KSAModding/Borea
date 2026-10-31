@@ -14,7 +14,8 @@ namespace Borea.App.ViewModels;
 /// and each one opens its review in place of the tabs. Its Reports tab lists the takedown and id dispute reports.
 /// Its Status tab lists the states of index-status.toml on the base branch with Lift on each, which is the only way back
 /// for a delisted listing, because it has no content page. Its Watcher tab lists the issues of the watcher and its watchdog, and the releases gone from their host.
-/// A tab reads GitHub when it shows for the first time.
+/// Its Statistics tab counts what the index holds.
+/// A tab reads GitHub when it shows for the first time, except the Statistics tab, which reads only the snapshot that Borea holds.
 /// </summary>
 public sealed partial class StewardPage : ObservableObject
 {
@@ -27,6 +28,7 @@ public sealed partial class StewardPage : ObservableObject
         Queue = new StewardQueueTab(owner);
         Reports = new StewardReportsTab(owner);
         Watcher = new StewardWatcherTab(owner);
+        Statistics = new StewardStatisticsTab(owner);
     }
 
     public StewardQueueTab Queue { get; }
@@ -34,6 +36,8 @@ public sealed partial class StewardPage : ObservableObject
     public StewardReportsTab Reports { get; }
 
     public StewardWatcherTab Watcher { get; }
+
+    public StewardStatisticsTab Statistics { get; }
 
     /// <summary>The review that shows in place of the tabs, or null.</summary>
     [ObservableProperty]
@@ -47,6 +51,7 @@ public sealed partial class StewardPage : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsReportsTab))]
     [NotifyPropertyChangedFor(nameof(IsStatusTab))]
     [NotifyPropertyChangedFor(nameof(IsWatcherTab))]
+    [NotifyPropertyChangedFor(nameof(IsStatisticsTab))]
     private StewardPageTab _tab;
 
     public bool IsQueueTab => Tab == StewardPageTab.Queue;
@@ -56,6 +61,8 @@ public sealed partial class StewardPage : ObservableObject
     public bool IsStatusTab => Tab == StewardPageTab.Status;
 
     public bool IsWatcherTab => Tab == StewardPageTab.Watcher;
+
+    public bool IsStatisticsTab => Tab == StewardPageTab.Statistics;
 
     /// <summary>The name of the Queue tab, with the number of pull requests that wait for a steward once it is known.</summary>
     public string QueueTabText => Queue.Count is { } count
@@ -95,6 +102,7 @@ public sealed partial class StewardPage : ObservableObject
         StewardPageTab.Queue => Queue.RefreshAsync(),
         StewardPageTab.Reports => Reports.RefreshAsync(),
         StewardPageTab.Watcher => Watcher.RefreshAsync(),
+        StewardPageTab.Statistics => Statistics.RefreshAsync(),
         _ => RefreshAsync(),
     };
 
@@ -107,6 +115,7 @@ public sealed partial class StewardPage : ObservableObject
             StewardPageTab.Queue => Queue.IsLoaded ? Task.CompletedTask : Queue.RefreshAsync(),
             StewardPageTab.Reports => Reports.IsLoaded ? Task.CompletedTask : Reports.RefreshAsync(),
             StewardPageTab.Watcher => Watcher.IsLoaded ? Task.CompletedTask : Watcher.RefreshAsync(),
+            StewardPageTab.Statistics => Statistics.IsLoaded ? Task.CompletedTask : Statistics.RefreshAsync(),
             _ => IsLoaded ? Task.CompletedTask : RefreshAsync(),
         };
     }
@@ -135,6 +144,9 @@ public sealed partial class StewardPage : ObservableObject
     [RelayCommand]
     private Task ShowWatcher() => ShowTabAsync(StewardPageTab.Watcher);
 
+    [RelayCommand]
+    private Task ShowStatistics() => ShowTabAsync(StewardPageTab.Statistics);
+
     internal void OnQueueCountChanged() => OnPropertyChanged(nameof(QueueTabText));
 
     /// <summary>Builds the texts of the tabs and of the open review again in the language that is now selected.</summary>
@@ -143,6 +155,7 @@ public sealed partial class StewardPage : ObservableObject
         Queue.RefreshText();
         Reports.RefreshText();
         Watcher.RefreshText();
+        Statistics.RefreshText();
         Review?.RefreshText();
         OnPropertyChanged(nameof(QueueTabText));
     }
@@ -225,4 +238,5 @@ public enum StewardPageTab
     Reports,
     Status,
     Watcher,
+    Statistics,
 }
