@@ -848,6 +848,12 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     public ContentType Type => _listing.Type;
 
+    public bool IsVehicle => Type == ContentType.Vehicle;
+
+    public bool IsSave => Type == ContentType.Save;
+
+    public bool IsVehicleOrSave => Type.IsVehicleOrSave();
+
     /// <summary>The curated tags in the words and order of the vocabulary, then the free-form tags.</summary>
     public IReadOnlyList<string> AllTags { get; private set; }
 
