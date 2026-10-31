@@ -26,6 +26,9 @@ public partial class MainViewModel
 
     private BoreaServices? _gameBuildCheckServices;
 
+    /// <summary>What the last game build check found, for the diagnostics.</summary>
+    private GameBuildCheckResult _gameBuildCheckResult;
+
     private int? _dismissedGameRevision;
 
     /// <summary>Set once a master server check has failed, so that an index download reads the new snapshot for the banner.</summary>
@@ -125,6 +128,7 @@ public partial class MainViewModel
             var answer = await services.LatestVersion.PingAsync();
             if (answer.Version is not null)
             {
+                _gameBuildCheckResult = GameBuildCheckResult.Answered;
                 LatestGameBuild = answer;
                 return;
             }
@@ -145,7 +149,15 @@ public partial class MainViewModel
 
         services.Log.Write($"The game build check at the master server failed. {failure}");
         _gameBuildCheckFailed = true;
+        SetResultOfFailedGameBuildCheck();
         await ReadSnapshotGameBuildAsync(services);
+    }
+
+    /// <summary>The result follows the snapshot build that is held, because a read of the snapshot can add one later. An answer of the master server stays the result, because its build also comes first in <see cref="NewerGameBuild"/>.</summary>
+    private void SetResultOfFailedGameBuildCheck()
+    {
+        if (LatestGameBuild is null)
+            _gameBuildCheckResult = SnapshotGameBuild is null ? GameBuildCheckResult.NoAnswer : GameBuildCheckResult.AnsweredByIndex;
     }
 
     /// <summary>The read of a failed check and the read after an index download can overlap, so only a newer build replaces the one that is held.</summary>
@@ -153,6 +165,8 @@ public partial class MainViewModel
     {
         if ((await ReadGameReleasesAsync(services, CancellationToken.None)).Newest is { } newest && (SnapshotGameBuild is null || newest > SnapshotGameBuild))
             SnapshotGameBuild = newest;
+
+        SetResultOfFailedGameBuildCheck();
     }
 
     /// <summary>A snapshot that arrives after a failed check can name a build that the old one did not.</summary>

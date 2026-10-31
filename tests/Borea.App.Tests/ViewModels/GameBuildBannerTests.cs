@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.Preferences;
+using Borea.Core.Updates;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -220,6 +221,7 @@ public sealed class GameBuildBannerTests
 
         Assert.Empty(FailedCheckLines(harness));
         Assert.Equal("A newer KSA build is available: 2026.9.10.5438", viewModel.GameBuildBannerText);
+        Assert.Contains("Newest game build: 2026.9.10.5438 (from the master server)", viewModel.DiagnosticsText);
     }
 
     [Fact]
@@ -322,6 +324,97 @@ public sealed class GameBuildBannerTests
         await next.WhenGameBuildCheckedAsync();
         Assert.Equal("A newer KSA build is available: 2026.9.7.5402", next.GameBuildBannerText);
         Assert.False(next.ShowGameBuildBanner);
+    }
+
+    [Theory]
+    [InlineData("2026.9.10.5438", false, "Newest game build: 2026.9.10.5438 (from the master server)")]
+    [InlineData("not a version", true, "Newest game build: no answer from the master server")]
+    [InlineData(null, true, "Newest game build: no answer from the master server")]
+    [InlineData("not a version", false, "Newest game build: 2026.9.7.5402 (from the index, the master server did not answer)")]
+    [InlineData(null, false, "Newest game build: 2026.9.7.5402 (from the index, the master server did not answer)")]
+    public async Task Diagnostics_NameTheResultOfTheGameBuildCheck(string? version, bool indexOffline, string line)
+    {
+        using var harness = await CreateAsync(version is null ? null : MasterServer(version), indexOffline: indexOffline);
+
+        Assert.Contains(line, harness.ViewModel.DiagnosticsText);
+    }
+
+    [Fact]
+    public async Task Diagnostics_NoAnswerAndOnlyTheInstalledBuildInTheSnapshot_NameTheIndexBuildWithoutABanner()
+    {
+        using var harness = await CreateAsync(respond: null, editSnapshot: json => WithOnlyBuild(json, InstalledBuild));
+
+        Assert.False(harness.ViewModel.ShowGameBuildBanner);
+        Assert.Contains($"Newest game build: {InstalledBuild} (from the index, the master server did not answer)", harness.ViewModel.DiagnosticsText);
+    }
+
+    [Fact]
+    public async Task Diagnostics_IndexDownloadedAfterAFailedCheckWithoutABuild_NameTheIndexBuild()
+    {
+        using var harness = await CreateAsync(respond: null, indexOffline: true);
+        var viewModel = harness.ViewModel;
+        Assert.Contains("Newest game build: no answer from the master server", viewModel.DiagnosticsText);
+
+        harness.IndexOffline = false;
+        await viewModel.RefreshContentIndexCommand.ExecuteAsync(null);
+
+        Assert.Contains("Newest game build: 2026.9.7.5402 (from the index, the master server did not answer)", viewModel.DiagnosticsText);
+    }
+
+    [Fact]
+    public async Task Diagnostics_AnswerAfterAFailedCheck_StaysTheMasterServerAfterAnIndexDownload()
+    {
+        var online = false;
+        var build = InstalledBuild;
+        var answer = MasterServer("2026.9.10.5438");
+        using var harness = await CreateAsync(request => online ? answer(request) : null, editSnapshot: json => WithOnlyBuild(json, build));
+        var viewModel = harness.ViewModel;
+        online = true;
+        viewModel.GameDirectoryInput = Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetBoreaSettingsPath())!, "Game");
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+        await viewModel.WhenGameBuildCheckedAsync();
+
+        build = "2026.9.7.5402";
+        await viewModel.RefreshContentIndexCommand.ExecuteAsync(null);
+
+        Assert.Contains("Newest game build: 2026.9.10.5438 (from the master server)", viewModel.DiagnosticsText);
+    }
+
+    [Fact]
+    public async Task Diagnostics_NothingDismissed_NameTheUpdateSettingsAndNone()
+    {
+        using var harness = await CreateAsync(MasterServer("2026.9.10.5438"));
+        var viewModel = harness.ViewModel;
+
+        Assert.Contains("Update check at start: on, channel stable", viewModel.DiagnosticsText);
+        Assert.Contains("Dismissed: game build none, untested build none, loader update none", viewModel.DiagnosticsText);
+
+        viewModel.DismissGameBuildBannerCommand.Execute(null);
+
+        Assert.Contains("Dismissed: game build 5438, untested build none, loader update none", viewModel.DiagnosticsText);
+    }
+
+    [Fact]
+    public async Task Diagnostics_StoredChoices_AreNamedAndNoCheckRuns()
+    {
+        var preferences = AppPreferences.Empty
+            .WithCheckForUpdatesAtStart(false)
+            .WithUpdateChannel(BoreaUpdateChannel.Testing)
+            .WithDismissedGameRevision(5402)
+            .WithDismissedUntestedGameRevision(5117)
+            .WithDismissedLoaderUpdate("StarMap 0.4.6")
+            .WithDismissedAnnouncements(["an-announcement"])
+            .WithSelectedThemeName("Dark");
+        using var harness = await CreateAsync(MasterServer("2026.9.10.5438"), preferences);
+
+        var text = harness.ViewModel.DiagnosticsText;
+
+        Assert.Contains("Update check at start: off, channel testing", text);
+        Assert.Contains("Dismissed: game build 5402, untested build 5117, loader update StarMap 0.4.6", text);
+        Assert.Contains("Newest game build: not checked", text);
+        Assert.DoesNotContain("an-announcement", text);
+        Assert.DoesNotContain("Dark", text);
+        Assert.DoesNotContain(harness.Requests, uri => uri.Host == MasterServerHost);
     }
 
     [Fact]
