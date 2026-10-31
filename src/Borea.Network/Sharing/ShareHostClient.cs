@@ -207,7 +207,10 @@ public sealed class ShareHostClient : IShareHostClient
     private static Uri? Https(string? address) =>
         Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps ? uri : null;
 
-    /// <summary>Signs in with the kept token. A refresh token that the host refuses is deleted.</summary>
+    /// <summary>
+    /// Signs in with the kept token. A refresh token is deleted only on invalid_grant, because a busy host also answers with
+    /// an OAuth error, and the token still works after that.
+    /// </summary>
     private async Task<bool> ResumeAsync(ShareHost host, CancellationToken cancellationToken)
     {
         if (_secrets is not { } secrets)
@@ -238,17 +241,17 @@ public sealed class ShareHostClient : IShareHostClient
             return false;
         }
 
-        KeyValuePair<string, string>[] refresh = [new("grant_type", "refresh_token"), new("refresh_token", kept[ShareHostApi.RefreshPrefix.Length..]), new("client_id", ShareHostApi.ClientId)];
+        var keptRefresh = kept[ShareHostApi.RefreshPrefix.Length..];
+        KeyValuePair<string, string>[] refresh = [new("grant_type", "refresh_token"), new("refresh_token", keptRefresh), new("client_id", ShareHostApi.ClientId)];
         var reply = await PostFormAsync(host, ShareHostApi.TokenPath, refresh, cancellationToken).ConfigureAwait(false);
         var answer = reply is null ? null : Parse<ShareHostJson.Token>(reply.Body);
         if (reply?.Status == HttpStatusCode.OK && answer?.AccessToken is { Length: > 0 } token)
         {
-            Enter(host, token, answer.RefreshToken, keep: true);
+            Enter(host, token, answer.RefreshToken is { Length: > 0 } rotated ? rotated : keptRefresh, keep: true);
             return true;
         }
 
-        // A busy or failing host keeps the token for the next start.
-        if (answer?.Error is not null)
+        if (answer?.Error == "invalid_grant")
             Forget(host);
         return false;
     }
@@ -265,6 +268,12 @@ public sealed class ShareHostClient : IShareHostClient
     private void Keep(ShareHost host, string secret) => RunSecret(secrets => secrets.Write(SecretName(host), secret));
 
     private void Forget(ShareHost host) => RunSecret(secrets => secrets.Delete(SecretName(host)));
+
+    private void ForgetKeptAccessToken(ShareHost host) => RunSecret(secrets =>
+    {
+        if (secrets.Read(SecretName(host))?.StartsWith(ShareHostApi.AccessPrefix, StringComparison.Ordinal) == true)
+            secrets.Delete(SecretName(host));
+    });
 
     // A store that fails only costs the next start a new sign-in.
     private void RunSecret(Action<ISecretStore> work)
@@ -303,7 +312,8 @@ public sealed class ShareHostClient : IShareHostClient
                     _tokens.Remove(TokenKey(host));
             }
 
-            Forget(host);
+            // A kept refresh token can outlive the access token, so the next sign-in tries it before it asks for a code.
+            ForgetKeptAccessToken(host);
             throw new ShareHostException(ShareHostFailure.SignedOut, $"{host.Name} no longer takes the sign-in.");
         }
 
