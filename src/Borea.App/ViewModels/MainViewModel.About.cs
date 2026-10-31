@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -112,7 +113,10 @@ public partial class MainViewModel
                 .AppendLine($"Borea {BoreaInformationalVersion}")
                 .AppendLine(RuntimeText)
                 .AppendLine(SystemText)
-                .AppendLine($"KSA: {InstalledVersionText ?? "not set up"}");
+                .AppendLine($"KSA: {InstalledVersionText ?? "not set up"}")
+                .AppendLine($"Update check at start: {(CheckForUpdatesAtStart ? "on" : "off")}, channel {UpdateChannel.ToString().ToLowerInvariant()}")
+                .AppendLine($"Dismissed: game build {DismissedText(_dismissedGameRevision ?? _appPreferences.DismissedGameRevision)}, untested build {DismissedText(_dismissedUntestedGameRevision ?? _appPreferences.DismissedUntestedGameRevision)}, loader update {_dismissedLoaderUpdate ?? _appPreferences.DismissedLoaderUpdate ?? "none"}")
+                .AppendLine($"Newest game build: {NewestGameBuildText}");
 
             foreach (var path in Localization.TranslationFiles.Paths)
                 text.AppendLine($"Translation file: {WithoutUserProfile(path)}");
@@ -144,6 +148,24 @@ public partial class MainViewModel
 
             return text.ToString().TrimEnd();
         }
+    }
+
+    private static string DismissedText(int? revision) => revision?.ToString(CultureInfo.InvariantCulture) ?? "none";
+
+    private string NewestGameBuildText => _gameBuildCheckResult switch
+    {
+        GameBuildCheckResult.Answered => $"{LatestGameBuild?.Version} (from the master server)",
+        GameBuildCheckResult.AnsweredByIndex => $"{SnapshotGameBuild} (from the index, the master server did not answer)",
+        GameBuildCheckResult.NoAnswer => "no answer from the master server",
+        _ => "not checked",
+    };
+
+    private enum GameBuildCheckResult
+    {
+        NotChecked,
+        Answered,
+        AnsweredByIndex,
+        NoAnswer,
     }
 
     public const int DiagnosticsLogLines = 200;

@@ -117,6 +117,9 @@ internal static class LaunchCommand
             $"No configured source has a listing for {string.Join(", ", choice.LoaderIds)}. Borea needs the listing of an installed mod loader to know how to start it.",
         LaunchLoaderFailure.NoLoaderTakesInstance =>
             $"No mod in '{instance.Name}' needs a mod loader, and no installed mod loader takes an instance. The game reads no instance path on its own. To start the game without a loader, use 'borea game launch', which uses the shared profile and not this instance.",
+        // The loader is installed, but the version rule found no version to start and none to install, or Borea could not look at the index.
+        LaunchLoaderFailure.None =>
+            $"No installed version of {choice.Loader!.ModId} is in the release channel, and Borea found no release to install that fits the game and the mods of '{instance.Name}' (it may be offline). Install one with 'borea loader install {choice.Loader.ModId} --version <version>', or change the release channel with 'borea settings set channel'.",
         _ => throw new ArgumentOutOfRangeException(nameof(choice), choice.Failure, null),
     };
 
@@ -165,7 +168,7 @@ internal static class LaunchCommand
             return;
 
         error.WriteLine(version.Offer is { } offer
-            ? $"warning: {loader.Name} {started} does not support KSA {game.Version?.Version}. Run '{InstallCommand(loader, game, offer.Version.ToString())}' to install {offer.Version}."
+            ? $"warning: {loader.Name} {started} does not support KSA {game.Version?.Version}. Run 'borea loader install {loader.ModId} --version {offer.Version}' to install {offer.Version}."
             : $"warning: {loader.Name} {started} does not support KSA {game.Version?.Version}.");
     }
 

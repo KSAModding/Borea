@@ -1930,7 +1930,7 @@
     <value>Borea hat in dieser Instanz noch keine Inhalte installiert. Füge Inhalte über Entdecken hinzu.</value>
   </data>
   <data name="ManualInstallsInfo" xml:space="preserve">
-    <value>Borea hat die Mods in dieser Liste nicht installiert, aber sie gehören zu dieser Instanz. Wenn du diese Instanz über Borea spielst, lädt das Spiel jeden dieser Mods, der aktiviert ist. Findet das Spiel einen neuen Mod, fragt es dich zuerst, ob du ihn aktivieren willst. Borea aktualisiert sie nicht.</value>
+    <value>Borea hat die Mods in dieser Liste nicht installiert, aber sie gehören zu dieser Instanz. Wenn du diese Instanz über Borea spielst, lädt das Spiel jede dieser Mods, die aktiviert ist. Findet das Spiel eine neue Mod, fragt es dich zuerst, ob du sie aktivieren willst. Borea aktualisiert sie nicht.</value>
   </data>
   <data name="ManualInstallsInIndex" xml:space="preserve">
     <value>Im Inhaltsindex</value>
@@ -1939,10 +1939,10 @@
     <value>Nicht im Inhaltsindex</value>
   </data>
   <data name="ManualInstallsNoUpdates" xml:space="preserve">
-    <value>Borea kann diesen Mod nicht aktualisieren</value>
+    <value>Borea kann diese Mod nicht aktualisieren</value>
   </data>
   <data name="ManualInstallsEmptyHint" xml:space="preserve">
-    <value>Lege einen Mod-Ordner in den Mods-Ordner dieser Instanz, um einen Mod zu nutzen, der nicht im Inhaltsindex ist.</value>
+    <value>Lege einen Mod-Ordner in den Mods-Ordner dieser Instanz, um eine Mod zu nutzen, die nicht im Inhaltsindex ist.</value>
   </data>
   <data name="ManualInstallsNoMatch" xml:space="preserve">
     <value>Im Inhaltsindex, aber die Dateien passen zu keiner Version</value>
@@ -2245,13 +2245,13 @@
     <value>Nicht auf der Festplatte</value>
   </data>
   <data name="ContentNotOnDiskDetail" xml:space="preserve">
-    <value>Der Ordner dieses Mods fehlt. Installiere ihn erneut, oder entferne ihn aus der Liste.</value>
+    <value>Der Ordner dieser Mod fehlt. Installiere sie erneut, oder entferne sie aus der Liste.</value>
   </data>
   <data name="ContentGoneFormat" xml:space="preserve">
     <value>Der Download dieser Version ist seit {0} nicht mehr verfügbar. Borea behält die installierte Kopie.</value>
   </data>
   <data name="ContentNotOnDiskEnable" xml:space="preserve">
-    <value>Borea kann einen Mod ohne Ordner nicht aktivieren.</value>
+    <value>Borea kann eine Mod ohne Ordner nicht aktivieren.</value>
   </data>
   <data name="ContentInstallAgain" xml:space="preserve">
     <value>Erneut installieren</value>
@@ -3778,10 +3778,10 @@
     <value>Aus jeder Gruppe wird eine mit dieser Mod installiert</value>
   </data>
   <data name="ContentDependencyConflicts" xml:space="preserve">
-    <value>Konflikte</value>
+    <value>Konflikte mit</value>
   </data>
   <data name="ContentDependencyConflictsHint" xml:space="preserve">
-    <value>Nicht zusammen installiert</value>
+    <value>Diese Mods funktionieren nicht mit dieser Mod zusammen</value>
   </data>
   <data name="ContentDependencyRecommended" xml:space="preserve">
     <value>Empfohlen</value>
@@ -3806,6 +3806,21 @@
   </data>
   <data name="ContentDependencyOtherHint" xml:space="preserve">
     <value>Eine Art, die diese Borea-Version nicht kennt</value>
+  </data>
+  <data name="ContentDependencyRequiredBy" xml:space="preserve">
+    <value>Benötigt von</value>
+  </data>
+  <data name="ContentDependencyRequiredByHint" xml:space="preserve">
+    <value>Mods, deren neueste Version diese Mod braucht</value>
+  </data>
+  <data name="ContentDependencyRequiredByShowAllFormat" xml:space="preserve">
+    <value>Alle {0} anzeigen</value>
+  </data>
+  <data name="ContentDependencyRequiredByShowInstalled" xml:space="preserve">
+    <value>Nur installierte anzeigen</value>
+  </data>
+  <data name="ContentDependencyRequiredByNoneInstalled" xml:space="preserve">
+    <value>Keine installierte Mod braucht diese Mod.</value>
   </data>
   <data name="ContentDependencyOneOf" xml:space="preserve">
     <value>Eine davon:</value>
@@ -3937,7 +3952,7 @@
     <value>Mod-Loader</value>
   </data>
   <data name="InstanceLoaderNone" xml:space="preserve">
-    <value>Kein Mod braucht einen Mod-Loader. Borea startet diese Instanz trotzdem über einen, weil nur ein Loader das Spiel auf eine Instanz zeigen kann.</value>
+    <value>Keine Mod braucht einen Mod-Loader. Borea startet diese Instanz trotzdem über einen, weil nur ein Loader das Spiel auf eine Instanz zeigen kann.</value>
   </data>
   <data name="InstanceLoaderNotInstalled" xml:space="preserve">
     <value>Nicht installiert</value>

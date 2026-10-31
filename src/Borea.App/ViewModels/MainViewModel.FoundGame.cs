@@ -48,6 +48,10 @@ public partial class MainViewModel
         if (detection is not { Games.Count: > 0 } || !NeedsGameSetup || _gameTabShown || IsSettingsOpen || IsNameModalOpen || IsDeleteModalOpen || IsKeepGameBuildModalOpen || IsUseCurrentGameBuildModalOpen || IsReviewingModList || IsLoaderPromptOpen || IsRuntimePromptOpen || IsLaunchArgumentsModalOpen || IsLaunchFailureOpen || IsToastDetailsOpen || IsReleaseNotesOpen)
             return;
 
+        // the loader modal of an instance keeps its error line, which this modal would clear
+        if (IsLoaderSettingModalOpen)
+            return;
+
         FoundGames.Clear();
         foreach (var game in detection.Games)
             FoundGames.Add(new FoundGameItem(game));
