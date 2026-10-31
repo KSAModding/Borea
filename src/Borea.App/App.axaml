@@ -123,7 +123,7 @@
             <FontFamily x:Key="Font.Sans">avares://Borea.App/Assets/Fonts#IBM Plex Sans</FontFamily>
             <FontFamily x:Key="Font.Mono">avares://Borea.App/Assets/Fonts#IBM Plex Mono</FontFamily>
 
-            <!-- Fluent's ToggleSwitch and ComboBox read these for their fills and borders -->
+            <!-- Fluent's ToggleSwitch, ComboBox and RadioButton read these for their fills and borders -->
             <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{DynamicResource Color.Window}" />
             <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{DynamicResource Color.Window}" />
             <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{DynamicResource Color.Window}" />
@@ -145,6 +145,21 @@
             <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{DynamicResource Color.BorderStrong}" />
             <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{DynamicResource Color.BorderStrong}" />
             <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="{DynamicResource Color.AccentSoft}" />
+            <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="{DynamicResource Color.AccentSoft}" />
+            <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="{DynamicResource Color.AccentSoft}" />
+            <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="{DynamicResource Color.Text}" />
+            <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="{DynamicResource Color.Text}" />
+            <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPressed" Color="{DynamicResource Color.Text}" />
+            <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedFill" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedFillPointerOver" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedFillPressed" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedStroke" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedStrokePointerOver" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedStrokePressed" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="RadioButtonCheckGlyphFill" Color="{DynamicResource Color.SurfaceHeader}" />
+            <SolidColorBrush x:Key="RadioButtonCheckGlyphFillPointerOver" Color="{DynamicResource Color.SurfaceHeader}" />
+            <SolidColorBrush x:Key="RadioButtonCheckGlyphFillPressed" Color="{DynamicResource Color.SurfaceHeader}" />
 
             <!-- A dropdown, which is whatever the Fluent theme hangs in an overlay, is a panel like any
                  other and takes the radius of a card and the surface of the app, not the small overlay
@@ -607,6 +622,10 @@
         <Style Selector="Button.add Path">
             <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
             <Setter Property="StrokeThickness" Value="2" />
+        </Style>
+        <Style Selector="Button.add:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceHeader}" />
+            <Setter Property="Opacity" Value="0.4" />
         </Style>
         <Style Selector="Button.add.installed">
             <Setter Property="Background" Value="{StaticResource Brush.Compatible}" />

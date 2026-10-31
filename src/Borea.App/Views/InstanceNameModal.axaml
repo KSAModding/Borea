@@ -26,7 +26,7 @@
                 <TextBlock Classes="body-md" Text="{Binding NameModalExplanation}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding NameModalExplanation, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Classes="body-md" Text="{Binding GameSaveRenameReason}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding GameSaveRenameReason, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Classes="body-md secondary" Text="{Binding Localization.GameSaveNameRules}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding ShowsGameSaveNameRules}" />
-                <Grid RowDefinitions="Auto,Auto,Auto" Margin="36,32,24,32">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="36,32,24,32">
                     <!-- Instance Name -->
                     <StackPanel Grid.Row="0" Spacing="6">
                         <TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalNameLabel}" />
@@ -51,8 +51,23 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
+                    <!-- Game Build -->
+                    <StackPanel Grid.Row="2" Spacing="6" Margin="0,16,0,0" IsVisible="{Binding CanPickGameBuild}">
+                        <TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalGameBuildLabel}" />
+                        <ComboBox ItemsSource="{Binding GameBuildChoices}" SelectedItem="{Binding SelectedGameBuildChoice}" AutomationProperties.Name="{Binding Localization.ModalGameBuildLabel}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GameBuildChoice">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Text}" VerticalAlignment="Center" />
+                                        <TextBlock Classes="label-md" Text="{Binding VersionText}" VerticalAlignment="Center" IsVisible="{Binding VersionText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ModalGameBuildHint}" TextWrapping="Wrap" />
+                    </StackPanel>
                     <!-- Buttons -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,32,0,0">
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,32,0,0">
                         <Button Classes="text tall" Content="{Binding NameModalSkipText}" Command="{Binding CancelNameModalCommand}" VerticalAlignment="Center" IsVisible="{Binding NameModalSkipText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <Button Classes="cta" Command="{Binding ConfirmNameModalCommand}">
                             <TextBlock Classes="action-lg" Text="{Binding NameModalConfirmText}" VerticalAlignment="Center" />

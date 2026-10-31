@@ -5,7 +5,8 @@ namespace Borea.App.ViewModels;
 /// <summary>
 /// The hint the pages show while no instance is active. Without any instance it
 /// leads to the New instance modal, otherwise to the Library. With an active
-/// instance, the pages and the add buttons name it instead.
+/// instance, the pages and the add buttons name it instead, or say why they add
+/// nothing to it.
 /// </summary>
 public partial class MainViewModel
 {
@@ -23,11 +24,16 @@ public partial class MainViewModel
 
     public string AddingToAfter => Localization.SplitDiscoverAddingTo().After;
 
-    public string AddToText => ActiveInstance is { } active ? Localization.FormatDiscoverAddTo(active.Name) : Localization.DiscoverAdd;
+    /// <summary>False while the kept build of the active instance is not found, because every install into it is refused.</summary>
+    public bool CanAddToActiveInstance => ActiveInstance?.AddRefusalText is null;
 
-    /// <summary>What Add does on a mod the active instance already holds in <paramref name="installedVersion"/>.</summary>
+    public string AddToText => ActiveInstance is { } active
+        ? active.AddRefusalText ?? Localization.FormatDiscoverAddTo(active.Name)
+        : Localization.DiscoverAdd;
+
+    /// <summary>What Add does on a mod the active instance already holds in <paramref name="installedVersion"/>, or why it does nothing.</summary>
     public string ReplaceVersionText(string installedVersion) => ActiveInstance is { } active
-        ? Localization.FormatContentReplaceVersionIn(installedVersion, active.Name)
+        ? active.AddRefusalText ?? Localization.FormatContentReplaceVersionIn(installedVersion, active.Name)
         : Localization.FormatContentReplaceVersion(installedVersion);
 
     /// <summary>
@@ -47,7 +53,7 @@ public partial class MainViewModel
             BeginCreateInstance();
     }
 
-    private void RefreshInstanceHint()
+    internal void RefreshInstanceHint()
     {
         OnPropertyChanged(nameof(HomeInstanceHintText));
         OnPropertyChanged(nameof(InstanceHintText));
@@ -56,5 +62,6 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(AddingToBefore));
         OnPropertyChanged(nameof(AddingToAfter));
         OnPropertyChanged(nameof(AddToText));
+        OnPropertyChanged(nameof(CanAddToActiveInstance));
     }
 }

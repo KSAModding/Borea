@@ -29,6 +29,9 @@ public partial class MainViewModel
 
     private int _instanceLoaderGeneration;
 
+    /// <summary>The release that a Mod loader row installs, so a row that the page builds again during the install still shows it. Null while no row installs.</summary>
+    private (string LoaderId, ModVersion Version)? _rowLoaderInstall;
+
     /// <summary>
     /// Chooses the loader version of the shown instance the way Play does, then builds the section again.
     /// A later call wins over an earlier one that is still reading.
@@ -67,6 +70,7 @@ public partial class MainViewModel
         var need = LoaderNeed.For(instance);
         var names = _content.ToDictionary(item => item.ModId, item => item.Name, ModIds.Comparer);
         var resolution = _instanceLoaderResolution is { } found && found.InstanceId == instance.InstanceId ? found.Resolution : null;
+        var keptBuildMissing = SelectedInstance is { } shown && shown.InstanceId == instance.InstanceId && shown.GameBuildProblem != KeptBuildProblem.None;
         var rows = new List<InstanceLoaderRow>();
 
         // the loader that starts the instance comes first, also when no mod needs it or it is not installed yet
@@ -88,7 +92,9 @@ public partial class MainViewModel
             LoaderUpdateFor(loaderId),
             id => names.TryGetValue(id, out var name) ? name : id,
             version,
-            instance.Loader);
+            instance.Loader,
+            KeptBuildTextOf(instance),
+            keptBuildMissing);
     }
 
     /// <summary>"0.4.5 to 0.8.0" or "0.4.5 or newer", the versions one mod accepts.</summary>
@@ -106,10 +112,34 @@ public partial class MainViewModel
         if (await UpdateLoaderToAsync(loaderId, release, replaced))
             return true;
 
-        // the modal shows the error itself, and a row has no place for it
-        if (SetupError is { } error && !IsLoaderSettingModalOpen && !IsLoaderPromptOpen)
+        // the modal shows the error itself, a row has no place for it, and a running game already got its toast from the update
+        if (SetupError is { } error && error != Localization.LoaderUpdateGameRunning && !IsLoaderSettingModalOpen && !IsLoaderPromptOpen)
             ShowErrorToast(() => Localization.FormatToastInstallFailed($"{loaderId} {release.Version}"), error);
         return false;
+    }
+
+    /// <summary>True while a Mod loader row installs <paramref name="release"/> of the loader.</summary>
+    internal bool IsRowInstalling(string loaderId, ModVersionMetadata? release) =>
+        _rowLoaderInstall is { } running && release is not null && ModIds.Equals(running.LoaderId, loaderId) && running.Version == release.Version;
+
+    /// <summary>
+    /// Installs <paramref name="release"/> for a Mod loader row, and the rows show the install until it ends. False when
+    /// it did not install.
+    /// </summary>
+    /// <param name="replaced">The version that an update replaces, or null for an install.</param>
+    internal async Task<bool> InstallLoaderFromRowAsync(string loaderId, ModVersionMetadata release, ModVersion? replaced)
+    {
+        _rowLoaderInstall = (loaderId, release.Version);
+        RefreshInstanceLoader();
+        try
+        {
+            return await InstallLoaderVersionAsync(loaderId, release, replaced);
+        }
+        finally
+        {
+            _rowLoaderInstall = null;
+            RefreshInstanceLoader();
+        }
     }
 }
 
@@ -165,6 +195,9 @@ public enum InstanceLoaderState
 
     /// <summary>The mods ask for versions that do not overlap.</summary>
     Conflict,
+
+    /// <summary>The kept build of the instance is gone or holds another build, so Borea cannot rate the version.</summary>
+    KeptBuildMissing,
 }
 
 /// <summary>
@@ -184,6 +217,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     private readonly LoaderUpdate? _update;
     private readonly LoaderVersionResolution? _resolution;
     private readonly LoaderSetting? _setting;
+    private readonly string? _keptBuild;
 
     /// <summary>A row for a loader the mods need, rated from the recorded installation as the update check rates it.</summary>
     /// <param name="update">The last loader update check's answer for this loader, or null before it answered.</param>
@@ -198,7 +232,9 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     /// <param name="nameOf">The display name of a mod id, as its row on the page shows it.</param>
     /// <param name="resolution">The version that starts the instance, or null for a loader that this launch does not start.</param>
     /// <param name="setting">The loader setting of the instance, which names a pinned version also when it is not installed.</param>
-    public InstanceLoaderRow(MainViewModel owner, string loaderId, NeededLoader? loader, DiscoverItem? listing, LoaderInstallation? installation, LoaderUpdate? update, Func<string, string> nameOf, LoaderVersionResolution? resolution, LoaderSetting? setting)
+    /// <param name="keptBuild">The kept build that <paramref name="resolution"/> was rated against, or null on the build of the settings.</param>
+    /// <param name="keptBuildMissing">True when the kept build is not found, so no rating of this row is about the build that the instance starts on.</param>
+    public InstanceLoaderRow(MainViewModel owner, string loaderId, NeededLoader? loader, DiscoverItem? listing, LoaderInstallation? installation, LoaderUpdate? update, Func<string, string> nameOf, LoaderVersionResolution? resolution, LoaderSetting? setting, string? keptBuild = null, bool keptBuildMissing = false)
     {
         _owner = owner;
         _loaderId = loaderId;
@@ -207,6 +243,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
         _nameOf = nameOf;
         _resolution = resolution;
         _setting = setting;
+        _keptBuild = keptBuild;
         Name = listing?.Name ?? loaderId;
         Icon = listing?.Icon;
 
@@ -216,13 +253,13 @@ public sealed partial class InstanceLoaderRow : ObservableObject
 
             // the update check reads the version of a recorded folder from its files when the settings do not know it
             _version = start is null ? null : start.Version ?? (start.IsRecorded ? update?.InstalledVersion : null);
-            State = StateOf(loader, start is not null, _version, resolution.StartCompatibility);
+            State = StateOf(loader, start is not null, _version, resolution.StartCompatibility, keptBuildMissing);
 
-            // the update check rated the recorded version, so its answer explains only that one
-            _update = start is { IsRecorded: true } && update is not null
+            // the update check rated the recorded version against the build of the settings, so its answer explains only that one there
+            _update = start is { IsRecorded: true } && update is not null && keptBuild is null
                 ? update
                 : new LoaderUpdate(loaderId, _version, resolution.StartCompatibility, resolution.Offer);
-            if (!IsConflict)
+            if (State is not (InstanceLoaderState.Conflict or InstanceLoaderState.KeptBuildMissing))
             {
                 _offer = start is null ? null : resolution.Offer;
                 _missing = start is null ? resolution.Missing : null;
@@ -233,7 +270,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
 
         _update = update;
         _version = installation is null ? null : installation.Version ?? update?.InstalledVersion;
-        State = StateOf(loader, installation is not null, _version, update?.InstalledCompatibility ?? GameCompatibility.Unknown);
+        State = StateOf(loader, installation is not null, _version, update?.InstalledCompatibility ?? GameCompatibility.Unknown, keptBuildMissing);
 
         // like a mod row, an update shows in place when the mods accept the new release
         if (State is InstanceLoaderState.Installed or InstanceLoaderState.GameIncompatible && update?.Offer is { } offer && (loader is null || loader.Accepts(offer.Version)))
@@ -315,6 +352,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
         InstanceLoaderState.GameIncompatible => _owner.Localization.FormatInstanceLoaderIncompatible(_version!.Value.ToString()),
         InstanceLoaderState.WrongVersion => _owner.Localization.FormatInstanceLoaderWrongVersion(_version!.Value.ToString()),
         InstanceLoaderState.NotInstalled => _owner.Localization.InstanceLoaderNotInstalled,
+        InstanceLoaderState.KeptBuildMissing => _owner.Localization.CompatibilityUnknown,
         _ => _owner.Localization.InstanceLoaderConflictShort,
     };
 
@@ -322,7 +360,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     public string? StatusToolTip => State switch
     {
         InstanceLoaderState.Conflict => _owner.Localization.InstanceLoaderConflict,
-        InstanceLoaderState.GameIncompatible when _update is not null => _owner.LoaderIncompatibleText(Name, _update),
+        InstanceLoaderState.GameIncompatible when _update is not null => _owner.LoaderIncompatibleText(Name, _update, _keptBuild),
         _ => null,
     };
 
@@ -335,51 +373,55 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     /// <summary>A conflict or a release that does not support the game shows as a danger.</summary>
     public bool IsDanger => State is InstanceLoaderState.Conflict or InstanceLoaderState.GameIncompatible;
 
-    /// <summary>"Update to 0.4.8" when a newer release that fits the game and the mods is offered, else null.</summary>
-    public string? UpdateText => _offer is { } offer ? _owner.Localization.FormatSetupUpdateLoader(offer.Version.ToString()) : null;
+    /// <summary>
+    /// "Update to 0.4.8" when a newer release that fits the game and the mods is offered, or "Install 0.4.6" for an
+    /// older release that a kept build needs, which goes beside the installed one. Else null.
+    /// </summary>
+    public string? UpdateText => _offer is not { } offer
+        ? null
+        : MainViewModel.IsOlderOffer(offer, _version)
+            ? _owner.Localization.FormatInstanceLoaderInstall(offer.Version.ToString())
+            : _owner.Localization.FormatSetupUpdateLoader(offer.Version.ToString());
 
-    public bool CanUpdate => _offer is not null;
+    /// <summary>The button hides while the row installs, because Stop takes its place.</summary>
+    public bool CanUpdate => _offer is not null && !IsInstalling;
 
     /// <summary>"Install 0.4.8" when the version that would start the instance is not installed and the index offers it, else null.</summary>
     public string? InstallText => _missing is { } missing ? _owner.Localization.FormatInstanceLoaderInstall(missing.Version.ToString()) : null;
 
-    public bool CanInstall => _missing is not null;
+    public bool CanInstall => _missing is not null && !IsInstalling;
 
-    /// <summary>True while this row installs a release, so the row shows the progress of the install.</summary>
-    [ObservableProperty]
-    private bool _isInstalling;
+    /// <summary>True while a row of this loader installs the release that this row offers, so the row shows the progress of the install.</summary>
+    public bool IsInstalling => _owner.IsRowInstalling(_loaderId, _missing ?? _offer);
+
+    /// <summary>
+    /// "Installing StarMap 0.4.7..." while this row installs, until the install reports its own progress text. A row
+    /// offers either an update or a missing version, never both, so the text names the release that it installs.
+    /// </summary>
+    public string? InstallingText => IsInstalling && (_missing ?? _offer) is { } release
+        ? _owner.Localization.FormatInstanceLoaderInstalling($"{Name} {release.Version}")
+        : null;
 
     [RelayCommand]
     private async Task UpdateAsync()
     {
         if (_offer is { } offer)
-            await InstallAsync(offer, _version);
+            await _owner.InstallLoaderFromRowAsync(_loaderId, offer, _version);
     }
 
     [RelayCommand]
     private async Task InstallMissingAsync()
     {
         if (_missing is { } missing)
-            await InstallAsync(missing, replaced: null);
+            await _owner.InstallLoaderFromRowAsync(_loaderId, missing, replaced: null);
     }
 
-    private async Task InstallAsync(ModVersionMetadata release, ModVersion? replaced)
-    {
-        IsInstalling = true;
-        try
-        {
-            await _owner.InstallLoaderVersionAsync(_loaderId, release, replaced);
-        }
-        finally
-        {
-            IsInstalling = false;
-        }
-    }
-
-    private static InstanceLoaderState StateOf(NeededLoader? loader, bool isInstalled, ModVersion? version, GameCompatibility compatibility)
+    private static InstanceLoaderState StateOf(NeededLoader? loader, bool isInstalled, ModVersion? version, GameCompatibility compatibility, bool keptBuildMissing = false)
     {
         if (loader?.HasConflict == true)
             return InstanceLoaderState.Conflict;
+        if (keptBuildMissing)
+            return InstanceLoaderState.KeptBuildMissing;
         if (!isInstalled)
             return InstanceLoaderState.NotInstalled;
         if (version is not { } known)

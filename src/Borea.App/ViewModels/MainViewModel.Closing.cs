@@ -27,11 +27,21 @@ public partial class MainViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsCloseWaitingForHistory))]
     [NotifyPropertyChangedFor(nameof(CloseStopsInstall))]
+    [NotifyPropertyChangedFor(nameof(CloseNowGameBuildKeepWarningText))]
     private IReadOnlyList<TaskItem> _closeWaitsFor = [];
 
     public bool IsCloseWaitingForHistory => CloseWaitsFor.Count == 0;
 
-    public bool CloseStopsInstall => CloseWaitsFor.Any(task => task.Run is not null);
+    // a build copy leaves no mod half installed, so it has its own warning
+    public bool CloseStopsInstall => CloseWaitsFor.Any(task => task.Run is not null && task.Kind != TaskKind.GameBuildKeep);
+
+    /// <summary>
+    /// The warning for a stopped build copy of an instance, with the build of the first one. Null when no such copy runs,
+    /// because a copy from a chosen folder leaves no instance without its build.
+    /// </summary>
+    public string? CloseNowGameBuildKeepWarningText => CloseWaitsFor.FirstOrDefault(task => task.Kind == TaskKind.GameBuildKeep && task.InstanceId is not null) is { } keep
+        ? Localization.FormatCloseNowGameBuildKeepWarning(keep.Subject ?? string.Empty)
+        : null;
 
     /// <summary>Ends the App at once.</summary>
     internal Action? EndApp { get; set; }

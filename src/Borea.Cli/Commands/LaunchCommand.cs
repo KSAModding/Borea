@@ -28,6 +28,11 @@ internal static class LaunchCommand
                 .ConfigureAwait(false);
             var givenLoaderId = parseResult.GetValue(loaderId);
             var game = cli.InstanceGames.Resolve(target);
+
+            // a kept build that is not there has no version to rate a loader against
+            if (game is { Problem: not KeptBuildProblem.None, KeptBuild: { } missing })
+                throw new InvalidOperationException(LaunchResult.GameBuildMissing(target, cli.Paths.GetGameBuildFolder(missing)).Message);
+
             var installed = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
             var resolution = await LoaderLookup.ResolveAsync(cli, target, installed, game.Version?.Version, givenLoaderId, ct).ConfigureAwait(false);
             var choice = resolution.Choice;
@@ -49,28 +54,22 @@ internal static class LaunchCommand
                     : $"No mod in '{target.Name}' needs a mod loader. Using {loader.ModId}, which takes an instance.");
             }
 
-            WriteLoaderWarning(loader, version, game.Version?.Version, error);
+            WriteLoaderWarning(loader, version, game, error);
 
             var shape = await cli.GameShape.GetForInstanceAsync(target.InstanceId, ct).ConfigureAwait(false);
             GameShapeOutput.WriteWarning(shape, error);
 
-            // The load order is a write, so it waits for a shape Borea trusts.
+            // The load order is a write, so it waits for a shape Borea trusts. The folder is the one the instance starts,
+            // the same installation the shape check read.
             if (shape.AllowsWrites
-                && cli.Settings.GameDirectoryPath is { } gameDirectory
+                && game.GameDirectory is { } gameDirectory
                 && await cli.ModState.PutGameContentFirstAsync(target.InstanceId, gameDirectory, ct).ConfigureAwait(false))
             {
                 cli.Log.Write($"Instance {target.InstanceId}: the game's own content now loads before the mods.");
             }
 
-            // each version folder keeps its own game path, and a loader in a Wine prefix needs the path of the prefix
-            if (game.GameDirectory is { } gamePath
-                && await cli.LoaderConfiguration.PrepareForLaunchAsync(loader, start.DirectoryPath, gamePath, start.IsAdopted, ct).ConfigureAwait(false) is { } prepared)
-            {
-                cli.Log.Write($"Wrote the game path to '{prepared}' before the launch.");
-            }
-
             ct.ThrowIfCancellationRequested();
-            var result = cli.Launcher.Launch(target, loader, start.DirectoryPath, passThrough.Values);
+            var result = cli.Launcher.Launch(target, loader, start.DirectoryPath, passThrough.Values, start.IsAdopted);
 
             // a loader that stops with an error while the game loads is reported, not left to vanish
             if (result.Started)
@@ -80,7 +79,7 @@ internal static class LaunchCommand
             {
                 error.WriteLine($"error: {result.Message}");
                 if (result.CrashCause == LoaderCrashCause.GameAssembly)
-                    error.WriteLine(GameAssemblyHint(target, loader, version));
+                    error.WriteLine(GameAssemblyHint(target, loader, version, game));
 
                 if (result.Outcome == LaunchOutcome.ExitedEarly)
                 {
@@ -118,6 +117,9 @@ internal static class LaunchCommand
             $"No configured source has a listing for {string.Join(", ", choice.LoaderIds)}. Borea needs the listing of an installed mod loader to know how to start it.",
         LaunchLoaderFailure.NoLoaderTakesInstance =>
             $"No mod in '{instance.Name}' needs a mod loader, and no installed mod loader takes an instance. The game reads no instance path on its own. To start the game without a loader, use 'borea game launch', which uses the shared profile and not this instance.",
+        // The loader is installed, but the version rule found no version to start and none to install, or Borea could not look at the index.
+        LaunchLoaderFailure.None =>
+            $"No installed version of {choice.Loader!.ModId} is in the release channel, and Borea found no release to install that fits the game and the mods of '{instance.Name}' (it may be offline). Install one with 'borea loader install {choice.Loader.ModId} --version <version>', or change the release channel with 'borea settings set channel'.",
         _ => throw new ArgumentOutOfRangeException(nameof(choice), choice.Failure, null),
     };
 
@@ -147,24 +149,35 @@ internal static class LaunchCommand
     /// What to do when the loader cannot load the game. An instance that is set to one version keeps it after an
     /// install, so it also gets the command that lets Borea choose the version again.
     /// </summary>
-    private static string GameAssemblyHint(Instance instance, ModMetadata loader, LoaderVersionResolution version) => version.IsPinned
-        ? $"Instance '{instance.Name}' is set to {loader.Name} {version.Start?.Version}. Install a {loader.Name} release for this KSA build with 'borea loader install {loader.ModId}', then let Borea choose it with 'borea instance set-loader \"{instance.Name}\" auto'."
-        : $"Install a {loader.Name} release for this KSA build with 'borea loader install {loader.ModId}'. The instance then starts the newest installed release that fits the game.";
+    private static string GameAssemblyHint(Instance instance, ModMetadata loader, LoaderVersionResolution version, InstanceGame game)
+    {
+        var install = InstallCommand(loader, game, version.Offer?.Version.ToString() ?? "<version>");
+        return version.IsPinned
+            ? $"Instance '{instance.Name}' is set to {loader.Name} {version.Start?.Version}. Install a {loader.Name} release for this KSA build with '{install}', then let Borea choose it with 'borea instance set-loader \"{instance.Name}\" auto'."
+            : $"Install a {loader.Name} release for this KSA build with '{install}'. The instance then starts the newest installed release that fits the game.";
+    }
 
     /// <summary>
     /// Warns when the index says the loader version that starts the instance does not support the game. The launch
     /// still starts, because the bounds can be wrong. An instance that is set to one version gets no install advice,
     /// because another installed version does not change what it starts.
     /// </summary>
-    private static void WriteLoaderWarning(ModMetadata loader, LoaderVersionResolution version, GameVersion? game, TextWriter error)
+    private static void WriteLoaderWarning(ModMetadata loader, LoaderVersionResolution version, InstanceGame game, TextWriter error)
     {
         if (version.StartCompatibility != GameCompatibility.Incompatible || version.Start?.Version is not { } started)
             return;
 
         error.WriteLine(version.Offer is { } offer
-            ? $"warning: {loader.Name} {started} does not support KSA {game}. Run 'borea loader install {loader.ModId}' to install {offer.Version}."
-            : $"warning: {loader.Name} {started} does not support KSA {game}.");
+            ? $"warning: {loader.Name} {started} does not support KSA {game.Version?.Version}. Run 'borea loader install {loader.ModId} --version {offer.Version}' to install {offer.Version}."
+            : $"warning: {loader.Name} {started} does not support KSA {game.Version?.Version}.");
     }
+
+    /// <summary>
+    /// The command that installs a loader release for the game of an instance. Without a version, the install picks the
+    /// release for the build of the settings, so an instance on a kept build gets <paramref name="version"/>.
+    /// </summary>
+    private static string InstallCommand(ModMetadata loader, InstanceGame game, string version) =>
+        game.KeptBuild is null ? $"borea loader install {loader.ModId}" : $"borea loader install {loader.ModId} --version {version}";
 
     private static string InstallHint(string loaderId) =>
         $"Install it with 'borea loader install {loaderId}', or record an existing copy with 'borea loader adopt {loaderId} <directory>'.";

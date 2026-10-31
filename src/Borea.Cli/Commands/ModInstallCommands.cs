@@ -190,7 +190,7 @@ internal static class ModInstallCommands
 
     private static async Task<InstallPlan> PlanAsync(CliServices cli, Instance instance, IModRepository repository, IReadOnlyList<RequestedMod> requested, ReleaseChannel channel, bool withRecommended, IReadOnlyDictionary<string, string> alternatives, CancellationToken cancellationToken)
     {
-        var gameVersion = cli.InstalledVersion.GetInstalledVersion()?.Version;
+        var gameVersion = InstanceLookup.GameVersionOf(cli, instance);
         var request = new InstallPlanningRequest(instance, requested, repository, gameVersion, cli.GamePlatform.Current, Alternatives: alternatives, Channel: channel);
         var plan = await cli.InstallPlanner.PlanAsync(request, cancellationToken).ConfigureAwait(false);
         if (!withRecommended)

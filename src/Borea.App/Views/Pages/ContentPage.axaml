@@ -144,7 +144,7 @@
                         <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Top">
                             <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
                             <Panel VerticalAlignment="Center" IsVisible="{Binding CanActOnSelectedContent}">
-                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
+                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" IsEnabled="{Binding CanAddToActiveInstance}" ToolTip.Tip="{Binding AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding AddToText}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
                                         <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
@@ -263,6 +263,15 @@
                             </MultiBinding>
                         </ContentControl.IsVisible>
                     </ContentControl>
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ActiveKeptBuildUnavailable}" Margin="0,16,0,0">
+                        <ContentControl.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="!CanAddToActiveInstance" />
+                                <Binding Path="CanActOnSelectedContent" />
+                                <Binding Path="!IsLoaderContent" />
+                            </MultiBinding>
+                        </ContentControl.IsVisible>
+                    </ContentControl>
                     <WrapPanel ItemSpacing="12" LineSpacing="4" Margin="0,16,0,0" IsVisible="{Binding IsLoaderContent}">
                         <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentLoaderHint}" TextWrapping="Wrap" VerticalAlignment="Center" />
                         <Button Classes="link" Command="{Binding SetMainWindowSettings}">
@@ -292,14 +301,14 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- the dependencies of the release in the header, grouped by kind -->
+                    <!-- the dependencies of the release in the header, grouped by kind, then the Conflicts with and Required by cards -->
                     <StackPanel Spacing="16" Margin="0,16,0,0" IsVisible="{Binding IsDependenciesTab}">
                         <TextBlock Classes="body-md secondary" Text="{Binding ContentDependenciesHeading}" IsVisible="{Binding ContentDependenciesHeading, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" Padding="16,8" IsVisible="{Binding ContentLoaderDependency, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <ContentControl Content="{Binding ContentLoaderDependency}" ContentTemplate="{StaticResource DependencyMemberRow}" />
                         </Border>
                         <TextBlock Classes="body-md muted" Text="{Binding ContentDependenciesEmptyText}" TextWrapping="Wrap" IsVisible="{Binding ContentDependenciesEmptyText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <ItemsControl ItemsSource="{Binding ContentDependencyGroups}">
+                        <ItemsControl ItemsSource="{Binding ContentDependencyGroups}" IsVisible="{Binding ContentDependenciesEmptyText, Converter={x:Static ObjectConverters.IsNull}}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Spacing="16" />
@@ -338,6 +347,55 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <!-- the mods that this release names as a conflict, and the listings whose newest release names this release as one -->
+                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" IsVisible="{Binding HasContentConflicts}">
+                            <StackPanel>
+                                <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ContentDependencyConflicts}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ContentDependencyConflictsHint}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding ContentConflicts}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DependencyMember">
+                                            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+                                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DependencyMemberRow}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        <!-- the listings whose newest release needs this mod -->
+                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" IsVisible="{Binding HasContentRequiredBy}">
+                            <StackPanel>
+                                <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ContentDependencyRequiredBy}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ContentDependencyRequiredByHint}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding ContentRequiredBy}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DependencyMember">
+                                            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+                                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DependencyMemberRow}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,10" IsVisible="{Binding IsContentRequiredByNoneInstalled}">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ContentDependencyRequiredByNoneInstalled}" TextWrapping="Wrap" />
+                                </Border>
+                                <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,10">
+                                    <!-- the padding keeps the text inside the hover background, and the margin lines the text up with the rows above -->
+                                    <Button Classes="link" HorizontalAlignment="Left" Margin="-8,0,0,0" Command="{Binding ToggleContentRequiredByCommand}">
+                                        <TextBlock Classes="action-md" Text="{Binding ContentRequiredByToggleText}" />
+                                    </Button>
+                                </Border>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
 
                     <!-- c/table-versions -->
@@ -403,7 +461,13 @@
                                                         <Button Classes="icon" Command="{Binding ToggleChangelogCommand}" IsVisible="{Binding Changelog, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" />
                                                         </Button>
-                                                        <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" ToolTip.Tip="{Binding InstallToolTip}" AutomationProperties.Name="{Binding InstallToolTip}">
+                                                        <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" ToolTip.Tip="{Binding InstallToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding InstallToolTip}">
+                                                            <Button.IsEnabled>
+                                                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                                    <Binding Path="!IsInstalling" />
+                                                                    <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).CanAddToActiveInstance" />
+                                                                </MultiBinding>
+                                                            </Button.IsEnabled>
                                                             <Button.IsVisible>
                                                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                                     <Binding Path="CanInstall" />

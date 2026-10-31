@@ -1,4 +1,5 @@
 ﻿using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Files;
@@ -154,6 +155,24 @@ public sealed class FileInstanceRepositoryTests : IDisposable
 
         var reloaded = await new FileInstanceRepository(_pathProvider).GetByIdAsync(instance.InstanceId);
         Assert.Equal(arguments, reloaded?.LaunchArguments);
+    }
+
+    [Fact]
+    public async Task RoundTrip_PersistsTheGameBuild_AndAnInstanceWithoutOneWritesNoKey()
+    {
+        var instance = (await _repository.CreateAsync("Kept", InstanceSource.Custom.Value)).Instance;
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        Assert.DoesNotContain(File.ReadAllLines(path), line => line.StartsWith("GameBuild", StringComparison.Ordinal));
+
+        await _repository.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetGameBuild(GameVersion.Parse("2026.10.13.5602"));
+            return true;
+        });
+
+        var reloaded = await new FileInstanceRepository(_pathProvider).GetByIdAsync(instance.InstanceId);
+        Assert.Equal(GameVersion.Parse("2026.10.13.5602"), reloaded!.GameBuild);
+        Assert.Contains(File.ReadAllLines(path), line => line == "GameBuild = \"2026.10.13.5602\"");
     }
 
     [Fact]

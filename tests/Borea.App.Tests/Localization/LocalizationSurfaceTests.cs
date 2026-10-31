@@ -68,6 +68,7 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Equal("Back to 1.1.9 in Main", service.FormatPackMemberBackTo("1.1.9", "Main"));
         Assert.Equal("In Main", service.FormatPackMemberInstanceHeader("Main"));
         Assert.Equal("MeasureTools changed to 1.1.10 in Main", service.FormatToastChanged("MeasureTools", "1.1.10", "Main"));
+        Assert.Equal("KSA\u00A02026.8.3.5117 kept for Main", service.FormatToastGameBuildKept("2026.8.3.5117", "Main"));
         Assert.Equal("Detached from Tools Pack, which pins 1.1.9. Attach it again from the row menu.", service.FormatContentDetachedFrom("Tools Pack", "1.1.9"));
         Assert.Equal("1 of 3 selected", service.FormatGameSaveProfileSelected(1, 3));
         Assert.Equal("1 mod", service.FormatDiscoverModCount(1));

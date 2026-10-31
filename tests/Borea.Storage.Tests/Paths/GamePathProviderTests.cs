@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Tests.Launch;
@@ -72,6 +73,7 @@ public sealed class GamePathProviderTests
 
         Assert.Equal(Path.Combine(@"E:\Library", "Instances"), provider.GetInstancesRoot());
         Assert.Equal(Path.Combine(@"E:\Library", "Backups"), provider.GetBackupsRoot());
+        Assert.Equal(Path.Combine(@"E:\Library", "Game Builds", "2026.10.13.5602"), provider.GetGameBuildFolder(GameVersion.Parse("2026.10.13.5602-dev")));
         Assert.StartsWith(@"E:\Library", provider.GetInstanceMetadataPath(instanceId));
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetBoreaSettingsPath());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetActiveInstancePointerPath());

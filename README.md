@@ -138,7 +138,7 @@ If Borea does not start after an update, rename `borea.exe.old` (`borea.old` on 
 
 1. In **Settings**, **General**, turn off **Open borea:// links with this Borea**, so that Borea removes its link registration.
 2. Close Borea and delete the folder that you unpacked it into, or `Borea.app` on macOS.
-3. Delete Borea's own folder. It holds the settings, caches, logs and mod loaders, and also the instances and backups unless you moved the library:
+3. Delete Borea's own folder. It holds the settings, caches, logs and mod loaders, and also the instances, backups and kept game builds unless you moved the library:
    - Windows: `%LocalAppData%\Borea`
    - Linux: `~/.local/share/Borea`, or `$XDG_DATA_HOME/Borea` when that variable is set
    - macOS: `~/Library/Application Support/Borea`
@@ -194,7 +194,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea game version` | Print the installed build and the current public build the master server reports. |
 | `borea game check` | Check the game installation against what Borea assumes about it. Exits 1 when an assumption is broken. |
 | `borea instance list` | Print every instance and mark the active one. |
-| `borea instance show <instance>` | Print one instance, the mod loader its mods need and the version it starts, its launch arguments, when it was last played, and how long it was played. |
+| `borea instance show <instance>` | Print one instance, the game build it runs on, the mod loader its mods need and the version it starts, its launch arguments, when it was last played, and how long it was played. |
 | `borea instance create <name>` | Create an empty instance. |
 | `borea instance duplicate <instance> [--name <name>]` | Create an instance with the same mods, versions, and enabled flags. |
 | `borea instance export <instance> [file]` | Write the mods of an instance, with their versions and enabled flags, as a modlist. |

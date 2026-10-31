@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
@@ -471,6 +472,8 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetSecretsFolder() => throw new NotSupportedException();
         public string GetInstancesRoot() => throw new NotSupportedException();
         public string GetStaticModFilesRoot() => throw new NotSupportedException();
+        public string GetGameBuildsRoot() => throw new NotSupportedException();
+        public string GetGameBuildFolder(GameVersion version) => throw new NotSupportedException();
         public string GetLoadersRoot() => throw new NotSupportedException();
         public string GetPresetsRoot() => throw new NotSupportedException();
         public string GetGameSettingsPresetsRoot() => throw new NotSupportedException();

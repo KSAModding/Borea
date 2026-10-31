@@ -16,9 +16,9 @@ using CommunityToolkit.Mvvm.Input;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// Rates the loader version that starts the active instance against its game and offers a newer
-/// release on Home, before Play, on the instance page and in the settings. Each recorded loader is
-/// rated too, for the instance page and the settings. Borea never updates a loader on its own, and
+/// Rates the loader version that starts the active instance against its game and offers a release
+/// that fits, newer or for a kept build also older, on Home, before Play, on the instance page and
+/// in the settings. Each recorded loader is rated too, for the instance page and the settings. Borea never updates a loader on its own, and
 /// an update goes beside the installed versions, so it changes no other instance.
 /// </summary>
 public partial class MainViewModel
@@ -31,13 +31,27 @@ public partial class MainViewModel
 
     private string _loaderUpdateName = string.Empty;
 
+    /// <summary>The kept build of the instance that the banners rate, which they name in place of the build of the settings. Null on the settings build.</summary>
+    private string? _loaderUpdateKeptBuild;
+
+    /// <summary>The instance that the banners rate, which the banner for a kept build names.</summary>
+    private (Guid Id, string Name) _loaderUpdateInstance = (Guid.Empty, string.Empty);
+
+    /// <summary>The current name of the rated instance, because a rename does not change the rating and starts no check.</summary>
+    private string LoaderUpdateInstanceName => _activeInstanceEntity is { } active && active.InstanceId == _loaderUpdateInstance.Id
+        ? active.Name
+        : _loaderUpdateInstance.Name;
+
     private string? _dismissedLoaderUpdate;
 
     /// <summary>The pinned version of the active instance that is missing or does not support the game, or null.</summary>
     private PinnedLoaderProblem? _pinnedLoaderProblem;
 
-    /// <summary>The active instance and its loader setting when the last check started, so a change rates again.</summary>
-    private (Guid? InstanceId, LoaderSetting? Setting) _loaderUpdateRated;
+    /// <summary>The active instance, its loader setting and its kept build when the last check started, so a change of any of them rates again.</summary>
+    private (Guid? InstanceId, LoaderSetting? Setting, GameVersion? GameBuild) _loaderUpdateRated;
+
+    private (Guid? InstanceId, LoaderSetting? Setting, GameVersion? GameBuild) ActiveLoaderRating =>
+        (_activeInstanceEntity?.InstanceId, _activeInstanceEntity?.Loader, _activeInstanceEntity?.GameBuild);
 
     /// <summary>
     /// The update the Home banner shows for an active instance that chooses its version automatically: the version
@@ -57,9 +71,11 @@ public partial class MainViewModel
 
     public string? LoaderUpdateBannerText => (_pinnedLoaderProblem, LoaderUpdate) switch
     {
-        ({ IsIncompatible: true } pin, _) => Localization.FormatLoaderPinnedIncompatible(_loaderUpdateName, pin.Version.ToString(), pin.InstanceName, InstalledVersionText ?? string.Empty),
+        ({ IsIncompatible: true } pin, _) => Localization.FormatLoaderPinnedIncompatible(_loaderUpdateName, pin.Version.ToString(), pin.InstanceName, _loaderUpdateKeptBuild ?? InstalledVersionText ?? string.Empty),
         ({ } pin, _) => Localization.FormatLoaderPinnedMissing(_loaderUpdateName, pin.Version.ToString(), pin.InstanceName),
-        (null, { } update) when IsBroken(update) => LoaderIncompatibleText(_loaderUpdateName, update),
+        (null, { InstalledVersion: { } installed, Offer: { } offer } update) when IsBroken(update) && _loaderUpdateKeptBuild is { } kept =>
+            Localization.FormatLoaderUpdateUrgentKept(LoaderUpdateInstanceName, kept, _loaderUpdateName, installed.ToString(), offer.Version.ToString()),
+        (null, { } update) when IsBroken(update) => LoaderIncompatibleText(_loaderUpdateName, update, _loaderUpdateKeptBuild),
         (null, { InstalledVersion: not null, Offer: { } offer }) => Localization.FormatLoaderUpdateAvailable(_loaderUpdateName, offer.Version.ToString()),
         _ => null,
     };
@@ -68,8 +84,10 @@ public partial class MainViewModel
         ? pinned.Install is { } install
             ? Localization.FormatLoaderInstallAction(_loaderUpdateName, install.Version.ToString())
             : Localization.LoaderChangeAction
-        : LoaderUpdate?.Offer is { } release
-            ? Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
+        : LoaderUpdate is { Offer: { } release } update
+            ? IsOlderOffer(release, update.InstalledVersion)
+                ? Localization.FormatLoaderInstallAction(_loaderUpdateName, release.Version.ToString())
+                : Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
             : null;
 
     partial void OnLoaderUpdateChanged(LoaderUpdate? value) => RefreshLoaderUpdateText();
@@ -81,19 +99,30 @@ public partial class MainViewModel
         update is { InstalledCompatibility: GameCompatibility.Incompatible, InstalledVersion: not null };
 
     /// <summary>
+    /// True when <paramref name="offer"/> is older than the installed version, which only a kept build asks for. It
+    /// installs beside the installed version, so the texts say Install, not Update.
+    /// </summary>
+    internal static bool IsOlderOffer(ModVersionMetadata offer, ModVersion? installed) => installed is { } known && offer.Version < known;
+
+    /// <summary>
     /// Why the installed release does not fit the game, and the next step: the
     /// release to update to, a KSA update, or no step yet.
     /// </summary>
-    internal string LoaderIncompatibleText(string loaderName, LoaderUpdate update)
+    /// <param name="game">The build that the release was rated against. Null names the build of the settings.</param>
+    internal string LoaderIncompatibleText(string loaderName, LoaderUpdate update, string? game = null)
     {
         var installed = update.InstalledVersion?.ToString() ?? string.Empty;
-        var game = InstalledVersionText ?? string.Empty;
+        game ??= InstalledVersionText ?? string.Empty;
         return update.Offer is { } offer
             ? Localization.FormatLoaderUpdateUrgent(loaderName, installed, game, offer.Version.ToString())
             : update.InstalledNeedsNewerGame
                 ? Localization.FormatLoaderNeedsNewerGame(loaderName, installed, game)
                 : Localization.FormatLoaderUpdateNone(loaderName, installed, game);
     }
+
+    /// <summary>The kept build that <paramref name="instance"/> starts, for the texts that rate its loader, or null on the build of the settings.</summary>
+    private string? KeptBuildTextOf(Instance instance) =>
+        instance.GameBuild is { } kept ? _services?.InstanceGames.Resolve(instance).Version?.RawVersion ?? kept.ToString() : null;
 
     /// <summary>True when the mods of <paramref name="instance"/> accept <paramref name="version"/> of the loader, or do not ask for that loader.</summary>
     private static bool AcceptsLoader(Instance instance, string loaderId, ModVersion version) =>
@@ -136,11 +165,13 @@ public partial class MainViewModel
             return;
 
         // also a check that fails counts, so a reload without the index does not start the next one
-        _loaderUpdateRated = (_activeInstanceEntity?.InstanceId, _activeInstanceEntity?.Loader);
+        _loaderUpdateRated = ActiveLoaderRating;
         var found = new Dictionary<string, LoaderUpdate>(ModIds.Comparer);
         LoaderUpdate? shown = null;
         PinnedLoaderProblem? pinned = null;
         var name = string.Empty;
+        string? keptBuild = null;
+        var ratedInstance = (Guid.Empty, string.Empty);
         try
         {
             foreach (var (loaderId, installation) in services.Settings.LoaderInstallations.OrderBy(entry => entry.Key, ModIds.Comparer))
@@ -150,11 +181,13 @@ public partial class MainViewModel
             // with no mods and the Automatic setting, which every new instance starts with.
             var active = await services.Instances.GetActiveInstanceIdAsync() is { } activeId ? await services.Instances.GetByIdAsync(activeId) : null;
             var instance = active ?? new Instance(nameof(Instance), InstanceSource.Custom.Value);
+            keptBuild = KeptBuildTextOf(instance);
+            ratedInstance = (instance.InstanceId, instance.Name);
             var resolution = await ResolveLaunchLoaderAsync(services, instance);
             if (resolution.Version is { IsPinned: true } pin)
                 pinned = PinnedLoaderProblemOf(instance, pin, resolution.Start);
-            else if (resolution.Start is { } start)
-                shown = await RateLoaderStartAsync(services, instance, start, found);
+            else if (resolution is { Start: { } start, Version: { } version })
+                shown = await RateLoaderStartAsync(services, instance, version, start, found);
 
             if ((pinned?.LoaderId ?? shown?.LoaderId) is { } shownId)
                 name = (await services.Mods.GetListingAsync(shownId))?.Name ?? shownId;
@@ -169,18 +202,25 @@ public partial class MainViewModel
 
         _loaderUpdates = found;
         _loaderUpdateName = name;
+        _loaderUpdateKeptBuild = keptBuild;
+        _loaderUpdateInstance = ratedInstance;
         _pinnedLoaderProblem = pinned;
         LoaderUpdate = shown;
         RefreshLoaderUpdateText();
-        RefreshInstanceLoader();
+
+        // the page that is open rates its loader again, because the build or the index that it was rated against changed
+        await LoadInstanceLoaderAsync();
     }
 
-    /// <summary>The banners follow the active instance, so another active instance or a new loader setting rates again.</summary>
+    /// <summary>The banners follow the active instance, so another active instance, a new loader setting or another kept build rates again.</summary>
     partial void OnActiveInstanceChanged(InstanceItem? value)
     {
         // the first check waits until the start has refreshed the index
-        if (_loaderUpdateCheckGeneration > 0 && _loaderUpdateRated != (_activeInstanceEntity?.InstanceId, _activeInstanceEntity?.Loader))
+        if (_loaderUpdateCheckGeneration > 0 && _loaderUpdateRated != ActiveLoaderRating)
             StartLoaderUpdateCheck();
+
+        // a rename rates nothing again, but the banner for a kept build names the instance
+        OnPropertyChanged(nameof(LoaderUpdateBannerText));
     }
 
     /// <summary>The Error banner for a pinned version that is missing or that the index rates incompatible with the game, else null.</summary>
@@ -201,7 +241,8 @@ public partial class MainViewModel
     /// The update for the version that starts an Automatic instance, rated the way the update check rates a recorded
     /// loader, with an offer that the mods of the instance accept. Null when there is nothing to show.
     /// </summary>
-    private static async Task<LoaderUpdate?> RateLoaderStartAsync(BoreaServices services, Instance instance, InstalledLoaderVersion start, IReadOnlyDictionary<string, LoaderUpdate> recorded)
+    /// <param name="resolution">The version choice that <paramref name="start"/> comes from.</param>
+    private static async Task<LoaderUpdate?> RateLoaderStartAsync(BoreaServices services, Instance instance, LoaderVersionResolution resolution, InstalledLoaderVersion start, IReadOnlyDictionary<string, LoaderUpdate> recorded)
     {
         var loaderId = start.LoaderId;
 
@@ -215,7 +256,33 @@ public partial class MainViewModel
             new LoaderInstallation(start.DirectoryPath, version, start.RawVersion, start.IsAdopted),
             services.InstanceGames.Resolve(instance).Version?.Version,
             need: need);
+
+        // A KSA update does not change a kept build, so the banner offers what Play offers, also an older release. It
+        // never offers the version that it rates, which the index offers when Borea knows it only from the files.
+        if (instance.GameBuild is not null)
+        {
+            var offer = resolution.Offer is { } fitting && (IsBroken(update) || version is not { } known || fitting.Version > known) ? fitting : null;
+            update = update with { Offer = offer, InstalledNeedsNewerGame = false };
+        }
+
         return IsBroken(update) || update is { InstalledVersion: not null, Offer: not null } ? update : null;
+    }
+
+    /// <summary>
+    /// The version that starts an instance on a kept build, rated against that build before a launch, or null when
+    /// there is nothing to show or no index to read.
+    /// </summary>
+    private async Task<LoaderUpdate?> RateKeptLoaderStartAsync(BoreaServices services, Instance instance, LoaderVersionResolution resolution, InstalledLoaderVersion start)
+    {
+        try
+        {
+            return await RateLoaderStartAsync(services, instance, resolution, start, _loaderUpdates);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+        {
+            // without the index there is nothing to rate, so the launch asks nothing, the same as before the update check answered
+            return null;
+        }
     }
 
     /// <summary>
@@ -280,8 +347,9 @@ public partial class MainViewModel
     /// as the usual loader install task. False when it did not install.
     /// </summary>
     /// <param name="replaced">
-    /// The version that the update replaces, or null for an install. Borea removes it after the install when Borea
-    /// created it and no instance starts it any more, so a player who only updates keeps one folder, as before.
+    /// The version that the update replaces, or null for an install. Borea removes it after the install of a newer
+    /// release when Borea created it and no instance starts it any more, so a player who only updates keeps one folder,
+    /// as before. An older release, which a kept build can need, goes beside it.
     /// </param>
     internal async Task<bool> UpdateLoaderToAsync(string loaderId, ModVersionMetadata release, ModVersion? replaced = null)
     {
@@ -303,7 +371,7 @@ public partial class MainViewModel
             var message = await InstallLoaderReleaseAsync(current, loaderId, release);
 
             // the removal runs inside the task, so the services that the task builds again already see it
-            if (replaced is { } old && old != release.Version)
+            if (replaced is { } old && old < release.Version)
                 await RemoveReplacedLoaderVersionAsync(current, loaderId, old, release.Version);
             return message;
         });

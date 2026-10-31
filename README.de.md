@@ -180,7 +180,7 @@ Der Exit-Code ist 0, wenn der Befehl durchgelaufen ist, 1, wenn die Operation fe
 | `borea game version` | Den installierten Build und den aktuellen öffentlichen Build ausgeben, den der Master-Server meldet. |
 | `borea game check` | Die Spielinstallation gegen das prüfen, was Borea über sie annimmt. Endet mit 1, wenn eine Annahme verletzt ist. |
 | `borea instance list` | Jede Instanz ausgeben und die aktive markieren. |
-| `borea instance show <instance>` | Eine Instanz ausgeben, dazu den Mod-Loader, den ihre Mods brauchen, und die Version, die sie startet, ihre Startargumente, wann sie zuletzt gespielt wurde und wie lange. |
+| `borea instance show <instance>` | Eine Instanz ausgeben, dazu den Spiel-Build, auf dem sie läuft, den Mod-Loader, den ihre Mods brauchen, und die Version, die sie startet, ihre Startargumente, wann sie zuletzt gespielt wurde und wie lange. |
 | `borea instance create <name>` | Eine leere Instanz anlegen. |
 | `borea instance duplicate <instance> [--name <name>]` | Eine Instanz mit denselben Mods und Versionen anlegen, in der dieselben Mods aktiviert sind. |
 | `borea instance export <instance> [file]` | Die Mods einer Instanz als Mod-Liste schreiben, mit Version und ob sie aktiv sind. |

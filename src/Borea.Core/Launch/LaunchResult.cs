@@ -1,4 +1,5 @@
 using Borea.Core.Game;
+using Borea.Core.Instances;
 
 namespace Borea.Core.Launch;
 
@@ -55,6 +56,9 @@ public sealed class LaunchResult
     /// <summary>The .NET runtime that the loader needs and the Wine prefix lacks, when that stopped the launch.</summary>
     public DotnetRuntimeNeed? MissingRuntime { get; private init; }
 
+    /// <summary>The configuration file of the loader that Borea could not read, when that stopped the launch.</summary>
+    public string? ConfigurationFile { get; private init; }
+
     private LaunchResult(LaunchOutcome outcome, string message, LaunchPlan? plan, int? processId)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -108,11 +112,21 @@ public sealed class LaunchResult
         };
     }
 
-    public static LaunchResult Failed(LaunchOutcome outcome, string message, LaunchPlan? plan = null, string? unknownName = null, WineInstall? wine = null, string? unmappedPath = null, DotnetRuntimeNeed? missingRuntime = null)
+    public static LaunchResult Failed(LaunchOutcome outcome, string message, LaunchPlan? plan = null, string? unknownName = null, WineInstall? wine = null, string? unmappedPath = null, DotnetRuntimeNeed? missingRuntime = null, string? configurationFile = null)
     {
         if (outcome == LaunchOutcome.Started)
             throw new ArgumentException("A started launch is a success, not a failure.", nameof(outcome));
 
-        return new LaunchResult(outcome, message, plan, processId: null) { UnknownName = unknownName, Wine = wine, UnmappedPath = unmappedPath, MissingRuntime = missingRuntime };
+        return new LaunchResult(outcome, message, plan, processId: null) { UnknownName = unknownName, Wine = wine, UnmappedPath = unmappedPath, MissingRuntime = missingRuntime, ConfigurationFile = configurationFile };
+    }
+
+    /// <summary>The refusal of an instance whose kept build has a problem, also for a caller that stops before the launch.</summary>
+    /// <param name="buildFolder">The folder of the kept build.</param>
+    public static LaunchResult GameBuildMissing(Instance instance, string buildFolder)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        return Failed(
+            LaunchOutcome.GameBuildMissing,
+            $"Instance '{instance.Name}' runs on KSA {instance.GameBuild}, and '{buildFolder}' is gone or holds another build. Borea starts nothing, so the instance does not start on another build. To use the game folder of the settings instead, select \"Use the current game build\" in the instance menu of the desktop App, or remove GameBuild from the instance.toml of the instance.");
     }
 }

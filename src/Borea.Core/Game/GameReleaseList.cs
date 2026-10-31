@@ -26,6 +26,8 @@ public sealed partial class GameReleaseList
 
     public bool IsEmpty => _versions.Length == 0;
 
+    public GameVersion? Newest => IsEmpty ? null : _versions.Max();
+
     public GameReleaseList WithBuild(GameVersion build) => new([.. _versions, build]);
 
     /// <summary>The builds above <paramref name="revision"/>, one per revision, newest first.</summary>
