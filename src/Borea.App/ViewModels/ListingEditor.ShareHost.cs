@@ -215,29 +215,16 @@ public sealed partial class ListingEditor
                 return;
             }
 
-            if (!services.ShareHostClient.IsSignedIn(host))
-            {
-                ShareHostProgress = Localization.FormatListingShareHostSigningIn(host.Name);
-                var progress = new Progress<GitHubDeviceCode>(code =>
-                {
-                    if (_shareHostRun != cancel)
-                        return;
+            var client = services.ShareHostClient;
+            if (!client.IsSignedIn(host))
+                await SignInToShareHostAsync(host, client, cancel);
 
-                    _shareHostCode = (code.VerificationUri, code.UserCode);
-                    OnPropertyChanged(nameof(ShareHostCodeText));
-                    OnPropertyChanged(nameof(ShareHostUserCode));
-                });
-                await services.ShareHostClient.SignInAsync(host, progress, _owner.StaySignedInToGitHub, cancel.Token);
-                _shareHostCode = null;
-                OnPropertyChanged(nameof(ShareHostCodeText));
-                OnPropertyChanged(nameof(ShareHostUserCode));
-            }
-
-            ShareHostProgress = Localization.ListingShareHostUploading;
             var listingId = ListingOnHost(host);
-            ShareUpload upload;
-            await using (var archive = File.OpenRead(file))
-                upload = await services.ShareHostClient.UploadAsync(host, archive, share.Content.Name + ".zip", Draft.Dependencies, listingId, cancel.Token);
+            var upload = await SendSignedInAsync(host, client, cancel, Localization.ListingShareHostUploading, async () =>
+            {
+                await using var archive = File.OpenRead(file);
+                return await client.UploadAsync(host, archive, share.Content.Name + ".zip", Draft.Dependencies, listingId, cancel.Token);
+            });
 
             if (_shareHostRun != cancel)
                 return;
@@ -277,11 +264,69 @@ public sealed partial class ListingEditor
             if (_shareHostRun == cancel)
             {
                 _shareHostRun = null;
-                _shareHostCode = null;
                 ShareHostProgress = null;
+            }
+        }
+    }
+
+    /// <summary>Signs in and shows the code that the player enters on the host until the sign-in ends.</summary>
+    private async Task SignInToShareHostAsync(ShareHost host, IShareHostClient client, CancellationTokenSource cancel)
+    {
+        ShareHostProgress = Localization.FormatListingShareHostSigningIn(host.Name);
+        var progress = new Progress<GitHubDeviceCode>(code =>
+        {
+            if (_shareHostRun != cancel)
+                return;
+
+            _shareHostCode = (code.VerificationUri, code.UserCode);
+            OnPropertyChanged(nameof(ShareHostCodeText));
+            OnPropertyChanged(nameof(ShareHostUserCode));
+        });
+        try
+        {
+            await client.SignInAsync(host, progress, _owner.StaySignedInToGitHub, cancel.Token);
+
+            // A Cancel that lands before this line has cleared the progress, and the caller must not set it again.
+            cancel.Token.ThrowIfCancellationRequested();
+        }
+        finally
+        {
+            if (_shareHostRun == cancel)
+            {
+                _shareHostCode = null;
                 OnPropertyChanged(nameof(ShareHostCodeText));
                 OnPropertyChanged(nameof(ShareHostUserCode));
             }
+        }
+    }
+
+    /// <summary>
+    /// Sends a request, and once more after a new sign-in when the host no longer takes the token, which the client has
+    /// dropped by then. <paramref name="send"/> opens its own stream, because a request disposes the stream it sent. A host
+    /// that also refuses the new token ends the sign-in, so the next share asks for a code and not for the same refresh.
+    /// </summary>
+    private async Task<T> SendSignedInAsync<T>(ShareHost host, IShareHostClient client, CancellationTokenSource cancel, string progress, Func<Task<T>> send)
+    {
+        ShareHostProgress = progress;
+        try
+        {
+            return await send();
+        }
+        catch (ShareHostException exception) when (exception.Failure == ShareHostFailure.SignedOut)
+        {
+            cancel.Token.ThrowIfCancellationRequested();
+            await SignInToShareHostAsync(host, client, cancel);
+        }
+
+        ShareHostProgress = progress;
+        try
+        {
+            return await send();
+        }
+        catch (ShareHostException exception) when (exception.Failure == ShareHostFailure.SignedOut)
+        {
+            client.SignOut(host);
+            throw;
         }
     }
 
@@ -299,13 +344,16 @@ public sealed partial class ListingEditor
             return;
         }
 
+        // A sign-in between two sends can take minutes while both fields stay editable, and only the values of the click go out.
+        var version = ShareHostVersion.Trim();
+        var status = ShareHostStatus;
         using var cancel = new CancellationTokenSource();
         _shareHostRun = cancel;
         ShareHostError = null;
-        ShareHostProgress = Localization.ListingShareHostPublishing;
         try
         {
-            var published = await services.ShareHostClient.PublishAsync(shared.Host, shared.Upload.Id, ShareHostVersion.Trim(), ShareHostStatus, listing, cancel.Token);
+            var client = services.ShareHostClient;
+            var published = await SendSignedInAsync(shared.Host, client, cancel, Localization.ListingShareHostPublishing, () => client.PublishAsync(shared.Host, shared.Upload.Id, version, status, listing, cancel.Token));
             if (_shareHostRun != cancel)
                 return;
 
