@@ -7,7 +7,8 @@ namespace Borea.Storage.Tests.Listings;
 /// <summary>
 /// The test documents of content-index that its checks and its listing page run too, so the editor gives the answers of
 /// check_schema.py. The rules the editor checks in full without the snapshot run here, and the vectors of
-/// <see cref="Named"/> of the schema and license rules, which the editor also says in the words of the checks.
+/// <see cref="Named"/> of the schema and license rules, which the editor also says in the words of the checks, and the
+/// vectors of a vehicle or a save.
 /// </summary>
 public sealed class ListingVectorTests
 {
@@ -37,19 +38,7 @@ public sealed class ListingVectorTests
         get
         {
             var data = new TheoryData<string>();
-            foreach (var vector in Read().Where(vector => Rules.Contains((string?)vector["rule"]) || Named.Contains((string?)vector["name"])))
-                data.Add((string)vector["name"]!);
-            return data;
-        }
-    }
-
-    /// <summary>The vectors of a type that the rollout gate of RFC 0085 holds.</summary>
-    public static TheoryData<string> GatedVectors
-    {
-        get
-        {
-            var data = new TheoryData<string>();
-            foreach (var vector in Read().Where(vector => vector["gated"] is not null))
+            foreach (var vector in Read().Where(vector => Rules.Contains((string?)vector["rule"]) || Named.Contains((string?)vector["name"]) || IsVehicleOrSave(vector)))
                 data.Add((string)vector["name"]!);
             return data;
         }
@@ -77,34 +66,8 @@ public sealed class ListingVectorTests
             Assert.True(lines.Any(line => line.Contains(says, StringComparison.Ordinal)), $"'{says}' is not in:\n{string.Join("\n", lines)}");
     }
 
-    [Theory]
-    [MemberData(nameof(GatedVectors))]
-    public void GatedVector_IsRefusedWithTheTitleOfTheGate(string name)
-    {
-        var vector = Read().Single(vector => (string?)vector["name"] == name);
-        var type = (string)vector["gated"]!;
-        Assert.Contains(type, UngatedSchema.GatedTypes);
-
-        var issues = _validator.Validate(_format.Read((string)vector["toml"]!), new ListingCheckContext(null)).Issues;
-
-        Assert.Contains(issues, issue => issue.Severity == ListingIssueSeverity.Error && $"{issue.Location}: {issue.Message}" == $"type: '{type}' is {UngatedSchema.GateTitle}");
-    }
-
-    [Theory]
-    [MemberData(nameof(GatedVectors))]
-    public async Task GatedVector_GivesTheAnswerOfTheChecksWithoutTheGate(string name)
-    {
-        var vector = Read().Single(vector => (string?)vector["name"] == name);
-        var validator = new ListingValidator(new UngatedSchema());
-        await validator.LoadSchemaAsync();
-
-        var issues = validator.Validate(_format.Read((string)vector["toml"]!), new ListingCheckContext(null)).Issues;
-
-        var lines = issues.Select(issue => $"{issue.Location}: {issue.Message}").ToList();
-        Assert.True((bool)vector["accepted"]! == !issues.Any(issue => issue.Severity == ListingIssueSeverity.Error), string.Join("\n", lines));
-        if ((string?)vector["says"] is { } says && !OwnWords.Contains(name))
-            Assert.True(lines.Any(line => line.Contains(says, StringComparison.Ordinal)), $"'{says}' is not in:\n{string.Join("\n", lines)}");
-    }
+    private static bool IsVehicleOrSave(JsonNode vector) =>
+        (string?)vector["toml"] is { } toml && (toml.Contains("type = \"vehicle\"", StringComparison.Ordinal) || toml.Contains("type = \"save\"", StringComparison.Ordinal));
 
     private static List<JsonNode> Read() =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Listings", "Fixtures", "vectors.json")))!["vectors"]!.AsArray().OfType<JsonNode>().ToList();

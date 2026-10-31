@@ -232,7 +232,7 @@ public sealed class ShareHostShareTests
     private static Func<HttpRequestMessage, HttpResponseMessage?> Serve(string? vehicles = null) => request => request.RequestUri?.AbsoluteUri switch
     {
         { } uri when uri == VehiclesUrl && vehicles is not null => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(vehicles) },
-        _ => GameSaveShareTests.Ungated(request),
+        _ => null,
     };
 
     private static readonly string ListedRover = $$"""

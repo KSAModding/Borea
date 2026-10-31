@@ -17,12 +17,7 @@
     },
     "type": {
       "description": "The content type. New types arrive by RFC and extend this enum.",
-      "$comment": "The not is the rollout gate of RFC 0085: the index accepts a type in it only once a release host for it exists. A steward lifts the gate for one type by removing it from the enum of the not, and removes the whole not when its enum is empty (KSAModding/content-index#210, first vehicle, then save).",
-      "enum": ["mod", "mod-loader", "modpack", "vehicle", "save"],
-      "not": {
-        "title": "a type that the index does not accept yet, because no release host for it exists (RFC 0085 Rollout)",
-        "enum": ["vehicle", "save"]
-      }
+      "enum": ["mod", "mod-loader", "modpack", "vehicle", "save"]
     },
     "name": {
       "description": "The display name. Free choice of characters and length.",
