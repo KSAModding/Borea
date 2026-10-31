@@ -492,6 +492,29 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task ClearSearchAndFilters_IsOfferedWhenOnlyTheyHideTheListings_AndClearsBoth()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.False(viewModel.ShowsClearSearchAndFilters);
+
+        viewModel.SearchText = "no listing has this name";
+        Assert.True(viewModel.ShowsClearSearchAndFilters);
+
+        viewModel.ToggleLicenseCommand.Execute("GPL-3.0");
+        viewModel.ClearDiscoverSearchAndFiltersCommand.Execute(null);
+
+        Assert.Equal(string.Empty, viewModel.SearchText);
+        Assert.False(viewModel.HasDiscoverFilters);
+        Assert.Equal(3, viewModel.DiscoverItems.Count);
+        Assert.False(viewModel.ShowsClearSearchAndFilters);
+
+        viewModel.ToggleLicenseCommand.Execute("GPL-3.0");
+        Assert.True(viewModel.ShowsClearSearchAndFilters);
+    }
+
+    [Fact]
     public async Task Count_InGerman_UsesTheGermanWords()
     {
         using var harness = await ViewModelHarness.CreateAsync();

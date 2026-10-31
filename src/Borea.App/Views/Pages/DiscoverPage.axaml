@@ -34,8 +34,8 @@
                             <Button Classes="tab" Classes.active="{Binding IsModsTab}" Content="{Binding Localization.DiscoverTabMods}" Command="{Binding ShowDiscoverModsCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsLoadersTab}" Content="{Binding Localization.DiscoverTabLoaders}" Command="{Binding ShowDiscoverLoadersCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsModpacksTab}" Content="{Binding Localization.DiscoverTabModpacks}" Command="{Binding ShowDiscoverModpacksCommand}" />
-                            <Button Classes="tab" Classes.active="{Binding IsVehiclesTab}" Content="{Binding Localization.DiscoverTabVehicles}" Command="{Binding ShowDiscoverVehiclesCommand}" IsEnabled="{Binding HasDiscoverVehicles}" />
-                            <Button Classes="tab" Classes.active="{Binding IsSavesTab}" Content="{Binding Localization.DiscoverTabSaves}" Command="{Binding ShowDiscoverSavesCommand}" IsEnabled="{Binding HasDiscoverSaves}" />
+                            <Button Classes="tab" Classes.active="{Binding IsVehiclesTab}" Content="{Binding Localization.DiscoverTabVehicles}" Command="{Binding ShowDiscoverVehiclesCommand}" />
+                            <Button Classes="tab" Classes.active="{Binding IsSavesTab}" Content="{Binding Localization.DiscoverTabSaves}" Command="{Binding ShowDiscoverSavesCommand}" />
                         </WrapPanel>
                     </Border>
 
@@ -174,16 +174,25 @@
                     </StackPanel>
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource InstanceHint}" Margin="8,24,0,0" IsVisible="{Binding !HasActiveInstance}" />
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ActiveKeptBuildUnavailable}" Margin="8,24,0,0" IsVisible="{Binding !CanAddToActiveInstance}" />
-                    <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverEmpty}" Margin="8,24,0,0">
-                        <TextBlock.IsVisible>
+                    <StackPanel Spacing="4" Margin="8,24,0,0" IsVisible="{Binding ShowsNothingSharedYet}">
+                        <TextBlock Classes="heading-md" Text="{Binding DiscoverNothingSharedText}" TextWrapping="Wrap" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding DiscoverNothingSharedHint}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Spacing="4" Margin="8,24,0,0">
+                        <StackPanel.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                 <Binding Path="!HasDiscoverItems" />
                                 <Binding Path="!IsDiscoverLoading" />
                                 <Binding Path="DiscoverError" Converter="{x:Static ObjectConverters.IsNull}" />
                                 <Binding Path="!IsIndexUnreachable" />
+                                <Binding Path="!ShowsNothingSharedYet" />
                             </MultiBinding>
-                        </TextBlock.IsVisible>
-                    </TextBlock>
+                        </StackPanel.IsVisible>
+                        <TextBlock Classes="body-md secondary" Text="{Binding Localization.DiscoverEmpty}" />
+                        <Button Classes="link" HorizontalAlignment="Left" Margin="-8,0,0,0" Command="{Binding ClearDiscoverSearchAndFiltersCommand}" IsVisible="{Binding ShowsClearSearchAndFilters}">
+                            <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverClearSearchAndFilters}" />
+                        </Button>
+                    </StackPanel>
 
                     <!-- a message above the list stays 24 above it, while the list starts 4 below the filter row -->
                     <Border Height="20">
