@@ -21,7 +21,23 @@ public sealed record ResolvedVehicle(
     IReadOnlyList<ResolvedPlaceholder> Placeholders,
     IReadOnlyList<PreviewNotice> Notices,
     int PartCount,
-    int SkippedInternalCount);
+    int SkippedInternalCount)
+{
+    /// <summary>The route of each fuel line that can be drawn, as points in the vehicle assembly frame.</summary>
+    public IReadOnlyList<IReadOnlyList<HoseWaypoint>> HoseRoutes { get; init; } = [];
+
+    /// <summary>The mesh in <see cref="Meshes"/> that gives a hose its place in the texture atlas, or -1 when the files do not have it.</summary>
+    public int HoseMesh { get; init; } = -1;
+
+    /// <summary>The material in <see cref="Materials"/> of a hose, or -1 when the files do not have it.</summary>
+    public int HoseMaterial { get; init; } = -1;
+}
+
+/// <summary>
+/// One point of a hose route. <paramref name="PinnedDirection"/> is the unit direction the hose has at the point, or
+/// zero when the curve through the points sets it.
+/// </summary>
+public readonly record struct HoseWaypoint(Vector3 Position, Vector3 PinnedDirection);
 
 /// <summary>
 /// One mesh of a glTF file. <paramref name="MeshIndex"/> is the position in the glTF meshes array, and

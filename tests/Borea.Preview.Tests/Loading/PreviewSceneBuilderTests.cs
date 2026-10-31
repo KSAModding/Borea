@@ -14,6 +14,7 @@ public sealed class PreviewSceneBuilderTests
 {
     private static readonly PreviewAssetRef GoodGlb = new("Core", "Meshes/Good.glb");
     private static readonly PreviewAssetRef BadGlb = new("Core", "Meshes/Bad.glb");
+    private static readonly PreviewAssetRef HoseGlb = new("Core", "Meshes/Hose.glb");
     private static readonly PreviewAssetRef GoodTexture = new("Core", "Textures/Good.ktx2");
     private static readonly PreviewAssetRef MissingTexture = new("Core", "Textures/Missing.ktx2");
     private static readonly PreviewAssetRef PbrTexture = new("Core", "Textures/Pbr.ktx2");
@@ -191,6 +192,163 @@ public sealed class PreviewSceneBuilderTests
         Assert.Equal((PreviewPlaceholderReason.ModNotLoaded, "SomeMod", "MissingTank"), (box.Reason, box.ModId, box.MissingId));
     }
 
+    [Fact]
+    public async Task AHose_BecomesADrawInTheVehicleFrame_WithThePatchAndTheTextureOfTheMaterial()
+    {
+        var vehicle = Vehicle([Mesh(HoseGlb, 0)], [new PreviewMaterialRef("HoseMat", GoodTexture, null, false)], []) with
+        {
+            HoseRoutes = [HoseRoute(0.5f), HoseRoute(0.25f)],
+            HoseMesh = 0,
+            HoseMaterial = 0,
+        };
+        var builder = Builder();
+        var source = Source();
+
+        var (geometry, notices) = await builder.BuildGeometryAsync(vehicle, source, Options, CancellationToken.None);
+        var (textured, textureNotices) = await builder.AddTexturesAsync(geometry, vehicle, source, Options, CancellationToken.None);
+
+        Assert.Empty(notices);
+        Assert.Empty(textureNotices);
+        Assert.Empty(textured.Placeholders);
+        Assert.Equal(2, textured.Draws.Count);
+        Assert.All(textured.Draws, draw =>
+        {
+            Assert.Equal(Matrix4x4.Identity, draw.Transform);
+            Assert.NotNull(draw.Material.Diffuse);
+            var uvs = Assert.IsType<float[]>(draw.Mesh.Uvs);
+
+            // The patch of the hose mesh has U from 0.2 to 0.6, in one meter, and V from 0.1 to 0.3.
+            Assert.All(uvs.Where((_, i) => i % 2 == 0), u => Assert.InRange(u, 0.2f - 1e-5f, 0.6f + 1e-5f));
+            Assert.All(uvs.Where((_, i) => i % 2 == 1), v => Assert.InRange(v, 0.1f - 1e-5f, 0.3f + 1e-5f));
+        });
+        Assert.Equal(0.5f, textured.Bounds.Max.X, 3);
+        Assert.Equal(HoseMeshBuilder.Radius, textured.Bounds.Max.Z, 3);
+    }
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 0)]
+    [InlineData(0, -1)]
+    public async Task AHoseWithoutAPatchOrMaterial_HasAPlainColor_AndTheOtherDrawsStay(int hoseMesh, int hoseMaterial)
+    {
+        // Mesh 1 cannot be read, and mesh 2 reads but has a flat quad, which is not a hose.
+        var vehicle = Vehicle([Mesh(HoseGlb, 0), Mesh(BadGlb, 0), Mesh(GoodGlb, 0)], [new PreviewMaterialRef("HoseMat", GoodTexture, null, false)], [Draw(0, 0)]) with
+        {
+            HoseRoutes = [HoseRoute(0.5f)],
+            HoseMesh = hoseMesh,
+            HoseMaterial = hoseMaterial,
+        };
+        var builder = Builder();
+        var source = Source();
+
+        var (geometry, _) = await builder.BuildGeometryAsync(vehicle, source, Options, CancellationToken.None);
+        var (textured, _) = await builder.AddTexturesAsync(geometry, vehicle, source, Options, CancellationToken.None);
+
+        Assert.Empty(textured.Placeholders);
+        Assert.Equal(2, textured.Draws.Count);
+        Assert.NotNull(textured.Draws[0].Material.Diffuse);
+        var hose = textured.Draws[1];
+        Assert.Null(hose.Material.Diffuse);
+        Assert.Equal(new Vector3(0.45f), hose.Material.BaseColor);
+    }
+
+    [Fact]
+    public async Task ARouteThatCannotMakeATube_IsLeftOut_AndTheNextHoseStays()
+    {
+        var vehicle = Vehicle([], [], []) with { HoseRoutes = [HoseRoute(0f), HoseRoute(0.5f)] };
+
+        var (scene, notices) = await Builder().BuildGeometryAsync(vehicle, Source(), Options, CancellationToken.None);
+
+        Assert.Single(scene.Draws);
+        Assert.Empty(notices);
+    }
+
+    [Fact]
+    public async Task TheHoses_TakeAtMostATenthOfTheTriangleBudget_AndTheAllowanceComesOffTheParts()
+    {
+        // A straight hose has 16 triangles, so an allowance of 40 fits two of three.
+        var options = Options with { MaxTriangles = 400 };
+        var vehicle = Vehicle([Mesh(GoodGlb, 0)], [], [.. Enumerable.Range(0, 190).Select(i => Draw(0, -1, i))]) with
+        {
+            HoseRoutes = [HoseRoute(0.5f), HoseRoute(0.5f), HoseRoute(0.5f)],
+        };
+
+        var (scene, notices) = await Builder().BuildGeometryAsync(vehicle, Source(), options, CancellationToken.None);
+
+        Assert.Equal(180 + 2, scene.Draws.Count);
+        Assert.Equal(10, scene.Placeholders.Count);
+        Assert.True(scene.TriangleCount <= options.MaxTriangles);
+        Assert.Contains(notices, notice => notice is { Kind: PreviewNoticeKind.Budget, Subject: "Triangles" });
+        Assert.Contains(notices, notice => notice is { Kind: PreviewNoticeKind.Budget, Subject: "FuelLines" });
+    }
+
+    [Fact]
+    public async Task AVehicleWithoutHoses_KeepsTheWholeTriangleBudget()
+    {
+        var options = Options with { MaxTriangles = 20 };
+        var vehicle = Vehicle([Mesh(GoodGlb, 0)], [], [.. Enumerable.Range(0, 10).Select(i => Draw(0, -1, i))]);
+
+        var (scene, notices) = await Builder().BuildGeometryAsync(vehicle, Source(), options, CancellationToken.None);
+
+        Assert.Equal(10, scene.Draws.Count);
+        Assert.Empty(notices);
+    }
+
+    [Fact]
+    public async Task AHoseMeshOverItsLimit_IsNotDecoded_AndTheHoseHasAPlainColor()
+    {
+        var large = new PreviewAssetRef("Core", "Meshes/Large.glb");
+        var source = Source();
+        source.Files[large.Path] = OneTriangleMeshesOverSharedVertices(1, 300_000);
+        var vehicle = Vehicle([Mesh(large, 0)], [], []) with { HoseRoutes = [HoseRoute(0.5f)], HoseMesh = 0 };
+        var builder = Builder();
+
+        var (scene, _) = await builder.BuildGeometryAsync(vehicle, source, Options, CancellationToken.None);
+
+        Assert.False(builder.MeshCache.TryGet(source.GetCacheKey(large), 0, out _));
+        Assert.Null(Assert.Single(scene.Draws).Mesh.Uvs);
+    }
+
+    private static HoseWaypoint[] HoseRoute(float length) =>
+        [new HoseWaypoint(Vector3.Zero, Vector3.Zero), new HoseWaypoint(new Vector3(length, 0f, 0f), Vector3.Zero)];
+
+    /// <summary>A straight mesh of one meter along Z, whose UV runs from U 0.2 to U 0.6 along it and from V 0.1 to V 0.3 around it.</summary>
+    private static byte[] HoseMeshGlb()
+    {
+        byte[] bin =
+        [
+            .. GlbTestWriter.Floats(0.05f, 0, -0.5f, 0.05f, 0, 0.5f, 0, 0.05f, -0.5f, 0, 0.05f, 0.5f),
+            .. GlbTestWriter.Floats(0.2f, 0.1f, 0.6f, 0.1f, 0.2f, 0.3f, 0.6f, 0.3f),
+            .. GlbTestWriter.Indices(GlbTestWriter.UnsignedShortComponent, 0, 1, 2, 2, 1, 3),
+        ];
+        var json = new JsonObject
+        {
+            ["asset"] = new JsonObject { ["version"] = "2.0" },
+            ["buffers"] = new JsonArray { new JsonObject { ["byteLength"] = bin.Length } },
+            ["bufferViews"] = new JsonArray { View(0, 48), View(48, 32), View(80, 12) },
+            ["accessors"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["bufferView"] = 0, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = 4, ["type"] = "VEC3",
+                    ["min"] = new JsonArray(0, 0, -0.5), ["max"] = new JsonArray(0.05, 0.05, 0.5),
+                },
+                new JsonObject { ["bufferView"] = 1, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = 4, ["type"] = "VEC2" },
+                new JsonObject { ["bufferView"] = 2, ["componentType"] = GlbTestWriter.UnsignedShortComponent, ["count"] = 6, ["type"] = "SCALAR" },
+            },
+            ["meshes"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["name"] = "Mesh0",
+                    ["primitives"] = new JsonArray { new JsonObject { ["attributes"] = new JsonObject { ["POSITION"] = 0, ["TEXCOORD_0"] = 1 }, ["indices"] = 2 } },
+                },
+            },
+        };
+        return GlbTestWriter.Pack(json, bin);
+    }
+
     private static PreviewSceneBuilder Builder() => new(new PreviewTextureLoader(null));
 
     private static CountingSource Source() => new()
@@ -199,6 +357,7 @@ public sealed class PreviewSceneBuilderTests
         {
             [GoodGlb.Path] = TwoQuadMeshes(),
             [BadGlb.Path] = "not a GLB file at all"u8.ToArray(),
+            [HoseGlb.Path] = HoseMeshGlb(),
             [GoodTexture.Path] = Ktx2TestWriter.Write(37, 2, 2, [new byte[16]]),
             [PbrTexture.Path] = Ktx2TestWriter.Write(37, 2, 2, [new byte[16]]),
             [NormalTexture.Path] = Ktx2TestWriter.Write(37, 2, 2, [new byte[16]]),

@@ -75,6 +75,22 @@ internal static class KsaPartSchema
     public const string RootPartRef = "RootPartRef";
     public const string PartRef = "PartRef";
 
+    public const string FuelLink = "FuelLink";
+    public const string PartA = "PartA";
+    public const string PartB = "PartB";
+    public const string Node = "Node";
+
+    public const string FuelPort = "FuelPort";
+    public const string AnchorAsmb = "AnchorAsmb";
+    public const string ConnectorPivot = "ConnectorPivot";
+    public const string ConnectorTip = "ConnectorTip";
+    public const string ConnectorMaxAngle = "ConnectorMaxAngle";
+    public const string ConnectorLeadOut = "ConnectorLeadOut";
+    public const string Tank = "Tank";
+
+    public const string HoseMesh = "CoreFuelTankB_Subpart_FuelLineHose";
+    public const string HoseMaterial = "CoreFuelTankB_Material";
+
     public const string Id = "Id";
     public const string Path = "Path";
     public const string HostOnly = "HostOnly";

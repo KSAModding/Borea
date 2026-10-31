@@ -141,6 +141,59 @@ public sealed class PartCatalogTests : IDisposable
         Assert.Contains(catalog.Notices, notice => notice is { Kind: PreviewNoticeKind.PatchMod, Subject: "Mod" });
     }
 
+    [Fact]
+    public void AFuelPort_HasTheValuesOfItsElement_OrTheDefaultsOfTheGame_AndAGameDataAddsItAfterThePortOfThePart()
+    {
+        const string assets = """
+            <Part Id="P">
+              <FuelPort MaxLength="100" Connector="Plug" ConnectorMaxAngle="60" ConnectorLeadOut="0.5">
+                <AnchorAsmb X="1" Y="2" Z="3" />
+                <ConnectorPivot Z="0.5" />
+                <ConnectorTip Z="-0.5" />
+              </FuelPort>
+            </Part>
+            <PartGameData Id="P"><FuelPort Id="Second" /><Tank Id="t" /></PartGameData>
+            <Part Id="Q" />
+            """;
+        var core = _mods.Mod("Core", ["Parts.xml"], ("Parts.xml", CatalogTestMods.Assets(assets)));
+
+        var catalog = PartCatalog.Build([core], CancellationToken.None);
+
+        Assert.Empty(catalog.Notices);
+        Assert.True(catalog.TryGetTemplate("P", out var part));
+        Assert.Equal(2, part.FuelPorts.Count);
+        Assert.True(part.HasTank);
+        Assert.Equal(new FuelPortData("Plug", new Vector3(1, 2, 3), float.DegreesToRadians(60f), new Vector3(0, 0, 0.5f), new Vector3(0, 0, -0.5f), 0.5f), part.FuelPorts[0]);
+        Assert.Equal(new FuelPortData(null, Vector3.Zero, float.DegreesToRadians(10f), Vector3.Zero, Vector3.Zero, 0.15f), part.FuelPorts[1]);
+        Assert.True(catalog.TryGetTemplate("Q", out var plain));
+        Assert.Empty(plain.FuelPorts);
+        Assert.False(plain.HasTank);
+    }
+
+    [Theory]
+    [InlineData("""<FuelPort ConnectorMaxAngle="wide" />""")]
+    [InlineData("""<FuelPort ConnectorLeadOut="0,15" />""")]
+    [InlineData("""<FuelPort><AnchorAsmb X="far" /></FuelPort>""")]
+    public void AFuelPortWithABadNumber_IsLeftOut_AndTheFileKeepsItsParts(string port)
+    {
+        var assets = $"""
+            <Part Id="P">
+              {port}
+              <Tank Id="t" />
+            </Part>
+            <Part Id="Q" />
+            """;
+        var core = _mods.Mod("Core", ["Parts.xml"], ("Parts.xml", CatalogTestMods.Assets(assets)));
+
+        var catalog = PartCatalog.Build([core], CancellationToken.None);
+
+        Assert.Empty(catalog.Notices);
+        Assert.True(catalog.TryGetTemplate("P", out var part));
+        Assert.Empty(part.FuelPorts);
+        Assert.True(part.HasTank);
+        Assert.True(catalog.TryGetTemplate("Q", out _));
+    }
+
     private static string Part(string id, string mesh) => Template("Part", id, mesh);
 
     private static string Template(string element, string id, string? mesh) =>

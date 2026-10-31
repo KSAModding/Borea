@@ -23,6 +23,12 @@ namespace Borea.Storage.Preview.Ksa;
 /// of its own path or nests deeper than <see cref="MaxSubPartDepth"/>, with a Cycle notice. The notices here are only
 /// the ones of this vehicle. The caller adds the notices of the catalog, the mesh index and the vehicle file.
 /// </para>
+/// <para>
+/// The fuel links first give their routes and connector poses (<see cref="FuelLinkRouter"/>), because a connector subpart
+/// turns toward its hose and its draws must have that pose. A hose is not a part, so the scene only names its route, and
+/// the mesh and the material that give it a texture. Each of these two is -1 when the files do not have it, without a
+/// placeholder.
+/// </para>
 /// </remarks>
 internal static class VehicleSceneResolver
 {
@@ -41,6 +47,7 @@ internal static class VehicleSceneResolver
     public const float DefaultHalfSize = 0.5f;
 
     /// <param name="parts">The full parts from <see cref="VehicleXmlReader"/>.</param>
+    /// <param name="fuelLinks">The fuel links from <see cref="VehicleXmlReader"/>, or null when there are none.</param>
     /// <param name="modByMissingId">
     /// For an Id that a needed mod would give and that is not on disk, the Id of that mod. A placeholder for such an
     /// Id gets <see cref="PlaceholderReason.ModNotLoaded"/>. A null value means that a needed mod is missing and it is
@@ -50,20 +57,22 @@ internal static class VehicleSceneResolver
         IReadOnlyList<VehiclePartRef> parts,
         PartCatalog catalog,
         MeshIndex meshes,
-        IReadOnlyDictionary<string, string?>? modByMissingId)
+        IReadOnlyDictionary<string, string?>? modByMissingId,
+        IReadOnlyList<VehicleFuelLink>? fuelLinks = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(meshes);
 
+        var layout = FuelLinkRouter.Route(parts, fuelLinks ?? [], catalog);
         var walk = new Walk(catalog, meshes, modByMissingId);
-        foreach (var part in parts)
+        for (var i = 0; i < parts.Count; i++)
         {
             if (walk.OverBudget)
                 break;
-            walk.AddPart(part);
+            walk.AddPart(parts[i], layout.Swings.GetValueOrDefault(i));
         }
 
-        return walk.Finish(parts.Count);
+        return walk.Finish(parts.Count, layout);
     }
 
     private sealed class Walk(PartCatalog catalog, MeshIndex meshIndex, IReadOnlyDictionary<string, string?>? modByMissingId)
@@ -79,11 +88,14 @@ internal static class VehicleSceneResolver
         private readonly List<string> _path = [];
         private int _nodes;
         private int _skipped;
+        private ConnectorSwing? _swing;
 
         public bool OverBudget { get; private set; }
 
-        public void AddPart(VehiclePartRef part)
+        /// <param name="swing">The pose of the connector subpart of this part, or null when it stays at rest.</param>
+        public void AddPart(VehiclePartRef part, ConnectorSwing? swing)
         {
+            _swing = swing;
             if (!catalog.TryGetTemplate(part.InstanceOf, out var template))
             {
                 AddPlaceholder(part.Transform, null, part.InstanceOf, PlaceholderReason.UnknownPart);
@@ -95,8 +107,29 @@ internal static class VehicleSceneResolver
             _path.Clear();
         }
 
-        public ResolvedVehicle Finish(int partCount) =>
-            new(_meshes, _materials, _draws, _placeholders, _notices, partCount, _skipped);
+        public ResolvedVehicle Finish(int partCount, FuelLinkLayout layout)
+        {
+            if (layout.SkippedLinks > 0)
+                AddNotice(PreviewNoticeKind.AssetFailed, VehicleXmlReader.FileName, $"{layout.SkippedLinks} fuel lines name a part that the vehicle does not have or have no valid route, so they are left out.");
+
+            var hoseMesh = -1;
+            var hoseMaterial = -1;
+            if (layout.Routes.Count > 0)
+            {
+                if (meshIndex.TryFind(KsaPartSchema.HoseMesh, out var mesh))
+                    hoseMesh = IndexOfMesh(mesh);
+
+                if (catalog.TryGetMaterial(KsaPartSchema.HoseMaterial, out var material))
+                    hoseMaterial = IndexOfMaterial(material, false);
+            }
+
+            return new ResolvedVehicle(_meshes, _materials, _draws, _placeholders, _notices, partCount, _skipped)
+            {
+                HoseRoutes = layout.Routes,
+                HoseMesh = hoseMesh,
+                HoseMaterial = hoseMaterial,
+            };
+        }
 
         /// <param name="partId">The InstanceOf of the full part that the template belongs to.</param>
         private void AddTemplate(PartTemplateData template, Matrix4x4 matrix, string partId)
@@ -121,7 +154,11 @@ internal static class VehicleSceneResolver
                 if (OverBudget)
                     return;
 
-                var subMatrix = (instance.Transform ?? KsaTransform.Identity).ToMatrix() * matrix;
+                var localMatrix = (instance.Transform ?? KsaTransform.Identity).ToMatrix();
+                if (_path.Count == 1 && _swing is { } swing && ReferenceEquals(instance, swing.Connector))
+                    localMatrix *= swing.PartFrameMatrix;
+
+                var subMatrix = localMatrix * matrix;
                 if (!KsaTransform.IsFinite(subMatrix))
                 {
                     // A placeholder also needs a finite matrix, so only this branch is left out.
