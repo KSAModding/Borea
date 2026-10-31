@@ -2016,6 +2016,12 @@
   <data name="GameSaveNoSaves" xml:space="preserve">
     <value>No saves in this instance yet</value>
   </data>
+  <data name="GameSaveFindVehicles" xml:space="preserve">
+    <value>Find vehicles</value>
+  </data>
+  <data name="GameSaveFindSaves" xml:space="preserve">
+    <value>Find saves</value>
+  </data>
   <data name="GameSaveUpdatedFormat" xml:space="preserve">
     <value>Updated {0}</value>
   </data>

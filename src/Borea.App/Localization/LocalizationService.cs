@@ -1563,6 +1563,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveNoSaves => Resources.GameSaveNoSaves;
 
+    public string GameSaveFindVehicles => Resources.GameSaveFindVehicles;
+
+    public string GameSaveFindSaves => Resources.GameSaveFindSaves;
+
     public string GameSaveOlderBuild => Resources.GameSaveOlderBuild;
 
     public string GameSaveChangedSinceInstall => Resources.GameSaveChangedSinceInstall;

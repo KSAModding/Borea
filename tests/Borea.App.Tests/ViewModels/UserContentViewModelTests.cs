@@ -66,6 +66,21 @@ public sealed class UserContentViewModelTests
         AssertHiddenWithANotice(() => viewModel.IndexRefreshStatus = new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.Failed, CachedAt: null, "offline"));
     }
 
+    [Theory]
+    [InlineData(GameSaveKind.Vehicle, ContentType.Vehicle)]
+    [InlineData(GameSaveKind.Save, ContentType.Save)]
+    public async Task EmptyTable_FindOpensTheDiscoverTabOfItsType(GameSaveKind kind, ContentType tab)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var section = kind == GameSaveKind.Vehicle ? viewModel.VehiclesSection : viewModel.SavesSection;
+
+        section.FindOnDiscoverCommand.Execute(null);
+
+        Assert.True(viewModel.CurrentWindowDiscover);
+        Assert.Equal(tab, viewModel.DiscoverType);
+    }
+
     [Fact]
     public async Task Discover_SnapshotWithAVehicle_ListsItOnItsTab()
     {

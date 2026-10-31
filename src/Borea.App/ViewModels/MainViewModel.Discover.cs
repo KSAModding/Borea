@@ -643,7 +643,12 @@ public partial class MainViewModel
             return;
 
         SelectedAuthor = link.Name;
-        DiscoverType = link.Type;
+        OpenDiscoverTab(link.Type);
+    }
+
+    internal void OpenDiscoverTab(ContentType type)
+    {
+        DiscoverType = type;
         SetMainWindowDiscover();
     }
 

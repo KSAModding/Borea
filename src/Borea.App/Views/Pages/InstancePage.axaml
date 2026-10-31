@@ -320,9 +320,14 @@
                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCopyFromProfileCommand}" />
                         </StackPanel>
                     </StackPanel>
-                    <Grid ColumnDefinitions="*,16,Auto" Margin="16,12" IsVisible="{Binding !HasItems}">
-                        <TextBlock Classes="body-md muted" Text="{Binding EmptyText}" VerticalAlignment="Center" />
-                        <Button Grid.Column="2" Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                    <Grid ColumnDefinitions="*,16,Auto,4,Auto" Margin="16,12" IsVisible="{Binding !HasItems}">
+                        <TextBlock Classes="body-md muted" Text="{Binding EmptyText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Classes="link" Command="{Binding FindOnDiscoverCommand}" VerticalAlignment="Center" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectedInstance.IsActive, FallbackValue={x:False}}">
+                            <TextBlock Classes="action-md" Text="{Binding FindText}" />
+                        </Button>
+                        <Button Grid.Column="4" Classes="link" Command="{Binding OpenFolderCommand}" VerticalAlignment="Center">
+                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" />
+                        </Button>
                     </Grid>
                     <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource GameSaveRow}" />
                 </StackPanel>

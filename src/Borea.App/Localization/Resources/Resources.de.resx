@@ -2016,6 +2016,12 @@
   <data name="GameSaveNoSaves" xml:space="preserve">
     <value>Noch keine Spielstände in dieser Instanz</value>
   </data>
+  <data name="GameSaveFindVehicles" xml:space="preserve">
+    <value>Fahrzeuge finden</value>
+  </data>
+  <data name="GameSaveFindSaves" xml:space="preserve">
+    <value>Spielstände finden</value>
+  </data>
   <data name="GameSaveUpdatedFormat" xml:space="preserve">
     <value>Aktualisiert {0}</value>
   </data>

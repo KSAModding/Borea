@@ -8,6 +8,7 @@ using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 using Borea.Core.Sharing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -567,6 +568,8 @@ public sealed partial class GameSaveSection : ObservableObject
 
     public string EmptyText => Kind == GameSaveKind.Vehicle ? _owner.Localization.GameSaveNoVehicles : _owner.Localization.GameSaveNoSaves;
 
+    public string FindText => Kind == GameSaveKind.Vehicle ? _owner.Localization.GameSaveFindVehicles : _owner.Localization.GameSaveFindSaves;
+
     /// <summary>Whether the schema in use accepts the type, so the index takes a listing of it (RFC 0085 rollout gate).</summary>
     public bool CanShare => _owner.Services?.ListingValidator.AcceptedTypes.Contains(Kind == GameSaveKind.Vehicle ? ListingFolders.VehicleType : ListingFolders.SaveType) == true;
 
@@ -657,6 +660,7 @@ public sealed partial class GameSaveSection : ObservableObject
     {
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(EmptyText));
+        OnPropertyChanged(nameof(FindText));
         OnPropertyChanged(nameof(CopyNoteText));
         OnPropertyChanged(nameof(ProfileSelectionText));
         foreach (var item in Items.Concat(ProfileItems))
@@ -665,6 +669,9 @@ public sealed partial class GameSaveSection : ObservableObject
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenGameSaveSectionFolder(this);
+
+    [RelayCommand]
+    private void FindOnDiscover() => _owner.OpenDiscoverTab(Kind == GameSaveKind.Vehicle ? ContentType.Vehicle : ContentType.Save);
 
     [RelayCommand]
     private Task BeginCopyFromProfileAsync() => _owner.BeginCopyFromProfileAsync(this);
