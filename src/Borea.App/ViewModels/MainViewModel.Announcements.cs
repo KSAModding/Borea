@@ -110,7 +110,6 @@ public partial class MainViewModel
         _announcementCheck = CheckAnnouncementsAsync(services, cancellation);
     }
 
-    /// <summary>Completes when the announcements check has finished.</summary>
     internal Task WhenAnnouncementsCheckedAsync() => _announcementCheck ?? Task.CompletedTask;
 
     private async Task CheckAnnouncementsAsync(BoreaServices services, CancellationTokenSource cancellation)

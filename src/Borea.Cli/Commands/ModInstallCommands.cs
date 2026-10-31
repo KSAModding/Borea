@@ -14,8 +14,8 @@ internal static class ModInstallCommands
         var id = ArgumentRules.Text("mod-id", "The id of the mod, vehicle or save to install.");
         var version = new Option<string?>("--version") { Description = "Install this exact version." };
         var instance = ArgumentRules.Instance();
-        var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
-        var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
+        var recommended = ArgumentRules.WithRecommended();
+        var alternatives = ArgumentRules.Alternatives();
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
         var channel = ArgumentRules.Channel();
         var name = NameOption();
@@ -49,7 +49,7 @@ internal static class ModInstallCommands
             RequireModOptions(parse, modId, name, allowMissing, json);
             var existing = target.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
             if (existing is { Ownership: not ModInstallOwnership.Borea })
-                throw new InvalidOperationException($"Borea does not own the files of '{existing.ModId}'. Run 'borea instance take-ownership' to let Borea install the recorded release over its folder.");
+                throw new InvalidOperationException(NotOwnedMessage(existing.ModId));
             var exactText = parse.GetValue(version);
             var repository = isDryRun ? cli.ReadOnlyMods : cli.Mods;
             var release = exactText is null
@@ -103,7 +103,7 @@ internal static class ModInstallCommands
             var installed = target.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId))
                 ?? throw new InvalidOperationException($"Mod '{modId}' is not installed in '{target.Name}'.");
             if (installed.Ownership != ModInstallOwnership.Borea)
-                throw new InvalidOperationException($"Borea does not own the files of '{installed.ModId}'. Run 'borea instance take-ownership' to let Borea install the recorded release over its folder.");
+                throw new InvalidOperationException(NotOwnedMessage(installed.ModId));
 
             var active = await cli.ModState.IsActiveAsync(target.InstanceId, installed.ModId, ct).ConfigureAwait(false);
             var (content, inactive) = await UserContentCommands.RecordedStateAsync(cli, target, ct).ConfigureAwait(false);
@@ -126,8 +126,8 @@ internal static class ModInstallCommands
     {
         var id = new Argument<string?>("mod-id") { Description = "The id of the mod, vehicle or save to update. Omit it to update all managed mods; vehicles and saves update one at a time.", Arity = ArgumentArity.ZeroOrOne };
         var instance = ArgumentRules.Instance();
-        var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
-        var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
+        var recommended = ArgumentRules.WithRecommended();
+        var alternatives = ArgumentRules.Alternatives();
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
         var channel = ArgumentRules.Channel();
         var version = new Option<string?>("--version") { Description = "Change a vehicle or save to this exact version, for example the one a pack pins." };
@@ -167,7 +167,7 @@ internal static class ModInstallCommands
             if (selected.Count == 0 && selectedId is not null)
                 throw new InvalidOperationException($"Mod '{selectedId}' is not installed in '{target.Name}'.");
             if (selected.Any(mod => mod.Ownership != ModInstallOwnership.Borea))
-                throw new InvalidOperationException($"Borea does not own the files of '{selected.Single(mod => mod.Ownership != ModInstallOwnership.Borea).ModId}'. Run 'borea instance take-ownership' to let Borea install the recorded release over its folder.");
+                throw new InvalidOperationException(NotOwnedMessage(selected.Single(mod => mod.Ownership != ModInstallOwnership.Borea).ModId));
 
             var isDryRun = parse.GetValue(dryRun);
             if (isDryRun)
@@ -190,7 +190,7 @@ internal static class ModInstallCommands
 
     private static async Task<InstallPlan> PlanAsync(CliServices cli, Instance instance, IModRepository repository, IReadOnlyList<RequestedMod> requested, ReleaseChannel channel, bool withRecommended, IReadOnlyDictionary<string, string> alternatives, CancellationToken cancellationToken)
     {
-        var gameVersion = cli.InstalledVersion.GetInstalledVersion()?.Version;
+        var gameVersion = InstanceLookup.GameVersionOf(cli, instance);
         var request = new InstallPlanningRequest(instance, requested, repository, gameVersion, cli.GamePlatform.Current, Alternatives: alternatives, Channel: channel);
         var plan = await cli.InstallPlanner.PlanAsync(request, cancellationToken).ConfigureAwait(false);
         if (!withRecommended)
@@ -246,7 +246,6 @@ internal static class ModInstallCommands
             output.WriteLine("Nothing to do.");
     }
 
-    /// <summary>The install steps of every listing the plan installs.</summary>
     private static async Task PrintInstallStepsAsync(TextWriter output, CliServices cli, InstallPlan plan, CancellationToken cancellationToken)
     {
         foreach (var operation in plan.Operations)
@@ -321,4 +320,7 @@ internal static class ModInstallCommands
         }
         return result;
     }
+
+    private static string NotOwnedMessage(string modId) =>
+        $"Borea does not own the files of '{modId}'. Run 'borea instance take-ownership' to let Borea install the recorded release over its folder.";
 }

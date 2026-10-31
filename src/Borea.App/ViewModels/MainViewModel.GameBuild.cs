@@ -26,7 +26,13 @@ public partial class MainViewModel
 
     private BoreaServices? _gameBuildCheckServices;
 
+    /// <summary>What the last game build check found, for the diagnostics.</summary>
+    private GameBuildCheckResult _gameBuildCheckResult;
+
     private int? _dismissedGameRevision;
+
+    /// <summary>Set once a master server check has failed, so that an index download reads the new snapshot for the banner.</summary>
+    private bool _gameBuildCheckFailed;
 
     /// <summary>What the master server reported, or null before it answered.</summary>
     [ObservableProperty]
@@ -36,18 +42,45 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(ShowGameBuildBanner))]
     private LatestVersionInfo? _latestGameBuild;
 
+    /// <summary>The newest build in game_versions of the index snapshot, read after a failed master server check. An answer of the master server replaces it.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NewerGameBuild))]
+    [NotifyPropertyChangedFor(nameof(GameBuildBannerText))]
+    [NotifyPropertyChangedFor(nameof(GameBuildDownloadUrl))]
+    [NotifyPropertyChangedFor(nameof(ShowGameBuildBanner))]
+    private GameVersion? _snapshotGameBuild;
+
     /// <summary>The public build when its revision is higher than the installed one (RFC 0017), else null.</summary>
     public GameVersion? NewerGameBuild =>
-        LatestGameBuild?.Version is { } latest && GameVersion.TryParse(InstalledVersionText, out var installed) && latest > installed
+        (LatestGameBuild?.Version ?? SnapshotGameBuild) is { } latest && GameVersion.TryParse(InstalledVersionText, out var installed) && latest > installed
             ? latest
             : null;
 
     public string? GameBuildBannerText => NewerGameBuild is { } build ? $"{Localization.GameBuildAvailable} {build}" : null;
 
-    /// <summary>The download page the master server names, when it is a web address.</summary>
+    /// <summary>
+    /// The Home instance and the installed build while that instance has mods and plays on the game folder of the settings.
+    /// A game update replaces that folder in place, so the newer-build banner is the last place where a keep still gets this build.
+    /// It offers no keep that the instance menu refuses.
+    /// </summary>
+    private (string Instance, string Build)? GameBuildKeepOffer =>
+        HomeInstance is { ModCount: > 0, Instance.GameBuild: null } home && GameFolderKeepRefusal == GameBuildKeepRefusal.None
+            && GameVersion.TryParse(InstalledVersionText, out var installed)
+            ? (home.Name, installed.ToString())
+            : null;
+
+    public string? GameBuildKeepHintText => GameBuildKeepOffer is { } offer ? Localization.FormatGameBuildKeepHint(offer.Instance, offer.Build) : null;
+
+    public string? GameBuildKeepActionText => GameBuildKeepOffer is { } offer ? Localization.FormatTaskKeepGameBuild(offer.Build) : null;
+
+    /// <summary>The page the game itself names when the master server gives it none (VersionInfo).</summary>
+    private const string GameDownloadPage = "https://ksa.ahwoo.com/";
+
+    /// <summary>The download page the master server names, when it is a web address, and the page of the game without an answer.</summary>
     public string? GameBuildDownloadUrl =>
-        NewerGameBuild is not null
-        && Uri.TryCreate(LatestGameBuild?.DownloadUrl, UriKind.Absolute, out var page)
+        NewerGameBuild is null ? null
+        : LatestGameBuild is null ? GameDownloadPage
+        : Uri.TryCreate(LatestGameBuild.DownloadUrl, UriKind.Absolute, out var page)
         && (page.Scheme == Uri.UriSchemeHttps || page.Scheme == Uri.UriSchemeHttp)
             ? page.AbsoluteUri
             : null;
@@ -84,6 +117,8 @@ public partial class MainViewModel
     {
         OnPropertyChanged(nameof(NewerGameBuild));
         OnPropertyChanged(nameof(GameBuildBannerText));
+        OnPropertyChanged(nameof(GameBuildKeepHintText));
+        OnPropertyChanged(nameof(GameBuildKeepActionText));
         OnPropertyChanged(nameof(GameBuildDownloadUrl));
         OnPropertyChanged(nameof(ShowGameBuildBanner));
         StartGameBuildCheck();
@@ -100,21 +135,62 @@ public partial class MainViewModel
         _gameBuildCheck = CheckGameBuildAsync(services);
     }
 
-    /// <summary>Completes when the master server check has finished.</summary>
     internal Task WhenGameBuildCheckedAsync() => _gameBuildCheck ?? Task.CompletedTask;
 
     private async Task CheckGameBuildAsync(BoreaServices services)
     {
+        string failure;
         try
         {
             var answer = await services.LatestVersion.PingAsync();
             if (answer.Version is not null)
+            {
+                _gameBuildCheckResult = GameBuildCheckResult.Answered;
                 LatestGameBuild = answer;
+                return;
+            }
+
+            failure = "The answer names no readable build.";
         }
-        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or ObjectDisposedException)
+        catch (Exception exception) when (exception is HttpRequestException or IOException or OperationCanceledException or InvalidOperationException)
         {
-            // no answer shows no banner
+            // The answer is read after the headers, so a body that breaks off is an IOException and an unknown charset is an InvalidOperationException, the base type of ObjectDisposedException.
+            // A rebuild replaces the graph and then disposes the old one, which cancels this request, and the new graph runs its own check.
+            // Nothing here passes a token, so on the current graph a cancellation is the timeout of the HttpClient, which is a failed check.
+            // Program.RunApp disposes its graph only after the dispatcher has shut down, which drops this continuation, so a shutdown does not reach this catch.
+            if (exception is ObjectDisposedException || !ReferenceEquals(services, _services))
+                return;
+
+            failure = exception.Message;
         }
+
+        services.Log.Write($"The game build check at the master server failed. {failure}");
+        _gameBuildCheckFailed = true;
+        SetResultOfFailedGameBuildCheck();
+        await ReadSnapshotGameBuildAsync(services);
+    }
+
+    /// <summary>The result follows the snapshot build that is held, because a read of the snapshot can add one later. An answer of the master server stays the result, because its build also comes first in <see cref="NewerGameBuild"/>.</summary>
+    private void SetResultOfFailedGameBuildCheck()
+    {
+        if (LatestGameBuild is null)
+            _gameBuildCheckResult = SnapshotGameBuild is null ? GameBuildCheckResult.NoAnswer : GameBuildCheckResult.AnsweredByIndex;
+    }
+
+    /// <summary>The read of a failed check and the read after an index download can overlap, so only a newer build replaces the one that is held.</summary>
+    private async Task ReadSnapshotGameBuildAsync(BoreaServices services)
+    {
+        if ((await ReadGameReleasesAsync(services, CancellationToken.None)).Newest is { } newest && (SnapshotGameBuild is null || newest > SnapshotGameBuild))
+            SnapshotGameBuild = newest;
+
+        SetResultOfFailedGameBuildCheck();
+    }
+
+    /// <summary>A snapshot that arrives after a failed check can name a build that the old one did not.</summary>
+    private async Task ReadSnapshotGameBuildAfterIndexDownloadAsync(BoreaServices services)
+    {
+        if (_gameBuildCheckFailed && CheckForUpdatesAtStart)
+            await ReadSnapshotGameBuildAsync(services);
     }
 
     [RelayCommand]
@@ -184,17 +260,22 @@ public partial class MainViewModel
     {
         var releases = _gameReleases;
         if (releases.IsEmpty)
-        {
-            try
-            {
-                releases = GameReleaseList.From((await services.IndexReader.ReadAsync(cancellationToken)).GameVersions);
-            }
-            catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
-            {
-            }
-        }
+            releases = await ReadGameReleasesAsync(services, cancellationToken);
 
         return LatestGameBuild?.Version is { } latest ? releases.WithBuild(latest) : releases;
+    }
+
+    /// <summary>game_versions of the snapshot on disk, or an empty list when the snapshot is missing or cannot be read.</summary>
+    private static async Task<GameReleaseList> ReadGameReleasesAsync(BoreaServices services, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return GameReleaseList.From((await services.IndexReader.ReadAsync(cancellationToken)).GameVersions);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            return GameReleaseList.Empty;
+        }
     }
 
     private void CancelNewerGamePatchNotes()

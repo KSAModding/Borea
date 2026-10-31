@@ -566,8 +566,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.Equal("-InstancePath", starMap.Provides.Instance!.Flag);
         Assert.Equal("STARMAP_INSTANCE_PATH", starMap.Provides.Instance.Variable);
         Assert.Equal([ModVersion.Parse("0.4.6")], versions);
-        Assert.NotNull(latest);
-        Assert.Equal(ModVersion.Parse("0.4.6"), latest.Version);
+        Assert.Equal(ModVersion.Parse("0.4.6"), latest!.Version);
         Assert.Equal(ContentIndexModRepository.SourceName, latest.Source);
         Assert.Equal(InstallAnchor.Standalone, latest.Install!.Target);
         Assert.Equal(

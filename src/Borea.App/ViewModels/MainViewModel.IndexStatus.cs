@@ -104,6 +104,8 @@ public partial class MainViewModel
     private async Task CheckContentIndexAsync(bool reloadPages)
     {
         var outcome = await RunIndexRefreshAsync();
+        if (outcome == ContentIndexRefreshOutcome.Downloaded && _services is { } services)
+            await ReadSnapshotGameBuildAfterIndexDownloadAsync(services);
 
         // read once the fetch is over, so that a Refresh click during the check still gets its toast
         var showResult = _showIndexCheckResult;
@@ -162,6 +164,7 @@ public partial class MainViewModel
         await ReloadContentPageAsync();
         EndIconRebuild();
         StartContentUpdateCheck();
+        StartLoaderUpdateCheck();
     }
 
     private void UpdateIndexRefreshStatus()

@@ -94,6 +94,65 @@ public sealed class StewardReviewViewModelTests
     }
 
     [Fact]
+    public async Task Handover_ShowsTheOldAndTheNewOwnerByLoginAndAccountId_AndWhetherTheNewLoginStillHasTheId()
+    {
+        _queue.Items.Add(FakeStewardQueue.Item(40));
+        using var harness = await CreateAsync();
+        var pull = FakePullRequestReviews.Review(40);
+        _reviews.Reviews[(Index, 40)] = pull with
+        {
+            Files = [FakePullRequestReviews.File(pull, "packs/my-pack/owner.json", "@@", status: "modified"), FakePullRequestReviews.File(pull, "packs/other-pack/owner.json", "@@", status: "modified")],
+            OwnerRecords =
+            [
+                new("packs/my-pack/owner.json", Owner("alice", 5), Owner("bob", 7), new PackOwnerAccount(PackOwnerAccountState.Same, "bob"), IsFirstClaim: false),
+                new("packs/other-pack/owner.json", Owner("alice", 5), Owner("bob", 7), new PackOwnerAccount(PackOwnerAccountState.OtherLogin, "carol"), IsFirstClaim: false),
+            ],
+        };
+
+        var review = await OpenReviewAsync(harness.ViewModel);
+
+        Assert.True(review.HasOwnerRecords);
+        Assert.False(review.HasDocuments);
+        var handover = review.OwnerRecords[0];
+        Assert.Equal(
+            ("packs/my-pack/owner.json", "Owner record", null, "Owner on the base branch: alice, account id 5", "Owner after the merge: bob, account id 7", "GitHub account 7 still has the login bob.", true, false),
+            (handover.Path, handover.KindText, handover.FirstClaimText, handover.BeforeText, handover.AfterText, handover.AccountText, handover.IsAccountSame, handover.IsAccountWrong));
+        var otherLogin = review.OwnerRecords[1];
+        Assert.Equal(
+            ("GitHub account 7 has the login carol now, not bob. The checks compare the account id, so carol owns the pack after the merge.", false, true),
+            (otherLogin.AccountText, otherLogin.IsAccountSame, otherLogin.IsAccountWrong));
+    }
+
+    [Fact]
+    public async Task OwnerRecordOfAFirstClaim_OneThatIsRemoved_AndOneThatNamesNoOwner()
+    {
+        _queue.Items.Add(FakeStewardQueue.Item(41));
+        using var harness = await CreateAsync();
+        _reviews.Reviews[(Index, 41)] = FakePullRequestReviews.Review(41) with
+        {
+            OwnerRecords =
+            [
+                new("packs/new-pack/owner.json", null, Owner("bob", 7), new PackOwnerAccount(PackOwnerAccountState.Gone), IsFirstClaim: true),
+                new("packs/my-pack/owner.json", Owner("alice", 5), null, null, IsFirstClaim: false),
+                new("packs/odd-pack/owner.json", new PackOwnerText("{}", null), new PackOwnerText("""{ "github_login": "bob" }""", null), null, IsFirstClaim: false),
+            ],
+        };
+
+        var review = await OpenReviewAsync(harness.ViewModel);
+
+        var claim = review.OwnerRecords[0];
+        Assert.Equal(
+            ("The pull request adds this record with the first version of its pack. Such a first claim merges itself when the checks pass.", "The base branch has no owner record of this pack.", "GitHub has no account with the id 7, so nobody can add a version of the pack after the merge.", true),
+            (claim.FirstClaimText, claim.BeforeText, claim.AccountText, claim.IsAccountWrong));
+        var removed = review.OwnerRecords[1];
+        Assert.Equal(("The pull request removes the owner record, so the pack has no owner after the merge.", (string?)null, (string?)null), (removed.AfterText, removed.AccountText, removed.RawAfter));
+        var odd = review.OwnerRecords[2];
+        Assert.Equal(
+            ("The record on the base branch names no login and account id.", "{}", "The new record names no login and account id.", """{ "github_login": "bob" }""", (string?)null),
+            (odd.BeforeText, odd.RawBefore, odd.AfterText, odd.RawAfter, odd.AccountText));
+    }
+
+    [Fact]
     public async Task EveryLink_OpensOnGitHubOrTheWeb()
     {
         _queue.Items.Add(FakeStewardQueue.Item(5));
@@ -411,8 +470,70 @@ public sealed class StewardReviewViewModelTests
         Assert.Equal(["repository"], document.OwnershipLinks.Select(link => link.Key));
     }
 
+    [Fact]
+    public async Task Vehicle_ShowsItsTagsAsWritten_ItsDependencies_AndTheFolderOfItsNewestRelease()
+    {
+        const string Text = """
+            spec_version = 1
+            id = "ExampleRover"
+            type = "vehicle"
+            name = "Example Rover"
+            tags = ["moon-rover", "weapons"]
+
+            [[dependencies]]
+            id = "ExampleParts"
+            kind = "required"
+            min = "1.0.0"
+
+            [[dependencies]]
+            kind = "recommends"
+            any_of = [{ id = "LightA", max = "2.0.0" }, { id = "LightB", min = "1.1.0", max = "1.9.0" }]
+            """;
+
+        // a curated mod tag would show with its curated name, which the free tags of a vehicle do not have
+        using var harness = await CreateAsync(ViewModelHarness.CuratedTags(("weapons", "Hardware")));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var review = new StewardReview(viewModel, FakeStewardQueue.Item(30));
+        var ownership = new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: "alice/ExampleRover");
+        StewardReviewDocument Shown(PullRequestRelease? release, StewardException? failure = null) => new(
+            viewModel, review, new PullRequestDocument("vehicles/ExampleRover.toml", StewardQueueKind.Vehicle, Text, harness.Services.ListingFormat.Read(Text), null, ownership, release, failure), "alice");
+
+        var stamped = Shown(new PullRequestRelease("1.2.0", "Example Rover"));
+        var noFolder = Shown(new PullRequestRelease("1.2.0", null));
+        var none = Shown(null);
+        var unreadable = Shown(null, new StewardException(StewardFailure.Forbidden));
+
+        Assert.True(stamped.IsVehicleOrSave);
+        Assert.Equal("Vehicle", stamped.KindText);
+        Assert.Equal(["Moon Rover", "Weapons"], stamped.Tags);
+        Assert.Equal(["required: ExampleParts >= 1.0.0", "recommends: LightA <= 2.0.0 or LightB 1.1.0 - 1.9.0"], stamped.Dependencies);
+        Assert.Equal("The newest release 1.2.0 installs into the folder \"Example Rover\".", stamped.ReleaseText);
+        Assert.Equal("The newest release 1.2.0 names no install folder.", noFolder.ReleaseText);
+        Assert.Equal(viewModel.Localization.StewardReviewNoRelease, none.ReleaseText);
+        Assert.Equal(
+            "The newest release could not be read from KSAModding/content-index-releases: " + viewModel.Localization.StewardQueueForbidden,
+            unreadable.ReleaseText);
+        Assert.Equal((false, false, false, true), (stamped.IsReleaseUnreadable, noFolder.IsReleaseUnreadable, none.IsReleaseUnreadable, unreadable.IsReleaseUnreadable));
+        Assert.True(stamped.HasOwnership);
+    }
+
+    [Fact]
+    public async Task ListingAndPack_ShowNoDependenciesOrRelease()
+    {
+        using var harness = await CreateAsync();
+        var review = new StewardReview(harness.ViewModel, FakeStewardQueue.Item(5));
+
+        var listing = new StewardReviewDocument(harness.ViewModel, review, Listing(harness, ListingOwnership.Unknown), "alice");
+        var pack = new StewardReviewDocument(harness.ViewModel, review, new PullRequestDocument("packs/my-pack/1.2.0.toml", StewardQueueKind.Pack, PackText, harness.Services.ListingFormat.Read(PackText), null, null), "alice");
+
+        Assert.All([listing, pack], document => Assert.Equal((false, 0, null), (document.IsVehicleOrSave, document.Dependencies.Count, document.ReleaseText)));
+    }
+
     private static PullRequestDocument Listing(ViewModelHarness harness, ListingOwnership ownership) =>
         new("listings/MyMod.toml", StewardQueueKind.Listing, ListingText, harness.Services.ListingFormat.Read(ListingText), null, ownership);
+
+    private static PackOwnerText Owner(string login, long id) => new(new ListingPackOwner(login, id).ToJson(), new ListingPackOwner(login, id));
 
     private static async Task<StewardReview> OpenReviewAsync(MainViewModel viewModel)
     {
@@ -422,10 +543,10 @@ public sealed class StewardReviewViewModelTests
         return viewModel.StewardPage.Review!;
     }
 
-    private async Task<ViewModelHarness> CreateAsync()
+    private async Task<ViewModelHarness> CreateAsync(Func<string, string>? editSnapshot = null)
     {
         _session.SignInDirectly();
-        var harness = await ViewModelHarness.CreateAsync(gitHub: _session, indexStatusEditor: new FakeIndexStatusEditor(), stewardQueue: _queue, pullRequestReviews: _reviews);
+        var harness = await ViewModelHarness.CreateAsync(gitHub: _session, indexStatusEditor: new FakeIndexStatusEditor(), stewardQueue: _queue, pullRequestReviews: _reviews, editSnapshot: editSnapshot);
         await harness.ViewModel.WhenStewardRoleCheckedAsync();
         return harness;
     }

@@ -143,12 +143,7 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
     }
 
     /// <summary>Whether <paramref name="path"/> is a listing document that <see cref="CheckPullRequestAsync"/> takes, which needs a lower-case .toml as the checks do.</summary>
-    internal static bool IsListingPath(string? path)
-    {
-        var folder = ListingDraft.ListingsFolder + "/";
-        var name = path is not null && path.StartsWith(folder, StringComparison.Ordinal) ? path[folder.Length..] : null;
-        return name is { Length: > 5 } && name.EndsWith(".toml", StringComparison.Ordinal) && !name.Contains('/', StringComparison.Ordinal);
-    }
+    internal static bool IsListingPath(string? path) => ListingFolders.IsDocumentPath(path);
 
     /// <summary>The listing at <paramref name="reference"/> of content-index, or null when it is not there.</summary>
     /// <exception cref="GitHubApiException">It could not be read, or it does not parse.</exception>
@@ -169,7 +164,7 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
         }
     }
 
-    private static Uri? ForumsThreadOf(ListingDraft? draft) =>
+    internal static Uri? ForumsThreadOf(ListingDraft? draft) =>
         draft?.LinkOf("forums") is { } link && ForumsThreadLink.ThreadOf(link) is not null ? new Uri(link) : null;
 
     /// <summary>RFC 0048: an edit proves control of the listed host, and of the new one when it moves.</summary>
@@ -199,6 +194,7 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
         {
             { Kind: ListingAuthority.GitHub } github => await VerifyRepositoryAsync(github.Target, draft.Id, author, cancellationToken).ConfigureAwait(false),
             { Kind: ListingAuthority.SpaceDock } spaceDock => await VerifySpaceDockAsync(spaceDock.Target, draft.Id, author, cancellationToken).ConfigureAwait(false),
+            { } share when draft.Releases?.Share?.Key == share.Kind => new ListingOwnership(ListingOwnershipState.CouldNotEvaluate, Problem: ListingOwnershipProblem.ShareHost),
             _ => new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.NoHost),
         };
     }

@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Globalization;
 using Borea.Cli.Output;
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
@@ -10,16 +11,13 @@ using Borea.Core.Planning;
 
 namespace Borea.Cli.Commands;
 
-/// <summary>
-/// <c>borea instance</c>: the lifecycle of instances.
-/// </summary>
 internal static class InstanceCommand
 {
     internal const string InstanceArgumentDescription = "The instance's name, or its id when two names differ only in case.";
 
     public static Command Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
-        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, set their launch arguments, create one from the mods of the shared profile, export and import modlists, adopt mods that Borea did not install and let Borea take their files over, rename saves and vehicles, and restore or delete their backups.");
+        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, set their launch arguments and their mod loader, create one from the mods of the shared profile, export and import modlists, adopt mods that Borea did not install and let Borea take their files over, rename saves and vehicles, and restore or delete their backups.");
         instance.Subcommands.Add(BuildList(services));
         instance.Subcommands.Add(BuildShow(services));
         instance.Subcommands.Add(BuildCreate(services));
@@ -30,6 +28,7 @@ internal static class InstanceCommand
         instance.Subcommands.Add(BuildArguments(services));
         instance.Subcommands.Add(BuildSetArguments(services, passThrough));
         instance.Subcommands.Add(BuildClearArguments(services));
+        instance.Subcommands.Add(BuildSetLoader(services));
         instance.Subcommands.Add(BuildDelete(services));
         instance.Subcommands.Add(BuildActivate(services));
         instance.Subcommands.Add(BuildDeactivate(services));
@@ -93,21 +92,24 @@ internal static class InstanceCommand
     {
         var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
         var json = ArgumentRules.Json();
-        var show = new Command("show", "Print one instance, when it was last played, and how long it was played.");
+        var show = new Command("show", "Print one instance, the game build it runs on, the mod loader its mods need and the one it starts, when it was last played, and how long it was played.");
         show.Arguments.Add(instance);
         show.Options.Add(json);
 
-        show.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        show.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
             var activeId = await cli.Instances.GetActiveInstanceIdAsync().ConfigureAwait(false);
             var lastPlayedAt = await LastPlayedAsync(cli, target, ct).ConfigureAwait(false);
             var playtime = await cli.Playtime.GetPlaytimeAsync(target.InstanceId, ct).ConfigureAwait(false);
             var loaderNeed = LoaderNeed.For(target);
+            var game = cli.InstanceGames.Resolve(target);
+            var installed = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
+            var resolution = await ResolveLoaderOrWarnAsync(cli, target, installed, error, ct).ConfigureAwait(false);
             var content = new List<InstalledContentView>();
             foreach (var record in await cli.InstalledContent.ListAsync(target.InstanceId, ct).ConfigureAwait(false))
                 content.Add(InstalledContentView.From(record, await cli.InstalledContent.CompareAsync(target.InstanceId, record, ct).ConfigureAwait(false)));
-            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime, loaderNeed, cli.Settings.LoaderInstallations) with
+            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime, loaderNeed, installed, resolution, game) with
             {
                 Vehicles = content.Where(item => item.Type == ContentType.Vehicle).ToList(),
                 Saves = content.Where(item => item.Type == ContentType.Save).ToList(),
@@ -123,8 +125,10 @@ internal static class InstanceCommand
             output.WriteLine($"Active: {(view.Active ? "yes" : "no")}");
             output.WriteLine($"Source: {Describe(target.Source)}");
             output.WriteLine($"Created: {Timestamp(view.CreatedAt)}");
+            output.WriteLine($"Game build: {DescribeGameBuild(cli, game)}");
             output.WriteLine($"Mods: {view.ModCount}");
             output.WriteLine($"Mod loader: {DescribeLoaderNeed(view.ModLoaders)}");
+            output.WriteLine($"Mod loader setting: {DescribeLoaderSetting(view.Loader, resolution?.Version)}");
             output.WriteLine($"Launch arguments: {DescribeLaunchArguments(target)}");
             output.WriteLine($"Last played: {(view.LastPlayedAt is { } lastPlayed ? Timestamp(lastPlayed) : "never")}");
             output.WriteLine($"Playtime: {DescribePlaytime(playtime)}");
@@ -143,6 +147,43 @@ internal static class InstanceCommand
         }));
 
         return show;
+    }
+
+    /// <summary>
+    /// The loader version that a launch of <paramref name="instance"/> would start, or null with a warning when the
+    /// listings cannot be read, so that the rest of the instance is still printed.
+    /// </summary>
+    private static async Task<InstanceLoaderResolution?> ResolveLoaderOrWarnAsync(CliServices cli, Instance instance, IReadOnlyList<InstalledLoaderVersion> installed, TextWriter error, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var game = cli.InstanceGames.Resolve(instance);
+            return await LoaderLookup.ResolveAsync(cli, instance, installed, game.Version?.Version, givenLoaderId: null, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or HttpRequestException)
+        {
+            error.WriteLine($"warning: Borea could not read the mod loader listings, so it cannot say which loader version '{instance.Name}' starts. {exception.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>"StarMap automatic (starts 0.4.8)", "StarMap pinned at 0.4.7 (not installed)" and the cases between them.</summary>
+    private static string DescribeLoaderSetting(InstanceLoaderView loader, LoaderVersionResolution? resolved)
+    {
+        var name = loader.Id is null ? "" : $"{loader.Id} ";
+        if (loader.PinnedVersion is { } pin)
+            return $"{name}pinned at {pin} ({(loader.Installed ? "installed" : "not installed")})";
+
+        var state = loader switch
+        {
+            { Id: null } => "no mod loader is chosen",
+            { Installed: true, Version: { } version } => $"starts {version}",
+            { Installed: true } => "starts the installed copy, version unknown",
+            { Version: { } version } => $"needs {version}, not installed",
+            _ when resolved?.Problem == LoaderVersionProblem.NoRelease => "not installed, and no release fits the game and the mods",
+            _ => "not installed",
+        };
+        return $"{name}automatic ({state})";
     }
 
     private static async Task<DateTimeOffset?> LastPlayedAsync(CliServices cli, Instance instance, CancellationToken cancellationToken)
@@ -175,6 +216,20 @@ internal static class InstanceCommand
         return loaders.Count > 1 ? $"{text} (one launch can only start one of them)" : text;
 
         static string Bounds(string min, string? max) => max is null ? $"{min} or newer" : $"{min} to {max}";
+    }
+
+    private static string DescribeGameBuild(CliServices cli, InstanceGame game)
+    {
+        if (game.KeptBuild is not { } build)
+        {
+            return game.Version is { } installed
+                ? $"from the game folder of the settings ({installed.Version?.ToString() ?? installed.RawVersion})"
+                : "from the game folder of the settings, version unknown";
+        }
+
+        return game.Problem == KeptBuildProblem.None
+            ? $"{build}, kept for this instance"
+            : $"{build}, kept for this instance, but {InstanceLookup.DescribeKeptBuildProblem(cli, game)}";
     }
 
     private static string DescribePlaytime(InstancePlaytime playtime)
@@ -325,6 +380,87 @@ internal static class InstanceCommand
         return clear;
     }
 
+    private static Command BuildSetLoader(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var loaderId = ArgumentRules.Text("loader-id", "The mod loader that the instance starts, or 'auto' to let Borea choose the loader and its version.");
+        var version = new Option<string?>("--version")
+        {
+            Description = "The exact release that the instance keeps, also when a newer one fits. 'auto', or no --version, lets Borea choose the newest release that fits the game and the mods.",
+        };
+        var json = ArgumentRules.Json();
+        var set = new Command(
+            "set-loader",
+            "Set the mod loader that an instance starts and its version. The instance keeps a pinned version, also when the game changes, until it is set to 'auto' again.");
+        set.Arguments.Add(instance);
+        set.Arguments.Add(loaderId);
+        set.Options.Add(version);
+        set.Options.Add(json);
+        set.Validators.Add(result =>
+        {
+            if (IsAuto(result.GetValue(loaderId)) && result.GetValue(version) is { } given && !IsAuto(given))
+                result.AddError("'auto' lets Borea choose the loader and its version. To pin a version, name the loader, for example 'borea instance set-loader <instance> StarMap --version 0.4.7'.");
+        });
+
+        set.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            var setting = await LoaderSettingAsync(cli, parseResult.GetRequiredValue(loaderId), parseResult.GetValue(version), ct).ConfigureAwait(false);
+            var saved = await cli.Instances.UpdateAsync(target.InstanceId, record =>
+            {
+                record.SetLoader(setting);
+                return record;
+            }, ct).ConfigureAwait(false);
+
+            // the pin is kept also when it is not installed, because the player can install it after this
+            if (setting is { LoaderId: { } id, Version: { } pin }
+                && InstalledLoaderVersion.Find(await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false), id, pin) is null)
+            {
+                error.WriteLine($"warning: {id} {pin} is not installed, so '{saved.Name}' cannot start until it is. Install it with 'borea loader install {id} --version {pin}'.");
+            }
+
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, new SetLoaderView(saved.InstanceId, saved.Name, LoaderSettingView.From(setting)));
+                return ExitCodes.Done;
+            }
+
+            output.WriteLine(setting switch
+            {
+                { LoaderId: null } => $"'{saved.Name}' starts the mod loader and the version that Borea chooses.",
+                { Version: null } => $"'{saved.Name}' starts the newest {setting.LoaderId} release that fits the game and the mods.",
+                _ => $"'{saved.Name}' starts {setting.LoaderId} {setting.Version}.",
+            });
+            return ExitCodes.Done;
+        }));
+
+        return set;
+    }
+
+    /// <summary>
+    /// The setting that the arguments of <c>set-loader</c> ask for. A loader id must name a mod loader listing, and the
+    /// setting keeps the id as the listing spells it.
+    /// </summary>
+    private static async Task<LoaderSetting> LoaderSettingAsync(CliServices cli, string loaderId, string? version, CancellationToken cancellationToken)
+    {
+        if (IsAuto(loaderId))
+            return LoaderSetting.Automatic;
+
+        ModVersion? pin = null;
+        if (version is not null && !IsAuto(version))
+        {
+            if (!ModVersion.TryParse(version, out var parsed))
+                throw new InvalidOperationException($"'{version}' is not a version. Give a release such as 0.4.7, or 'auto'.");
+
+            pin = parsed;
+        }
+
+        var listing = await LoaderLookup.GetListingAsync(cli.Mods, loaderId, cancellationToken).ConfigureAwait(false);
+        return pin is { } exact ? LoaderSetting.Pinned(listing.ModId, exact) : LoaderSetting.ForLoader(listing.ModId);
+    }
+
+    private static bool IsAuto(string? value) => string.Equals(value, "auto", StringComparison.OrdinalIgnoreCase);
+
     private static Task<Instance> SaveLaunchArgumentsAsync(CliServices cli, Instance target, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
         => cli.Instances.UpdateAsync(target.InstanceId, saved =>
         {
@@ -333,13 +469,15 @@ internal static class InstanceCommand
         }, cancellationToken);
 
     /// <summary>
-    /// Refuses an argument that the listing of a configured mod loader reads as
+    /// Refuses an argument that the listing of an installed mod loader reads as
     /// its instance flag, from the cached index. The launch checks the listing
     /// it uses again, so a listing that cannot be read now only gives a warning.
     /// </summary>
     private static async Task RefuseHandoverFlagAsync(CliServices cli, IReadOnlyList<string> arguments, TextWriter error, CancellationToken cancellationToken)
     {
-        foreach (var loaderId in cli.Settings.LoaderInstallations.Keys)
+        // the listing names one flag for every version of a loader, so a loader with several versions is read once
+        var installed = await cli.LoaderVersions.ListAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var loaderId in installed.Select(version => version.LoaderId).Distinct(ModIds.Comparer))
         {
             ModMetadata? listing;
             try
@@ -603,7 +741,7 @@ internal static class InstanceCommand
                             target,
                             recorded,
                             cli.Mods,
-                            cli.InstalledVersion.GetInstalledVersion()?.Version,
+                            InstanceLookup.GameVersionOf(cli, target),
                             cli.GamePlatform.Current,
                             ct).ConfigureAwait(false);
                         ModInstallCommands.PrintPlan(output, dependencies.Plan!);
@@ -702,8 +840,7 @@ internal static class InstanceCommand
         if (mods.Count == 0)
             throw new InvalidOperationException("The shared profile has no mods to import.");
 
-        if (!await cli.Instances.IsNameAvailableAsync(instanceName).ConfigureAwait(false))
-            throw new InvalidOperationException($"Instance name '{instanceName}' is already in use.");
+        await InstanceLookup.RequireFreeNameAsync(cli.Instances, instanceName).ConfigureAwait(false);
 
         var snapshot = await ReadIndexOrWarnAsync(cli, error, cancellationToken).ConfigureAwait(false);
         var views = mods.Select(mod => new ProfileModView(mod.FolderName, mod.Enabled, IsListedMod(snapshot, mod.FolderName))).ToList();
@@ -760,9 +897,9 @@ internal static class InstanceCommand
     }
 
     /// <summary><c>instance show --json</c>.</summary>
-    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, IReadOnlyList<ModLoaderNeedView> ModLoaders, IReadOnlyList<string> LaunchArguments, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime)
+    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, IReadOnlyList<ModLoaderNeedView> ModLoaders, InstanceLoaderView Loader, IReadOnlyList<string> LaunchArguments, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime, GameBuildView GameBuild)
     {
-        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt, InstancePlaytime playtime, LoaderNeed need, IReadOnlyDictionary<string, LoaderInstallation> installations)
+        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt, InstancePlaytime playtime, LoaderNeed need, IReadOnlyList<InstalledLoaderVersion> installed, InstanceLoaderResolution? resolution, InstanceGame game)
             => new(
                 instance.InstanceId,
                 instance.Name,
@@ -770,10 +907,12 @@ internal static class InstanceCommand
                 InstanceSourceView.From(instance.Source),
                 instance.CreatedAt,
                 instance.Mods.Count,
-                need.Loaders.Select(loader => ModLoaderNeedView.From(loader, installations)).ToList(),
+                need.Loaders.Select(loader => ModLoaderNeedView.From(loader, installed, resolution)).ToList(),
+                InstanceLoaderView.From(instance.Loader, resolution),
                 instance.LaunchArguments,
                 lastPlayedAt,
-                PlaytimeView.From(playtime));
+                PlaytimeView.From(playtime),
+                GameBuildView.From(game));
 
         /// <summary>The vehicles Borea installed, with whether the player changed them since.</summary>
         public IReadOnlyList<InstalledContentView> Vehicles { get; init; } = [];
@@ -794,10 +933,17 @@ internal static class InstanceCommand
     /// <summary>One loader the mods of an instance need, for <c>instance show</c>.</summary>
     private sealed record ModLoaderNeedView(string Id, string MinVersion, string? MaxVersion, bool Conflict, IReadOnlyList<string> NeededBy, IReadOnlyList<ModLoaderBoundsView> Requirements, bool Installed, string? InstalledVersion, bool? Accepted)
     {
-        public static ModLoaderNeedView From(NeededLoader loader, IReadOnlyDictionary<string, LoaderInstallation> installations)
+        /// <summary>
+        /// The installed state is of the version that the instance starts when <paramref name="resolution"/> chose this loader,
+        /// else of the recorded version, or of the newest one when no version of this loader is recorded.
+        /// </summary>
+        public static ModLoaderNeedView From(NeededLoader loader, IReadOnlyList<InstalledLoaderVersion> installed, InstanceLoaderResolution? resolution)
         {
-            var installation = installations.FirstOrDefault(entry => ModIds.Equals(entry.Key, loader.LoaderId)).Value;
-            var version = installation?.Version;
+            var versions = InstalledLoaderVersion.Of(installed, loader.LoaderId);
+            var start = resolution?.Version is { } resolved && ModIds.Equals(resolved.LoaderId, loader.LoaderId)
+                ? resolution.Start
+                : versions.FirstOrDefault(version => version.IsRecorded) ?? versions.FirstOrDefault();
+            var version = start?.Version;
             return new(
                 loader.LoaderId,
                 loader.MinVersion.ToString(),
@@ -805,11 +951,35 @@ internal static class InstanceCommand
                 loader.HasConflict,
                 loader.NeededBy,
                 loader.Requirements.Select(requirement => new ModLoaderBoundsView(requirement.ModId, requirement.MinVersion.ToString(), requirement.MaxVersion?.ToString())).ToList(),
-                installation is not null,
+                start is not null,
                 version?.ToString(),
                 version is { } known ? loader.Accepts(known) : null);
         }
     }
+
+    /// <summary>
+    /// The mod loader setting of an instance and what it starts, for <c>instance show</c>. The version is the one that starts,
+    /// else the one to install, and the id is null when no loader can be chosen.
+    /// </summary>
+    private sealed record InstanceLoaderView(string? Id, string Mode, string? PinnedVersion, string? Version, bool Installed)
+    {
+        public static InstanceLoaderView From(LoaderSetting setting, InstanceLoaderResolution? resolution)
+        {
+            var start = resolution?.Start;
+            var version = start is not null ? start.Version : resolution?.Version?.Missing?.Version ?? setting.Version;
+            return new(resolution?.Version?.LoaderId ?? setting.LoaderId, LoaderMode(setting), setting.Version?.ToString(), version?.ToString(), start is not null);
+        }
+    }
+
+    /// <summary>The JSON shape of <c>instance set-loader</c>.</summary>
+    private sealed record SetLoaderView(Guid Id, string Name, LoaderSettingView Loader);
+
+    private sealed record LoaderSettingView(string? Id, string Mode, string? PinnedVersion)
+    {
+        public static LoaderSettingView From(LoaderSetting setting) => new(setting.LoaderId, LoaderMode(setting), setting.Version?.ToString());
+    }
+
+    private static string LoaderMode(LoaderSetting setting) => setting.IsPinned ? "pinned" : "automatic";
 
     /// <summary>The JSON shape of <c>instance arguments</c>, <c>set-arguments</c> and <c>clear-arguments</c>.</summary>
     private sealed record LaunchArgumentsView(Guid Id, string Name, IReadOnlyList<string> Arguments)
@@ -821,6 +991,25 @@ internal static class InstanceCommand
     {
         public static PlaytimeView From(InstancePlaytime playtime)
             => new((long)playtime.Total.TotalSeconds, playtime.Sessions, playtime.IncludesRunningSession, playtime.UnreadableLogs, playtime.IsKnown);
+    }
+
+    /// <summary>
+    /// The build an instance runs. <see cref="Kept"/> is null when it runs on the game folder of the settings, and
+    /// <see cref="Version"/> is null when that version is unknown or the kept build has a problem.
+    /// </summary>
+    private sealed record GameBuildView(string? Kept, string? Version, string Problem)
+    {
+        public static GameBuildView From(InstanceGame game)
+            => new(
+                game.KeptBuild?.ToString(),
+                game.Version?.Version?.ToString(),
+                game.Problem switch
+                {
+                    KeptBuildProblem.None => "none",
+                    KeptBuildProblem.Missing => "missing",
+                    KeptBuildProblem.WrongVersion => "wrong-version",
+                    _ => "unknown",
+                });
     }
 
     /// <summary>What one mod asks of the loader, so a script sees which mod asks for which end of a conflict.</summary>

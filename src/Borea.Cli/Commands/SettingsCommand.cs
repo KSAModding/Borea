@@ -1,14 +1,12 @@
 using System.CommandLine;
 using Borea.Cli.Output;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
 
 namespace Borea.Cli.Commands;
 
-/// <summary>
-/// <c>borea settings</c>: where the game, the mod loaders and the library are, the release channel and the shared mod store.
-/// </summary>
 internal static class SettingsCommand
 {
     private const string On = "on";
@@ -28,14 +26,15 @@ internal static class SettingsCommand
         var show = new Command("show", "Print the saved settings.");
         show.Options.Add(json);
 
-        show.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, (cli, output, _, _) =>
+        show.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
         {
+            var versions = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
             if (parseResult.GetValue(json))
-                JsonOutput.Write(output, SettingsView.From(cli.Settings, cli.Paths));
+                JsonOutput.Write(output, SettingsView.From(cli.Settings, cli.Paths, versions));
             else
-                WriteSettings(output, cli.Settings, cli.Paths);
+                WriteSettings(output, cli.Settings, cli.Paths, versions);
 
-            return Task.FromResult(ExitCodes.Done);
+            return ExitCodes.Done;
         }));
 
         return show;
@@ -197,7 +196,7 @@ internal static class SettingsCommand
             error.WriteLine($"warning: {directory} does not exist.");
     }
 
-    private static void WriteSettings(TextWriter output, BoreaSettings settings, IGamePathProvider paths)
+    private static void WriteSettings(TextWriter output, BoreaSettings settings, IGamePathProvider paths, IReadOnlyList<InstalledLoaderVersion> versions)
     {
         output.WriteLine($"Game directory: {settings.GameDirectoryPath ?? "not set"}");
         output.WriteLine($"Library folder: {LibraryFolderOf(paths)}{(settings.LibraryFolderPath is null ? " (default)" : string.Empty)}");
@@ -207,33 +206,50 @@ internal static class SettingsCommand
         if (settings.LoaderInstallations.Count == 0)
         {
             output.WriteLine("Loader directories: none");
+        }
+        else
+        {
+            output.WriteLine("Loader directories:");
+            foreach (var (loaderId, installation) in settings.LoaderInstallations.OrderBy(p => p.Key, ModIds.Comparer))
+                output.WriteLine($"  {loaderId}: {installation.DirectoryPath}");
+        }
+
+        if (versions.Count == 0)
+        {
+            output.WriteLine("Loader versions: none");
             return;
         }
 
-        output.WriteLine("Loader directories:");
-        foreach (var (loaderId, installation) in settings.LoaderInstallations.OrderBy(p => p.Key, ModIds.Comparer))
-            output.WriteLine($"  {loaderId}: {installation.DirectoryPath}");
+        output.WriteLine("Loader versions:");
+        foreach (var version in versions)
+            output.WriteLine($"  {version.LoaderId} {version.Version?.ToString() ?? "(unknown version)"}{(version.IsRecorded ? " (recorded)" : string.Empty)}: {version.DirectoryPath}");
     }
 
     private static string OnOff(bool value) => value ? On : Off;
 
     private static string LibraryFolderOf(IGamePathProvider paths) => Path.GetDirectoryName(paths.GetInstancesRoot())!;
 
-    /// <summary>The JSON shape of <c>settings show</c>.</summary>
-    private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories, string ReleaseChannel, string LibraryFolder, bool LibraryFolderIsDefault, bool SharedModStore)
+    /// <summary>
+    /// The JSON shape of <c>settings show</c>. The loader directories are the recorded installations, which an older Borea
+    /// starts, and the loader versions are every version on disk.
+    /// </summary>
+    private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories, IReadOnlyList<LoaderVersionView> LoaderVersions, string ReleaseChannel, string LibraryFolder, bool LibraryFolderIsDefault, bool SharedModStore)
     {
-        public static SettingsView From(BoreaSettings settings, IGamePathProvider paths)
+        public static SettingsView From(BoreaSettings settings, IGamePathProvider paths, IReadOnlyList<InstalledLoaderVersion> versions)
             => new(
                 settings.GameDirectoryPath,
                 settings.LoaderInstallations.ToDictionary(
                     pair => pair.Key,
                     pair => pair.Value.DirectoryPath,
                     ModIds.Comparer),
+                versions.Select(v => new LoaderVersionView(v.LoaderId, v.Version?.ToString(), v.DirectoryPath, v.IsAdopted, v.IsRecorded)).ToList(),
                 settings.ReleaseChannel.ToName(),
                 LibraryFolderOf(paths),
                 settings.LibraryFolderPath is null,
                 settings.SharedModStore);
     }
+
+    private sealed record LoaderVersionView(string Id, string? Version, string Directory, bool Adopted, bool Recorded);
 
     /// <summary>The JSON shape of <c>settings set library</c>.</summary>
     private sealed record LibraryChangeView(string LibraryFolder, string PreviousLibraryFolder, string Outcome, bool OldFilesRemain);

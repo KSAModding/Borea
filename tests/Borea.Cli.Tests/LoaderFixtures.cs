@@ -42,19 +42,21 @@ internal static class LoaderFixtures
             instance: instance,
             platforms: platforms));
 
-    public static ModVersionMetadata Release(string id = "StarMap", string version = "0.4.6", bool yanked = false, ReleaseStatus releaseStatus = ReleaseStatus.Stable, DateTimeOffset? unavailableSince = null) => new(
+    public static ModVersionMetadata Release(string id = "StarMap", string version = "0.4.6", bool yanked = false, ReleaseStatus releaseStatus = ReleaseStatus.Stable, DateTimeOffset? unavailableSince = null, string gameMin = "2026.9.7.5402", string? gameMax = null) => new(
         specVersion: 1,
         modId: id,
         version: ModVersion.Parse(version),
         releaseStatus: releaseStatus,
         releaseDate: new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero),
-        gameMin: "2026.9.7.5402",
-        gameMinRevision: 5402,
+        gameMin: gameMin,
+        gameMinRevision: GameVersion.Parse(gameMin).Revision,
         download: new DownloadInfo("https://example.invalid/loader.zip", null, 100, "application/zip", unavailableSince: unavailableSince),
         installSizeBytes: 200,
         dependencies: Array.Empty<ModDependency>(),
         type: ContentType.ModLoader,
         install: new InstallInfo(root: null, derived: true, target: InstallAnchor.Standalone),
+        gameMax: gameMax,
+        gameMaxRevision: gameMax is null ? null : GameVersion.Parse(gameMax).Revision,
         yanked: yanked,
         source: "index");
 }

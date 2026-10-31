@@ -29,15 +29,16 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     /// <summary>What the mod.toml of the archive of <see cref="Base"/> declares: the optional KittenExtensions that the stamper derived.</summary>
     private static readonly IReadOnlyList<LocalModDependency> ModToml = [new("KittenExtensions", optional: true)];
 
+    private static ReleaseAmendment AmendmentOf(ReleaseChange change) => ReleaseAmendment.Create(change, GameVersions, DateTimeOffset.UtcNow);
+
     [Fact]
     public void NewKind_OfADerivedDependency_OnTheAuthorsRequest_MakesItAuthoredAndKeepsIt()
     {
-        var amendment = ReleaseAmendment.Create(new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind("kittenextensions", "required")] }, GameVersions, DateTimeOffset.UtcNow);
+        var amendment = AmendmentOf(new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind("kittenextensions", "required")] });
 
         var amended = amendment.Apply(Path120, Base, ReleaseAmender.Owner);
 
-        Assert.NotNull(amended);
-        Assert.True(amended.Widens);
+        Assert.True(amended!.Widens);
         Assert.Equal(
             Base.Replace("\"id\": \"KittenExtensions\",\n      \"kind\": \"optional\",\n      \"source\": \"derived\"", "\"id\": \"KittenExtensions\",\n      \"kind\": \"required\",\n      \"source\": \"authored\"", StringComparison.Ordinal),
             amended.Text);
@@ -46,7 +47,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     [Fact]
     public void NewKind_ByAStewardAlone_IsRefusedAsAWidening()
     {
-        var amendment = ReleaseAmendment.Create(new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind("ExampleLibrary", "recommends")] }, GameVersions, DateTimeOffset.UtcNow);
+        var amendment = AmendmentOf(new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind("ExampleLibrary", "recommends")] });
 
         var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, Base, ReleaseAmender.Steward));
         var amended = amendment.Apply(Path120, Base, ReleaseAmender.Owner);
@@ -63,7 +64,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     public void NewKind_OfNoStatedDependencyOrNoKind_IsRefused(string id, string kind, ReleaseAmendmentRefusal refusal)
     {
         var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() =>
-            ReleaseAmendment.Create(new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind(id, kind)] }, GameVersions, DateTimeOffset.UtcNow)
+            AmendmentOf(new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind(id, kind)] })
                 .Apply(Path120, Base, ReleaseAmender.Owner));
 
         Assert.Equal(refusal, refused.Refusal);
@@ -72,7 +73,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     [Fact]
     public void NewKind_ThatTheDependencyHasAlready_ChangesNothing()
     {
-        var amendment = ReleaseAmendment.Create(new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind("KittenExtensions", "optional")] }, GameVersions, DateTimeOffset.UtcNow);
+        var amendment = AmendmentOf(new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind("KittenExtensions", "optional")] });
 
         Assert.Null(amendment.Apply(Path120, Base, ReleaseAmender.Owner));
     }
@@ -197,7 +198,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     [Fact]
     public void Removal_OfADerivedDependency_IsRefusedEvenOnTheAuthorsRequest()
     {
-        var amendment = ReleaseAmendment.Create(new ReleaseChange { RemovedDependencies = ["KittenExtensions"] }, GameVersions, DateTimeOffset.UtcNow);
+        var amendment = AmendmentOf(new ReleaseChange { RemovedDependencies = ["KittenExtensions"] });
 
         var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, Base, ReleaseAmender.Owner));
 
@@ -215,7 +216,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     [InlineData(true, true, "the dependency 'examplelibrary' is removed, and the archive's mod.toml declares 'examplelibrary', so the release keeps it as a derived entry")]
     public void Removal_OfADeclaredDependency_NeedsTheModTomlThatDoesNotDeclareIt(bool read, bool declaresIt, string error)
     {
-        var amendment = ReleaseAmendment.Create(new ReleaseChange { RemovedDependencies = ["ExampleLibrary"] }, GameVersions, DateTimeOffset.UtcNow);
+        var amendment = AmendmentOf(new ReleaseChange { RemovedDependencies = ["ExampleLibrary"] });
         IReadOnlyList<LocalModDependency>? declared = read ? [.. ModToml, .. declaresIt ? new[] { new LocalModDependency("examplelibrary", optional: false) } : []] : null;
 
         var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, Base, ReleaseAmender.Owner, declared));
@@ -232,7 +233,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
         var change = new ReleaseChange { RemovedDependencies = ["ExampleLibrary"] };
         var alone = new ReleaseAmendmentRequest("ExampleMod", ReleaseSelection.Of("1.2.0"), change, "The author declared it by mistake.");
         var onRequest = alone with { AuthorRequest = Link };
-        var amendment = ReleaseAmendment.Create(onRequest.Amendment, GameVersions, DateTimeOffset.UtcNow);
+        var amendment = AmendmentOf(onRequest.Amendment);
 
         var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, Base, alone.Amender, ModToml));
         var amended = amendment.Apply(Path120, Base, onRequest.Amender, ModToml);
@@ -361,7 +362,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     public void OwnerRow_OnTheAuthorsRequest_IsWrittenAsTheIndexChecksIt_AndByAStewardAloneIsRefused(string name)
     {
         var (published, change, written, ownerOnly) = OwnerRow(name);
-        var amendment = ReleaseAmendment.Create(change, GameVersions, DateTimeOffset.UtcNow);
+        var amendment = AmendmentOf(change);
 
         var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, published, ReleaseAmender.Steward, ModToml));
         var amended = amendment.Apply(Path120, published, ReleaseAmender.Owner, ModToml);
@@ -369,8 +370,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
         Assert.Equal(ReleaseAmendmentRefusal.Widens, refused.Refusal);
         string[] details = [.. ownerOnly, "only the verified owner of the listing widens a release, or a steward who names the author's request"];
         Assert.Equal(details, refused.Details);
-        Assert.NotNull(amended);
-        Assert.True(amended.Widens);
+        Assert.True(amended!.Widens);
         Assert.Equal(Encoding.UTF8.GetBytes(written), Encoding.UTF8.GetBytes(amended.Text));
         Assert.Null(amendment.Apply(Path120, written, ReleaseAmender.Owner, ModToml));
     }
@@ -415,7 +415,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
             _ => throw new ArgumentOutOfRangeException(nameof(name), name, null),
         };
 
-        var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => ReleaseAmendment.Create(change, GameVersions, DateTimeOffset.UtcNow));
+        var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => AmendmentOf(change));
 
         Assert.Equal(ReleaseAmendmentRefusal.InvalidChange, refused.Refusal);
     }
@@ -423,8 +423,8 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     [Fact]
     public void OwnerRow_OfABoundTheReleaseDoesNotStateOrADependencyItDoesNotName_ChangesNothingOrIsRefused()
     {
-        var withoutMax = ReleaseAmendment.Create(new ReleaseChange { RemovedDependencyBounds = [new ReleaseDependencyBoundRemoval("KittenExtensions", false, true)] }, GameVersions, DateTimeOffset.UtcNow);
-        var unknown = ReleaseAmendment.Create(new ReleaseChange { RemovedDependencyBounds = [new ReleaseDependencyBoundRemoval("Nothing", true, false)] }, GameVersions, DateTimeOffset.UtcNow);
+        var withoutMax = AmendmentOf(new ReleaseChange { RemovedDependencyBounds = [new ReleaseDependencyBoundRemoval("KittenExtensions", false, true)] });
+        var unknown = AmendmentOf(new ReleaseChange { RemovedDependencyBounds = [new ReleaseDependencyBoundRemoval("Nothing", true, false)] });
 
         Assert.Null(withoutMax.Apply(Path120, Base, ReleaseAmender.Owner));
         Assert.Equal(ReleaseAmendmentRefusal.NoDependency, Assert.Throws<ReleaseAmendmentRefusedException>(() => unknown.Apply(Path120, Base, ReleaseAmender.Owner)).Refusal);

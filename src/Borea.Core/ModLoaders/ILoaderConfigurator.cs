@@ -28,27 +28,6 @@ public interface ILoaderConfigurator
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Writes the game path again before a launch when the loader runs in the
-    /// Wine prefix of the game and its file holds no game path or the host
-    /// path of the game, which an older Borea wrote and the loader in the
-    /// prefix cannot open. Any other value stays, so a path the player set is
-    /// kept. Returns the file it wrote, or null when it wrote nothing, which is
-    /// always so outside a prefix, for a format it cannot write and for a
-    /// directory that is not absolute.
-    /// </summary>
-    /// <exception cref="ArgumentException">The listing is not a mod loader.</exception>
-    /// <exception cref="InvalidOperationException">
-    /// The file cannot be read as its stated format or cannot be written, or
-    /// no drive of the Wine prefix around the game holds it. Nothing is
-    /// written then.
-    /// </exception>
-    Task<string?> RefreshForWineAsync(
-        ModMetadata loader,
-        string loaderDirectory,
-        string gameDirectory,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// The value <see cref="ConfigureAsync"/> writes for
     /// <paramref name="gameDirectory"/>: the absolute host path, or the Windows
     /// path through the drives of the Wine prefix that holds the game, because

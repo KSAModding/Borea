@@ -30,13 +30,13 @@ public sealed partial class GitHubIndexReportsTests
         Issue(11, "Compendium: the watcher found a problem", "<!-- watcher:listing=Compendium -->", "ksamodding-indexer-bot[bot]");
         Issue(12, "[Dispute] MeasureTools is mine", DisputeBody, "bob");
         _issues.Add(new { number = 13, title = "[Takedown] a pull request", html_url = $"https://github.com/{Index}/pull/13", body = TakedownBody, created_at = Day, updated_at = Day, user = new { login = "carol", type = "User" }, pull_request = new { url = $"{Api}/repos/{Index}/pulls/13" } });
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         var listed = await reports.ListAsync();
 
         Assert.Equal([(10, IndexReportKind.Takedown), (12, IndexReportKind.Dispute)], listed.Select(report => (report.Number, report.Kind)));
         var takedown = listed[0];
-        Assert.Equal((new Uri($"https://github.com/{Index}/issues/10"), "[Takedown] Harmful installer", "alice", Day.AddHours(10)), (takedown.Url, takedown.Title, takedown.Author, takedown.Created));
+        Assert.Equal((new Uri($"https://github.com/{Index}/issues/10"), "[Takedown] Harmful installer", "alice", 110L, Day.AddHours(10)), (takedown.Url, takedown.Title, takedown.Author, takedown.AuthorId, takedown.Created));
         Assert.Equal(("tools-pack", "1.1.0", "The archive carries something harmful", "A player."), (takedown.Id, takedown.Version, takedown.Ground, takedown.Reporter));
         var dispute = listed[1];
         Assert.Equal(("MeasureTools", "I announced it first.", "@bob"), (dispute.Id, dispute.Claim, dispute.OtherParty));
@@ -45,7 +45,7 @@ public sealed partial class GitHubIndexReportsTests
     [Fact]
     public async Task ListAsync_ReadsWithoutTheToken()
     {
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         await reports.ListAsync();
 
@@ -71,7 +71,7 @@ public sealed partial class GitHubIndexReportsTests
     public async Task ListAsync_Failure_ThrowsAsAStewardFailure(HttpStatusCode status, StewardFailure failure)
     {
         _failing = status;
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         var exception = await Assert.ThrowsAsync<StewardException>(() => reports.ListAsync());
 
@@ -82,7 +82,7 @@ public sealed partial class GitHubIndexReportsTests
     public async Task ListAsync_IssueWithoutAnHttpsLink_IsAnUnexpectedResponse()
     {
         _issues.Add(new { number = 10, title = "[Takedown] Harmful installer", html_url = "javascript:alert(1)", body = TakedownBody, created_at = Day, updated_at = Day, user = new { login = "alice", type = "User" } });
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         var exception = await Assert.ThrowsAsync<StewardException>(() => reports.ListAsync());
 
@@ -109,8 +109,10 @@ public sealed partial class GitHubIndexReportsTests
             body,
             created_at = Day.AddHours(number),
             updated_at = Day.AddHours(number + 1),
-            user = new { login = author, type = author.EndsWith("[bot]", StringComparison.Ordinal) ? "Bot" : "User" },
+            user = new { login = author, id = 100 + number, type = author.EndsWith("[bot]", StringComparison.Ordinal) ? "Bot" : "User" },
         });
+
+    private async Task<GitHubIndexReports> SignedInAsync() => new(await SignInAsync(), Http());
 
     private async Task<GitHubSession> SignInAsync()
     {

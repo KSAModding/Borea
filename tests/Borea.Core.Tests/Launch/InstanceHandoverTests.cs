@@ -4,40 +4,20 @@ namespace Borea.Core.Tests.Launch;
 
 public sealed class InstanceHandoverTests
 {
-    [Fact]
-    public void Constructor_FlagAndVariable_KeepsBoth()
+    [Theory]
+    [InlineData("-InstancePath", "STARMAP_INSTANCE_PATH")]
+    [InlineData("-Instance", null)]
+    [InlineData(null, "LOADER_INSTANCE")]
+    public void Constructor_FlagOrVariableOrBoth_KeepsThem(string? flag, string? variable)
     {
-        var handover = new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH");
+        var handover = new InstanceHandover(flag, variable);
 
-        Assert.Equal("-InstancePath", handover.Flag);
-        Assert.Equal("STARMAP_INSTANCE_PATH", handover.Variable);
-    }
-
-    [Fact]
-    public void Constructor_FlagOnly_IsAccepted()
-    {
-        var handover = new InstanceHandover("-Instance", null);
-
-        Assert.Equal("-Instance", handover.Flag);
-        Assert.Null(handover.Variable);
-    }
-
-    [Fact]
-    public void Constructor_VariableOnly_IsAccepted()
-    {
-        var handover = new InstanceHandover(null, "LOADER_INSTANCE");
-
-        Assert.Null(handover.Flag);
-        Assert.Equal("LOADER_INSTANCE", handover.Variable);
-    }
-
-    [Fact]
-    public void Constructor_Neither_ThrowsArgumentException()
-    {
-        Assert.Throws<ArgumentException>(() => new InstanceHandover(null, null));
+        Assert.Equal(flag, handover.Flag);
+        Assert.Equal(variable, handover.Variable);
     }
 
     [Theory]
+    [InlineData(null, null)]
     [InlineData("", "VAR")]
     [InlineData("   ", "VAR")]
     [InlineData("-Instance Path", "VAR")]
@@ -46,7 +26,7 @@ public sealed class InstanceHandoverTests
     [InlineData("-Flag", "   ")]
     [InlineData(null, "LOADER INSTANCE")]
     [InlineData(null, "LOADER_INSTANCE\n")]
-    public void Constructor_EmptyOrWhitespace_ThrowsArgumentException(string? flag, string? variable)
+    public void Constructor_NeitherOrNotOneToken_ThrowsArgumentException(string? flag, string? variable)
     {
         Assert.Throws<ArgumentException>(() => new InstanceHandover(flag, variable));
     }

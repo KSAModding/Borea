@@ -16,8 +16,6 @@ internal static class SelfUpdateLock
     /// </summary>
     public static FileStream? TryTake(string folder)
     {
-        ArgumentNullException.ThrowIfNull(folder);
-
         try
         {
             return new FileStream(

@@ -72,14 +72,14 @@ public sealed class FileUserContentInstaller : IUserContentInstaller
             var record = new InstalledContentRecord(release, folderName, _time.GetUtcNow(), files);
             var target = Path.Combine(kindFolder, folderName);
             Directory.CreateDirectory(kindFolder);
-            Directory.Move(staging, target);
+            DirectoryRename.Move(staging, target);
             try
             {
                 await _records.AddAsync(instanceId, record, CancellationToken.None).ConfigureAwait(false);
             }
             catch
             {
-                Directory.Move(target, staging);
+                DirectoryRename.Move(target, staging);
                 throw;
             }
 
@@ -123,16 +123,16 @@ public sealed class FileUserContentInstaller : IUserContentInstaller
             var moved = false;
             try
             {
-                Directory.Move(staging, target);
+                DirectoryRename.Move(staging, target);
                 moved = true;
                 await _records.ReplaceAsync(instanceId, current.FolderName, record, CancellationToken.None).ConfigureAwait(false);
             }
             catch
             {
                 if (moved)
-                    Directory.Move(target, staging);
+                    DirectoryRename.Move(target, staging);
 
-                Directory.Move(backup, oldFolder);
+                DirectoryRename.Move(backup, oldFolder);
                 GameSaveBackupFolder.TryDeleteRecord(backup);
                 throw;
             }
@@ -242,6 +242,7 @@ public sealed class FileUserContentInstaller : IUserContentInstaller
             TryDeleteFile(archive);
         }
 
+        UserContentFolder.CheckFiles(staging, release);
         UserContentFolder.Check(staging, release);
         if (!string.Equals(folderName, release.Install!.Folder, StringComparison.Ordinal))
         {

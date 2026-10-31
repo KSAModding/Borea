@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Borea.Storage.Index.Dtos;
@@ -8,5 +9,5 @@ public sealed class PackVersionDto
     public required PackAuthoredDto Authored { get; set; }
 
     [JsonPropertyName("index_status")]
-    public System.Text.Json.JsonElement? IndexStatus { get; set; }
+    public JsonElement? IndexStatus { get; set; }
 }

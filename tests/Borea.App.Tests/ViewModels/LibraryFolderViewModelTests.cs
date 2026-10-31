@@ -110,10 +110,14 @@ public sealed class LibraryFolderViewModelTests : IDisposable
     public async Task ChangeLibraryFolder_WhileAnInstallRuns_IsRefused()
     {
         using var download = new ManualResetEventSlim();
+        var downloading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var harness = await ViewModelHarness.CreateAsync(respond: request =>
         {
             if (IsAfcDownload(request.RequestUri!))
+            {
+                downloading.TrySetResult();
                 download.Wait(TimeSpan.FromSeconds(30));
+            }
             return null;
         });
         var viewModel = harness.ViewModel;
@@ -121,8 +125,7 @@ public sealed class LibraryFolderViewModelTests : IDisposable
         await item.InstallCommand.ExecuteAsync(null);
 
         var install = item.ConfirmInstallCommand.ExecuteAsync(null);
-        for (var wait = 0; wait < 300 && !harness.Requests.Any(IsAfcDownload); wait++)
-            await Task.Delay(100);
+        await downloading.Task.WaitAsync(TimeSpan.FromSeconds(30));
         await viewModel.ChangeLibraryFolderCommand.ExecuteAsync(_library);
         download.Set();
         await install;

@@ -5,7 +5,7 @@ namespace Borea.Storage.Instances;
 /// <summary>The hashes an install record keeps, see <see cref="Core.Instances.InstalledContentRecord.Files"/>.</summary>
 public static class InstalledContentHashes
 {
-    private static readonly EnumerationOptions EveryFile = new()
+    internal static readonly EnumerationOptions EveryFile = new()
     {
         RecurseSubdirectories = true,
         IgnoreInaccessible = false,

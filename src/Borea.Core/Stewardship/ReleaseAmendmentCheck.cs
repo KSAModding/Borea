@@ -416,7 +416,7 @@ internal static partial class ReleaseAmendmentCheck
 
         var declared = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (var entry in derived)
-            declared[(StringOf(entry["id"]) ?? string.Empty).ToLowerInvariant()] = StringOf(entry["kind"]);
+            declared[LowerId(entry)] = StringOf(entry["kind"]);
         foreach (var name in key.Names.Where(name => declared.ContainsKey(name) && !ids.Contains(name)))
         {
             if (!alternatives.Contains(name))
@@ -500,7 +500,7 @@ internal static partial class ReleaseAmendmentCheck
     {
         var members = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
         foreach (var member in (entry["any_of"] as JsonArray ?? []).OfType<JsonObject>())
-            members[(StringOf(member["id"]) ?? string.Empty).ToLowerInvariant()] = member;
+            members[LowerId(member)] = member;
         return members;
     }
 
@@ -560,6 +560,9 @@ internal static partial class ReleaseAmendmentCheck
         _ => IsTrue(node),
     };
 
+    /// <summary>The id of an entry or an any_of member in lowercase, the key that every lookup of this class uses, because ids compare without regard to case (RFC 0031).</summary>
+    private static string LowerId(JsonObject entry) => (StringOf(entry["id"]) ?? string.Empty).ToLowerInvariant();
+
     /// <summary>What identifies an entry in both versions of the file. Ids compare without regard to case (RFC 0031), and an any_of entry is named by its members.</summary>
     private sealed record EntryKey(bool AnyOf, string[] Names)
     {
@@ -577,8 +580,6 @@ internal static partial class ReleaseAmendmentCheck
         public bool Equals(EntryKey? other) => other is not null && AnyOf == other.AnyOf && Names.SequenceEqual(other.Names, StringComparer.Ordinal);
 
         public override int GetHashCode() => HashCode.Combine(AnyOf, string.Join('\n', Names));
-
-        private static string LowerId(JsonObject entry) => (StringOf(entry["id"]) ?? string.Empty).ToLowerInvariant();
     }
 
     [GeneratedRegex(@"^releases/([^/]+)/(.+)\.[Jj][Ss][Oo][Nn]\z")]

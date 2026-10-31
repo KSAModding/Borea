@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -81,7 +83,7 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// The first argument that the listing of a configured mod loader reads as
+    /// The first argument that the listing of an installed mod loader reads as
     /// its instance flag, from the cached index. A launch checks the listing it
     /// uses again, so a listing that cannot be read now refuses nothing.
     /// </summary>
@@ -90,7 +92,19 @@ public partial class MainViewModel
         if (_services is null || arguments.Count == 0)
             return null;
 
-        foreach (var loaderId in _services.Settings.LoaderInstallations.Keys)
+        IReadOnlyList<InstalledLoaderVersion> installed;
+        try
+        {
+            installed = await _services.LoaderVersions.ListAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            // the launch checks the listing it uses again
+            return null;
+        }
+
+        // the listing names one flag for every version of a loader, so a loader with several versions is read once
+        foreach (var loaderId in installed.Select(version => version.LoaderId).Distinct(ModIds.Comparer))
         {
             ModMetadata? listing;
             try

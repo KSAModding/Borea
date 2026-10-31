@@ -3,24 +3,26 @@ using System.Diagnostics;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Storage.Files;
 using Borea.Storage.Launch;
 
 namespace Borea.Storage.ModLoaders;
 
-/// <summary>
-/// File-backed <see cref="ILoaderAdopter"/>.
-/// </summary>
 public sealed class FileLoaderAdopter : ILoaderAdopter
 {
     private readonly IBoreaSettingsRepository _settings;
     private readonly ILoaderConfigurationReader _configuration;
+    private readonly string? _loadersRoot;
 
+    /// <param name="loadersRoot">Borea's own Loaders root. A loader adopted below it is recorded as Borea-owned.</param>
     public FileLoaderAdopter(
         IBoreaSettingsRepository settings,
-        ILoaderConfigurationReader configuration)
+        ILoaderConfigurationReader configuration,
+        string? loadersRoot = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _loadersRoot = loadersRoot;
     }
 
     public async Task<LoaderAdoptionResult> AdoptAsync(
@@ -69,15 +71,13 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
 
         var settings = await _settings.GetAsync(cancellationToken).ConfigureAwait(false) ?? new BoreaSettings(null);
         if (settings.LoaderInstallations.TryGetValue(loader.ModId, out var recorded)
-            && !SamePath(recorded.DirectoryPath, loaderDirectory))
+            && !FileSystemPaths.SamePath(recorded.DirectoryPath, loaderDirectory))
         {
             throw new InvalidOperationException(
                 $"{loader.Name} is already recorded at '{recorded.DirectoryPath}'. Remove that record or adopt that directory instead.");
         }
 
-        // Outside Windows FileVersionInfo reads only assembly metadata, so a Windows app host shows no version there.
-        var rawVersion = ReadFileVersion(executable)
-            ?? (DotnetHost.AssemblyBeside(executable) is { } assembly ? ReadFileVersion(assembly) : null);
+        var rawVersion = ReadRawVersion(executable);
         var version = MatchVersion(loader, releases, rawVersion);
         string? configuredGameDirectory = null;
         string? configurationWarning = null;
@@ -111,7 +111,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             loaderDirectory,
             version,
             rawVersion,
-            isAdopted: recorded?.IsAdopted ?? true);
+            isAdopted: (_loadersRoot is null || !LoaderLayoutMigration.IsBelowLoadersRoot(_loadersRoot, loaderDirectory)) && (recorded?.IsAdopted ?? true));
 
         var result = new LoaderAdoptionResult(
             loader.ModId,
@@ -173,7 +173,12 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         return warnings;
     }
 
-    private static string? ReadFileVersion(string executable)
+    /// <summary>The file version of the launch file, or of the assembly beside an app host that carries none.</summary>
+    internal static string? ReadRawVersion(string executable) =>
+        // Outside Windows FileVersionInfo reads only assembly metadata, so a Windows app host shows no version there.
+        ReadFileVersion(executable) ?? (DotnetHost.AssemblyBeside(executable) is { } assembly ? ReadFileVersion(assembly) : null);
+
+    internal static string? ReadFileVersion(string executable)
     {
         try
         {
@@ -191,7 +196,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         }
     }
 
-    private static bool TryParseFileVersion(string? rawVersion, out ModVersion version)
+    internal static bool TryParseFileVersion(string? rawVersion, out ModVersion version)
     {
         if (ModVersion.TryParse(rawVersion, out version))
             return true;
@@ -213,7 +218,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         if (!Path.IsPathFullyQualified(managed) || !Path.IsPathFullyQualified(configured))
             return false;
 
-        return SamePath(managed, configured);
+        return FileSystemPaths.SamePath(managed, configured);
     }
 
     private static string Absolute(string path, string paramName)
@@ -225,14 +230,5 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             throw new ArgumentException("The loader directory must be absolute.", paramName);
 
         return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
-    }
-
-    private static bool SamePath(string left, string right)
-    {
-        var comparison = OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-        return string.Equals(
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
-            comparison);
     }
 }

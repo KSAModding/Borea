@@ -65,9 +65,7 @@ public sealed class BackupsViewModelTests
     public async Task Restore_FileInUse_FailsTheTaskNamingTheFolderAndChangesNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
-        WriteItem(backups, "Orbit-2026-09-01T080000Z", "Orbit", 10);
+        var (instance, backups) = await AddMainWithOrbitBackupAsync(harness);
         await OpenGameDataAsync(harness, "Main");
         var row = Assert.Single(harness.ViewModel.BackupItems);
 
@@ -86,9 +84,7 @@ public sealed class BackupsViewModelTests
     public async Task Delete_AsksFirstAndThenDeletes()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
-        WriteItem(backups, "Orbit-2026-09-01T080000Z", "Orbit", 10);
+        var (_, backups) = await AddMainWithOrbitBackupAsync(harness);
         await OpenGameDataAsync(harness, "Main");
         var row = Assert.Single(harness.ViewModel.BackupItems);
 
@@ -109,9 +105,7 @@ public sealed class BackupsViewModelTests
     {
         var starter = new GameSavesViewModelTests.RunningGameStarter();
         using var harness = await ViewModelHarness.CreateAsync(GameSavesViewModelTests.WithStarMap, processStarter: starter);
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
-        WriteItem(backups, "Orbit-2026-09-01T080000Z", "Orbit", 10);
+        var (instance, backups) = await AddMainWithOrbitBackupAsync(harness);
         WriteItem(backups, "Moon-2026-09-02T080000Z", "Moon", 10);
         starter.GameLogPath = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
         await OpenGameDataAsync(harness, "Main");
@@ -133,9 +127,7 @@ public sealed class BackupsViewModelTests
     public async Task Restore_WhileAGameRunsOutsideBorea_RefusesAndChangesNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
-        WriteItem(backups, "Orbit-2026-09-01T080000Z", "Orbit", 10);
+        var (instance, backups) = await AddMainWithOrbitBackupAsync(harness);
         await OpenGameDataAsync(harness, "Main");
         harness.IsGameProcessRunning = () => true;
 
@@ -151,9 +143,7 @@ public sealed class BackupsViewModelTests
     public async Task Restore_BackupGoneMeanwhile_FailsAndDropsTheRow()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
-        WriteItem(backups, "Orbit-2026-09-01T080000Z", "Orbit", 10);
+        var (_, backups) = await AddMainWithOrbitBackupAsync(harness);
         await OpenGameDataAsync(harness, "Main");
         var row = Assert.Single(harness.ViewModel.BackupItems);
         Directory.Delete(Path.Combine(backups, "Orbit-2026-09-01T080000Z"), recursive: true);
@@ -225,6 +215,14 @@ public sealed class BackupsViewModelTests
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.Instances.Single(instance => instance.Name == name).OpenCommand.ExecuteAsync(null);
         await harness.ViewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
+    }
+
+    private static async Task<(Instance Instance, string Backups)> AddMainWithOrbitBackupAsync(ViewModelHarness harness)
+    {
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
+        WriteItem(backups, "Orbit-2026-09-01T080000Z", "Orbit", 10);
+        return (instance, backups);
     }
 
     private static void WriteItem(string parent, string folderName, string name, int dataBytes)

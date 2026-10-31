@@ -81,8 +81,7 @@ public sealed class GameSavesViewModelTests
     public async Task BackUp_WritesAZipIntoTheBackups()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId), "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (instance, _) = await AddMainWithOrbitAsync(harness);
         await OpenAsync(harness, "Main");
         var section = harness.ViewModel.SavesSection;
 
@@ -116,8 +115,7 @@ public sealed class GameSavesViewModelTests
     public async Task BackUpAllSaves_FromTheLibraryRow_LeavesTheInstancePageAsItWas()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId), "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (instance, _) = await AddMainWithOrbitAsync(harness);
         await OpenAsync(harness, "Main");
         await harness.ViewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
         harness.ViewModel.SetMainWindowLibrary();
@@ -382,9 +380,7 @@ public sealed class GameSavesViewModelTests
     public async Task LockedFile_DeleteFailsNamingTheFolderAndKeepsTheRow()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (_, saves) = await AddMainWithOrbitAsync(harness);
         await OpenAsync(harness, "Main");
         var section = harness.ViewModel.SavesSection;
         var row = Assert.Single(section.Items);
@@ -405,9 +401,7 @@ public sealed class GameSavesViewModelTests
         var starter = new RunningGameStarter();
         using var harness = await ViewModelHarness.CreateAsync(WithStarMap, processStarter: starter);
         var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (instance, saves) = await AddMainWithOrbitAsync(harness);
         starter.GameLogPath = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
         await OpenAsync(harness, "Main");
         await viewModel.PlayCommand.ExecuteAsync(null);
@@ -427,9 +421,7 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync(WithStarMap);
         var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (_, saves) = await AddMainWithOrbitAsync(harness);
         await OpenAsync(harness, "Main");
         harness.IsGameProcessRunning = () => true;
         var row = Assert.Single(viewModel.SavesSection.Items);
@@ -447,9 +439,7 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (_, saves) = await AddMainWithOrbitAsync(harness);
         await OpenAsync(harness, "Main");
         var row = Assert.Single(viewModel.SavesSection.Items);
 
@@ -502,9 +492,7 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (_, saves) = await AddMainWithOrbitAsync(harness);
         WriteItem(saves, "Moon", "2026-08-02T14:34:32.4054896", "v2026.8.3.5117", 10);
         await OpenAsync(harness, "Main");
         var meta = File.ReadAllText(Path.Combine(saves, "Orbit", "meta.toml"));
@@ -529,9 +517,7 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (_, saves) = await AddMainWithOrbitAsync(harness);
         await OpenAsync(harness, "Main");
         harness.IsGameProcessRunning = () => true;
         Assert.Single(viewModel.SavesSection.Items).BeginRenameCommand.Execute(null);
@@ -550,9 +536,7 @@ public sealed class GameSavesViewModelTests
         var starter = new RunningGameStarter();
         using var harness = await ViewModelHarness.CreateAsync(WithStarMap, processStarter: starter);
         var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (instance, saves) = await AddMainWithOrbitAsync(harness);
         starter.GameLogPath = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
         await OpenAsync(harness, "Main");
         await viewModel.PlayCommand.ExecuteAsync(null);
@@ -571,9 +555,7 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        var (_, saves) = await AddMainWithOrbitAsync(harness);
         File.WriteAllText(Path.Combine(saves, "Mun"), "not a save");
         await OpenAsync(harness, "Main");
         var meta = File.ReadAllText(Path.Combine(saves, "Orbit", "meta.toml"));
@@ -608,8 +590,16 @@ public sealed class GameSavesViewModelTests
         await harness.ViewModel.Instances.Single(instance => instance.Name == name).OpenCommand.ExecuteAsync(null);
     }
 
+    private static async Task<(Instance Instance, string Saves)> AddMainWithOrbitAsync(ViewModelHarness harness)
+    {
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
+        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        return (instance, saves);
+    }
+
     /// <summary>A folder the way the game writes it, with a meta.toml in the shape of SaveMetaData.</summary>
-    private static void WriteItem(string kindFolder, string name, string updated, string version, int dataBytes, string dataFile = "universe.xml")
+    internal static void WriteItem(string kindFolder, string name, string updated, string version, int dataBytes, string dataFile = "universe.xml")
     {
         var folder = Directory.CreateDirectory(Path.Combine(kindFolder, name)).FullName;
         File.WriteAllText(Path.Combine(folder, "meta.toml"), $"""

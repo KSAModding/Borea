@@ -2,13 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
+using Borea.App.Localization;
+using Borea.Core.ModLoaders;
 using Borea.Core.Paths;
 using Borea.Core.Updates;
+using Borea.Storage.ModLoaders;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -60,6 +64,9 @@ public partial class MainViewModel
         new("Phosphor Icons", "https://phosphoricons.com"),
     ];
 
+    public IReadOnlyList<LanguageTranslatorCredits> TranslatorCredits { get; } =
+        TranslatorCreditsCatalog.ForLanguages(LocalizationService.BuiltInCultures);
+
     [ObservableProperty]
     private string? _aboutMessage;
 
@@ -106,7 +113,10 @@ public partial class MainViewModel
                 .AppendLine($"Borea {BoreaInformationalVersion}")
                 .AppendLine(RuntimeText)
                 .AppendLine(SystemText)
-                .AppendLine($"KSA: {InstalledVersionText ?? "not set up"}");
+                .AppendLine($"KSA: {InstalledVersionText ?? "not set up"}")
+                .AppendLine($"Update check at start: {(CheckForUpdatesAtStart ? "on" : "off")}, channel {UpdateChannel.ToString().ToLowerInvariant()}")
+                .AppendLine($"Dismissed: game build {DismissedText(_dismissedGameRevision ?? _appPreferences.DismissedGameRevision)}, untested build {DismissedText(_dismissedUntestedGameRevision ?? _appPreferences.DismissedUntestedGameRevision)}, loader update {_dismissedLoaderUpdate ?? _appPreferences.DismissedLoaderUpdate ?? "none"}")
+                .AppendLine($"Newest game build: {NewestGameBuildText}");
 
             foreach (var path in Localization.TranslationFiles.Paths)
                 text.AppendLine($"Translation file: {WithoutUserProfile(path)}");
@@ -121,11 +131,16 @@ public partial class MainViewModel
                 if (ActiveInstance is { } instance)
                     text.AppendLine($"Instance: {instance.Name}");
 
-                // the matched release is what the Game tab shows; the file version is the fallback for an adopted loader
-                foreach (var (loaderId, installation) in _services.Settings.LoaderInstallations)
+                // one line per installed version, and the record alone until the versions were listed
+                var versions = _listedLoaderVersions ?? _services.Settings.LoaderInstallations
+                    .Select(entry => new InstalledLoaderVersion(entry.Key, entry.Value.Version, entry.Value.RawVersion, entry.Value.DirectoryPath, LoaderLayoutMigration.IsPlayerFolder(_services.Paths.GetLoadersRoot(), entry.Value.DirectoryPath, entry.Value.IsAdopted), IsRecorded: true))
+                    .ToList();
+                foreach (var installed in versions)
                 {
-                    var version = installation.Version?.ToString() ?? installation.RawVersion ?? "version unknown";
-                    text.AppendLine($"{loaderId}: {version} at {WithoutUserProfile(installation.DirectoryPath)}");
+                    // the file version is the fallback for an adopted loader
+                    var version = installed.Version?.ToString() ?? installed.RawVersion ?? "version unknown";
+                    var marks = (installed.IsRecorded ? " (recorded)" : string.Empty) + (installed.IsAdopted ? " (adopted)" : string.Empty);
+                    text.AppendLine($"{installed.LoaderId}: {version} at {WithoutUserProfile(installed.DirectoryPath)}{marks}");
                 }
 
                 text.AppendLine($"Log: {WithoutUserProfile(_services.Log.CurrentFilePath)}");
@@ -133,6 +148,24 @@ public partial class MainViewModel
 
             return text.ToString().TrimEnd();
         }
+    }
+
+    private static string DismissedText(int? revision) => revision?.ToString(CultureInfo.InvariantCulture) ?? "none";
+
+    private string NewestGameBuildText => _gameBuildCheckResult switch
+    {
+        GameBuildCheckResult.Answered => $"{LatestGameBuild?.Version} (from the master server)",
+        GameBuildCheckResult.AnsweredByIndex => $"{SnapshotGameBuild} (from the index, the master server did not answer)",
+        GameBuildCheckResult.NoAnswer => "no answer from the master server",
+        _ => "not checked",
+    };
+
+    private enum GameBuildCheckResult
+    {
+        NotChecked,
+        Answered,
+        AnsweredByIndex,
+        NoAnswer,
     }
 
     public const int DiagnosticsLogLines = 200;
@@ -158,7 +191,7 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void ShowAboutSettings()
+    private async Task ShowAboutSettingsAsync()
     {
         AboutMessage = null;
         AboutError = null;
@@ -167,6 +200,19 @@ public partial class MainViewModel
         NoticesError = null;
         UpdateIndexRefreshStatus();
         SettingsTab = SettingsTab.About;
+
+        // the diagnostics name every installed loader version
+        if (_services is not { } services)
+            return;
+
+        try
+        {
+            _listedLoaderVersions = await services.LoaderVersions.ListAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            // the diagnostics keep the versions of the last list, or the record
+        }
     }
 
     [RelayCommand]

@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 
 namespace Borea.Core.Mods;
 
@@ -8,7 +9,7 @@ namespace Borea.Core.Mods;
 public sealed class ReleaseSource
 {
     /// <summary>
-    /// The hosts, keyed as the authored file writes them ("github", "spacedock").
+    /// The hosts, keyed as the authored file writes them ("github", "spacedock", or the key of a share host such as "ksamods").
     /// </summary>
     public IReadOnlyList<ReleaseHost> Hosts { get; }
 
@@ -62,10 +63,23 @@ public sealed class ReleaseSource
     public ReleaseHost AuthorityHost => Hosts.First(h => string.Equals(h.Host, Authority, StringComparison.OrdinalIgnoreCase));
 }
 
+/// <summary>The kind of a release host, which follows from its key and its reference.</summary>
+public enum ReleaseHostKind
+{
+    GitHub,
+    SpaceDock,
+
+    /// <summary>A share host of RFC 0094, which hosts.toml of content-index registers. The reference is the listing id.</summary>
+    Share,
+
+    /// <summary>A key that Borea does not know.</summary>
+    Other,
+}
+
 /// <summary>
 /// One release host entry: the host key and the reference on that host.
 /// </summary>
-public sealed class ReleaseHost
+public sealed partial class ReleaseHost
 {
     /// <summary>
     /// The host key, such as "github" or "spacedock".
@@ -73,9 +87,11 @@ public sealed class ReleaseHost
     public string Host { get; }
 
     /// <summary>
-    /// The reference on that host, such as "owner/repo" or a SpaceDock mod id.
+    /// The reference on that host, such as "owner/repo", a SpaceDock mod id, or the listing id on a share host.
     /// </summary>
     public string Reference { get; }
+
+    public ReleaseHostKind Kind { get; }
 
     public ReleaseHost(string host, string reference)
     {
@@ -87,5 +103,22 @@ public sealed class ReleaseHost
 
         Host = host;
         Reference = reference;
+        Kind = host.ToLowerInvariant() switch
+        {
+            "github" => ReleaseHostKind.GitHub,
+            "spacedock" => ReleaseHostKind.SpaceDock,
+            _ when IsShareKey(host) && ModIds.IsValid(reference) => ReleaseHostKind.Share,
+            _ => ReleaseHostKind.Other,
+        };
     }
+
+    /// <summary>
+    /// Whether <paramref name="key"/> can name a share host under [releases]: the form that the tools of content-index-releases
+    /// read from hosts.toml, and no other key of [releases].
+    /// </summary>
+    public static bool IsShareKey(string? key) =>
+        key is not null && ShareKey().IsMatch(key) && key is not ("github" or "spacedock" or "authority" or "since" or "tag_prefix");
+
+    [GeneratedRegex("^[a-z][a-z0-9-]{1,31}$")]
+    private static partial Regex ShareKey();
 }

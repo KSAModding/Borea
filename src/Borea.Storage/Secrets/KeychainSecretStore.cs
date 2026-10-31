@@ -29,7 +29,7 @@ internal sealed class KeychainSecretStore : ISecretStore
         var symbols = Require();
         return Call(name, account =>
         {
-            var query = Dictionary(symbols, account, (symbols.ReturnData, symbols.True), (symbols.MatchLimit, symbols.MatchLimitOne));
+            var query = PasswordQuery(symbols, account, (symbols.ReturnData, symbols.True), (symbols.MatchLimit, symbols.MatchLimitOne));
             try
             {
                 var status = SecItemCopyMatching(query, out var data);
@@ -71,9 +71,9 @@ internal sealed class KeychainSecretStore : ISecretStore
             var plain = Encoding.UTF8.GetBytes(secret);
             var data = CFDataCreate(IntPtr.Zero, plain, plain.Length);
             Array.Clear(plain);
-            var query = Dictionary(symbols, account);
+            var query = PasswordQuery(symbols, account);
             var change = CFDictionaryCreate(IntPtr.Zero, [symbols.ValueData], [data], 1, symbols.KeyCallBacks, symbols.ValueCallBacks);
-            var added = Dictionary(symbols, account, (symbols.ValueData, data));
+            var added = PasswordQuery(symbols, account, (symbols.ValueData, data));
             try
             {
                 var status = SecItemUpdate(query, change);
@@ -98,7 +98,7 @@ internal sealed class KeychainSecretStore : ISecretStore
         var symbols = Require();
         Call<object?>(name, account =>
         {
-            var query = Dictionary(symbols, account);
+            var query = PasswordQuery(symbols, account);
             try
             {
                 var status = SecItemDelete(query);
@@ -139,7 +139,7 @@ internal sealed class KeychainSecretStore : ISecretStore
     }
 
     /// <summary>The query for the generic password <paramref name="account"/> of Borea, with <paramref name="extra"/> added.</summary>
-    private static IntPtr Dictionary(Symbols symbols, IntPtr account, params (IntPtr Key, IntPtr Value)[] extra)
+    private static IntPtr PasswordQuery(Symbols symbols, IntPtr account, params (IntPtr Key, IntPtr Value)[] extra)
     {
         var service = CFStringCreateWithCString(IntPtr.Zero, Service, Utf8Encoding);
         try

@@ -281,23 +281,7 @@ public sealed class DiscoverPageTests
 
     /// <summary>Renders Discover next to a navigation rail, as the main window does.</summary>
     private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, T> read, double windowHeight = 832) =>
-        HeadlessApp.RunAsync(harness, () =>
-        {
-            var page = new DiscoverPage { DataContext = harness.ViewModel };
-            Grid.SetColumn(page, 1);
-            var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{PageBodyPanel.NavigationRailWidth},*"), Children = { page } };
-            var window = new Window { Width = windowWidth, Height = windowHeight, Content = body, DataContext = harness.ViewModel };
-            window.Show();
-            try
-            {
-                window.UpdateLayout();
-                return Task.FromResult(read(page));
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
+        RenderAsync(harness, windowWidth, page => Task.FromResult(read(page)), windowHeight);
 
     private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, Task<T>> read, double windowHeight = 832) =>
         HeadlessApp.RunAsync(harness, async () =>
@@ -317,6 +301,22 @@ public sealed class DiscoverPageTests
                 window.Close();
             }
         });
+
+    [Fact]
+    public async Task CategoryTabs_StayOnOneLine_InGermanAt1000Px()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        Assert.True(harness.Localization.TrySetCulture("de"));
+
+        var tabTops = await RenderAsync(harness, 1000, page =>
+            page.GetVisualDescendants().OfType<Button>()
+                .Where(button => button.Classes.Contains("tab"))
+                .Select(button => Corner(button, page).Y)
+                .ToList());
+
+        Assert.Equal(5, tabTops.Count);
+        Assert.Single(tabTops.Distinct());
+    }
 
     private static GameVersionControls ReadGameVersionControls(MainViewModel viewModel, Control page)
     {

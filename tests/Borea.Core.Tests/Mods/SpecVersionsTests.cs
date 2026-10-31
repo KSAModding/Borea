@@ -10,27 +10,16 @@ public sealed class SpecVersionsTests
         Assert.Equal(1, SpecVersions.Highest);
     }
 
-    [Fact]
-    public void IsAboveHighest_AtHighest_ReturnsFalse()
-    {
-        Assert.False(SpecVersions.IsAboveHighest(SpecVersions.Highest));
-    }
-
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(int.MinValue)]
-    public void IsAboveHighest_NonPositive_ReturnsFalse(int specVersion)
+    [InlineData(int.MinValue, false)]
+    [InlineData(-1, false)]
+    [InlineData(0, false)]
+    [InlineData(SpecVersions.Highest, false)]
+    [InlineData(SpecVersions.Highest + 1, true)]
+    [InlineData(SpecVersions.Highest + 6, true)]
+    [InlineData(int.MaxValue, true)]
+    public void IsAboveHighest_IsTrueOnlyAboveHighest(int specVersion, bool expected)
     {
-        Assert.False(SpecVersions.IsAboveHighest(specVersion));
-    }
-
-    [Theory]
-    [InlineData(SpecVersions.Highest + 1)]
-    [InlineData(SpecVersions.Highest + 6)]
-    [InlineData(int.MaxValue)]
-    public void IsAboveHighest_AboveHighest_ReturnsTrue(int specVersion)
-    {
-        Assert.True(SpecVersions.IsAboveHighest(specVersion));
+        Assert.Equal(expected, SpecVersions.IsAboveHighest(specVersion));
     }
 }

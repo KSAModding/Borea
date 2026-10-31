@@ -16,6 +16,7 @@ Borea keeps user-interface text in [`src/Borea.App/Localization/Resources`](../s
 
 - [`Resources.resx`](../src/Borea.App/Localization/Resources/Resources.resx) is the neutral English source.
 - [`Resources.de.resx`](../src/Borea.App/Localization/Resources/Resources.de.resx) is the German translation.
+- [`Resources.zh-Hans.resx`](../src/Borea.App/Localization/Resources/Resources.zh-Hans.resx) is the Simplified Chinese translation, listed as `简体中文`.
 - [`Resources.en-QP.resx`](../src/Borea.App/Localization/Resources/Resources.en-QP.resx) is pirate speak. `QP` is a private-use region code, because .NET has no culture for pirate speak.
 - A translated file uses the name `Resources.<language>.resx`. For example, French uses `Resources.fr.resx`.
 
@@ -41,6 +42,27 @@ For example, this entry uses `NavigationHome` as its stable key and `Home` as it
 To improve a translation, edit the text between `<value>` and `</value>`. Keep the `NavigationHome` key and the XML tags unchanged.
 
 GitHub creates a personal fork automatically when you do not have direct write access. You do not need to install Borea or a development environment for a text-only correction.
+
+## Add your translator credit
+
+Settings, About lists the translators of each language that Borea ships. The names are kept in [`Translators.json`](../src/Borea.App/Localization/Resources/Translators.json), next to the language files, and are embedded in the App. Do not put a name into a translated interface text.
+
+In the pull request for your language, add your name under the same culture name as its resource file. Each language has a list, so later contributors can add their own name without replacing earlier translators:
+
+```json
+{
+  "zh-Hans": [
+    {
+      "name": "kuxiaowo",
+      "url": "https://github.com/kuxiaowo"
+    }
+  ]
+}
+```
+
+The `url` is optional. With an absolute HTTPS URL, the name opens that page when clicked; without one, it is plain text. Keep existing names, and only add a name with that person's agreement. Names are shown as written, in the same format for every language. The original English row links to the Borea repository, and translations without a recorded name show "Not credited yet".
+
+Only built-in languages appear in this list. A credit for a language being added appears when that language is registered in Borea; local preview files in the `Languages` folder do not add credits.
 
 ## Preserve placeholders
 
@@ -104,6 +126,8 @@ To see the texts that Borea ships again, remove the file from `Languages` and st
 Continuous integration checks every pull request. A text-only contributor can wait for that result.
 
 If you already have the .NET SDK, you can run the focused tests locally:
+
+On Linux, the Simplified Chinese rendering checks also need a system font documented in the [Linux installation instructions](../README.md#linux), for example `fonts-noto-cjk` or `fonts-wqy-microhei` on Debian and Ubuntu. CI uses the smaller `fonts-wqy-microhei` package. The checks keep asserting that every Chinese glyph renders; a minimal system without a Chinese font will fail them.
 
 ```text
 dotnet test tests/Borea.App.Tests/Borea.App.Tests.csproj --no-restore

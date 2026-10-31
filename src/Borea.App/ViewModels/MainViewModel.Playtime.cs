@@ -42,9 +42,7 @@ public partial class MainViewModel
     private void StartPlaytimeLoad(Guid instanceId)
     {
         RefreshPlaytimeText();
-        var previous = _playtimeLoad;
-        var load = LoadPlaytimeAsync(instanceId);
-        _playtimeLoad = previous.IsCompleted ? load : Task.WhenAll(previous, load);
+        _playtimeLoad = Chain(_playtimeLoad, LoadPlaytimeAsync(instanceId));
     }
 
     private async Task LoadPlaytimeAsync(Guid instanceId)

@@ -16,8 +16,6 @@ public static partial class MarkdownImages
     /// <summary>The destination of every Markdown image, and the number of raw HTML images.</summary>
     public static (IReadOnlyList<string> Destinations, int HtmlImages) Scan(string markdown)
     {
-        ArgumentNullException.ThrowIfNull(markdown);
-
         var destinations = new List<string>();
         var html = 0;
         foreach (var node in MarkdownSyntax.Walk(MarkdownSyntax.Parse(markdown)))

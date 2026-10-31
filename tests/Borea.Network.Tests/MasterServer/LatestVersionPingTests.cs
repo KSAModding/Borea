@@ -31,7 +31,6 @@ public sealed class LatestVersionPingTests
 
         var answer = await ping.PingAsync();
 
-        Assert.NotNull(answer.Version);
         Assert.Equal(5117, answer.Version!.Value.Revision);
     }
 

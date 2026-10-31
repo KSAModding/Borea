@@ -30,7 +30,7 @@
 
                     <!-- c/inner-nav-bar -->
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="24" Padding="6" Margin="0,16,0,0" HorizontalAlignment="Stretch">
-                        <WrapPanel ItemSpacing="16" LineSpacing="6">
+                        <WrapPanel ItemSpacing="4" LineSpacing="6">
                             <Button Classes="tab" Classes.active="{Binding IsModsTab}" Content="{Binding Localization.DiscoverTabMods}" Command="{Binding ShowDiscoverModsCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsLoadersTab}" Content="{Binding Localization.DiscoverTabLoaders}" Command="{Binding ShowDiscoverLoadersCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsModpacksTab}" Content="{Binding Localization.DiscoverTabModpacks}" Command="{Binding ShowDiscoverModpacksCommand}" />
@@ -173,6 +173,7 @@
                         </Button>
                     </StackPanel>
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource InstanceHint}" Margin="8,24,0,0" IsVisible="{Binding !HasActiveInstance}" />
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ActiveKeptBuildUnavailable}" Margin="8,24,0,0" IsVisible="{Binding !CanAddToActiveInstance}" />
                     <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverEmpty}" Margin="8,24,0,0">
                         <TextBlock.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">

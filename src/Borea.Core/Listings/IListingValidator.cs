@@ -14,10 +14,17 @@ public interface IListingValidator
     /// <summary>Loads the newest schema of content-index, and keeps the one in use when that fails.</summary>
     Task<ListingSchemaOrigin> LoadSchemaAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The types the schema in use accepts: those in properties.type.enum and not in the rollout gate properties.type.not.enum (RFC 0085).
+    /// So a client offers a vehicle or a save the moment the index lifts its gate.
+    /// </summary>
+    IReadOnlyList<string> AcceptedTypes { get; }
+
     ListingCheckResult Validate(AuthoredTable document, ListingCheckContext context);
 }
 
 /// <param name="Snapshot">The content index, for the id collision, the references and the curated tags. Null skips those rules.</param>
 /// <param name="ListedId">The id of the listed document an edit changes, which is no collision with itself.</param>
 /// <param name="Archive">The latest release archive the author named, when Borea read one.</param>
-public sealed record ListingCheckContext(ContentIndexSnapshot? Snapshot, string? ListedId = null, ListingArchiveFacts? Archive = null);
+/// <param name="InstallFolder">The folder a shared vehicle or save installs as, the name in its meta.toml.</param>
+public sealed record ListingCheckContext(ContentIndexSnapshot? Snapshot, string? ListedId = null, ListingArchiveFacts? Archive = null, string? InstallFolder = null);

@@ -23,6 +23,7 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.ModState, services.ModState);
         Assert.Same(graph.LatestVersion, services.LatestVersion);
         Assert.Same(graph.InstalledVersion, services.InstalledVersion);
+        Assert.Same(graph.InstanceGames, services.InstanceGames);
         Assert.Same(graph.IndexFetcher, services.IndexFetcher);
         Assert.Same(graph.IndexReader, services.IndexReader);
         Assert.Same(graph.IndexSnapshots, services.IndexSnapshots);
@@ -88,6 +89,7 @@ public sealed class CliServicesTests : IDisposable
             ModListFormat = graph.ModListFormat,
             LatestVersion = new FakeLatestVersionPing(),
             InstalledVersion = new FakeInstalledGameVersionProvider(),
+            InstanceGames = graph.InstanceGames,
             GamePlatform = graph.GamePlatform,
             GameShape = graph.GameShape,
             IndexFetcher = new FakeContentIndexFetcher(),
@@ -115,8 +117,8 @@ public sealed class CliServicesTests : IDisposable
             SharedProfileImporter = graph.SharedProfileImporter,
             LoaderInstaller = graph.LoaderInstaller,
             LoaderAdopter = graph.LoaderAdopter,
-            LoaderConfiguration = graph.LoaderConfiguration,
             LoaderUninstaller = graph.LoaderUninstaller,
+            LoaderVersions = graph.LoaderVersions,
             Launcher = graph.Launcher,
             ModPacks = graph.ModPacks,
             ReadOnlyModPacks = graph.ReadOnlyModPacks,

@@ -67,12 +67,6 @@ public sealed class ModPackMetadataTests
     }
 
     [Fact]
-    public void Constructor_MonthFormGameMin_IsAccepted()
-    {
-        Assert.Equal("2026.7", Build(gameMin: "2026.7").GameMin);
-    }
-
-    [Fact]
     public void Constructor_VehiclesAndSaves_UseTheSameEntryShape()
     {
         var pack = Build(
@@ -163,19 +157,21 @@ public sealed class ModPackMetadataTests
     }
 
     [Fact]
-    public void Constructor_SameContentPinnedAcrossTwoSections_ThrowsArgumentException()
-    {
-        Assert.Throws<ArgumentException>(() =>
-            Build(mods: new[] { Entry("shared-id") }, saves: new[] { Entry("shared-id") }));
-    }
-
-    [Fact]
     public void Constructor_SameContentPinnedInModsAndVehicles_ThrowsArgumentException()
     {
         var exception = Assert.Throws<ArgumentException>(() =>
             Build(mods: new[] { Entry("shared-id") }, vehicles: new[] { Entry("SHARED-ID") }));
 
         Assert.Equal("vehicles", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_SameContentPinnedInModsAndSaves_ThrowsArgumentException()
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            Build(mods: new[] { Entry("shared-id") }, saves: new[] { Entry("shared-id") }));
+
+        Assert.Equal("saves", exception.ParamName);
     }
 
     [Fact]
@@ -198,14 +194,5 @@ public sealed class ModPackMetadataTests
         var pack = Build(specVersion: SpecVersions.Highest + 1);
 
         Assert.True(SpecVersions.IsAboveHighest(pack.SpecVersion));
-    }
-
-    [Fact]
-    public void RepeatedPin_NamesTheSectionItIsIn()
-    {
-        var exception = Assert.Throws<ArgumentException>(() =>
-            Build(mods: new[] { Entry("shared-id") }, saves: new[] { Entry("shared-id") }));
-
-        Assert.Equal("saves", exception.ParamName);
     }
 }

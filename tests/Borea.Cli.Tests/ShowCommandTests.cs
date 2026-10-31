@@ -23,9 +23,7 @@ public sealed class ShowCommandTests : IDisposable
             version: "1.0.0",
             yanked: true,
             yankedReason: "This release is broken.");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.AddRange(new[] { yanked, newest });
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(
+        AddListing(new ContentIndexListing(
             listing.ModId,
             listing,
             new[] { yanked, newest },
@@ -51,9 +49,7 @@ public sealed class ShowCommandTests : IDisposable
         var since = new DateTimeOffset(2026, 9, 23, 10, 24, 0, TimeSpan.Zero);
         var gone = ContentCommandFixtures.Release(version: "1.0.0", unavailableSince: since);
         var newest = ContentCommandFixtures.Release(version: "2.0.0");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.AddRange(new[] { gone, newest });
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { gone, newest }, null));
+        AddListing(listing, gone, newest);
         _host.InstalledVersion = Installed("2026.9.7.5402");
 
         var human = await _host.RunAsync("show", listing.ModId);
@@ -73,8 +69,7 @@ public sealed class ShowCommandTests : IDisposable
         var listing = ContentCommandFixtures.Listing(install: new InstallDescriptor(
             steps: ["Install QEMU from your package manager.", "Start the game once.\nThen close it."],
             uninstall: ["Remove QEMU when no other program needs it."]));
-        _host.Mods.Listings.Add(listing);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null));
+        AddListing(listing);
 
         var run = await _host.RunAsync("show", listing.ModId);
 
@@ -87,8 +82,7 @@ public sealed class ShowCommandTests : IDisposable
     public async Task Show_AbsentOrEmptySteps_PrintNothing()
     {
         var listing = ContentCommandFixtures.Listing(install: new InstallDescriptor(steps: Array.Empty<string>()));
-        _host.Mods.Listings.Add(listing);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null));
+        AddListing(listing);
 
         var run = await _host.RunAsync("show", listing.ModId);
 
@@ -127,9 +121,7 @@ public sealed class ShowCommandTests : IDisposable
         var text = ContentCommandFixtures.Release(version: "2.0.0", changelog: "## Fixes\n\n- Orbit hold stays stable.");
         var link = ContentCommandFixtures.Release(version: "1.1.0", changelog: "https://example.com/flight-tools/1.1.0");
         var none = ContentCommandFixtures.Release(version: "1.0.0");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.AddRange(new[] { none, link, text });
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { none, link, text }, null));
+        AddListing(listing, none, link, text);
 
         var run = await _host.RunAsync("show", listing.ModId);
 
@@ -146,9 +138,7 @@ public sealed class ShowCommandTests : IDisposable
         var listing = ContentCommandFixtures.Listing();
         var linked = ContentCommandFixtures.Release(version: "2.0.0", changelog: "https://example.com/flight-tools/2.0.0");
         var none = ContentCommandFixtures.Release(version: "1.0.0");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.AddRange(new[] { none, linked });
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { none, linked }, null));
+        AddListing(listing, none, linked);
 
         var run = await _host.RunAsync("show", listing.ModId, "--json");
 
@@ -165,9 +155,7 @@ public sealed class ShowCommandTests : IDisposable
         var release = ContentCommandFixtures.Release(
             changelog: "https://example.com/flight-tools/2.0.0",
             changelogText: "## Changes\n- Orbit hold stays stable.");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { release }, null));
+        AddListing(listing, release);
 
         var run = await _host.RunAsync("show", listing.ModId);
 
@@ -184,9 +172,7 @@ public sealed class ShowCommandTests : IDisposable
         var release = ContentCommandFixtures.Release(
             changelog: "https://example.com/flight-tools/2.0.0",
             changelogText: "## Changes\n- Orbit hold stays stable.");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { release }, null));
+        AddListing(listing, release);
 
         var run = await _host.RunAsync("show", listing.ModId, "--json");
 
@@ -209,9 +195,7 @@ public sealed class ShowCommandTests : IDisposable
                 new ModDependencyAlternative("second-lib"),
             }, MetadataSource.Derived),
         });
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { release }, null));
+        AddListing(listing, release);
 
         var run = await _host.RunAsync("show", "flight-tools", "--version", "2.0.0");
 
@@ -226,20 +210,15 @@ public sealed class ShowCommandTests : IDisposable
     {
         var listing = ContentCommandFixtures.Listing();
         var known = ContentCommandFixtures.Release(version: "2.0.0");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(known);
-        _host.IndexReader.Snapshot = Snapshot(
-            new[] { new ContentIndexListing(listing.ModId, listing, new[] { known }, null) },
-            new[]
-            {
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.UnsupportedVersion,
-                    ContentIndexDiagnosticScope.Release,
-                    "Release spec version 2 is newer than this client.",
-                    listing.ModId,
-                    "3.0.0",
-                    2),
-            });
+        AddListing(
+            new ContentIndexListing(listing.ModId, listing, new[] { known }, null),
+            new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.UnsupportedVersion,
+                ContentIndexDiagnosticScope.Release,
+                "Release spec version 2 is newer than this client.",
+                listing.ModId,
+                "3.0.0",
+                2));
 
         var run = await _host.RunAsync("show", listing.ModId, "--json");
 
@@ -280,17 +259,13 @@ public sealed class ShowCommandTests : IDisposable
     {
         var listing = ContentCommandFixtures.Listing();
         var status = new IndexStatus(IndexStatusState.Unknown, "future-state", reason: "A future warning.");
-        _host.Mods.Listings.Add(listing);
-        _host.IndexReader.Snapshot = Snapshot(
-            new[] { new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), status) },
-            new[]
-            {
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.UnsupportedValue,
-                    ContentIndexDiagnosticScope.IndexStatus,
-                    "Index status state 'future-state' is not supported.",
-                    listing.ModId),
-            });
+        AddListing(
+            new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), status),
+            new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.UnsupportedValue,
+                ContentIndexDiagnosticScope.IndexStatus,
+                "Index status state 'future-state' is not supported.",
+                listing.ModId));
 
         var run = await _host.RunAsync("show", listing.ModId);
 
@@ -321,19 +296,15 @@ public sealed class ShowCommandTests : IDisposable
     public async Task ShowVersion_UnknownReleaseSpecVersion_PrintsUnknownAndTheDiagnostic()
     {
         var listing = ContentCommandFixtures.Listing();
-        _host.Mods.Listings.Add(listing);
-        _host.IndexReader.Snapshot = Snapshot(
-            new[] { new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null) },
-            new[]
-            {
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.UnsupportedVersion,
-                    ContentIndexDiagnosticScope.Release,
-                    "Release spec version 2 is newer than this client.",
-                    listing.ModId,
-                    "3.0.0",
-                    2),
-            });
+        AddListing(
+            new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null),
+            new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.UnsupportedVersion,
+                ContentIndexDiagnosticScope.Release,
+                "Release spec version 2 is newer than this client.",
+                listing.ModId,
+                "3.0.0",
+                2));
 
         var run = await _host.RunAsync("show", listing.ModId, "--version", "3.0.0+local.1");
         var json = await _host.RunAsync("show", listing.ModId, "--version", "3.0.0+local.1", "--json");
@@ -429,9 +400,7 @@ public sealed class ShowCommandTests : IDisposable
             {
                 new ModDependency("required-lib", ModDependencyKind.Required, ModVersion.Parse("1.0.0")),
             });
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { release }, null));
+        AddListing(listing, release);
         _host.InstalledVersion = Installed("2026.9.7.5402");
 
         var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0", "--json");
@@ -461,10 +430,7 @@ public sealed class ShowCommandTests : IDisposable
         var listing = ContentCommandFixtures.Listing();
         var newest = ContentCommandFixtures.Release(version: "2.0.0");
         var older = ContentCommandFixtures.Release(version: "1.0.0");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.AddRange(new[] { newest, older });
-        _host.IndexReader.Snapshot = Snapshot(
-            new ContentIndexListing(listing.ModId, listing, new[] { newest, older }, null, Counts()));
+        AddListing(new ContentIndexListing(listing.ModId, listing, new[] { newest, older }, null, Counts()));
 
         var run = await _host.RunAsync("show", listing.ModId);
 
@@ -481,10 +447,7 @@ public sealed class ShowCommandTests : IDisposable
         var listing = ContentCommandFixtures.Listing();
         var newest = ContentCommandFixtures.Release(version: "2.0.0");
         var older = ContentCommandFixtures.Release(version: "1.0.0");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.AddRange(new[] { newest, older });
-        _host.IndexReader.Snapshot = Snapshot(
-            new ContentIndexListing(listing.ModId, listing, new[] { newest, older }, null, Counts()));
+        AddListing(new ContentIndexListing(listing.ModId, listing, new[] { newest, older }, null, Counts()));
 
         var run = await _host.RunAsync("show", listing.ModId, "--json");
 
@@ -505,9 +468,7 @@ public sealed class ShowCommandTests : IDisposable
     {
         var listing = ContentCommandFixtures.Listing();
         var release = ContentCommandFixtures.Release();
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { release }, null));
+        AddListing(listing, release);
 
         var run = await _host.RunAsync("show", listing.ModId);
         var json = await _host.RunAsync("show", listing.ModId, "--json");
@@ -523,18 +484,13 @@ public sealed class ShowCommandTests : IDisposable
     {
         var listing = ContentCommandFixtures.Listing();
         var release = ContentCommandFixtures.Release();
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(
-            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
-            new[]
-            {
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.Malformed,
-                    ContentIndexDiagnosticScope.Downloads,
-                    "The downloads value is unreadable. The downloads value must be an object, but was Array.",
-                    listing.ModId),
-            });
+        AddListing(
+            new ContentIndexListing(listing.ModId, listing, new[] { release }, null),
+            new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.Malformed,
+                ContentIndexDiagnosticScope.Downloads,
+                "The downloads value is unreadable. The downloads value must be an object, but was Array.",
+                listing.ModId));
 
         var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0");
 
@@ -553,9 +509,7 @@ public sealed class ShowCommandTests : IDisposable
             60,
             new Dictionary<string, long> { ["github"] = 60 },
             new[] { new ReleaseDownloadCounts(ModVersion.Parse("1.0.0"), 60, new Dictionary<string, long> { ["github"] = 60 }) });
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(yanked);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { yanked }, null, counts));
+        AddListing(new ContentIndexListing(listing.ModId, listing, new[] { yanked }, null, counts));
 
         var run = await _host.RunAsync("show", listing.ModId);
 
@@ -572,9 +526,7 @@ public sealed class ShowCommandTests : IDisposable
             12,
             new Dictionary<string, long> { ["SpaceDock"] = 12 },
             Array.Empty<ReleaseDownloadCounts>());
-        _host.Mods.Listings.Add(listing);
-        _host.IndexReader.Snapshot = Snapshot(
-            new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null, counts));
+        AddListing(new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null, counts));
 
         var run = await _host.RunAsync("show", listing.ModId, "--json");
 
@@ -589,20 +541,15 @@ public sealed class ShowCommandTests : IDisposable
     {
         var listing = ContentCommandFixtures.Listing();
         var known = ContentCommandFixtures.Release(version: "2.0.0");
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(known);
-        _host.IndexReader.Snapshot = Snapshot(
-            new[] { new ContentIndexListing(listing.ModId, listing, new[] { known }, null, Counts()) },
-            new[]
-            {
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.UnsupportedVersion,
-                    ContentIndexDiagnosticScope.Release,
-                    "Release spec version 2 is newer than this client.",
-                    listing.ModId,
-                    "0.9.0",
-                    2),
-            });
+        AddListing(
+            new ContentIndexListing(listing.ModId, listing, new[] { known }, null, Counts()),
+            new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.UnsupportedVersion,
+                ContentIndexDiagnosticScope.Release,
+                "Release spec version 2 is newer than this client.",
+                listing.ModId,
+                "0.9.0",
+                2));
 
         var run = await _host.RunAsync("show", listing.ModId);
         var json = await _host.RunAsync("show", listing.ModId, "--json");
@@ -615,35 +562,36 @@ public sealed class ShowCommandTests : IDisposable
         Assert.Equal(7, releases[1].GetProperty("downloads").GetProperty("total").GetInt64());
     }
 
-    [Fact]
-    public async Task ShowVersion_ReleaseCountDiagnostic_ShowsOnlyTheRequestedVersion()
+    [Theory]
+    [InlineData(ContentIndexDiagnosticScope.Downloads, "The downloads releases item at index 0 is unreadable.", "The downloads releases item at index 1 is unreadable.", "malformed downloads flight-tools 2.0.0")]
+    [InlineData(ContentIndexDiagnosticScope.ChangelogText, "The changelog_text value must be a string.", "The changelog_text value must be a string.", "malformed changelog-text flight-tools 2.0.0: The changelog_text value must be a string.")]
+    public async Task ShowVersion_ReleaseDiagnostic_ShowsOnlyTheRequestedVersion(
+        ContentIndexDiagnosticScope scope,
+        string requestedReason,
+        string otherReason,
+        string expected)
     {
         var listing = ContentCommandFixtures.Listing();
         var release = ContentCommandFixtures.Release();
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(
-            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
-            new[]
-            {
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.Malformed,
-                    ContentIndexDiagnosticScope.Downloads,
-                    "The downloads releases item at index 0 is unreadable.",
-                    listing.ModId,
-                    "2.0.0"),
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.Malformed,
-                    ContentIndexDiagnosticScope.Downloads,
-                    "The downloads releases item at index 1 is unreadable.",
-                    listing.ModId,
-                    "1.0.0"),
-            });
+        AddListing(
+            new ContentIndexListing(listing.ModId, listing, new[] { release }, null),
+            new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.Malformed,
+                scope,
+                requestedReason,
+                listing.ModId,
+                "2.0.0"),
+            new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.Malformed,
+                scope,
+                otherReason,
+                listing.ModId,
+                "1.0.0"));
 
         var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0");
 
         Assert.Equal(0, run.ExitCode);
-        Assert.Contains("malformed downloads flight-tools 2.0.0", run.Output);
+        Assert.Contains(expected, run.Output);
         Assert.DoesNotContain("flight-tools 1.0.0", run.Output);
     }
 
@@ -665,9 +613,7 @@ public sealed class ShowCommandTests : IDisposable
         var release = ContentCommandFixtures.Release();
         var published = new DateTimeOffset(2026, 8, 2, 13, 18, 41, TimeSpan.Zero);
         var updated = new DateTimeOffset(2026, 9, 2, 10, 14, 5, TimeSpan.Zero);
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(
+        AddListing(new ContentIndexListing(
             listing.ModId, listing, new[] { release }, null, publishedAt: published, updatedAt: updated));
 
         var run = await _host.RunAsync("show", listing.ModId);
@@ -684,8 +630,7 @@ public sealed class ShowCommandTests : IDisposable
     public async Task Show_OnlyPublishedAt_OmitsTheUpdatedLine()
     {
         var listing = ContentCommandFixtures.Listing();
-        _host.Mods.Listings.Add(listing);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(
+        AddListing(new ContentIndexListing(
             listing.ModId,
             listing,
             Array.Empty<ModVersionMetadata>(),
@@ -705,8 +650,7 @@ public sealed class ShowCommandTests : IDisposable
     public async Task Show_NoDates_OmitsBothLinesAndWritesNullInJson()
     {
         var listing = ContentCommandFixtures.Listing();
-        _host.Mods.Listings.Add(listing);
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null));
+        AddListing(listing);
 
         var run = await _host.RunAsync("show", listing.ModId);
         var json = await _host.RunAsync("show", listing.ModId, "--json");
@@ -728,18 +672,13 @@ public sealed class ShowCommandTests : IDisposable
     {
         var listing = ContentCommandFixtures.Listing();
         var release = ContentCommandFixtures.Release();
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(
-            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
-            new[]
-            {
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.Malformed,
-                    scope,
-                    reason,
-                    listing.ModId),
-            });
+        AddListing(
+            new ContentIndexListing(listing.ModId, listing, new[] { release }, null),
+            new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.Malformed,
+                scope,
+                reason,
+                listing.ModId));
 
         var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0");
 
@@ -747,42 +686,20 @@ public sealed class ShowCommandTests : IDisposable
         Assert.Contains(expected, run.Output);
     }
 
-    [Fact]
-    public async Task ShowVersion_ChangelogTextDiagnostic_ShowsOnlyTheRequestedVersion()
-    {
-        var listing = ContentCommandFixtures.Listing();
-        var release = ContentCommandFixtures.Release();
-        _host.Mods.Listings.Add(listing);
-        _host.Mods.Releases.Add(release);
-        _host.IndexReader.Snapshot = Snapshot(
-            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
-            new[]
-            {
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.Malformed,
-                    ContentIndexDiagnosticScope.ChangelogText,
-                    "The changelog_text value must be a string.",
-                    listing.ModId,
-                    "2.0.0"),
-                new ContentIndexDiagnostic(
-                    ContentIndexDiagnosticKind.Malformed,
-                    ContentIndexDiagnosticScope.ChangelogText,
-                    "The changelog_text value must be a string.",
-                    listing.ModId,
-                    "1.0.0"),
-            });
-
-        var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0");
-
-        Assert.Equal(0, run.ExitCode);
-        Assert.Contains("malformed changelog-text flight-tools 2.0.0: The changelog_text value must be a string.", run.Output);
-        Assert.DoesNotContain("flight-tools 1.0.0", run.Output);
-    }
-
     private static FakeInstalledGameVersionProvider Installed(string version) => new()
     {
         Installed = new InstalledGameVersion(GameVersion.Parse(version), version),
     };
+
+    private void AddListing(ModMetadata listing, params ModVersionMetadata[] releases) =>
+        AddListing(new ContentIndexListing(listing.ModId, listing, releases, null));
+
+    private void AddListing(ContentIndexListing entry, params ContentIndexDiagnostic[] diagnostics)
+    {
+        _host.Mods.Listings.Add(entry.Authored!);
+        _host.Mods.Releases.AddRange(entry.Releases);
+        _host.IndexReader.Snapshot = Snapshot(new[] { entry }, diagnostics);
+    }
 
     private static ListingDownloadCounts Counts() => new(
         1200,

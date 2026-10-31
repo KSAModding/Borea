@@ -18,8 +18,6 @@ internal sealed class LinkHandler(ILinkRegistrar registrar, string executablePat
 {
     private static readonly TimeSpan XdgMimeTimeout = TimeSpan.FromSeconds(10);
 
-    internal string ExecutablePath => executablePath;
-
     /// <summary>Null on macOS, whose handler comes from the app bundle, and for a process that is not a published borea program.</summary>
     internal static LinkHandler? ForThisProcess()
     {

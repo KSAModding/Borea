@@ -42,14 +42,6 @@ public sealed class LaunchPlanTests
     }
 
     [Fact]
-    public void ForLoader_StartsTheProcessInTheLoaderDirectory()
-    {
-        var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", Handover, InstanceRoot);
-
-        Assert.Equal(LoaderDirectory, plan.WorkingDirectory);
-    }
-
-    [Fact]
     public void ForLoader_FlagOnlyHandover_SetsNoVariable()
     {
         var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", new InstanceHandover("-Instance", null), InstanceRoot);

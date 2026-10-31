@@ -88,20 +88,20 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
         if (!BoreaRelease.TryParseTag(dto.TagName, out var version))
             return null;
 
-        // Only a release page of this repository is opened.
-        if (!Uri.TryCreate(dto.HtmlUrl, UriKind.Absolute, out var page)
-            || page.Scheme != Uri.UriSchemeHttps
-            || !string.Equals(page.Host, "github.com", StringComparison.OrdinalIgnoreCase)
-            || !page.AbsolutePath.StartsWith(ReleasePagePathPrefix, StringComparison.OrdinalIgnoreCase))
-        {
+        if (!Uri.TryCreate(dto.HtmlUrl, UriKind.Absolute, out var page) || !IsReleasePage(page))
             return null;
-        }
 
         return new BoreaRelease(version, dto.TagName!, page.AbsoluteUri, string.IsNullOrWhiteSpace(dto.Body) ? null : dto.Body, dto.PublishedAt)
         {
             Assets = dto.Assets?.Select(ToAsset).OfType<BoreaReleaseAsset>().ToList() ?? [],
         };
     }
+
+    /// <summary>Whether <paramref name="page"/> is a release page of this repository, the only page that is opened.</summary>
+    private static bool IsReleasePage(Uri page) =>
+        page.Scheme == Uri.UriSchemeHttps
+        && string.Equals(page.Host, "github.com", StringComparison.OrdinalIgnoreCase)
+        && page.AbsolutePath.StartsWith(ReleasePagePathPrefix, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// A published file of this repository. A name that is not a plain file name or a URL that is not a

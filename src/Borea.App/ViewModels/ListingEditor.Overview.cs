@@ -87,7 +87,8 @@ public sealed partial class ListingEditor
         Need("about", Localization.ListingAuthors, Authors, "authors", "authors");
         Need("about", Localization.ListingAbstract, Abstract, "abstract", "abstract");
         Need("about", Localization.ListingLicense, License, "license", "license");
-        Need("links", Localization.LinkForum, Forums, "links.forums", "forums", "links");
+        if (!IsVehicleOrSave)
+            Need("links", Localization.LinkForum, Forums, "links.forums", "forums", "links");
         if (IsPack)
         {
             Need("pack", Localization.ListingPackVersion, PackVersion, "version", "version");
@@ -96,7 +97,8 @@ public sealed partial class ListingEditor
                 missing.Add(("members", Localization.ListingMembers, "mods", ["mods"]));
         }
 
-        Need("compatibility", Localization.ListingGameMin, GameMin, "compatibility.game_min", "game_min", "compatibility");
+        if (!IsVehicleOrSave)
+            Need("compatibility", Localization.ListingGameMin, GameMin, "compatibility.game_min", "game_min", "compatibility");
         if (Icon is { } icon && IsEmpty(icon))
             missing.Add(("images", Localization.ListingIcon, "images.icon", []));
         for (var index = 0; index < DescriptionImages.Count; index++)
@@ -140,7 +142,7 @@ public sealed partial class ListingEditor
         }
         else
         {
-            steps.Add(Step("releases", Localization.ListingReleases, Filled(ReleasesGitHub, ReleasesSpaceDock), recommended: true));
+            steps.Add(Step("releases", Localization.ListingReleases, Filled(ReleasesGitHub, ReleasesSpaceDock) || ShareHost is not null, recommended: true));
             steps.Add(Step("compatibility", Localization.ListingCompatibility, Filled(GameMin, GameMax) || UsesLoader));
             steps.Add(Step("dependencies", Localization.ListingDependencies, Dependencies.Count > 0));
         }
@@ -149,6 +151,7 @@ public sealed partial class ListingEditor
         steps.Add(Step("images", Localization.ListingImages, Icon is not null || DescriptionImages.Count > 0));
         if (HasFixedId)
             steps.Add(Step("status", Localization.ListingStatus, IsDeprecated));
+        steps.RemoveAll(step => (!ShowsIndexOnlyCards && IndexOnlySections.Contains(step.Key)) || (!ShowsListingCards && step.Key is "about" or "tags"));
         MainViewModel.Arrange(Steps, steps);
 
         OnPropertyChanged(nameof(HasVisibleErrors));

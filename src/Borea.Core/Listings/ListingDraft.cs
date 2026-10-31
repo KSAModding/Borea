@@ -67,6 +67,9 @@ public sealed record ListingDraft
 
     public bool IsPack => Type == ModPackType;
 
+    /// <summary>Whether the draft is a vehicle or a save (RFC 0085), whose forums thread and compatibility are optional.</summary>
+    public bool IsVehicleOrSave => Type is ListingFolders.VehicleType or ListingFolders.SaveType;
+
     /// <summary>The version of a pack. A pack document is its own release, so only a pack has one.</summary>
     public string Version { get; init; } = string.Empty;
 
@@ -88,7 +91,7 @@ public sealed record ListingDraft
     public IReadOnlyList<ListingPackMember> Pins => [.. Mods, .. Vehicles, .. Saves];
 
     /// <summary>Where the document lives in content-index. Each pack version is a file of its own.</summary>
-    public string Path => IsPack ? $"{PacksFolder}/{Id}/{Version}.toml" : $"{ListingsFolder}/{Id}.toml";
+    public string Path => IsPack ? $"{PacksFolder}/{Id}/{Version}.toml" : $"{ListingFolders.Of(Type)}/{Id}.toml";
 
     public string? LinkOf(string key) => Links.FirstOrDefault(link => string.Equals(link.Key, key, StringComparison.OrdinalIgnoreCase))?.Url;
 
@@ -157,12 +160,13 @@ public sealed record ListingDraft
         var links = new AuthoredTable();
         foreach (var link in Links)
             links.Set(link.Key, link.Url);
-        document.Set("links", links);
+        // A mod keeps writing both tables, so its checks still name a missing forums link or game_min.
+        SetOrRemove(document, "links", IsVehicleOrSave && links.Count == 0 ? null : links);
 
         var compatibility = document.GetTable("compatibility")?.Clone() ?? new AuthoredTable();
-        compatibility.Set("game_min", GameMin);
+        SetOrRemove(compatibility, "game_min", IsVehicleOrSave && GameMin.Length == 0 ? null : GameMin);
         SetOrRemove(compatibility, "game_max", GameMax);
-        document.Set("compatibility", compatibility);
+        SetOrRemove(document, "compatibility", IsVehicleOrSave && compatibility.Count == 0 ? null : compatibility);
 
         SetOrRemove(document, "loader", Loader is null ? null : WriteLoader(Loader));
         SetOrRemove(document, "dependencies", Dependencies.Count == 0 ? null : Dependencies.Select(WriteDependency).Cast<object>().ToList());
@@ -203,12 +207,23 @@ public sealed record ListingDraft
         if (table is null)
             return null;
 
-        return new ListingReleases(table.GetString("github"), table["spacedock"] as long?, table.GetString("authority"), table.GetString("since"), table.GetString("tag_prefix"));
+        var github = table.GetString("github");
+        var spaceDock = table["spacedock"] as long?;
+        var authority = table.GetString("authority");
+
+        // The rule of DtoMapper.MapReleaseSource: a share host counts with an authority, or as the only host.
+        var shares = table.Entries
+            .Where(entry => ReleaseHost.IsShareKey(entry.Key) && entry.Value is string id && ModIds.IsValid(id))
+            .Select(entry => new ListingShareHost(entry.Key, (string)entry.Value))
+            .ToList();
+        var share = shares.FirstOrDefault(entry => entry.Key == authority)
+            ?? (authority is not null || (github is null && spaceDock is null && shares.Count == 1) ? shares.FirstOrDefault() : null);
+        return new ListingReleases(github, spaceDock, authority, table.GetString("since"), table.GetString("tag_prefix"), share);
     }
 
     private static AuthoredTable? WriteReleases(ListingReleases? releases, AuthoredTable? original)
     {
-        if (releases is null || (string.IsNullOrEmpty(releases.GitHub) && releases.SpaceDock is null))
+        if (releases is null || (string.IsNullOrEmpty(releases.GitHub) && releases.SpaceDock is null && releases.Share is null))
             return null;
 
         var table = original?.Clone() ?? new AuthoredTable();
@@ -217,6 +232,8 @@ public sealed record ListingDraft
         SetOrRemove(table, "authority", string.IsNullOrEmpty(releases.Authority) ? null : releases.Authority);
         SetOrRemove(table, "since", string.IsNullOrEmpty(releases.Since) ? null : releases.Since);
         SetOrRemove(table, "tag_prefix", string.IsNullOrEmpty(releases.TagPrefix) ? null : releases.TagPrefix);
+        if (releases.Share is { } share)
+            table.Set(share.Key, share.Id);
         return table;
     }
 
@@ -244,7 +261,8 @@ public sealed record ListingDraft
         };
     }
 
-    private static AuthoredTable WriteDependency(ListingDependency dependency)
+    /// <summary>The <c>[[dependencies]]</c> table of one dependency, as a listing writes it.</summary>
+    public static AuthoredTable WriteDependency(ListingDependency dependency)
     {
         if (dependency.Preserved is { } preserved)
             return preserved.Clone();
@@ -312,11 +330,14 @@ public sealed record ListingDraft
 public sealed record ListingLink(string Key, string Url);
 
 /// <summary>
-/// The [releases] table: the hosts the watcher reads, which of them decides when both are named, the version
-/// from which the watcher also stamps the older releases (RFC 0079), and the text that the tag of every mod release
-/// on GitHub starts with (RFC 0096).
+/// The [releases] table: the hosts the watcher reads, which of them decides when more than one is named, the version
+/// from which the watcher also stamps the older releases (RFC 0079), the text that the tag of every mod release
+/// on GitHub starts with (RFC 0096), and the share host of a vehicle or a save (RFC 0094).
 /// </summary>
-public sealed record ListingReleases(string? GitHub, long? SpaceDock, string? Authority = null, string? Since = null, string? TagPrefix = null);
+public sealed record ListingReleases(string? GitHub, long? SpaceDock, string? Authority = null, string? Since = null, string? TagPrefix = null, ListingShareHost? Share = null);
+
+/// <summary>A share host under [releases], such as ksamods = "ExampleRover": the key of the host in hosts.toml and the listing id there.</summary>
+public sealed record ListingShareHost(string Key, string Id);
 
 public sealed record ListingLoader(string Id, string Min, string? Max = null);
 

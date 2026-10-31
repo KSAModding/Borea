@@ -76,7 +76,25 @@ public sealed class ReleaseChangeEffectTests
         Assert.Equal(new ReleaseFileDependency("KittenExtensions", "optional", null, null, "derived"), values.Dependency("KittenExtensions"));
         Assert.Equal((true, false), (values.Dependency("ExampleLibrary")!.IsAuthored, values.Dependency("KittenExtensions")!.IsAuthored));
         Assert.Null(values.Dependency("Nothing"));
+        Assert.Equal(("mod", null), (values.Type, values.Folder));
         Assert.Null(ReleaseFileValues.Read("not json"));
         Assert.Null(ReleaseFileValues.Read("[1]"));
     }
+
+    [Fact]
+    public void GameMaxOfAVehicleRelease_WritesTheBytesOfToolsAmend_AndKeepsTheInstallTableWhereItIs()
+    {
+        var stamped = Vehicle("ExampleRover-1.0.0.json");
+        var path = ReleaseAmendment.PathOf("ExampleRover", "1.0.0");
+
+        var amended = ReleaseAmendment.Create(new ReleaseChange { GameMax = "2026.8.19.5261" }, GameVersions, DateTimeOffset.UtcNow).Apply(path, stamped, ReleaseAmender.Steward)!;
+
+        Assert.Equal(Vehicle("ExampleRover-1.0.0-game-max.json"), amended.Text);
+        Assert.Equal(("vehicle", "Example Rover"), (ReleaseFileValues.Read(amended.Text)!.Type, ReleaseFileValues.Read(amended.Text)!.Folder));
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(stamped)!["install"], JsonNode.Parse(amended.Text)!["install"]));
+    }
+
+    /// <summary>A vehicle release that tools/stamp_release.py wrote, and that release after tools/amend.py added a game_max.</summary>
+    private static string Vehicle(string name) =>
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Stewardship", "Fixtures", "vehicle", name)).ReplaceLineEndings("\n");
 }

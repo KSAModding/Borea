@@ -26,6 +26,22 @@ public sealed class SearchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_ActiveInstanceOnAKeptBuild_KeepsTheVersionOfTheSettings()
+    {
+        _host.Mods.Listings.Add(ContentCommandFixtures.Listing());
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        _host.InstalledVersion = Installed("2026.9.7.5402");
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("instance", "activate", "Alpha");
+        await _host.KeepGameBuildAsync("Alpha");
+
+        var run = await _host.RunAsync("search", "Flight");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("flight-tools  Flight Tools  2.0.0  compatible", run.Output);
+    }
+
+    [Fact]
     public async Task Search_DesignSnapshotFixture_UsesTheMappedIndexWithoutNetwork()
     {
         var indexPath = _host.Paths.GetIndexPath();

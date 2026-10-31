@@ -90,6 +90,19 @@ public sealed class TomlListingFormatTests
     }
 
     [Fact]
+    public void Write_DependencyListOnly_GivesTheTablesOfTheShareHostUpload()
+    {
+        var document = new AuthoredTable();
+        document.Set("dependencies", new List<object>
+        {
+            ListingDraft.WriteDependency(new ListingDependency("ExamplePartsMod", "required", "1.4.0")),
+            ListingDraft.WriteDependency(new ListingDependency("BetterWheels", "recommends")),
+        });
+
+        Assert.Equal("[[dependencies]]\nid = \"ExamplePartsMod\"\nkind = \"required\"\nmin = \"1.4.0\"\n\n[[dependencies]]\nid = \"BetterWheels\"\nkind = \"recommends\"\n", _format.Write(document));
+    }
+
+    [Fact]
     public void Write_ListedLoader_KeepsInstallAndProvidesUnchanged()
     {
         var draft = ListingDraft.FromDocument(_format.Read(StarMap)) with { Abstract = "Changed." };

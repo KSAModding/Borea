@@ -1,4 +1,3 @@
-using Borea.Core.Dependencies;
 using System.Collections.ObjectModel;
 
 namespace Borea.Core.Mods;
@@ -15,10 +14,6 @@ public sealed class InstalledMod
     public InstallReason Reason { get; private set; }
     public DateTimeOffset InstalledAt { get; }
 
-    /// <summary>
-    /// The live versioned listing. Its dependencies can be found
-    /// using <see cref="Metadata.Dependencies"/>.
-    /// </summary>
     public ModVersionMetadata Metadata { get; }
 
     /// <summary>
@@ -65,17 +60,6 @@ public sealed class InstalledMod
         if (!ModIds.Equals(metadata.ModId, modId))
             throw new ArgumentException($"Metadata ModId '{metadata.ModId}' does not match '{modId}'.", nameof(metadata));
 
-        ModId = modId;
-        Version = version;
-        Reason = reason;
-        InstalledAt = installedAt;
-        Metadata = metadata;
-        Checksum = checksum;
-        Ownership = ownership;
-        OwnershipToken = ownershipToken;
-        Storage = storage;
-        IsPinned = isPinned;
-
         if (ownership == ModInstallOwnership.Foreign && !string.IsNullOrWhiteSpace(ownershipToken))
             throw new ArgumentException("A foreign mod cannot have a Borea ownership token.", nameof(ownershipToken));
 
@@ -90,6 +74,17 @@ public sealed class InstalledMod
             if (ownershipToken is not null)
                 throw new ArgumentException("A linked mod proves ownership through its link, so it has no ownership token.", nameof(ownershipToken));
         }
+
+        ModId = modId;
+        Version = version;
+        Reason = reason;
+        InstalledAt = installedAt;
+        Metadata = metadata;
+        Checksum = checksum;
+        Ownership = ownership;
+        OwnershipToken = ownershipToken;
+        Storage = storage;
+        IsPinned = isPinned;
     }
 
     public void MarkAsManuallyInstalled()

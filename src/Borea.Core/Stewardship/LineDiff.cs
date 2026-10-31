@@ -14,8 +14,6 @@ internal static class LineDiff
     /// <returns>The hunks, each with its @@ line, or an empty text when both texts are the same.</returns>
     public static string Unified(string before, string after)
     {
-        ArgumentNullException.ThrowIfNull(before);
-        ArgumentNullException.ThrowIfNull(after);
         var lines = Script(Lines(before), Lines(after));
         var patch = new StringBuilder();
         var index = 0;
@@ -27,20 +25,26 @@ internal static class LineDiff
 
             var start = Math.Max(first - Context, 0);
             var end = Math.Min(last + Context, lines.Count - 1);
-            var hunk = lines.GetRange(start, end - start + 1);
-            var oldBefore = lines.Take(start).Count(line => line.Kind != '+');
-            var newBefore = lines.Take(start).Count(line => line.Kind != '-');
             if (patch.Length > 0)
                 patch.Append('\n');
-            patch.Append("@@ -").Append(Range(oldBefore, hunk.Count(line => line.Kind != '+')))
-                .Append(" +").Append(Range(newBefore, hunk.Count(line => line.Kind != '-'))).Append(" @@");
-            foreach (var (kind, text) in hunk)
-                patch.Append('\n').Append(kind).Append(text);
+            AppendHunk(patch, lines, start, end);
 
             index = end + 1;
         }
 
         return patch.ToString();
+    }
+
+    /// <summary>Appends the @@ line of the lines from <paramref name="start"/> to <paramref name="end"/>, and those lines.</summary>
+    private static void AppendHunk(StringBuilder patch, List<(char Kind, string Text)> lines, int start, int end)
+    {
+        var hunk = lines.GetRange(start, end - start + 1);
+        var oldBefore = lines.Take(start).Count(line => line.Kind != '+');
+        var newBefore = lines.Take(start).Count(line => line.Kind != '-');
+        patch.Append("@@ -").Append(Range(oldBefore, hunk.Count(line => line.Kind != '+')))
+            .Append(" +").Append(Range(newBefore, hunk.Count(line => line.Kind != '-'))).Append(" @@");
+        foreach (var (kind, text) in hunk)
+            patch.Append('\n').Append(kind).Append(text);
     }
 
     /// <summary>The lines of a text, without the empty one after a final line break.</summary>
@@ -73,37 +77,43 @@ internal static class LineDiff
         }
         else
         {
-            var common = new int[removed.Count + 1, added.Count + 1];
-            for (var i = removed.Count - 1; i >= 0; i--)
-            {
-                for (var j = added.Count - 1; j >= 0; j--)
-                    common[i, j] = removed[i] == added[j] ? common[i + 1, j + 1] + 1 : Math.Max(common[i + 1, j], common[i, j + 1]);
-            }
-
-            var (a, b) = (0, 0);
-            while (a < removed.Count && b < added.Count)
-            {
-                if (removed[a] == added[b])
-                {
-                    lines.Add((' ', removed[a++]));
-                    b++;
-                }
-                else if (common[a + 1, b] >= common[a, b + 1])
-                {
-                    lines.Add(('-', removed[a++]));
-                }
-                else
-                {
-                    lines.Add(('+', added[b++]));
-                }
-            }
-
-            lines.AddRange(removed.Skip(a).Select(line => ('-', line)));
-            lines.AddRange(added.Skip(b).Select(line => ('+', line)));
+            AppendCommonSubsequence(lines, removed, added);
         }
 
         lines.AddRange(before.Skip(before.Count - tail).Select(line => (' ', line)));
         return lines;
+    }
+
+    /// <summary>The changed part as kept, removed or added lines along a longest common subsequence.</summary>
+    private static void AppendCommonSubsequence(List<(char Kind, string Text)> lines, List<string> removed, List<string> added)
+    {
+        var common = new int[removed.Count + 1, added.Count + 1];
+        for (var i = removed.Count - 1; i >= 0; i--)
+        {
+            for (var j = added.Count - 1; j >= 0; j--)
+                common[i, j] = removed[i] == added[j] ? common[i + 1, j + 1] + 1 : Math.Max(common[i + 1, j], common[i, j + 1]);
+        }
+
+        var (a, b) = (0, 0);
+        while (a < removed.Count && b < added.Count)
+        {
+            if (removed[a] == added[b])
+            {
+                lines.Add((' ', removed[a++]));
+                b++;
+            }
+            else if (common[a + 1, b] >= common[a, b + 1])
+            {
+                lines.Add(('-', removed[a++]));
+            }
+            else
+            {
+                lines.Add(('+', added[b++]));
+            }
+        }
+
+        lines.AddRange(removed.Skip(a).Select(line => ('-', line)));
+        lines.AddRange(added.Skip(b).Select(line => ('+', line)));
     }
 
     private static int? FirstChange(List<(char Kind, string Text)> lines, int from)

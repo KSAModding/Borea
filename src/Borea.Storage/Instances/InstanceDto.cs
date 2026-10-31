@@ -14,6 +14,15 @@ public sealed class InstanceDto
     public DateTimeOffset? LastPlayedAt { get; set; }
     public List<string> LaunchArguments { get; set; } = new();
 
+    /// <summary>The kept game build as a GameVersion string. Absent when the instance runs on the game folder of the settings, so such a record does not change.</summary>
+    public string? GameBuild { get; set; }
+
+    /// <summary>The mod loader the instance chose. It is absent when Borea chooses the loader, so such a record does not change.</summary>
+    public string? LoaderId { get; set; }
+
+    /// <summary>The loader release the instance keeps, as a ModVersion string. It is absent when Borea chooses the newest fitting release.</summary>
+    public string? LoaderVersion { get; set; }
+
     /// <summary>"ModPack" or "Custom" discriminator for InstanceSource.</summary>
     public string SourceType { get; set; } = string.Empty;
 

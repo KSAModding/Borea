@@ -192,6 +192,12 @@
   <data name="StewardQueueKindPack" xml:space="preserve">
     <value>Fleet</value>
   </data>
+  <data name="StewardQueueKindVehicle" xml:space="preserve">
+    <value>Ship</value>
+  </data>
+  <data name="StewardQueueKindSave" xml:space="preserve">
+    <value>Tale</value>
+  </data>
   <data name="StewardReviewLoading" xml:space="preserve">
     <value>Haulin' the pull request aboard from GitHub...</value>
   </data>
@@ -200,6 +206,21 @@
   </data>
   <data name="StewardReviewVerdict" xml:space="preserve">
     <value>What the lookouts say</value>
+  </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Newest haul</value>
+  </data>
+  <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
+    <value>The newest haul {0} docks in the berth "{1}".</value>
+  </data>
+  <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
+    <value>The newest haul {0} names nary a berth.</value>
+  </data>
+  <data name="StewardReviewNoRelease" xml:space="preserve">
+    <value>Nary a haul be stamped yet. The lookouts read the berth from the chest.</value>
+  </data>
+  <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
+    <value>The newest haul couldn't be read from KSAModding/content-index-releases: {0}</value>
   </data>
   <data name="StewardActionApprove" xml:space="preserve">
     <value>Give it the nod</value>
@@ -723,6 +744,36 @@
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>A fresher game build awaits ye:</value>
   </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}. {0} {3} will.</value>
+  </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}, and no newer {0} will yet.</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} needs a newer KSA build than {2}. Refit KSA afore ye sail.</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} be ready fer haulin'.</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>Refit {0} to {1}</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>Drop anchor on KSA first. The Borea can't refit the mod loader while the game be sailin'.</value>
+  </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>The {2} sea be nailed down to {0} {1}, but that one ain't aboard.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>The {2} sea be nailed down to {0} {1}, which won't sail with KSA {3}.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>Haul {0} {1} aboard</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Change the mod loader</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Haul it in</value>
   </data>
@@ -1098,6 +1149,9 @@
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Couldn't stow the orders fer settin' sail o' {0}</value>
   </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Couldn't bottle up the mod loader o' {0}</value>
+  </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>Couldn't bring {0} back from the island</value>
   </data>
@@ -1127,6 +1181,21 @@
   </data>
   <data name="ToastBackUpFailedFormat" xml:space="preserve">
     <value>Couldn't salvage {0}</value>
+  </data>
+  <data name="ToastShareFailedFormat" xml:space="preserve">
+    <value>Couldn't share {0}</value>
+  </data>
+  <data name="ShareFolderFileMissingFormat" xml:space="preserve">
+    <value>The hold has no {0}.</value>
+  </data>
+  <data name="ShareFolderNotTomlFormat" xml:space="preserve">
+    <value>{0} ain't TOML.</value>
+  </data>
+  <data name="ShareFolderNoNameFormat" xml:space="preserve">
+    <value>{0} has no name on it.</value>
+  </data>
+  <data name="ShareFolderNotXmlFormat" xml:space="preserve">
+    <value>{0} be broken XML.</value>
   </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Couldn't salvage the tales</value>
@@ -1250,6 +1319,12 @@
   </data>
   <data name="GameSaveBackUp" xml:space="preserve">
     <value>Salvage</value>
+  </data>
+  <data name="GameSaveShare" xml:space="preserve">
+    <value>Share wi' the fleet</value>
+  </data>
+  <data name="GameSaveShareRenameFormat" xml:space="preserve">
+    <value>The game won't take the name "{0}" no more, an' the index be checkin' names the same. Rename the thing by the rules below, then share it.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>{0} salvaged to {1}.</value>
@@ -1941,6 +2016,9 @@
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>The active sea ain't exist any longer.</value>
   </data>
+  <data name="InstallKeptBuildUnavailableFormat" xml:space="preserve">
+    <value>This sea sails on the stowed KSA build {0}, and the hold {1} be gone or ain't holdin' that build. Borea brings nothin' aboard this sea till the hold carries that build again. To sail from the game hold in yer Rigging instead, pick "Use the current game build" in the sea's menu.</value>
+  </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Piece togett'er a sea</value>
   </data>
@@ -2018,6 +2096,9 @@
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Compass headin's</value>
+  </data>
+  <data name="ContentSharedOnFormat" xml:space="preserve">
+    <value>Moored at {0}</value>
   </data>
   <data name="ContentCopyShareLink" xml:space="preserve">
     <value>Copy th' link fer yer mateys</value>
@@ -2175,6 +2256,171 @@
   <data name="ListingMemberRulesHint" xml:space="preserve">
     <value>The pack nails down every barrel its crew can't sail without, inside their bounds, an' no barrel be feudin' with another. A release that needs a barrel not on the chart gets a mark, fer no pack can nail it down.</value>
   </data>
+  <data name="ListingShareVehicleTitle" xml:space="preserve">
+    <value>Share a ship</value>
+  </data>
+  <data name="ListingShareSaveTitle" xml:space="preserve">
+    <value>Share a logbook</value>
+  </data>
+  <data name="ListingForumsOptionalHint" xml:space="preserve">
+    <value>If ye fancy: a thread about it on forums.ahwoo.com.</value>
+  </data>
+  <data name="ListingGameMinFromArchiveHint" xml:space="preserve">
+    <value>If ye fancy. When this be empty, the index takes the build that wrote the file from meta.toml in the chest. Set an older one only when ye know it loads the file.</value>
+  </data>
+  <data name="ListingShareHeading" xml:space="preserve">
+    <value>What ye be sharin'</value>
+  </data>
+  <data name="ListingShareIntro" xml:space="preserve">
+    <value>The Borea writes the scroll that puts yer ship or logbook on the chart, an' checks it 'fore ye open the pull request.</value>
+  </data>
+  <data name="ListingShareIdHint" xml:space="preserve">
+    <value>It can't change later. A ship or logbook docks under the name in its meta.toml, not under this id.</value>
+  </data>
+  <data name="ListingShareDependenciesHint" xml:space="preserve">
+    <value>The chest has no mod.toml, so a client knows only this list. Name every barrel o' fun the file needs.</value>
+  </data>
+  <data name="ListingShareGameMaxHint" xml:space="preserve">
+    <value>Leave this empty unless newer builds o' the game won't load the file no more. Sailors on a newer build then can't take it aboard. Every release stamped while this be set keeps the limit, fer a release can only get stricter later.</value>
+  </data>
+  <data name="ListingShareDependencyRequired" xml:space="preserve">
+    <value>Yer ship or logbook won't load without it, so a client always brings it aboard too.</value>
+  </data>
+  <data name="ListingShareDependencyOptional" xml:space="preserve">
+    <value>Yer ship or logbook uses it when it be there. A client won't bring it aboard by itself.</value>
+  </data>
+  <data name="ListingShareDependencyConflict" xml:space="preserve">
+    <value>Yer ship or logbook must not sail together with it. Give the versions that feud as the oldest an' the newest, or leave both empty when every version feuds.</value>
+  </data>
+  <data name="ListingShareHint" xml:space="preserve">
+    <value>The Borea read the file an' proposed one required barrel fer each barrel o' fun in this sea that makes a plank, grog, crewmate or isle the file names. Check the list: toss what the file don't need, an' add a barrel that only changes how planks behave as recommends.</value>
+  </data>
+  <data name="ListingShareArchiveHeading" xml:space="preserve">
+    <value>Stow the chest</value>
+  </data>
+  <data name="ListingShareArchiveHint" xml:space="preserve">
+    <value>Nail the stowed chest to a release o' yer own, an' name that release under Releases.</value>
+  </data>
+  <data name="ListingShareExtraFiles" xml:space="preserve">
+    <value>The game don't write these scrolls, so a barrel o' fun did. Add the barrel that writes them as a dependency:</value>
+  </data>
+  <data name="ListingShareSaveArchive" xml:space="preserve">
+    <value>Stow the chest</value>
+  </data>
+  <data name="ListingShareArchiveFileType" xml:space="preserve">
+    <value>Zip chest</value>
+  </data>
+  <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
+    <value>Stowed {0}. SHA-256 {1}, {2} bytes.</value>
+  </data>
+  <data name="ListingShareHostHint" xml:space="preserve">
+    <value>A harbor keeps the chest an' opens the pull request fer ye. Ye sign in with whatever papers the harbor takes, an' the harbor checks the chest 'fore anything sets sail.</value>
+  </data>
+  <data name="ListingShareHostHeading" xml:space="preserve">
+    <value>Moor at a harbor</value>
+  </data>
+  <data name="ListingShareOnHostFormat" xml:space="preserve">
+    <value>Moor at {0}</value>
+  </data>
+  <data name="ListingShareHostWriting" xml:space="preserve">
+    <value>Packin' the chest...</value>
+  </data>
+  <data name="ListingShareHostSigningInFormat" xml:space="preserve">
+    <value>Waitin' fer yer papers at {0}...</value>
+  </data>
+  <data name="ListingShareHostCodeFormat" xml:space="preserve">
+    <value>Sail to {0} an' give this password.</value>
+  </data>
+  <data name="ListingShareHostCopyCode" xml:space="preserve">
+    <value>Copy the password an' sail there</value>
+  </data>
+  <data name="ListingShareHostUploading" xml:space="preserve">
+    <value>Haulin' the chest ashore, an' the harbor checks it...</value>
+  </data>
+  <data name="ListingShareHostPublishing" xml:space="preserve">
+    <value>Settin' sail...</value>
+  </data>
+  <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
+    <value>The chest weighs {0}, an' {1} takes no more than {2}. Nothin' was sent.</value>
+  </data>
+  <data name="ListingShareCheckPassedFormat" xml:space="preserve">
+    <value>{0}: shipshape</value>
+  </data>
+  <data name="ListingShareCheckFailedFormat" xml:space="preserve">
+    <value>{0}: sunk. {1}</value>
+  </data>
+  <data name="ListingShareHostChecksFailed" xml:space="preserve">
+    <value>Mend what the harbor found, then moor again.</value>
+  </data>
+  <data name="ListingShareHostListing" xml:space="preserve">
+    <value>The chart scroll the harbor shows</value>
+  </data>
+  <data name="ListingShareHostVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ListingShareHostStatus" xml:space="preserve">
+    <value>Release status</value>
+  </data>
+  <data name="ListingShareHostPublish" xml:space="preserve">
+    <value>Set sail</value>
+  </data>
+  <data name="ListingShareHostPublishedFormat" xml:space="preserve">
+    <value>{0} {1} has set sail. The harbor opened the pull request.</value>
+  </data>
+  <data name="ListingShareHostReleasedFormat" xml:space="preserve">
+    <value>{0} {1} has set sail from the harbor.</value>
+  </data>
+  <data name="ListingShareHostSignedOut" xml:space="preserve">
+    <value>The harbor no longer takes yer papers. Moor again to sign in.</value>
+  </data>
+  <data name="ListingShareHostSignInRefused" xml:space="preserve">
+    <value>The papers were refused, or the password went stale.</value>
+  </data>
+  <data name="ListingShareHostNetwork" xml:space="preserve">
+    <value>The harbor could not be reached.</value>
+  </data>
+  <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
+    <value>{0} answered in a tongue the Borea don't speak.</value>
+  </data>
+  <data name="ListingShareHostSaidFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="ListingFixShareHost" xml:space="preserve">
+    <value>The Borea cannot read the papers o' a harbor. The checks take a pull request from the GitHub flag ye linked at the harbor, or one the harbor opens fer ye.</value>
+  </data>
+  <data name="ListingShareContentIdFormat" xml:space="preserve">
+    <value>{0} {1}</value>
+  </data>
+  <data name="ListingShareKindPart" xml:space="preserve">
+    <value>plank</value>
+  </data>
+  <data name="ListingShareKindSubstance" xml:space="preserve">
+    <value>grog</value>
+  </data>
+  <data name="ListingShareKindCharacter" xml:space="preserve">
+    <value>crewmate</value>
+  </data>
+  <data name="ListingShareKindBody" xml:space="preserve">
+    <value>isle in the sky</value>
+  </data>
+  <data name="ListingShareKindSystem" xml:space="preserve">
+    <value>starry sea</value>
+  </data>
+  <data name="ListingShareNotProvidedFormat" xml:space="preserve">
+    <value>No barrel o' fun in this sea makes {0}.</value>
+  </data>
+  <data name="ListingShareDisabledProviderFormat" xml:space="preserve">
+    <value>{0} makes {1}, but this sea don't load it, so the Borea added no entry.</value>
+  </data>
+  <data name="ListingShareInvalidFolderFormat" xml:space="preserve">
+    <value>The hold {0} makes {1}, but its name ain't a listing id, so the Borea added no entry.</value>
+  </data>
+  <data name="ListingShareSharedIdFormat" xml:space="preserve">
+    <value>{1} all make {0}. The game takes the first o' them, so keep only the entry the file needs.</value>
+  </data>
+  <data name="ListingShareUnreadableFileFormat" xml:space="preserve">
+    <value>The Borea couldn't read {0}, so it don't know what that scroll makes.</value>
+  </data>
   <data name="ListingNoListedVehicleMatch" xml:space="preserve">
     <value>No listed ship matches.</value>
   </data>
@@ -2276,6 +2522,9 @@
   </data>
   <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
     <value>Leave this empty when every release o' the repository be a mod release. With a prefix, the index takes only the GitHub releases whose tag starts with it, letter case an' all, an' reads the version from the rest o' the tag. Fer example, with mymod- the tag mymod-v1.2.0 be version 1.2.0.</value>
+  </data>
+  <data name="ListingReleasesShareHostFormat" xml:space="preserve">
+    <value>Moored at {0} as {1}. Only that harbor changes this, so let it be.</value>
   </data>
   <data name="PackMemberNewerFormat" xml:space="preserve">
     <value>{0} be in port</value>
@@ -2440,7 +2689,7 @@
     <value>Loader o' the direc'try</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>Leave empty to let Borea pick a folder when installing.</value>
+    <value>A hold that already carries the loader o' barrels o' fun. Use sum'thin' already in the hold, an' Borea sails it from there.</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>Haul onboard</value>
@@ -2463,8 +2712,47 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>Hauled {0} {1} aboard {2}.</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>Hauled aboard {0}</value>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}, not fit fer this KSA build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Swap</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>The mod loader hoists the game with the mods o' this crew. Automatic hoists the newest stowed version that fits the game an' the mods. A nailed-down version stays put till ye change it, even when a newer one fits.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatic: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Nailed down at {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>Haul aboard {0}</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Pick which version o' the mod loader hoists {0}. Other crews keep their own say.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatic (the wise choice)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Hoists {0} {1}, the newest stowed version that fits the game an' the mods.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} fits the game an' the mods, but it ain't aboard. Borea hauls it aboard when ye bottle up.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>No release o' {0} fits this game build an' the mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Always sail with this version</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Haul aboard an' bottle up</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod loader</value>
   </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Hauled aboard, version a dead man's tale</value>
@@ -2472,11 +2760,38 @@
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>Update to {0}</value>
   </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>Haul onboard all o'er again</value>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>Loaders o' barrels o' fun</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea stows every version in its own hold. Each sea sails with the version its Loader row names, so one sea can keep an old version aboard.</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>Sailed by {0}</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>Nobody sails it</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>Sailed by {0}. Set them seas to another version first, matey.</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}, yer own hold</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>Forget it</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>Haul another version aboard</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>Make this version walk the plank?</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>{0} {1} walked the plank.</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>Loaders o' barrels o' fun are set up from the Game settings.</value>
+    <value>Each sea picks its loader version in the Loader row o' its page. The rigging lists the versions aboard.</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Tavern</value>
@@ -2797,13 +3112,31 @@
     <value>The map o' this sea be lost to time.</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The loader o' barrels o' fun {0} ain't hauled onboard. Loaders o' barrels o' fun are set up from the Game settings.</value>
+    <value>The loader o' barrels o' fun {0} ain't hauled onboard. Haul it aboard in the Loader row o' the sea's page.</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The barrels o' fun in this sea be needin' the loader o' barrels o' fun {0}, and it ain't hauled onboard. Loaders o' barrels o' fun are set up from the Game settings.</value>
+    <value>The barrels o' fun in this sea be needin' the loader o' barrels o' fun {0}, and it ain't hauled onboard. Haul it aboard in the Loader row o' the sea's page.</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>This sea be needin' {0}. Haul it onboard now?</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}. Refit it to {3} afore ye play?</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}, so the game may not leave port. Sail anyway?</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>Refit and sail</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>Sail anyway</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>This sea be nailed down to {0} {1}. That one ain't aboard, and the index don't offer it no more. Let the Borea pick the newest one that fits?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Let the Borea pick</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This sea be needin' {0}. Draw up the game treasure chest first.</value>
@@ -2841,8 +3174,20 @@
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} made {2} keel over before it could take off. It may not work with this version o' KSA. Maroon it and try again, or look fer an new tide.</value>
   </data>
+  <data name="LaunchOtherModsNeedMissingFormat" xml:space="preserve">
+    <value>These barrels o' fun be needin' bits o' KSA this version ain't got, so they'll likely sink too: {0}.</value>
+  </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} keeled over right after takin' off (exit code {1}). The d'tails show what it scribbled down.</value>
+  </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} were rigged fer another KSA build than yer {1} an' can't haul the game aboard. When a {0} release fer {1} makes port, haul it aboard in the Loader row o' the sea's page. If yer {1} be older than the build {0} were rigged fer, refit KSA instead.</value>
+  </data>
+  <data name="LaunchLoaderTooOldForKeptBuildFormat" xml:space="preserve">
+    <value>{0} were rigged fer another KSA build than {1}, which this sea keeps in the hold, an' can't haul the game aboard. Haul aboard a {0} release fer {1} in the Loader row o' the sea's page. A KSA refit don't change a build in the hold.</value>
+  </data>
+  <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
+    <value>{0} releases o' the seven seas</value>
   </data>
   <data name="LaunchStoppedTitleFormat" xml:space="preserve">
     <value>{0} keeled over</value>
@@ -2895,8 +3240,14 @@
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>Maroon {0}</value>
   </data>
+  <data name="LaunchDisableModsFormat" xml:space="preserve">
+    <value>Maroon {0} barrels o' fun</value>
+  </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
     <value>{0} is marooned. Take off on the sea again.</value>
+  </data>
+  <data name="LaunchModsDisabledFormat" xml:space="preserve">
+    <value>{0} barrels o' fun be marooned. Take off on the sea again.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Show more d'tail</value>

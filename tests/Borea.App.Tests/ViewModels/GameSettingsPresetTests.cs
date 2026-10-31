@@ -141,8 +141,6 @@ public sealed class GameSettingsPresetTests
         using var harness = await CreateAsync(SeedPresetAsync);
         var viewModel = harness.ViewModel;
 
-        await viewModel.WhenGameSettingsPresetsLoadedAsync();
-
         var saved = Assert.Single(viewModel.SavedGameSettingsPresets);
         Assert.Equal("Full screen", saved.Name);
         Assert.False(viewModel.IsCreatingInstance);
@@ -198,7 +196,6 @@ public sealed class GameSettingsPresetTests
     {
         using var harness = await CreateAsync(SeedPresetAsync);
         var viewModel = harness.ViewModel;
-        await viewModel.WhenGameSettingsPresetsLoadedAsync();
         var saved = await harness.Services.GameSettingsPresets.ListAsync();
         var held = HoldReads(harness);
 
@@ -218,7 +215,6 @@ public sealed class GameSettingsPresetTests
     {
         using var harness = await CreateAsync(SeedPresetAsync);
         var viewModel = harness.ViewModel;
-        await viewModel.WhenGameSettingsPresetsLoadedAsync();
         var saved = await harness.Services.GameSettingsPresets.ListAsync();
         var older = new GameSettingsPreset(Guid.NewGuid(), "Windowed", Borea.Core.Game.GameVersion.Parse("2026.8.3.5117"));
         var held = HoldReads(harness);
@@ -239,7 +235,6 @@ public sealed class GameSettingsPresetTests
     {
         using var harness = await CreateAsync(SeedPresetAsync);
         var viewModel = harness.ViewModel;
-        await viewModel.WhenGameSettingsPresetsLoadedAsync();
         var saved = await harness.Services.GameSettingsPresets.ListAsync();
         viewModel.GameSettingsPresets.Clear();
         var held = HoldReads(harness);
@@ -356,10 +351,16 @@ public sealed class GameSettingsPresetTests
         releasedAt: new DateTimeOffset(2026, 8, 5, 12, 0, 0, TimeSpan.Zero),
         mods: [new ModPackEntry("AdvancedFlightComputer", ModVersion.Parse("0.7.5"))]);
 
-    /// <summary>A harness whose game folder holds the version fixture, so a preset can record a version.</summary>
+    /// <summary>
+    /// A harness whose game folder holds the version fixture, so a preset can record a version.
+    /// It returns only after the startup load of the presets. In a test the end of that load
+    /// runs on a pool thread, so a test that opens the new instance modal earlier reads the
+    /// picker while that load replaces it (#935).
+    /// </summary>
     /// <param name="seed">Runs after the game folder is in place, for a test that wants presets on disk.</param>
-    private static Task<ViewModelHarness> CreateAsync(Func<Borea.Composition.BoreaServices, Task>? seed = null) =>
-        ViewModelHarness.CreateAsync(async services =>
+    private static async Task<ViewModelHarness> CreateAsync(Func<Borea.Composition.BoreaServices, Task>? seed = null)
+    {
+        var harness = await ViewModelHarness.CreateAsync(async services =>
         {
             var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
             File.Copy(Path.Combine(AppContext.BaseDirectory, GameBuild), Path.Combine(game, "KSA.dll"), overwrite: true);
@@ -367,6 +368,9 @@ public sealed class GameSettingsPresetTests
             if (seed is not null)
                 await seed(services);
         });
+        await harness.ViewModel.WhenGameSettingsPresetsLoadedAsync();
+        return harness;
+    }
 
     /// <summary>One saved preset, written before the view model reads anything.</summary>
     private static async Task SeedPresetAsync(Borea.Composition.BoreaServices services)

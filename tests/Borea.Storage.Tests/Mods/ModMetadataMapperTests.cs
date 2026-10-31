@@ -48,14 +48,12 @@ public sealed class ModMetadataMapperTests : IDisposable
         // Absent is not empty.
         Assert.Empty(reloaded.Install.Uninstall!);
 
-        Assert.NotNull(reloaded.Releases);
         Assert.Equal("github", reloaded.Releases!.Authority);
         Assert.Equal(2, reloaded.Releases.Hosts.Count);
         Assert.Equal("owner/repo", reloaded.Releases.AuthorityHost.Reference);
         Assert.Equal(original.Releases!.Since, reloaded.Releases.Since);
         Assert.Equal("release/v", reloaded.Releases.TagPrefix);
 
-        Assert.NotNull(reloaded.Loader);
         Assert.Equal(original.Loader!.LoaderId, reloaded.Loader!.LoaderId);
         Assert.Equal(original.Loader.MinVersion, reloaded.Loader.MinVersion);
         Assert.Equal(original.Loader.MaxVersion, reloaded.Loader.MaxVersion);
@@ -129,7 +127,6 @@ public sealed class ModMetadataMapperTests : IDisposable
 
         var (reloaded, _, _) = await RoundTripAsync(original);
 
-        Assert.NotNull(reloaded.Os);
         Assert.Empty(reloaded.Os!);
     }
 

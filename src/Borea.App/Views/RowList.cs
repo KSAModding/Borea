@@ -25,7 +25,6 @@ public sealed class RowList : ItemsControl
     }
 }
 
-/// <summary>The container of one row of a <see cref="RowList"/>.</summary>
 public sealed class RowListItem : Decorator
 {
     private IDataTemplate? _template;

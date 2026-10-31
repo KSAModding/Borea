@@ -1,8 +1,5 @@
 ﻿namespace Borea.Storage.Mods;
 
-/// <summary>
-/// TOML-serializable representation of a ModDependency.
-/// </summary>
 public sealed class ModDependencyDto
 {
     /// <summary>Null when this is an any_of entry.</summary>

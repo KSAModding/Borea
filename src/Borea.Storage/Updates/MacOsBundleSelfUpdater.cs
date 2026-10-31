@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Reflection;
 using Borea.Core.Logging;
 using Borea.Core.Updates;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Updates;
 
@@ -163,9 +164,9 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
                     throw new SelfUpdateFailedException(SelfUpdateFailure.Install, "The new build changed after it was checked, so Borea kept the build that runs.");
 
                 MakeRoom(bundle);
-                Directory.Move(bundle.BundlePath, bundle.ReplacedPath);
+                DirectoryRename.Move(bundle.BundlePath, bundle.ReplacedPath);
                 bundleIsAside = true;
-                Directory.Move(unpacked, bundle.BundlePath);
+                DirectoryRename.Move(unpacked, bundle.BundlePath);
             }
             catch (Exception exception) when (FileSelfUpdater.IsFileFailure(exception) || exception is SelfUpdateFailedException)
             {
@@ -207,7 +208,7 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
         }
         catch (Exception exception) when (FileSelfUpdater.IsFileFailure(exception))
         {
-            Directory.Move(bundle.ReplacedPath, Path.Combine(bundle.Folder, $"{SelfUpdateCleanup.StagingPrefix}{Guid.NewGuid():N}"));
+            DirectoryRename.Move(bundle.ReplacedPath, Path.Combine(bundle.Folder, $"{SelfUpdateCleanup.StagingPrefix}{Guid.NewGuid():N}"));
         }
     }
 
@@ -261,14 +262,14 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
         SelfUpdateReceipt.Delete(bundle.Folder);
 
         var newBundle = Path.Combine(staging, Path.GetFileName(bundle.BundlePath));
-        Directory.Move(bundle.BundlePath, newBundle);
+        DirectoryRename.Move(bundle.BundlePath, newBundle);
         try
         {
             PutBack(bundle);
         }
         catch (SelfUpdateFailedException)
         {
-            Directory.Move(newBundle, bundle.BundlePath);
+            DirectoryRename.Move(newBundle, bundle.BundlePath);
             throw;
         }
     }
@@ -279,7 +280,7 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
     {
         try
         {
-            Directory.Move(bundle.ReplacedPath, bundle.BundlePath);
+            DirectoryRename.Move(bundle.ReplacedPath, bundle.BundlePath);
         }
         catch (Exception exception) when (FileSelfUpdater.IsFileFailure(exception))
         {

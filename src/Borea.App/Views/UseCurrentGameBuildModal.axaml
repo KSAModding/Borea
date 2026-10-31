@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.UseCurrentGameBuildModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: move an instance from its kept build back to the game build of the settings -->
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" Width="561" Margin="80,24,0,24">
+            <!-- the texts scroll in the height that is left, so the buttons stay in a window at its minimum height -->
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.ModalUseCurrentGameBuildTitle}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CancelUseCurrentGameBuildCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Grid.Row="1" Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <ScrollViewer Grid.Row="2">
+                    <StackPanel Margin="36,32,24,16" Spacing="16">
+                        <!-- a Grid, so a long line wraps next to the bar -->
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding IsUseCurrentGameBuildChecking}">
+                            <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                            <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.ModalUseCurrentGameBuildChecking}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                        </Grid>
+                        <TextBlock Classes="body-md" Text="{Binding UseCurrentGameBuildText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md" Text="{Binding UseCurrentGameBuildFitText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildFitText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <!-- low enough that a long list leaves room for the notes under it -->
+                        <ScrollViewer MaxHeight="120" IsVisible="{Binding ShowsUseCurrentGameBuildModNames}">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" IsVisible="{Binding UseCurrentGameBuildIncompatibleText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Border Classes="chip incompatible" VerticalAlignment="Top">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Ellipse />
+                                            <TextBlock Text="{Binding Localization.CompatibilityIncompatible}" />
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Classes="body-md" Text="{Binding UseCurrentGameBuildIncompatibleText}" TextWrapping="Wrap" />
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" IsVisible="{Binding UseCurrentGameBuildUnknownText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Border Classes="chip" VerticalAlignment="Top">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Ellipse />
+                                            <TextBlock Text="{Binding Localization.CompatibilityUnknown}" />
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Classes="body-md" Text="{Binding UseCurrentGameBuildUnknownText}" TextWrapping="Wrap" />
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
+                        <TextBlock Classes="body-md danger" Text="{Binding UseCurrentGameBuildIncompatibleNoteText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildIncompatibleNoteText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md danger" Text="{Binding UseCurrentGameBuildOlderText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildOlderText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md danger" Text="{Binding UseCurrentGameBuildNoGameText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildNoGameText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
+                </ScrollViewer>
+                <!-- the backup line sits above the buttons and not in the texts, so its outcome stays in view when the texts scroll in a low window -->
+                <StackPanel Grid.Row="3" Spacing="16" Margin="36,0,24,32">
+                    <TextBlock Classes="body-md" Classes.danger="{Binding IsUseCurrentGameBuildBackupFailed}" Classes.secondary="{Binding !IsUseCurrentGameBuildBackupFailed}" Text="{Binding UseCurrentGameBuildBackupText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" IsVisible="{Binding UseCurrentGameBuildBackupText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <!-- the confirm wraps under Cancel when the three buttons of an older build need more than the width -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <Button Classes="text tall" Content="{Binding Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpUseCurrentGameBuildSavesCommand}" IsVisible="{Binding IsUseCurrentGameBuildToOlder}" VerticalAlignment="Top" />
+                        <WrapPanel Grid.Column="1" HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8">
+                            <Button Classes="text tall" Content="{Binding UseCurrentGameBuildDismissText}" Command="{Binding CancelUseCurrentGameBuildCommand}" VerticalAlignment="Center" />
+                            <Button Classes="cta" Command="{Binding SetUpGameForGameBuildCommand}" IsVisible="{Binding UseCurrentGameBuildNoGameText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <TextBlock Classes="action-lg" Text="{Binding Localization.SetupBannerAction}" VerticalAlignment="Center" />
+                            </Button>
+                            <Button Classes="cta" Command="{Binding ConfirmUseCurrentGameBuildCommand}" IsVisible="{Binding ShowsUseCurrentGameBuildPrimaryConfirm}">
+                                <TextBlock Classes="action-lg" Text="{Binding Localization.ModalUseCurrentGameBuildConfirm}" VerticalAlignment="Center" />
+                            </Button>
+                            <Button Classes="text tall danger" Content="{Binding Localization.ModalUseCurrentGameBuildConfirm}" Command="{Binding ConfirmUseCurrentGameBuildCommand}" IsVisible="{Binding IsUseCurrentGameBuildToOlder}" VerticalAlignment="Center" />
+                        </WrapPanel>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Panel>
+</UserControl>

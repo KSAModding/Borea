@@ -31,6 +31,48 @@ public sealed class ContentViewModelTests
         Assert.Contains(viewModel.ContentLinks, link => link.Label == harness.Localization.LinkRepository);
         Assert.Contains(viewModel.ContentLinks, link => link.Label == "SpaceDock");
         Assert.True(viewModel.HasContentLinks);
+        Assert.Null(viewModel.ContentShareHostText);
+    }
+
+    [Fact]
+    public async Task Open_ListingOnAShareHost_NamesTheHost()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+        {
+            var root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+            var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "AdvancedFlightComputer")!;
+            var releases = listing["authored"]!["releases"]!.AsObject();
+            releases["ksamods"] = "AdvancedFlightComputer";
+            releases["authority"] = "ksamods";
+            return root.ToJsonString();
+        });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatContentSharedOn("ksamods"), viewModel.ContentShareHostText);
+    }
+
+    [Fact]
+    public async Task Open_ListingOnARegisteredShareHost_LinksTheHostPage()
+    {
+        var hosts = ViewModelHarness.ShareHosts("""{ "ksamods": { "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/", "types": ["vehicle", "mod"] } }""");
+        using var harness = await ViewModelHarness.CreateAsync(
+            editSnapshot: json =>
+            {
+                var root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+                var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "AdvancedFlightComputer")!;
+                listing["authored"]!["releases"] = new System.Text.Json.Nodes.JsonObject { ["ksamods"] = "AdvancedFlightComputer" };
+                return hosts(root.ToJsonString());
+            });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        Assert.Contains(new ContentLink(harness.Localization.FormatContentSharedOn("ksamods.gg"), "https://ksamods.gg/", "share-host"), viewModel.ContentLinks);
+        Assert.Null(viewModel.ContentShareHostText);
     }
 
     [Fact]
@@ -304,8 +346,7 @@ public sealed class ContentViewModelTests
         text.ToggleChangelogCommand.Execute(null);
         Assert.True(text.IsChangelogExpanded);
 
-        var link = rows["1.1.0"].Changelog;
-        Assert.NotNull(link);
+        var link = rows["1.1.0"].Changelog!;
         Assert.Null(link.Text);
         Assert.Equal(new ContentLink(harness.Localization.ContentChangelog, "https://example.com/aircraft-hud/1.1.0"), link.Link);
 
@@ -320,9 +361,8 @@ public sealed class ContentViewModelTests
     [InlineData("https://example.com/changelog fixes the HUD", false)]
     public void Changelog_OnlyAnAbsoluteHttpsUriIsALink(string value, bool isLink)
     {
-        var changelog = ReleaseChangelog.From(Release("1.0.0", value), "1.0.0", "Changelog");
+        var changelog = ReleaseChangelog.From(Release("1.0.0", value), "1.0.0", "Changelog")!;
 
-        Assert.NotNull(changelog);
         Assert.Equal(isLink, changelog.Link is not null);
         Assert.Equal(isLink, changelog.Text is null);
     }
@@ -333,9 +373,8 @@ public sealed class ContentViewModelTests
     [InlineData(null, false)]
     public void Changelog_TextIsPreferredOverTheLink(string? text, bool showsText)
     {
-        var changelog = ReleaseChangelog.From(Release("1.0.0", "https://example.com/changelog", text), "1.0.0", "Changelog");
+        var changelog = ReleaseChangelog.From(Release("1.0.0", "https://example.com/changelog", text), "1.0.0", "Changelog")!;
 
-        Assert.NotNull(changelog);
         Assert.Equal(showsText ? text : null, changelog.Text);
         Assert.Equal(showsText, changelog.Link is null);
     }

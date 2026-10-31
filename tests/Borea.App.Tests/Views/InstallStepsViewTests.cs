@@ -56,11 +56,8 @@ public sealed class InstallStepsViewTests
     [Fact]
     public async Task DiscoverRow_TheRemoveConfirmationShowsTheUninstallSteps()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => InstallStepsTests.WithInstall(json, "AdvancedFlightComputer", null, [InstallStepsTests.UninstallStep]));
-        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        using var harness = await InstalledWithUninstallStepAsync();
         var viewModel = harness.ViewModel;
-        await viewModel.LoadAsync();
-        await viewModel.EnsureDiscoverLoadedAsync();
         var item = viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
 
         var before = await ShownTextsAsync(harness, () => new DiscoverPage());
@@ -75,11 +72,8 @@ public sealed class InstallStepsViewTests
     [Fact]
     public async Task ContentPage_TheRemoveConfirmationShowsTheUninstallSteps()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => InstallStepsTests.WithInstall(json, "AdvancedFlightComputer", null, [InstallStepsTests.UninstallStep]));
-        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        using var harness = await InstalledWithUninstallStepAsync();
         var viewModel = harness.ViewModel;
-        await viewModel.LoadAsync();
-        await viewModel.EnsureDiscoverLoadedAsync();
         await InstallStepsTests.OpenAsync(viewModel, "AdvancedFlightComputer");
 
         var before = await ShownTextsAsync(harness, () => new Borea.App.Views.Pages.ContentPage());
@@ -96,11 +90,8 @@ public sealed class InstallStepsViewTests
     [Fact]
     public async Task InstancePage_TheRemoveConfirmationOfARowShowsTheUninstallSteps()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => InstallStepsTests.WithInstall(json, "AdvancedFlightComputer", null, [InstallStepsTests.UninstallStep]));
-        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        using var harness = await InstalledWithUninstallStepAsync();
         var viewModel = harness.ViewModel;
-        await viewModel.LoadAsync();
-        await viewModel.EnsureDiscoverLoadedAsync();
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
         var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single(item => item.ModId == "AdvancedFlightComputer");
 
@@ -160,6 +151,24 @@ public sealed class InstallStepsViewTests
         Assert.Contains(InstallStepsTests.QemuStep, confirming);
         Assert.Contains(heading, installed);
         Assert.Contains(harness.Localization.InstallStepsDismiss, dismiss);
+    }
+
+    /// <summary>An active instance that holds AdvancedFlightComputer from Borea, whose listing has one uninstall step, with Discover loaded.</summary>
+    private static async Task<ViewModelHarness> InstalledWithUninstallStepAsync()
+    {
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => InstallStepsTests.WithInstall(json, "AdvancedFlightComputer", null, [InstallStepsTests.UninstallStep]));
+        try
+        {
+            await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+            await harness.ViewModel.LoadAsync();
+            await harness.ViewModel.EnsureDiscoverLoadedAsync();
+            return harness;
+        }
+        catch
+        {
+            harness.Dispose();
+            throw;
+        }
     }
 
     private static Task<List<string>> ShownTextsAsync(ViewModelHarness harness, Func<Control> page) =>

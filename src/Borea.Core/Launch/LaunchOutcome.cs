@@ -61,4 +61,16 @@ public enum LaunchOutcome
 
     /// <summary>The loader needs a shared .NET runtime, and the Wine prefix of the wrapper that starts it has none that fits.</summary>
     WrapperRuntimeMissing = 19,
+
+    /// <summary>The instance keeps a game build whose folder is gone or holds another build.</summary>
+    GameBuildMissing = 20,
+
+    /// <summary>The instance keeps a game build, and the loader's listing names no game path that Borea can write.</summary>
+    LoaderTakesNoGamePath = 21,
+
+    /// <summary>A game runs, and the loader's configuration names another game folder that a restart of that game would read.</summary>
+    OtherBuildRunning = 22,
+
+    /// <summary>Borea cannot read or parse the loader's configuration, so it cannot tell which game folder the file names.</summary>
+    LoaderConfigurationUnreadable = 23,
 }

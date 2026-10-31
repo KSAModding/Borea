@@ -1,3 +1,5 @@
+using Borea.Core.Files;
+
 namespace Borea.Storage.Files;
 
 /// <summary>
@@ -12,7 +14,41 @@ internal static class AtomicFile
     /// write does not finish.
     /// </summary>
     /// <remarks>Not safe against a second writer of the same path.</remarks>
-    public static async Task WriteAllTextAsync(string path, string text, CancellationToken cancellationToken = default)
+    public static Task WriteAllTextAsync(string path, string text, CancellationToken cancellationToken = default) =>
+        ReplaceThroughTempFileAsync(path, tempPath => File.WriteAllTextAsync(tempPath, text, cancellationToken), cancellationToken);
+
+    public static Task WriteAllBytesAsync(string path, byte[] content, CancellationToken cancellationToken = default) =>
+        ReplaceThroughTempFileAsync(path, tempPath => File.WriteAllBytesAsync(tempPath, content, cancellationToken), cancellationToken);
+
+    public static void WriteAllBytes(string path, byte[] content)
+    {
+        var tempPath = TempFileBeside(path);
+        try
+        {
+            File.WriteAllBytes(tempPath, content);
+            FileReplace.MoveOver(tempPath, path);
+        }
+        finally
+        {
+            LeftoverCleanup.TryDeleteFile(tempPath);
+        }
+    }
+
+    private static async Task ReplaceThroughTempFileAsync(string path, Func<string, Task> writeTempFile, CancellationToken cancellationToken)
+    {
+        var tempPath = TempFileBeside(path);
+        try
+        {
+            await writeTempFile(tempPath).ConfigureAwait(false);
+            await FileReplace.MoveOverAsync(tempPath, path, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            LeftoverCleanup.TryDeleteFile(tempPath);
+        }
+    }
+
+    private static string TempFileBeside(string path)
     {
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory))
@@ -20,69 +56,6 @@ internal static class AtomicFile
 
         // Written beside the file and moved onto it: the move is atomic in one
         // directory, and the unique name keeps a second writer off this file.
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            await File.WriteAllTextAsync(tempPath, text, cancellationToken).ConfigureAwait(false);
-            File.Move(tempPath, path, overwrite: true);
-        }
-        finally
-        {
-            TryDeleteLeftover(tempPath);
-        }
-    }
-
-    public static async Task WriteAllBytesAsync(string path, byte[] content, CancellationToken cancellationToken = default)
-    {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            await File.WriteAllBytesAsync(tempPath, content, cancellationToken).ConfigureAwait(false);
-            File.Move(tempPath, path, overwrite: true);
-        }
-        finally
-        {
-            TryDeleteLeftover(tempPath);
-        }
-    }
-
-    public static void WriteAllBytes(string path, byte[] content)
-    {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            File.WriteAllBytes(tempPath, content);
-            File.Move(tempPath, path, overwrite: true);
-        }
-        finally
-        {
-            TryDeleteLeftover(tempPath);
-        }
-    }
-
-    /// <summary>
-    /// Clears the temporary file without replacing the error that caused it.
-    /// </summary>
-    private static void TryDeleteLeftover(string tempPath)
-    {
-        try
-        {
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        return $"{path}.{Guid.NewGuid():N}.tmp";
     }
 }

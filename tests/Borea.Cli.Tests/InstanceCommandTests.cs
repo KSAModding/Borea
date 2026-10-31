@@ -105,8 +105,7 @@ public sealed class InstanceCommandTests : IDisposable
     {
         await _host.RunAsync("instance", "create", "Alpha");
         await _host.RunAsync("instance", "activate", "Alpha");
-        var list = await _host.RunAsync("instance", "list", "--json");
-        var id = Guid.Parse(Assert.Single(list.Json.EnumerateArray()).GetProperty("id").GetString()!);
+        var id = await ListedInstanceIdAsync();
         var log = Path.Combine(_host.Paths.GetInstanceRoot(id), "logs", "KittenSpaceAgency.260915-112433.43720.log");
         Directory.CreateDirectory(Path.GetDirectoryName(log)!);
         await File.WriteAllTextAsync(log, "11:24:36.689  INFO loaded settings from settings.toml\n");
@@ -136,6 +135,25 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         Assert.Contains("Last played: never", run.Output);
         Assert.Contains("Launch arguments: none", run.Output);
+        Assert.Contains("Game build: from the game folder of the settings", run.Output);
+    }
+
+    [Fact]
+    public async Task Show_InstanceOnAKeptBuild_NamesTheBuild()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.KeepGameBuildAsync("Alpha");
+
+        var text = await _host.RunAsync("instance", "show", "Alpha");
+        var json = await _host.RunAsync("instance", "show", "Alpha", "--json");
+
+        Assert.Equal(0, text.ExitCode);
+        Assert.Contains("Game build: 2026.8.3.5117, kept for this instance", text.Output);
+        Assert.Equal(0, json.ExitCode);
+        var gameBuild = json.Json.GetProperty("gameBuild");
+        Assert.Equal("2026.8.3.5117", gameBuild.GetProperty("kept").GetString());
+        Assert.Equal("2026.8.3.5117", gameBuild.GetProperty("version").GetString());
+        Assert.Equal("none", gameBuild.GetProperty("problem").GetString());
     }
 
     [Fact]
@@ -257,8 +275,7 @@ public sealed class InstanceCommandTests : IDisposable
     public async Task Show_PrintsThePlaytimeAndTheSessionCount()
     {
         await _host.RunAsync("instance", "create", "Alpha");
-        var list = await _host.RunAsync("instance", "list", "--json");
-        var id = Guid.Parse(Assert.Single(list.Json.EnumerateArray()).GetProperty("id").GetString()!);
+        var id = await ListedInstanceIdAsync();
         var archives = Directory.CreateDirectory(Path.Combine(_host.Paths.GetInstanceRoot(id), "logs", "Archives"));
         await File.WriteAllLinesAsync(Path.Combine(archives.FullName, "KittenSpaceAgency.260914.0.log"), ["20:00:00.000  INFO loaded settings from settings.toml", "22:40:30.000 DEBUG Shutting down application"]);
         await File.WriteAllLinesAsync(Path.Combine(archives.FullName, "KittenSpaceAgency.260915.0.log"), ["09:00:00.000  INFO loaded settings from settings.toml", "09:00:05.000 ERROR Unhandled exception System.MissingMethodException"]);
@@ -319,8 +336,7 @@ public sealed class InstanceCommandTests : IDisposable
     public async Task Activate_ById_SetsTheActivePointer()
     {
         await _host.RunAsync("instance", "create", "Alpha");
-        var list = await _host.RunAsync("instance", "list", "--json");
-        var id = Guid.Parse(Assert.Single(list.Json.EnumerateArray()).GetProperty("id").GetString()!);
+        var id = await ListedInstanceIdAsync();
 
         var activate = await _host.RunAsync("instance", "activate", id.ToString());
 
@@ -422,8 +438,7 @@ public sealed class InstanceCommandTests : IDisposable
     public async Task Delete_RemovesTheInstanceAndItsFolder()
     {
         await _host.RunAsync("instance", "create", "Alpha");
-        var before = await _host.RunAsync("instance", "list", "--json");
-        var id = Guid.Parse(Assert.Single(before.Json.EnumerateArray()).GetProperty("id").GetString()!);
+        var id = await ListedInstanceIdAsync();
 
         var delete = await _host.RunAsync("instance", "delete", "Alpha");
         var after = await _host.RunAsync("instance", "list", "--json");
@@ -436,6 +451,8 @@ public sealed class InstanceCommandTests : IDisposable
     [Theory]
     [InlineData("activate")]
     [InlineData("delete")]
+    [InlineData("mods")]
+    [InlineData("scan")]
     public async Task UnknownInstance_Fails(string command)
     {
         await _host.RunAsync("instance", "create", "Alpha");
@@ -496,8 +513,7 @@ public sealed class InstanceCommandTests : IDisposable
     public async Task Mods_PrintsManifestEntriesInLoadOrder()
     {
         await _host.RunAsync("instance", "create", "Alpha");
-        var list = await _host.RunAsync("instance", "list", "--json");
-        var instanceId = Guid.Parse(Assert.Single(list.Json.EnumerateArray()).GetProperty("id").GetString()!);
+        var instanceId = await ListedInstanceIdAsync();
         var repository = new Borea.Storage.State.FileModStateRepository(_host.Paths);
 
         var firstFolder = Directory.CreateDirectory(Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), "First"));
@@ -528,15 +544,6 @@ public sealed class InstanceCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task Mods_UnknownInstance_Fails()
-    {
-        var run = await _host.RunAsync("instance", "mods", "Nope");
-
-        Assert.Equal(1, run.ExitCode);
-        Assert.Contains("No instance is named 'Nope'.", run.Error);
-    }
-
-    [Fact]
     public async Task Scan_NoForeignFolders_SaysSo()
     {
         await _host.RunAsync("instance", "create", "Alpha");
@@ -563,7 +570,7 @@ public sealed class InstanceCommandTests : IDisposable
             """);
         WriteMod(instanceId, "LocalOnly", "name = \"LocalOnly\"");
         Directory.CreateDirectory(Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), "NotAMod"));
-        IndexWithListing("flight-tools");
+        IndexWithReleases(ContentCommandFixtures.Release(id: "flight-tools"));
 
         var human = await _host.RunAsync("instance", "scan", "Alpha");
         var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
@@ -624,7 +631,7 @@ public sealed class InstanceCommandTests : IDisposable
     {
         var instanceId = await CreateInstanceAsync("Alpha");
         await RecordModAsync(instanceId, "flight-tools");
-        IndexWithListing("flight-tools");
+        IndexWithReleases(ContentCommandFixtures.Release(id: "flight-tools"));
 
         var human = await _host.RunAsync("instance", "scan", "Alpha");
         var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
@@ -650,15 +657,6 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         Assert.Empty(run.Json.GetProperty("missingMods").EnumerateArray());
         Assert.Empty(run.Json.GetProperty("foreignFolders").EnumerateArray());
-    }
-
-    [Fact]
-    public async Task Scan_UnknownInstance_Fails()
-    {
-        var run = await _host.RunAsync("instance", "scan", "Nope");
-
-        Assert.Equal(1, run.ExitCode);
-        Assert.Contains("No instance is named 'Nope'.", run.Error);
     }
 
     [Fact]
@@ -821,6 +819,22 @@ public sealed class InstanceCommandTests : IDisposable
         var mods = (await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods;
         Assert.Equal(ModInstallOwnership.Borea, mods.Single(mod => mod.ModId == "flight-tools").Ownership);
         Assert.Equal(InstallReason.Dependency, mods.Single(mod => mod.ModId == "library").Reason);
+    }
+
+    [Fact]
+    public async Task TakeOwnership_WithDependenciesOnAKeptBuildThatIsGone_FailsAndNamesTheBuild()
+    {
+        var instanceId = await RecordForeignAsync(new ModDependency("library", ModDependencyKind.Required));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        _host.InstallerFactory = graph => new FolderInstaller(graph);
+        await _host.KeepGameBuildAsync("Alpha", withFolder: false);
+
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools", "--with-dependencies");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("keeps game build 2026.8.3.5117", run.Error);
+        var mod = Assert.Single((await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Foreign, mod.Ownership);
     }
 
     [Fact]
@@ -1042,6 +1056,12 @@ public sealed class InstanceCommandTests : IDisposable
         return created.Instance.InstanceId;
     }
 
+    private async Task<Guid> ListedInstanceIdAsync()
+    {
+        var list = await _host.RunAsync("instance", "list", "--json");
+        return Guid.Parse(Assert.Single(list.Json.EnumerateArray()).GetProperty("id").GetString()!);
+    }
+
     /// <summary>Records an installed mod without writing its folder.</summary>
     private async Task RecordModAsync(Guid instanceId, string modId)
     {
@@ -1068,17 +1088,6 @@ public sealed class InstanceCommandTests : IDisposable
         var path = Path.Combine(_host.Root, Guid.NewGuid().ToString("N") + ".zip");
         File.WriteAllBytes(path, bytes);
         return path;
-    }
-
-    private void IndexWithListing(string id)
-    {
-        var listing = ContentCommandFixtures.Listing(id: id);
-        _host.IndexReader.Snapshot = new ContentIndexSnapshot(
-            1,
-            new[] { new ContentIndexListing(listing.ModId, listing, new[] { ContentCommandFixtures.Release(id: id) }, null) },
-            Array.Empty<ContentIndexPack>(),
-            null,
-            Array.Empty<ContentIndexDiagnostic>());
     }
 
     /// <summary>Records flight-tools in the instance Alpha as a foreign mod whose release declares the dependencies.</summary>

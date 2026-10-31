@@ -15,7 +15,7 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestActions
         if (PullRequestMerge.NeedsBody(kind) && string.IsNullOrWhiteSpace(body))
             throw new ArgumentException($"A {kind} review needs a text.", nameof(body));
 
-        await ActAsync(async () =>
+        await StewardActions.ActAsync(async () =>
         {
             await EnsureUnchangedAsync(pulls, pullRequest, cancellationToken).ConfigureAwait(false);
             var review = new Dictionary<string, object>
@@ -38,7 +38,7 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestActions
     public async Task MergeAsync(PullRequestReview pullRequest, bool skipRequiredReview, CancellationToken cancellationToken = default)
     {
         var pulls = PullsUrlOf(pullRequest);
-        await ActAsync(async () =>
+        await StewardActions.ActAsync(async () =>
         {
             var pull = await EnsureUnchangedAsync(pulls, pullRequest, cancellationToken).ConfigureAwait(false);
             var comments = CommentsAsync(pullRequest.Repository, pullRequest.Number, cancellationToken);
@@ -74,7 +74,7 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestActions
         if (string.IsNullOrWhiteSpace(comment))
             throw new ArgumentException("Closing needs a comment.", nameof(comment));
 
-        await ActAsync(async () =>
+        await StewardActions.ActAsync(async () =>
         {
             await EnsureUnchangedAsync(pulls, pullRequest, cancellationToken).ConfigureAwait(false);
 
@@ -82,7 +82,7 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestActions
             // and a retry after such a failure finds its comment as the last one and only closes
             var body = comment.Trim();
             var posted = await CommentsAsync(pullRequest.Repository, pullRequest.Number, cancellationToken).ConfigureAwait(false);
-            if (posted is not [.., var (login, text)] || _session.State.Login is not { } me || !string.Equals(login, me, StringComparison.OrdinalIgnoreCase) || !SameText(text, body))
+            if (posted is not [.., var (login, text)] || _session.State.Login is not { } me || !string.Equals(login, me, StringComparison.OrdinalIgnoreCase) || !StewardActions.SameText(text, body))
             {
                 var comments = $"{GitHubApi.Root}/repos/{pullRequest.Repository}/issues/{pullRequest.Number.ToString(CultureInfo.InvariantCulture)}/comments";
                 GitHubApi.Ensure(await _api.SendAsync(HttpMethod.Post, comments, new Dictionary<string, object> { ["body"] = body }, cancellationToken).ConfigureAwait(false));
@@ -96,18 +96,6 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestActions
     {
         ArgumentNullException.ThrowIfNull(pullRequest);
         return PullsUrlOf(pullRequest.Repository, pullRequest.Number);
-    }
-
-    private static async Task ActAsync(Func<Task> action)
-    {
-        try
-        {
-            await action().ConfigureAwait(false);
-        }
-        catch (GitHubApiException exception)
-        {
-            throw exception.ToStewardException();
-        }
     }
 
     /// <summary>The pull request as GitHub has it now, when it is still open at the head commit and on the base branch that the review showed.</summary>
@@ -127,10 +115,6 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestActions
 
         return pull;
     }
-
-    /// <summary>Compares a comment on GitHub with the comment that Borea sends, without the kind of line end and the spaces around the text.</summary>
-    private static bool SameText(string? posted, string body) =>
-        posted is not null && string.Equals(posted.ReplaceLineEndings("\n").Trim(), body.ReplaceLineEndings("\n"), StringComparison.Ordinal);
 
     /// <summary>The reviewDecision of GitHub, such as REVIEW_REQUIRED, or null when the rules require no review. REST has no such field.</summary>
     private async Task<string?> ReviewDecisionAsync(string repository, int number, CancellationToken cancellationToken)

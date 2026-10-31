@@ -23,9 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Copies of tools/amendment-vectors.json and releases/ of content-index-releases at 6d9fd24f913a, releases/ as release-files/ because .gitignore leaves out every folder named releases. -->
+    <!-- Copies of tools/amendment-vectors.json of content-index-releases at 72f5a63537e1, the merge of content-index-releases #112, and of releases/ at 6d9fd24f913a, releases/ as release-files/ because .gitignore leaves out every folder named releases. -->
+    <!-- vehicle/ holds a release that tools/stamp_release.py of content-index-releases at 889c4e896ef4, the merge of content-index-releases #111, stamped, and the same file after tools/amend.py added a game_max. -->
     <None Update="Stewardship\Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
-    <!-- A copy of schemas/save-names.json of content-index at 2c1409f304a7, on the branch of content-index #208 (sha256 037c57e8). Refresh it from the merge commit of #208. -->
+    <!-- A copy of schemas/save-names.json of content-index at b41be3d54440, the merge of content-index #213 (sha256 037c57e8). -->
     <None Update="Instances\Fixtures\save-names.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

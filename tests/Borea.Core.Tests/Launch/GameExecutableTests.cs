@@ -7,22 +7,13 @@ public sealed class GameExecutableTests
 {
     private static readonly string GameDirectory = Path.Combine(Path.GetTempPath(), "BoreaTest", "Game");
 
-    [Fact]
-    public void FileName_Windows_IsKsaExe()
+    [Theory]
+    [InlineData(OsPlatform.Windows, "KSA.exe")]
+    [InlineData(OsPlatform.Linux, "KSA")]
+    [InlineData(OsPlatform.MacOs, null)]
+    public void FileName_Platform_IsTheGameFileOrNullWhenNoneIsKnown(OsPlatform platform, string? expected)
     {
-        Assert.Equal("KSA.exe", GameExecutable.FileName(OsPlatform.Windows));
-    }
-
-    [Fact]
-    public void FileName_Linux_IsKsa()
-    {
-        Assert.Equal("KSA", GameExecutable.FileName(OsPlatform.Linux));
-    }
-
-    [Fact]
-    public void FileName_MacOs_IsNull()
-    {
-        Assert.Null(GameExecutable.FileName(OsPlatform.MacOs));
+        Assert.Equal(expected, GameExecutable.FileName(platform));
     }
 
     [Fact]

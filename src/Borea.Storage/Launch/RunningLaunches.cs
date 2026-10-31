@@ -1,4 +1,5 @@
 using Borea.Core.Game;
+using Borea.Core.Mods;
 
 namespace Borea.Storage.Launch;
 
@@ -18,7 +19,7 @@ public sealed class RunningLaunches
     /// </summary>
     internal Dictionary<Guid, IStartedProcess> Processes { get; } = new();
 
-    internal Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName)> Starts { get; } = new();
+    internal Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases)> Starts { get; } = new();
 
     /// <summary>
     /// The last launch per instance that ended, until the next launch of the
@@ -28,6 +29,14 @@ public sealed class RunningLaunches
 
     /// <summary>The Wine wrapper install each launch through a wrapper started, by the key of its process.</summary>
     internal Dictionary<Guid, WineInstall> Wrappers { get; } = new();
+
+    /// <summary>
+    /// The game path that the last launch per instance wrote for its kept
+    /// build, with the loader that reads it, until the next launch of the
+    /// instance, so the exit watch can write the game folder of the settings
+    /// back, or the game path that the player set in an adopted folder.
+    /// </summary>
+    internal Dictionary<Guid, (int ProcessId, ModMetadata Loader, string LoaderDirectory, string GamePath, string? PlayerGamePath)> KeptBuilds { get; } = new();
 
     /// <summary>
     /// Whether a launch that still runs went through the wrapper app at
@@ -45,7 +54,10 @@ public sealed class RunningLaunches
     internal void Forget(bool ended, Func<IStartedProcess, bool>? hasEnded = null)
     {
         if (!ended)
+        {
             Ended.Clear();
+            KeptBuilds.Clear();
+        }
 
         foreach (var (key, process) in Processes.ToArray())
         {

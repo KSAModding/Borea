@@ -87,15 +87,6 @@ public sealed class IndexStatusDocumentTests
         Assert.Empty(lifted.Entries);
     }
 
-    [Fact]
-    public void Apply_RetractedWithoutAVersion_IsRefused()
-    {
-        var document = IndexStatusDocument.Parse(IndexStatusFixtures.Current);
-
-        Assert.Equal(IndexStatusRefusal.MissingVersion, Refusal(document, IndexStatusChange.Retract("my-pack", null, "Broken.")));
-        Assert.Equal(IndexStatusRefusal.MissingVersion, Refusal(document, IndexStatusChange.Retract("my-pack", " ", "Broken.")));
-    }
-
     [Theory]
     [InlineData("disputed", null, "delisted", null)]
     [InlineData("delisted", null, "disputed", null)]
@@ -124,6 +115,8 @@ public sealed class IndexStatusDocumentTests
     [InlineData("retracted", "MyMod", "1.0.0", IndexStatusRefusal.NotAPack)]
     [InlineData("retracted", "Missing", "1.0.0", IndexStatusRefusal.NotAPack)]
     [InlineData("retracted", "my-pack", "2.0.0", IndexStatusRefusal.UnknownVersion)]
+    [InlineData("retracted", "my-pack", null, IndexStatusRefusal.MissingVersion)]
+    [InlineData("retracted", "my-pack", " ", IndexStatusRefusal.MissingVersion)]
     public void Apply_WhatTheStatusCheckRefuses_IsRefused(string state, string id, string? version, IndexStatusRefusal refusal)
     {
         var document = IndexStatusDocument.Parse(IndexStatusFixtures.Current);
@@ -151,10 +144,10 @@ public sealed class IndexStatusDocumentTests
     [InlineData(null, false)]
     [InlineData("A pasted\treason.", false)]
     [InlineData("First line.\r\nSecond line.", false)]
+    [InlineData("First line.\u2029Second line.", false)]
     public void Change_IsValidReason_TakesOneLineWithoutControlCharacters(string? reason, bool valid)
     {
         Assert.Equal(valid, IndexStatusChange.IsValidReason(reason));
-        Assert.False(IndexStatusChange.IsValidReason("First line." + (char)0x2029 + "Second line."));
     }
 
     [Theory]
@@ -221,6 +214,26 @@ public sealed class IndexStatusDocumentTests
         Assert.Equal(IndexStatusRefusal.Duplicate, Refusal(disputed, IndexStatusChange.Delist("MYMOD", "Taken down.")));
         Assert.Equal(IndexStatusRefusal.UnknownVersion, Refusal(document, IndexStatusChange.Retract("my-pack", "1.1.0-RC", "Broken.")));
         Assert.Equal(document.Text, disputed.Apply(IndexStatusChange.Lift(new IndexStatusEntry("MYMOD", "disputed", null, null, null), "Resolved."), Contents, Now).Text);
+    }
+
+    [Fact]
+    public void Apply_VehicleAndSaveIds_ResolveFromTheirFoldersAndAreNoPacks()
+    {
+        var contents = IndexContents.FromPaths(["saves/ExampleSave.toml", "vehicles/ExampleRover.toml", "vehicles/nested/Deep.toml", "saves/README.md", "Vehicles/Upper.toml"]);
+        var document = IndexStatusDocument.Parse(IndexStatusFixtures.Current);
+
+        var delisted = document.Apply(IndexStatusChange.Delist("examplesave", "The author asked for it."), contents, Now);
+
+        Assert.Equal("ExampleSave", delisted.Entries.Single().Id);
+        Assert.Equal("ExampleRover", contents.ListingId("EXAMPLEROVER"));
+        Assert.Equal("vehicles/ExampleRover.toml", contents.ListingPath("examplerover"));
+        Assert.Equal("saves/ExampleSave.toml", contents.ListingPath("ExampleSave"));
+        Assert.Equal("listings/MyMod.toml", Contents.ListingPath("mymod"));
+        Assert.Null(contents.ListingId("Deep"));
+        Assert.Null(contents.ListingId("README"));
+        Assert.Null(contents.ListingId("Upper"));
+        Assert.Null(contents.ListingPath("Missing"));
+        Assert.Equal(IndexStatusRefusal.NotAPack, Assert.Throws<IndexStatusRefusedException>(() => document.Apply(IndexStatusChange.Retract("ExampleRover", "1.0.0", "Broken."), contents, Now)).Refusal);
     }
 
     [Fact]

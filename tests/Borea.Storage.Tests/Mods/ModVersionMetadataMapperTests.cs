@@ -49,19 +49,16 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Equal(original.Download.ContentType, reloaded.Download.ContentType);
         Assert.Equal(original.Download.Mirrors, reloaded.Download.Mirrors);
 
-        Assert.NotNull(reloaded.Install);
         Assert.Equal(original.Install!.Root, reloaded.Install!.Root);
         Assert.True(reloaded.Install.Derived);
         Assert.Equal(original.Manages, reloaded.Manages);
 
-        Assert.NotNull(reloaded.Loader);
         Assert.Equal(MetadataSource.Authored, reloaded.Loader!.Source);
 
         Assert.Equal(2, reloaded.Dependencies.Count);
         Assert.Equal(MetadataSource.Authored, reloaded.Dependencies[0].Source);
         Assert.Equal(MetadataSource.Derived, reloaded.Dependencies[1].Source);
 
-        Assert.NotNull(reloaded.Listing);
         Assert.Equal(original.Listing!.Name, reloaded.Listing!.Name);
         Assert.Equal(original.Listing.Description, reloaded.Listing.Description);
         Assert.Equal(original.Listing.Links["forums"], reloaded.Listing.Links["forums"]);
@@ -280,13 +277,17 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
     }
 
     [Fact]
-    public void FromDto_AbsentVersionScheme_DefaultsToSemver()
+    public async Task FromDto_AbsentVersionScheme_DefaultsToSemver()
     {
-        var dto = ModVersionMetadataMapper.ToDto(MetadataFixtures.MinimalRelease());
-        dto.VersionScheme = "semver";
+        var path = Path.Combine(_tempRoot, "release.toml");
+        await TomlFileStore.WriteAsync(path, ModVersionMetadataMapper.ToDto(MetadataFixtures.MinimalRelease()));
+        var lines = await File.ReadAllLinesAsync(path);
+        var schemeLine = Assert.Single(lines, line => line.StartsWith("VersionScheme ", StringComparison.Ordinal));
+        await File.WriteAllLinesAsync(path, lines.Where(line => line != schemeLine));
 
-        Assert.Equal("semver", ModVersionMetadataMapper.FromDto(dto).VersionScheme);
-        Assert.Equal("semver", new ModVersionMetadataDto().VersionScheme);
+        var reloaded = await TomlFileStore.ReadAsync<ModVersionMetadataDto>(path);
+
+        Assert.Equal("semver", ModVersionMetadataMapper.FromDto(reloaded!).VersionScheme);
     }
 
     [Fact]

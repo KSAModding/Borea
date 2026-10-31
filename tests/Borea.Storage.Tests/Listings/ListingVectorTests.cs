@@ -27,7 +27,7 @@ public sealed class ListingVectorTests
     /// Vectors whose rejection Borea words in its own way. The page names the keys of a oneOf, where check_schema.py
     /// prints the raw message of jsonschema.
     /// </summary>
-    private static readonly string[] OwnWords = ["a dependency names an id or alternatives"];
+    private static readonly string[] OwnWords = ["a dependency names an id or alternatives", "a vehicle with an install folder"];
 
     private readonly ListingValidator _validator = new(new EmbeddedSchema());
     private readonly TomlListingFormat _format = new();
@@ -38,6 +38,18 @@ public sealed class ListingVectorTests
         {
             var data = new TheoryData<string>();
             foreach (var vector in Read().Where(vector => Rules.Contains((string?)vector["rule"]) || Named.Contains((string?)vector["name"])))
+                data.Add((string)vector["name"]!);
+            return data;
+        }
+    }
+
+    /// <summary>The vectors of a type that the rollout gate of RFC 0085 holds.</summary>
+    public static TheoryData<string> GatedVectors
+    {
+        get
+        {
+            var data = new TheoryData<string>();
+            foreach (var vector in Read().Where(vector => vector["gated"] is not null))
                 data.Add((string)vector["name"]!);
             return data;
         }
@@ -58,6 +70,35 @@ public sealed class ListingVectorTests
         var vector = Read().Single(vector => (string?)vector["name"] == name);
 
         var issues = _validator.Validate(_format.Read((string)vector["toml"]!), new ListingCheckContext(null)).Issues;
+
+        var lines = issues.Select(issue => $"{issue.Location}: {issue.Message}").ToList();
+        Assert.True((bool)vector["accepted"]! == !issues.Any(issue => issue.Severity == ListingIssueSeverity.Error), string.Join("\n", lines));
+        if ((string?)vector["says"] is { } says && !OwnWords.Contains(name))
+            Assert.True(lines.Any(line => line.Contains(says, StringComparison.Ordinal)), $"'{says}' is not in:\n{string.Join("\n", lines)}");
+    }
+
+    [Theory]
+    [MemberData(nameof(GatedVectors))]
+    public void GatedVector_IsRefusedWithTheTitleOfTheGate(string name)
+    {
+        var vector = Read().Single(vector => (string?)vector["name"] == name);
+        var type = (string)vector["gated"]!;
+        Assert.Contains(type, UngatedSchema.GatedTypes);
+
+        var issues = _validator.Validate(_format.Read((string)vector["toml"]!), new ListingCheckContext(null)).Issues;
+
+        Assert.Contains(issues, issue => issue.Severity == ListingIssueSeverity.Error && $"{issue.Location}: {issue.Message}" == $"type: '{type}' is {UngatedSchema.GateTitle}");
+    }
+
+    [Theory]
+    [MemberData(nameof(GatedVectors))]
+    public async Task GatedVector_GivesTheAnswerOfTheChecksWithoutTheGate(string name)
+    {
+        var vector = Read().Single(vector => (string?)vector["name"] == name);
+        var validator = new ListingValidator(new UngatedSchema());
+        await validator.LoadSchemaAsync();
+
+        var issues = validator.Validate(_format.Read((string)vector["toml"]!), new ListingCheckContext(null)).Issues;
 
         var lines = issues.Select(issue => $"{issue.Location}: {issue.Message}").ToList();
         Assert.True((bool)vector["accepted"]! == !issues.Any(issue => issue.Severity == ListingIssueSeverity.Error), string.Join("\n", lines));

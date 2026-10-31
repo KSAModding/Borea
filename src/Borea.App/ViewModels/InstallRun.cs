@@ -52,7 +52,7 @@ public sealed partial class InstallRun : ObservableObject
 
     internal Task Ended => _ended.Task;
 
-    /// <summary>Shows the last paused report again, because a paused download sends no new text after a language change.</summary>
+    /// <summary>Shows the last report again, because a paused download or a keep that waits for another copy sends no new text after a language change.</summary>
     internal Action? RepeatPausedReport { get; set; }
 
     public string StopText => !IsStopping ? _localization.InstallStop

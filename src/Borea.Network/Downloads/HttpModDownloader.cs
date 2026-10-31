@@ -41,15 +41,7 @@ public sealed class HttpModDownloader : IModDownloader
             throw new ArgumentException("Archive path cannot be null or whitespace.", nameof(archivePath));
 
         var download = release.Download;
-        var sources = new List<string>(1 + download.Mirrors.Count) { download.Url };
-        sources.AddRange(download.Mirrors);
-
-        // the host answered for a day that the archive is gone, so it is asked last
-        if (download.UnavailableSince is not null)
-        {
-            sources.RemoveAt(0);
-            sources.Add(download.Url);
-        }
+        var sources = SourcesOf(download);
 
         var pause = DownloadPause.Current;
         var failures = new List<string>();
@@ -98,6 +90,21 @@ public sealed class HttpModDownloader : IModDownloader
 
             throw;
         }
+    }
+
+    /// <summary>The release URL and then the mirrors, with the URL asked last when its host answered for a day that the archive is gone.</summary>
+    private static List<string> SourcesOf(DownloadInfo download)
+    {
+        var sources = new List<string>(1 + download.Mirrors.Count) { download.Url };
+        sources.AddRange(download.Mirrors);
+
+        if (download.UnavailableSince is not null)
+        {
+            sources.RemoveAt(0);
+            sources.Add(download.Url);
+        }
+
+        return sources;
     }
 
     /// <summary>

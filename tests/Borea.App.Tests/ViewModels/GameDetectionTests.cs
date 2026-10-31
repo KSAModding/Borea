@@ -126,6 +126,23 @@ public sealed class GameDetectionTests
     }
 
     [Fact]
+    public async Task FirstStart_LoaderModalOpenWhenDetectionEnds_OpensNothing()
+    {
+        using var release = new ManualResetEventSlim();
+        using var harness = await CreateWithHeldDetectionAsync(release);
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Main", Borea.Core.Instances.InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        viewModel.EditingLoaderSetting = viewModel.Instances.Single();
+        Assert.True(viewModel.IsLoaderSettingModalOpen);
+        release.Set();
+        await viewModel.WhenGameDetectedAsync();
+
+        Assert.False(viewModel.IsFoundGameModalOpen);
+    }
+
+    [Fact]
     public async Task FirstStart_SavedFolderMissing_AsksToUseTheFoundGame()
     {
         string root = null!;
@@ -187,6 +204,8 @@ public sealed class GameDetectionTests
                 loader = PlaceStarMap(h);
             });
         var viewModel = harness.ViewModel;
+        // the loader update check reads StarMapConfig.json, and Windows cannot replace a file that is open
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
 
         await viewModel.UseFoundGameCommand.ExecuteAsync(null);
 
@@ -225,6 +244,8 @@ public sealed class GameDetectionTests
             services => services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation("StarMap", new LoaderInstallation(loader, version: null, rawVersion: null, isAdopted: true))),
             candidates: h => loader = PlaceStarMap(h));
         var viewModel = harness.ViewModel;
+        // the loader update check reads StarMapConfig.json, and Windows cannot replace a file that is open
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
         var game = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
         viewModel.GameDirectoryInput = game;
 

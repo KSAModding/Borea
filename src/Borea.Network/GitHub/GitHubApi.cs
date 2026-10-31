@@ -142,7 +142,6 @@ internal sealed class GitHubApi
     /// <exception cref="GitHubApiException">The request failed, or GitHub answered with an error or without data.</exception>
     public async Task<T> QueryAsync<T>(string query, IReadOnlyDictionary<string, object> variables, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(query);
         if (!query.TrimStart().StartsWith("query", StringComparison.Ordinal))
             throw new ArgumentException("Borea sends only a GraphQL query.", nameof(query));
 
@@ -237,7 +236,6 @@ internal sealed class GitHubApi
     /// <exception cref="GitHubApiException">A request failed, or GitHub answered without a sha.</exception>
     public async Task<string> CommitAsync(string repository, string parent, IReadOnlyCollection<(string Path, string Text)> files, string message, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(files);
         var git = $"{Root}/repos/{repository}/git";
         var parentTree = (await GetAsync<CommitDto>($"{git}/commits/{parent}", cancellationToken).ConfigureAwait(false)).Tree?.Sha;
         var entries = new List<Dictionary<string, object>>();
@@ -271,7 +269,6 @@ internal sealed class GitHubApi
     /// <summary>The same for an endpoint that wraps the array in an object, which <paramref name="items"/> opens.</summary>
     public async IAsyncEnumerable<TItem> GetPagesAsync<TPage, TItem>(string url, Func<TPage, IReadOnlyCollection<TItem>> items, [EnumeratorCancellation] CancellationToken cancellationToken, bool anonymous = false)
     {
-        ArgumentNullException.ThrowIfNull(items);
         var separator = url.Contains('?', StringComparison.Ordinal) ? '&' : '?';
         for (var page = 1; page <= MaxPages; page++)
         {
@@ -340,6 +337,7 @@ internal sealed class GitHubApi
 
         return new GitHubIssue(issue.Number, link, issue.Title, issue.Body, issue.User?.Login, issue.User?.Type, issue.CreatedAt, issue.UpdatedAt)
         {
+            AuthorId = issue.User?.Id,
             IsClosed = issue.State == "closed",
             StateReason = issue.StateReason,
             Closed = issue.ClosedAt,
@@ -351,7 +349,6 @@ internal sealed class GitHubApi
     /// <exception cref="GitHubApiException">Any other answer, with GitHub's message and the rate-limit time.</exception>
     public static string Ensure(GitHubReply reply)
     {
-        ArgumentNullException.ThrowIfNull(reply);
         if ((int)reply.Status is >= 200 and < 300)
             return reply.Body;
 
@@ -391,21 +388,8 @@ internal sealed class GitHubApi
             return null;
 
         var segments = target.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Select(Uri.UnescapeDataString).ToArray();
-        string[] path;
-        if (segments is ["repos", var owner, _, ..])
-        {
-            if (!string.Equals(owner, Organization, StringComparison.OrdinalIgnoreCase))
-                return null;
-            path = segments[3..];
-        }
-        else if (segments is ["repositories", _, ..])
-        {
-            path = segments[2..];
-        }
-        else
-        {
+        if (RepositoryPathOf(segments) is not { } path)
             return null;
-        }
 
         return path switch
         {
@@ -419,6 +403,14 @@ internal sealed class GitHubApi
             _ => null,
         };
     }
+
+    /// <summary>The path below the repository, for a repository of the organization or one addressed by its id, or null for any other path.</summary>
+    private static string[]? RepositoryPathOf(string[] segments) => segments switch
+    {
+        ["repos", var owner, _, ..] => string.Equals(owner, Organization, StringComparison.OrdinalIgnoreCase) ? segments[3..] : null,
+        ["repositories", _, ..] => segments[2..],
+        _ => null,
+    };
 
     private string? CommitRefusal(string? branch) =>
         Protected(branch) ?? (branch is not null && CommitBranchPrefixes.Any(prefix => branch.StartsWith(prefix, StringComparison.Ordinal))
@@ -592,6 +584,8 @@ internal sealed class GitHubApi
     {
         public string? Login { get; set; }
 
+        public long? Id { get; set; }
+
         public string? Type { get; set; }
     }
 }
@@ -610,8 +604,9 @@ internal sealed record GitHubIssue(int Number, Uri Url, string Title, string? Bo
 
     public DateTimeOffset? Closed { get; init; }
 
-    /// <summary>How many comments the issue has.</summary>
     public int Comments { get; init; }
+
+    public long? AuthorId { get; init; }
 }
 
 /// <param name="Message">GitHub's error message with its details, or null.</param>

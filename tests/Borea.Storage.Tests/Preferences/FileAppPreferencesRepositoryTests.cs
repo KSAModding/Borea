@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Borea.Core.Mods;
 using Borea.Core.Preferences;
 using Borea.Core.Updates;
 using Borea.Storage.Preferences;
@@ -49,29 +48,28 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
         Assert.False(result.Preferences.CheckForUpdatesAtStart);
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        using var document = await ReadSavedDocumentAsync();
         Assert.Equal(1, document.RootElement.GetProperty("formatVersion").GetInt32());
         Assert.False(document.RootElement.GetProperty("checkForUpdatesAtStart").GetBoolean());
     }
 
-    [Fact]
-    public async Task GetAsync_FileWrittenBeforeTheUpdateCheckField_LoadsWithTheCheckOn()
+    [Theory]
+    [InlineData("")]
+    [InlineData(""", "markUntranslatedTexts": null, "openBoreaLinks": null, "staySignedInToGitHub": null""")]
+    public async Task GetAsync_NoOrNullSwitches_LoadsTheDefaults(string fields)
     {
-        await WriteAsync("""
-            {
-              "formatVersion": 1,
-              "selectedTheme": "Light",
-              "regionalCulture": "de-DE",
-              "uiCulture": "de",
-              "customThemes": []
-            }
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{fields}} }
             """);
 
         var result = await _repository.GetAsync(BundledThemeNames);
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
-        Assert.Equal("Light", result.Preferences.SelectedThemeName);
         Assert.True(result.Preferences.CheckForUpdatesAtStart);
+        Assert.True(result.Preferences.LoadImagesFromAuthorHosts);
+        Assert.False(result.Preferences.MarkUntranslatedTexts);
+        Assert.True(result.Preferences.OpenBoreaLinks);
+        Assert.True(result.Preferences.StaySignedInToGitHub);
     }
 
     [Fact]
@@ -98,21 +96,8 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.False(result.Preferences.LoadImagesFromAuthorHosts);
         Assert.Equal("Dark", result.Preferences.SelectedThemeName);
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        using var document = await ReadSavedDocumentAsync();
         Assert.False(document.RootElement.GetProperty("loadImagesFromAuthorHosts").GetBoolean());
-    }
-
-    [Fact]
-    public async Task GetAsync_FileWrittenBeforeTheImageField_LoadsWithImagesFromAuthorHostsOn()
-    {
-        await WriteAsync("""
-            { "formatVersion": 1, "selectedTheme": "Light" }
-            """);
-
-        var result = await _repository.GetAsync(BundledThemeNames);
-
-        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
-        Assert.True(result.Preferences.LoadImagesFromAuthorHosts);
     }
 
     [Fact]
@@ -124,7 +109,7 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         var result = await _repository.GetAsync(BundledThemeNames);
 
         Assert.Equal(HomeLaunchOption.WithoutModLoader, result.Preferences.HomeLaunch);
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        using var document = await ReadSavedDocumentAsync();
         Assert.Equal("without-mod-loader", document.RootElement.GetProperty("homeLaunch").GetString());
     }
 
@@ -170,7 +155,7 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
         Assert.Equal("Light", result.Preferences.SelectedThemeName);
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        using var document = await ReadSavedDocumentAsync();
         Assert.False(document.RootElement.TryGetProperty("dismissedBoreaRelease", out _));
         Assert.Equal("Light", document.RootElement.GetProperty("selectedTheme").GetString());
     }
@@ -195,7 +180,7 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         var result = await _repository.GetAsync(BundledThemeNames);
 
         Assert.Equal(5438, result.Preferences.DismissedGameRevision);
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        using var document = await ReadSavedDocumentAsync();
         Assert.Equal(5438, document.RootElement.GetProperty("dismissedGameRevision").GetInt32());
     }
 
@@ -255,6 +240,18 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_DismissedLoaderUpdate_RestoresTheRelease()
+    {
+        Assert.Null(AppPreferences.Empty.DismissedLoaderUpdate);
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithDismissedLoaderUpdate("StarMap 0.4.8").WithStaySignedInToGitHub(false), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal("StarMap 0.4.8", result.Preferences.DismissedLoaderUpdate);
+        Assert.Equal("StarMap 0.4.8", result.Preferences.WithSelectedThemeName("Light").WithDismissedUntestedGameRevision(5482).DismissedLoaderUpdate);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheDismissedGameRevision()
     {
         var preferences = AppPreferences.Empty.WithDismissedGameRevision(5438)
@@ -296,7 +293,7 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
         Assert.Equal(channel, result.Preferences.UpdateChannel);
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        using var document = await ReadSavedDocumentAsync();
         Assert.Equal(name, document.RootElement.GetProperty("updateChannel").GetString());
     }
 
@@ -342,7 +339,7 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
         Assert.Equal(order, result.Preferences.DiscoverSortOrder);
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        using var document = await ReadSavedDocumentAsync();
         Assert.Equal(name, document.RootElement.GetProperty("discoverSortOrder").GetString());
     }
 
@@ -423,25 +420,17 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         Assert.Empty(result.Preferences.CustomThemes);
     }
 
-    [Fact]
-    public async Task SaveThenGet_SavedUiCulture_RestoresTheSelection()
+    [Theory]
+    [InlineData("de")]
+    [InlineData("en-QP")]
+    public async Task SaveThenGet_SavedUiCulture_RestoresTheSelection(string uiCulture)
     {
-        await _repository.SaveAsync(new AppPreferences("Borealis", uiCultureName: "de"), BundledThemeNames);
+        await _repository.SaveAsync(new AppPreferences("Borealis", uiCultureName: uiCulture), BundledThemeNames);
 
         var result = await _repository.GetAsync(BundledThemeNames);
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
-        Assert.Equal("de", result.Preferences.UiCultureName);
-    }
-
-    [Fact]
-    public async Task SaveThenGet_SavedPirateUiCulture_RestoresTheSelection()
-    {
-        await _repository.SaveAsync(new AppPreferences("Borealis", uiCultureName: "en-QP"), BundledThemeNames);
-
-        var result = await _repository.GetAsync(BundledThemeNames);
-
-        Assert.Equal("en-QP", result.Preferences.UiCultureName);
+        Assert.Equal(uiCulture, result.Preferences.UiCultureName);
     }
 
     [Fact]
@@ -452,20 +441,6 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         var result = await _repository.GetAsync(BundledThemeNames);
 
         Assert.True(result.Preferences.MarkUntranslatedTexts);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(""", "markUntranslatedTexts": null""")]
-    public async Task GetAsync_NoMarkUntranslatedTexts_ReadsAsOff(string fields)
-    {
-        await WriteAsync($$"""
-            { "formatVersion": 1, "selectedTheme": "Light"{{fields}} }
-            """);
-
-        var result = await _repository.GetAsync(BundledThemeNames);
-
-        Assert.False(result.Preferences.MarkUntranslatedTexts);
     }
 
     [Fact]
@@ -616,7 +591,7 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
             new AppPreferences("Mission", [customTheme], regionalCultureName: "en-GB"),
             BundledThemeNames);
 
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        using var document = await ReadSavedDocumentAsync();
         var root = document.RootElement;
         Assert.Equal(1, root.GetProperty("formatVersion").GetInt32());
         Assert.Equal("Mission", root.GetProperty("selectedTheme").GetString());
@@ -700,6 +675,9 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         await File.WriteAllTextAsync(_pathProvider.GetAppPreferencesPath(), document);
     }
 
+    private async Task<JsonDocument> ReadSavedDocumentAsync()
+        => JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
@@ -780,20 +758,6 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         Assert.False(result.Preferences.OpenBoreaLinks);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(""", "openBoreaLinks": null""")]
-    public async Task GetAsync_NoOpenBoreaLinks_ReadsAsOn(string fields)
-    {
-        await WriteAsync($$"""
-            { "formatVersion": 1, "selectedTheme": "Light"{{fields}} }
-            """);
-
-        var result = await _repository.GetAsync(BundledThemeNames);
-
-        Assert.True(result.Preferences.OpenBoreaLinks);
-    }
-
     [Fact]
     public async Task SaveThenGet_StaySignedInToGitHubOff_RestoresIt()
     {
@@ -802,20 +766,6 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         var result = await _repository.GetAsync(BundledThemeNames);
 
         Assert.False(result.Preferences.StaySignedInToGitHub);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(""", "staySignedInToGitHub": null""")]
-    public async Task GetAsync_NoStaySignedInToGitHub_ReadsAsOn(string fields)
-    {
-        await WriteAsync($$"""
-            { "formatVersion": 1, "selectedTheme": "Light"{{fields}} }
-            """);
-
-        var result = await _repository.GetAsync(BundledThemeNames);
-
-        Assert.True(result.Preferences.StaySignedInToGitHub);
     }
 
     [Fact]
