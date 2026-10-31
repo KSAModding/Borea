@@ -3663,6 +3663,9 @@
   <data name="ModalUseCurrentGameBuildTextFormat" xml:space="preserve">
     <value>{0} startet dann mit KSA {1} aus dem Spielordner in den Einstellungen und nicht mehr mit dem behaltenen Build {2}. Die Spielstände bleiben in der Instanz, und der behaltene Build bleibt im Ordner Game Builds.</value>
   </data>
+  <data name="ModalUseCurrentGameBuildMissingTextFormat" xml:space="preserve">
+    <value>Danach startet {0} mit dem aktuellen Spiel-Build KSA {1}. Die Spielstände bleiben in der Instanz. Der Ordner des behaltenen KSA {2} fehlt oder enthält einen anderen Build, darum kann diese Instanz nicht mehr damit starten.</value>
+  </data>
   <data name="ModalUseCurrentGameBuildFitFormat" xml:space="preserve">
     <value>{0} von {1} Mods passen zu KSA {2}.</value>
   </data>
@@ -4755,8 +4758,8 @@
   <data name="LaunchWrapperBusyFormat" xml:space="preserve">
     <value>Ein Spiel, das Borea über den Wine-Wrapper '{0}' gestartet hat, läuft noch. Der Wrapper führt immer nur ein Spiel aus, also schließe dieses Spiel zuerst.</value>
   </data>
-  <data name="LaunchGameBuildMissing" xml:space="preserve">
-    <value>Diese Instanz läuft auf einem behaltenen KSA-Build, und der Ordner dieses Builds fehlt oder enthält einen anderen Build. Borea startet nichts, damit die Instanz nicht auf einem anderen Build startet. Um stattdessen den Spielordner der Einstellungen zu verwenden, wähle „Aktuellen Spiel-Build verwenden“ im Menü der Instanz.</value>
+  <data name="LaunchGameBuildMissingFormat" xml:space="preserve">
+    <value>KSA {0}, den diese Instanz behält, ist nicht im Ordner {1} der Bibliothek, darum startet Borea nichts. Kopiere diesen Build zurück in den Ordner.</value>
   </data>
   <data name="LaunchOtherBuildRunningFormat" xml:space="preserve">
     <value>Schließe zuerst das laufende Spiel. Um diese Instanz zu starten, muss Borea {0} auf einen anderen Spielordner umstellen, und das tut Borea nur, wenn kein Spiel läuft.</value>
@@ -4859,6 +4862,9 @@
   </data>
   <data name="InstanceGameBuildFormat" xml:space="preserve">
     <value>KSA {0}</value>
+  </data>
+  <data name="InstanceGameBuildNotFoundFormat" xml:space="preserve">
+    <value>KSA {0} nicht gefunden</value>
   </data>
   <data name="InstanceGameBuildToolTipFormat" xml:space="preserve">
     <value>Diese Instanz behält KSA {0} und startet immer mit dieser Kopie.</value>

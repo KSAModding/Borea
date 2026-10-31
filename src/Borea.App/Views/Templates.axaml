@@ -9,11 +9,14 @@
     </DataTemplate>
     <!-- what the last launch said, on Home, in the Library and on the instance page -->
     <DataTemplate x:Key="LaunchStatus" x:DataType="vm:MainViewModel">
-        <!-- one line, and the launch modal has the way out when the loader stopped -->
+        <!-- one line, and the way out: the launch modal when the loader stopped, the use-current modal when the kept build is not found -->
         <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" VerticalAlignment="Center" Classes.danger="{Binding HasLaunchOutput}" />
+            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" VerticalAlignment="Center" Classes.danger="{Binding HasLaunchFailed}" />
             <Button Grid.Column="1" Classes="link" Margin="16,0,0,0" VerticalAlignment="Center" Command="{Binding ShowLaunchFailureCommand}" IsVisible="{Binding HasLaunchOutput}">
                 <TextBlock Classes="action-md" Text="{Binding Localization.LaunchShowDetails}" />
+            </Button>
+            <Button Grid.Column="1" Classes="link" Margin="16,0,0,0" VerticalAlignment="Center" Command="{Binding LaunchGameBuildMissingItem.BeginUseCurrentGameBuildCommand}" IsVisible="{Binding LaunchGameBuildMissingItem, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Classes="action-md" Text="{Binding Localization.InstanceUseCurrentGameBuild}" />
             </Button>
         </Grid>
     </DataTemplate>
@@ -73,6 +76,13 @@
                         <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                             <Border Classes="chip positive" IsVisible="{Binding SourceText, Converter={x:Static ObjectConverters.IsNotNull}}">
                                 <TextBlock Text="{Binding SourceText}" />
+                            </Border>
+                            <!-- after an update, the chip shows which instances still start the build they keep -->
+                            <Border Classes="chip muted" IsVisible="{Binding GameBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding GameBuildToolTip}" AutomationProperties.Name="{Binding GameBuildToolTip}">
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.PushPin}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding GameBuildText}" />
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                         <!-- c/meta: GameController + when the instance was last played, CirclesThree + the number of installed mods -->

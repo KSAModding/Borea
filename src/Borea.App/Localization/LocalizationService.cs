@@ -2324,6 +2324,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatModalUseCurrentGameBuildText(string instanceName, string build, string keptBuild)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildTextFormat, instanceName, build, keptBuild);
 
+    public string FormatModalUseCurrentGameBuildMissingText(string instanceName, string build, string keptBuild)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildMissingTextFormat, instanceName, build, keptBuild);
+
     public string FormatModalUseCurrentGameBuildFit(int fitting, int total, string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildFitFormat, fitting, total, build);
 
@@ -2931,6 +2934,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatInstanceGameBuild(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGameBuildFormat, build);
+
+    public string FormatInstanceGameBuildNotFound(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGameBuildNotFoundFormat, build);
 
     public string FormatInstanceGameBuildToolTip(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGameBuildToolTipFormat, build);
@@ -3732,7 +3738,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchWrapperBusy(string wrapper)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchWrapperBusyFormat, wrapper);
 
-    public string LaunchGameBuildMissing => Resources.LaunchGameBuildMissing;
+    public string FormatLaunchGameBuildMissing(string build, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchGameBuildMissingFormat, build, folder);
 
     public string FormatLaunchOtherBuildRunning(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchOtherBuildRunningFormat, loader);

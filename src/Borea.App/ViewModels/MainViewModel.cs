@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -494,6 +495,17 @@ public partial class MainViewModel : ViewModelBase
             Instances.Add(row);
         RefreshOtherInstances();
         _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
+
+        // the link of the launch line follows its instance to the new row, and a deleted instance takes the line with it
+        if (LaunchGameBuildMissingItem is { } linked)
+        {
+            LaunchGameBuildMissingItem = Instances.FirstOrDefault(instance => instance.InstanceId == linked.InstanceId);
+            if (LaunchGameBuildMissingItem is null)
+            {
+                ClearLaunchFailure();
+                LaunchMessage = null;
+            }
+        }
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
         var kept = CurrentWindowHome ? Instances.FirstOrDefault(instance => instance.InstanceId == HomeInstance?.InstanceId) : null;
@@ -1095,7 +1107,24 @@ public sealed partial class InstanceItem : ObservableObject
     public string? GameBuildText => Instance.GameBuild is { } build ? _owner.Localization.FormatInstanceGameBuild(build.ToString()) : null;
 
     public string? GameBuildToolTip => Instance.GameBuild is { } build
-        ? $"{_owner.Localization.FormatInstanceGameBuildToolTip(build.ToString())} {_owner.Localization.ModalKeepGameBuildPopupNote}"
+        ? _owner.Localization.FormatInstanceGameBuildToolTip(build.ToString()) + Environment.NewLine + _owner.Localization.ModalKeepGameBuildPopupNote
+        : null;
+
+    /// <summary>Whether the kept build is there, read when the instance page opens and when a launch reads it. None on a row where neither happened.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsGameBuildChip), nameof(GameBuildNotFoundText), nameof(GameBuildMissingText))]
+    private KeptBuildProblem _gameBuildProblem;
+
+    /// <summary>The pin chip of the page, which the chip of a kept build that is not found replaces.</summary>
+    public bool ShowsGameBuildChip => GameBuildText is not null && GameBuildProblem == KeptBuildProblem.None;
+
+    public string? GameBuildNotFoundText => GameBuildProblem != KeptBuildProblem.None && Instance.GameBuild is { } build
+        ? _owner.Localization.FormatInstanceGameBuildNotFound(build.ToString())
+        : null;
+
+    /// <summary>The tooltip of the chip of a kept build that is not found, the same sentence a launch says.</summary>
+    public string? GameBuildMissingText => GameBuildProblem != KeptBuildProblem.None && Instance.GameBuild is { } build
+        ? _owner.GameBuildMissingText(build)
         : null;
 
     private bool _isOpening;
@@ -1125,6 +1154,8 @@ public sealed partial class InstanceItem : ObservableObject
         OnPropertyChanged(nameof(ModCountToolTip));
         OnPropertyChanged(nameof(GameBuildText));
         OnPropertyChanged(nameof(GameBuildToolTip));
+        OnPropertyChanged(nameof(GameBuildNotFoundText));
+        OnPropertyChanged(nameof(GameBuildMissingText));
     }
 
     internal ModVersion? InstalledVersionOf(string modId)

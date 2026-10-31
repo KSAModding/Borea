@@ -594,7 +594,6 @@ public sealed class LaunchFailureTests
     }
 
     [Theory]
-    [InlineData(LaunchOutcome.GameBuildMissing)]
     [InlineData(LaunchOutcome.OtherBuildRunning)]
     [InlineData(LaunchOutcome.LoaderTakesNoGamePath)]
     [InlineData(LaunchOutcome.LoaderConfigurationUnreadable)]
@@ -608,13 +607,13 @@ public sealed class LaunchFailureTests
 
         var expected = outcome switch
         {
-            LaunchOutcome.GameBuildMissing => harness.Localization.LaunchGameBuildMissing,
             LaunchOutcome.LoaderTakesNoGamePath => harness.Localization.FormatLaunchLoaderTakesNoGamePath("StarMap"),
             LaunchOutcome.LoaderConfigurationUnreadable => harness.Localization.FormatLaunchLoaderConfigurationUnreadable(file, "StarMap"),
             _ => harness.Localization.FormatLaunchOtherBuildRunning("StarMap"),
         };
         Assert.Equal(expected, harness.ViewModel.LaunchMessage);
         Assert.NotEqual("English text.", harness.ViewModel.LaunchMessage);
+        Assert.True(harness.ViewModel.HasLaunchFailed);
     }
 
     [Fact]
@@ -697,6 +696,7 @@ public sealed class LaunchFailureTests
         Assert.False(openWhileWatched);
         Assert.False(viewModel.IsRuntimePromptOpen);
         Assert.Equal(harness.Localization.FormatLaunchStarted("StarMap", "Main"), viewModel.LaunchMessage);
+        Assert.False(viewModel.HasLaunchFailed);
     }
 
     [Fact]
@@ -1013,7 +1013,7 @@ public sealed class LaunchFailureTests
     }
 
     /// <summary>A loader launcher that answers every launch with <paramref name="launched"/> and its watch with <paramref name="watched"/>.</summary>
-    private sealed class FixedLauncher(LaunchResult launched, LaunchResult? watched = null) : ILauncher
+    internal sealed class FixedLauncher(LaunchResult launched, LaunchResult? watched = null) : ILauncher
     {
         public int Launches { get; private set; }
 

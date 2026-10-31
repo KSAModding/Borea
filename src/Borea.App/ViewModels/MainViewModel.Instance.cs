@@ -113,6 +113,14 @@ public partial class MainViewModel
 
     public bool HasLaunchOutput => LaunchOutputText is not null;
 
+    /// <summary>True when the last launch started nothing, so its line shows as a danger.</summary>
+    [ObservableProperty]
+    private bool _hasLaunchFailed;
+
+    /// <summary>The instance whose kept build the last launch did not find, for the link that leaves that build. Null for every other line.</summary>
+    [ObservableProperty]
+    private InstanceItem? _launchGameBuildMissingItem;
+
     [ObservableProperty]
     private bool _isLaunchOutputShown;
 
@@ -174,6 +182,12 @@ public partial class MainViewModel
         if (running is PackUpdateItem || PackUpdate?.InstanceId != item.InstanceId)
             PackUpdate = running as PackUpdateItem;
         _selectedInstanceEntity = await _services.Instances.GetByIdAsync(item.InstanceId);
+
+        // the page reads the folder of a kept build once, on a pool thread, before the Mod loader section rates against it
+        var games = _services.InstanceGames;
+        item.GameBuildProblem = _selectedInstanceEntity is { GameBuild: not null } keeping
+            ? (await Task.Run(() => games.Resolve(keeping))).Problem
+            : KeptBuildProblem.None;
 
         var enabled = new HashSet<string>(ModIds.Comparer);
         if (_selectedInstanceEntity is not null)
@@ -655,7 +669,7 @@ public partial class MainViewModel
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
-            LaunchMessage = Localization.LibraryFolderBusy;
+            RefuseLaunch(Localization.LibraryFolderBusy);
             return;
         }
 
@@ -669,10 +683,13 @@ public partial class MainViewModel
 
             // a kept build that is not there has no version to rate a loader against
             var game = services.InstanceGames.Resolve(instance);
-            if (game.Problem != KeptBuildProblem.None)
+
+            // the row and the page show what this read found, also for a kept build that the player copied back
+            var row = instance.GameBuild is null ? null : await ShowGameBuildProblemAsync(instance.InstanceId, game.Problem);
+            if (game is { Problem: not KeptBuildProblem.None, KeptBuild: { } kept })
             {
-                services.Log.Write($"Launch of instance {instance.InstanceId} did not start, its kept build {game.KeptBuild} is {game.Problem}.");
-                LaunchMessage = Localization.LaunchGameBuildMissing;
+                services.Log.Write($"Launch of instance {instance.InstanceId} did not start, its kept build {kept} is {game.Problem}.");
+                RefuseLaunch(GameBuildMissingText(kept)!, row);
                 return;
             }
 
@@ -686,7 +703,7 @@ public partial class MainViewModel
                 // a failed fetch leaves no index to read, and its reason tells the user more than the missing file does
                 var reason = services.IndexRefresh.Status is { Outcome: ContentIndexRefreshOutcome.Failed, FailureReason: { } fetchFailure } ? fetchFailure : exception.Message;
                 services.Log.Write($"Launch of instance {instance.InstanceId} did not start, the listings did not load: {reason}", exception);
-                LaunchMessage = Localization.FormatLaunchListingsFailed(reason);
+                RefuseLaunch(Localization.FormatLaunchListingsFailed(reason));
                 return;
             }
 
@@ -704,9 +721,9 @@ public partial class MainViewModel
                 else if (resolution.Version is { Problem: LoaderVersionProblem.NotInstallable } && instance.Loader.Version is { } pin && resolution.Loader is { } pinnedLoader)
                     OpenLoaderPrompt(instance, pinnedLoader, pin: pin);
                 else if (!choice.Succeeded)
-                    LaunchMessage = LaunchLoaderFailureText(choice);
+                    RefuseLaunch(LaunchLoaderFailureText(choice));
                 else
-                    LaunchMessage = Localization.FormatLaunchLoaderNotInstalled(instance.Loader.IsPinned ? $"{choice.Loader.Name} {instance.Loader.Version}" : choice.Loader.Name);
+                    RefuseLaunch(Localization.FormatLaunchLoaderNotInstalled(instance.Loader.IsPinned ? $"{choice.Loader.Name} {instance.Loader.Version}" : choice.Loader.Name));
                 return;
             }
 
@@ -761,8 +778,13 @@ public partial class MainViewModel
             // an install cannot change the version of a pinned instance, so only an Automatic one on a kept build gets an offer
             if (result.Outcome == LaunchOutcome.ExitedEarly)
                 await ShowLaunchFailureAsync(result, instance, loader, instance.GameBuild is null || version.IsPinned ? null : recorded);
+            else if (result.Started)
+                LaunchMessage = LaunchResultText(result, loader, instance);
+            else if (result.Outcome == LaunchOutcome.GameBuildMissing)
+                // the launcher reads the kept build again, and the folder went away after the check above
+                RefuseLaunch(LaunchResultText(result, loader, instance), await ShowGameBuildProblemAsync(instance.InstanceId, KeptBuildProblem.Missing));
             else
-                LaunchMessage = LaunchResultText(result, loader, instance.Name);
+                RefuseLaunch(LaunchResultText(result, loader, instance));
 
             // the game shows its update popup on every online start of a kept build, and its GET closes the game
             if (result.Started && instance.GameBuild is not null)
@@ -777,12 +799,47 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {
-            LaunchMessage = exception.Message;
+            RefuseLaunch(exception.Message);
         }
         finally
         {
             IsLaunching = false;
         }
+    }
+
+    /// <param name="missingBuild">The instance whose kept build is not found, which the line offers to leave, or null for any other refusal.</param>
+    private void RefuseLaunch(string text, InstanceItem? missingBuild = null)
+    {
+        LaunchMessage = text;
+        HasLaunchFailed = true;
+        LaunchGameBuildMissingItem = missingBuild;
+    }
+
+    /// <summary>
+    /// Names the kept build and its folder relative to the library, because the full path alone takes a German line at
+    /// 1000 px. Null without services.
+    /// </summary>
+    internal string? GameBuildMissingText(GameVersion build) => _services is { Paths: var paths }
+        ? Localization.FormatLaunchGameBuildMissing(build.ToString(), Path.Combine(Path.GetFileName(paths.GetGameBuildsRoot()), Path.GetFileName(paths.GetGameBuildFolder(build))))
+        : null;
+
+    /// <summary>
+    /// Shows on the row of the instance and on its page whether the kept build is there, and returns the row for the
+    /// link of the launch line. When the page showed another answer, its Mod loader section rates again.
+    /// </summary>
+    private async Task<InstanceItem?> ShowGameBuildProblemAsync(Guid instanceId, KeptBuildProblem problem)
+    {
+        var shown = SelectedInstance?.InstanceId == instanceId ? SelectedInstance : null;
+        var changed = shown is not null && shown.GameBuildProblem != problem;
+        var row = Instances.FirstOrDefault(item => item.InstanceId == instanceId);
+        if (row is not null)
+            row.GameBuildProblem = problem;
+        if (shown is not null)
+            shown.GameBuildProblem = problem;
+
+        if (changed)
+            await LoadInstanceLoaderAsync();
+        return row;
     }
 
     /// <summary>Launches the game without a mod loader, and makes that what the Home launch button starts.</summary>
@@ -799,17 +856,21 @@ public partial class MainViewModel
         try
         {
             var result = _services.SharedProfileLauncher.Launch();
-            LaunchMessage = result.Outcome switch
+            var text = result.Outcome switch
             {
                 SharedProfileLaunchOutcome.WindowsBuild => WindowsBuildText(result.Wine),
                 SharedProfileLaunchOutcome.PathOutsidePrefix => Localization.FormatLaunchPathOutsidePrefix(result.UnmappedPath!, result.Wine!.PrefixRoot),
                 SharedProfileLaunchOutcome.WrapperBusy => Localization.FormatLaunchWrapperBusy(result.Wine!.Wrapper!.BundlePath),
                 _ => result.Message,
             };
+            if (result.Started)
+                LaunchMessage = text;
+            else
+                RefuseLaunch(text);
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {
-            LaunchMessage = exception.Message;
+            RefuseLaunch(exception.Message);
         }
         finally
         {
@@ -880,12 +941,15 @@ public partial class MainViewModel
         LaunchBlamedModId = blamed?.ModId;
         RefreshLaunchFailureActions();
         LaunchFailureError = null;
+        HasLaunchFailed = true;
         IsLaunchFailureOpen = true;
     }
 
     private void ClearLaunchFailure()
     {
         IsLaunchFailureOpen = false;
+        HasLaunchFailed = false;
+        LaunchGameBuildMissingItem = null;
         LaunchFailureError = null;
         LaunchOutputText = null;
         IsLaunchOutputShown = false;
@@ -979,9 +1043,9 @@ public partial class MainViewModel
             LaunchFailureError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instanceId));
     }
 
-    private string LaunchResultText(LaunchResult result, ModMetadata loader, string instanceName) => result.Outcome switch
+    private string LaunchResultText(LaunchResult result, ModMetadata loader, Instance instance) => result.Outcome switch
     {
-        LaunchOutcome.Started => Localization.FormatLaunchStarted(loader.Name, instanceName),
+        LaunchOutcome.Started => Localization.FormatLaunchStarted(loader.Name, instance.Name),
         LaunchOutcome.UnknownPlatformKey => Localization.FormatLaunchUnknownPlatformKey(loader.Name, result.UnknownName!),
         LaunchOutcome.UnknownRuntime => Localization.FormatLaunchUnknownRuntime(loader.Name, result.UnknownName!),
         LaunchOutcome.DotnetMissing => Localization.FormatLaunchDotnetMissing(loader.Name),
@@ -992,7 +1056,7 @@ public partial class MainViewModel
         LaunchOutcome.WrapperNeedsVariable => Localization.FormatLaunchWrapperNeedsVariable(loader.Name, loader.Provides!.Instance!.Flag!, result.Wine!.Wrapper!.BundlePath),
         LaunchOutcome.WrapperArguments => Localization.FormatLaunchWrapperArguments(result.Wine!.Wrapper!.BundlePath, loader.Name),
         LaunchOutcome.WrapperRuntime => Localization.FormatLaunchWrapperRuntime(loader.Name, result.Wine!.Wrapper!.BundlePath),
-        LaunchOutcome.GameBuildMissing => Localization.LaunchGameBuildMissing,
+        LaunchOutcome.GameBuildMissing when instance.GameBuild is { } kept && GameBuildMissingText(kept) is { } missing => missing,
         LaunchOutcome.OtherBuildRunning => Localization.FormatLaunchOtherBuildRunning(loader.Name),
         LaunchOutcome.LoaderTakesNoGamePath => Localization.FormatLaunchLoaderTakesNoGamePath(loader.Name),
         LaunchOutcome.LoaderConfigurationUnreadable when result.ConfigurationFile is { } file => Localization.FormatLaunchLoaderConfigurationUnreadable(file, loader.Name),

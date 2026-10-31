@@ -3663,6 +3663,9 @@
   <data name="ModalUseCurrentGameBuildTextFormat" xml:space="preserve">
     <value>{0} then starts on KSA {1} from the game folder in the settings, and no longer on the kept build {2}. The saves stay in the instance, and the kept build stays in the Game Builds folder.</value>
   </data>
+  <data name="ModalUseCurrentGameBuildMissingTextFormat" xml:space="preserve">
+    <value>After this, {0} starts on the current game build, KSA {1}. Its saves stay in the instance. The folder of the kept KSA {2} is gone or holds another build, so this instance cannot start on it any more.</value>
+  </data>
   <data name="ModalUseCurrentGameBuildFitFormat" xml:space="preserve">
     <value>{0} of {1} mods fit KSA {2}.</value>
   </data>
@@ -4764,8 +4767,8 @@
   <data name="LaunchWrapperBusyFormat" xml:space="preserve">
     <value>A game that Borea started through the Wine wrapper '{0}' is still running. The wrapper runs one game at a time, so close that game first.</value>
   </data>
-  <data name="LaunchGameBuildMissing" xml:space="preserve">
-    <value>This instance runs on a kept KSA build, and the folder of that build is gone or holds another build. Borea starts nothing, so the instance does not start on another build. To use the game folder of the settings instead, select "Use the current game build" in the instance menu.</value>
+  <data name="LaunchGameBuildMissingFormat" xml:space="preserve">
+    <value>KSA {0}, which this instance keeps, is not in the folder {1} of the library, so Borea starts nothing. Copy that build back into the folder.</value>
   </data>
   <data name="LaunchOtherBuildRunningFormat" xml:space="preserve">
     <value>Close the running game first. To start this instance, Borea must point {0} to another game folder, and it does that only while no game runs.</value>
@@ -4868,6 +4871,9 @@
   </data>
   <data name="InstanceGameBuildFormat" xml:space="preserve">
     <value>KSA {0}</value>
+  </data>
+  <data name="InstanceGameBuildNotFoundFormat" xml:space="preserve">
+    <value>KSA {0} not found</value>
   </data>
   <data name="InstanceGameBuildToolTipFormat" xml:space="preserve">
     <value>This instance keeps KSA {0} and always starts on that copy.</value>
