@@ -40,12 +40,12 @@
                     </Border>
 
                     <!-- stale index -->
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,16,8,0" IsVisible="{Binding IsIndexStale}">
-                        <TextBlock Classes="body-md secondary" Text="{Binding IndexStaleText}" VerticalAlignment="Center" />
-                        <Button Classes="link" Command="{Binding RetryContentIndexCommand}">
+                    <WrapPanel ItemSpacing="12" LineSpacing="4" Margin="8,16,8,0" IsVisible="{Binding IsIndexStale}">
+                        <TextBlock Classes="body-md secondary" Text="{Binding IndexStaleText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Classes="link" Command="{Binding RetryContentIndexCommand}" VerticalAlignment="Center">
                             <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverIndexRetry}" />
                         </Button>
-                    </StackPanel>
+                    </WrapPanel>
 
                     <!-- active filters, and the sort order of the Mods and Modpacks tabs -->
                     <DockPanel MinHeight="32" Margin="8,24,0,0">

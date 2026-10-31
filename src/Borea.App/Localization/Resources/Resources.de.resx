@@ -2611,7 +2611,7 @@
     <value>Zu {0} hinzufügen</value>
   </data>
   <data name="DiscoverAddingToFormat" xml:space="preserve">
-    <value>Hinzufügen zu {0}</value>
+    <value>Ziel: {0}</value>
   </data>
   <data name="DiscoverKeptBuildUnavailableFormat" xml:space="preserve">
     <value>{0} behält KSA {1}, aber dieser Build fehlt in der Bibliothek, darum kann Borea keine Mods dafür bewerten oder installieren.</value>
