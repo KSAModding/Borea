@@ -171,10 +171,22 @@ public sealed class GameSaveShareViewTests
         await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
         await GameSaveShareTests.OpenAsync(harness);
         await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
 
+        var question = await PageTextsAsync(harness);
+
+        Assert.Contains(editor.ShareLooksLikeText, question);
+        Assert.Contains(editor.ShareAsNewVersionText, question);
+        Assert.Contains(harness.Localization.ShareIsDifferentVehicle, question);
+        Assert.DoesNotContain(harness.Localization.ShareYourName, question);
+        Assert.DoesNotContain(harness.Localization.ShareModsHeading, question);
+        Assert.DoesNotContain(harness.Localization.ShareNext, question);
+        Assert.DoesNotContain(harness.Localization.ShareEditAll, question);
+
+        editor.ShareAsNewVersionCommand.Execute(null);
         var texts = await PageTextsAsync(harness);
 
-        Assert.True(harness.ViewModel.ListingEditor.IsNewVersionShare);
+        Assert.True(editor.IsNewVersionShare);
         Assert.Contains(harness.Localization.ShareModsHeading, texts);
         Assert.DoesNotContain(harness.Localization.ShareYourName, texts);
         Assert.DoesNotContain(harness.Localization.ShareMoreOptions, texts);

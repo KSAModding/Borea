@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Instances;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -26,6 +27,13 @@ public enum ShareFlowStep
 /// <summary>A license of the plain list. A null value stands for another license, which the player types.</summary>
 public sealed record ShareLicenseChoice(string? Value, string Label);
 
+/// <summary>A listing on a share host that a share can add a version to. The index may not hold it yet.</summary>
+/// <param name="HostName">The name of the host when the record of a share holds it, and otherwise the hosts of the index name it.</param>
+/// <param name="Reference">The id of the listing on the host.</param>
+/// <param name="Version">The version that is online, or null when Borea knows none.</param>
+/// <param name="HoldsTheName">Whether an item that is not this listing cannot keep its name next to it.</param>
+internal sealed record ShareListing(string Id, string Name, string HostKey, string? HostName, string Reference, string? Version, bool HoldsTheName);
+
 /// <summary>
 /// The steps of a share: plain fields, and nothing goes to a host before they are valid. They edit the same draft as the full form,
 /// and going back from the publish step drops the upload, so what the upload sent can only change before it.
@@ -41,8 +49,14 @@ public sealed partial class ListingEditor
         ("CC-BY-NC-4.0", text => text.ShareLicenseCcByNc),
     ];
 
-    /// <summary>The listing of the shared item on a share host, which makes the share a new version of it, or null for a new listing.</summary>
-    private (ContentIndexListing Listing, ReleaseHost Entry)? _shareListing;
+    /// <summary>The listing on a share host that the player said this item belongs to, which makes the share a new version of it, or null for a new listing.</summary>
+    private ShareListing? _shareListing;
+
+    /// <summary>The listing that the item looks like, until the player says whether it belongs to it.</summary>
+    private ShareListing? _askedShareListing;
+
+    /// <summary>The listings that the player said this item is not. A listing that installs under the name of the item still counts, because the checks of the index refuse that folder.</summary>
+    private readonly HashSet<string> _declinedShareListings = new(ModIds.Comparer);
 
     /// <summary>The short name that the host refused at a publish, which the index can hold back only hours later.</summary>
     private string? _refusedShareId;
@@ -108,6 +122,19 @@ public sealed partial class ListingEditor
     /// <summary>A new version sends only the upload and its mods, because the host keeps the listing as it is.</summary>
     public bool IsNewVersionShare => _shareListing is not null;
 
+    /// <summary>The question comes before any field, because the answer decides which fields a share has.</summary>
+    public bool IsAskingShareListing => _askedShareListing is not null;
+
+    public bool ShowsShareFields => !IsNewVersionShare && !IsAskingShareListing;
+
+    public string? ShareLooksLikeText => _askedShareListing is { } asked ? Localization.FormatShareLooksLike(asked.Name, ShareHostNameOf(asked)) : null;
+
+    public string? ShareVersionOnlineText => _askedShareListing?.Version is { } version ? Localization.FormatShareVersionOnline(version) : null;
+
+    public string? ShareAsNewVersionText => _askedShareListing is { } asked ? Localization.FormatShareAsNewVersion(asked.Name) : null;
+
+    public string ShareIsDifferentText => IsSave ? Localization.ShareIsDifferentSave : Localization.ShareIsDifferentVehicle;
+
     public ObservableCollection<ListingStepItem> ShareSteps { get; } = [];
 
     public string ShareDescribeHeading => IsSave ? Localization.ShareDescribeSave : Localization.ShareDescribeVehicle;
@@ -118,13 +145,13 @@ public sealed partial class ListingEditor
 
     public string? ShareItemText => _share is { } share ? Localization.FormatShareItemIn(share.Content.Name, _owner.InstanceName(share.InstanceId)) : null;
 
-    public string? ShareNewVersionText => _shareListing is { } shared
-        ? Localization.FormatShareNewVersionLine(ShareListingName, _shareHosts.FirstOrDefault(host => host.Key == shared.Entry.Host)?.Name ?? shared.Entry.Host)
-        : null;
+    public string? ShareNewVersionText => _shareListing is { } shared ? Localization.FormatShareNewVersionLine(shared.Name, ShareHostNameOf(shared)) : null;
 
-    private string ShareListingName => _shareListing is { } shared ? shared.Listing.Authored?.Name ?? shared.Listing.Id : Draft.Name;
+    private string ShareListingName => _shareListing?.Name ?? Draft.Name;
 
-    public bool ShowsPreviewCard => !IsShareStep || (!IsShareChoose && !IsNewVersionShare);
+    private string ShareHostNameOf(ShareListing listing) => _shareHosts.FirstOrDefault(host => host.Key == listing.HostKey)?.Name ?? listing.HostName ?? listing.HostKey;
+
+    public bool ShowsPreviewCard => !IsShareStep || (!IsShareChoose && ShowsShareFields);
 
     public string PreviewHeading => !IsShareStep ? Localization.ListingPreview : IsSave ? Localization.SharePreviewSave : Localization.SharePreviewVehicle;
 
@@ -182,17 +209,131 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(SelectedShareLicense));
     }
 
-    private (ContentIndexListing Listing, ReleaseHost Entry)? FindShareListing()
+    private IReadOnlyList<ContentIndexListing> ShareListingsOf(GameSaveShareStart share) =>
+        (share.Entry.Kind == GameSaveKind.Save ? _snapshot?.Saves : _snapshot?.Vehicles) ?? [];
+
+    /// <summary>
+    /// The record of a share comes first, because the index holds a new listing only hours later, and the install record next, because it holds on a second computer.
+    /// Then come a listing that installs under the name of the item and a listing with the id. A match is no proof of ownership, and the host decides with not_owner.
+    /// </summary>
+    private ShareListing? FindShareListing(GameSaveShareStart share, string id)
     {
-        var listings = Type == ListingFolders.SaveType ? _snapshot?.Saves : _snapshot?.Vehicles;
-        var found = listings?.FirstOrDefault(listing => ModIds.Equals(listing.Id, Id.Trim()));
-        return found?.Authored?.Releases?.Hosts.FirstOrDefault(entry => entry.Kind == ReleaseHostKind.Share) is { } host ? (found, host) : null;
+        var name = share.Content.Name;
+        var listings = ShareListingsOf(share);
+        if (share.SharedEntry is { } entry && !_declinedShareListings.Contains(entry.ListingId))
+        {
+            var listed = listings.FirstOrDefault(listing => ModIds.Equals(listing.Id, entry.ListingId));
+            return new ShareListing(entry.ListingId, listed?.Authored?.Name ?? entry.FolderName, entry.HostKey, entry.HostName, entry.ListingId, listed is null ? entry.Version : NewestShareVersion(listed, entry.Version), listed is not null && HoldsShareName(listed, name));
+        }
+
+        return listings.Where(listing => IsUndeclined(listing, share.InstalledListingId))
+            .Concat(listings.Where(listing => HoldsShareName(listing, name)))
+            .Concat(listings.Where(listing => IsUndeclined(listing, id)))
+            .Select(listing => OnShareHost(listing, name))
+            .FirstOrDefault(found => found is not null);
+
+        bool IsUndeclined(ContentIndexListing listing, string? listingId) => ModIds.Equals(listing.Id, listingId) && !_declinedShareListings.Contains(listing.Id);
+    }
+
+    private static ShareListing? OnShareHost(ContentIndexListing listing, string name) =>
+        listing.Authored?.Releases?.Hosts.FirstOrDefault(host => host.Kind == ReleaseHostKind.Share) is { } host
+            ? new ShareListing(listing.Id, listing.Authored?.Name ?? listing.Id, host.Host, null, host.Reference, NewestShareVersion(listing), HoldsShareName(listing, name))
+            : null;
+
+    /// <summary>The recorded version counts only while the index does not hold it, because the index holds a new release hours later and may have yanked an older one.</summary>
+    private static string? NewestShareVersion(ContentIndexListing listing, string? recorded = null)
+    {
+        var newest = listing.Releases.Where(release => !release.Yanked).Select(release => (ModVersion?)release.Version).Max();
+        return ModVersion.TryParse(recorded, out var waiting) && listing.Releases.All(release => release.Version != waiting) && (newest is null || waiting > newest)
+            ? recorded
+            : newest?.ToString();
+    }
+
+    /// <summary>The release checks refuse the install folder of any release. The name of a listing stays out, because two listings with one name still install apart.</summary>
+    private static bool HoldsShareName(ContentIndexListing listing, string name) =>
+        listing.Releases.Any(release => string.Equals(release.Install?.Folder, name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Why the item cannot start as it is named, because a listing that Borea cannot add a version to installs under its name.
+    /// A listing on a share host asks its question instead. This compares in Borea and never waits for an answer of a host.
+    /// </summary>
+    internal string? ShareNameTakenText(GameSaveShareStart share) =>
+        FindShareListing(share, ListingShareId.From(share.Content.Name)) is null && ShareListingsOf(share).Any(listing => HoldsShareName(listing, share.Content.Name))
+            ? ShareFolderTakenText(share)
+            : null;
+
+    private string ShareFolderTakenText(GameSaveShareStart share) => share.Entry.Kind == GameSaveKind.Save
+        ? Localization.FormatShareFolderTakenSave(share.Content.Name)
+        : Localization.FormatShareFolderTakenVehicle(share.Content.Name);
+
+    /// <summary>A share on the publish step that only now finds its listing goes back, because the question stands on the step before.</summary>
+    private void LookUpShareListing(GameSaveShareStart share)
+    {
+        _askedShareListing = FindShareListing(share, Id.Trim());
+        if (IsAskingShareListing && IsSharePublish)
+            BackToShareDescribe();
+
+        if (ShareNameTakenText(share) is { } taken)
+            RenameShareNameTaken(share, taken, asked: null);
+    }
+
+    [RelayCommand]
+    private void ShareAsNewVersion()
+    {
+        if (_askedShareListing is not { } asked)
+            return;
+
+        _askedShareListing = null;
+        _shareListing = asked;
+        Id = asked.Id;
+        RefreshShare();
+        Refresh();
+    }
+
+    /// <summary>The name stays only when no listing holds it, and a short name that is taken opens More options through its error.</summary>
+    [RelayCommand]
+    private async Task ShareIsDifferentAsync()
+    {
+        if (_share is not { } share || _askedShareListing is not { } asked)
+            return;
+
+        if (asked.HoldsTheName)
+            RenameShareNameTaken(share, ShareFolderTakenText(share), asked);
+        else
+            await GoOnWithoutShareListingAsync(share, asked);
+    }
+
+    /// <summary>A Cancel in the rename changes nothing, so the player can still answer the question.</summary>
+    private void RenameShareNameTaken(GameSaveShareStart share, string reason, ShareListing? asked) =>
+        _owner.BeginShareRename(share, reason, async renamed =>
+        {
+            if (_share != share)
+                return;
+
+            await GoOnWithoutShareListingAsync(TakeShareRename(share, renamed), asked);
+        });
+
+    /// <summary>The record of the share goes with the answer, because it would ask the same question at the next share. A rename has moved it to the new name.</summary>
+    private async Task GoOnWithoutShareListingAsync(GameSaveShareStart share, ShareListing? declined)
+    {
+        if (declined is not null)
+            _declinedShareListings.Add(declined.Id);
+
+        LookUpShareListing(share);
+        RefreshShare();
+        Refresh();
+
+        if (share.SharedEntry is { } entry && ModIds.Equals(entry.ListingId, declined?.Id) && _owner.Services is { } services)
+        {
+            await services.SharedContent.RemoveAsync(share.Entry.Kind.ToContentType(), entry.HostKey, share.Entry.FolderName);
+            await _owner.ShowSharedContentAsync(share.Entry.Kind);
+        }
     }
 
     /// <summary>
     /// Decides whether the share can go on. A new listing needs the required fields, and an error that the step has no own text for
     /// counts as one outside the step, because its message is in English and the full form shows it. A new version sends no
-    /// fields of the listing, so only its mods can hold it back.
+    /// fields of the listing, so only its mods can hold it back, and the question holds back everything until it has an answer.
     /// </summary>
     private void RefreshShareGate()
     {
@@ -201,14 +342,14 @@ public sealed partial class ListingEditor
 
         HasNoShareMods = Dependencies.Count == 0 && _share.Proposal.Dependencies.Count == 0 && ShareNotes.Count == 0 && !HasShareExtraFiles;
 
-        if (IsNewVersionShare)
+        if (!ShowsShareFields)
         {
             ShareIdError = null;
             ShareSentenceError = null;
             ShareLicenseError = null;
             ShareNextReason = null;
-            HasShareOtherFields = Errors.Any(issue => SectionOf(issue) == "dependencies");
-            CanContinueShare = !HasShareOtherFields;
+            HasShareOtherFields = IsNewVersionShare && Errors.Any(issue => SectionOf(issue) == "dependencies");
+            CanContinueShare = IsNewVersionShare && !HasShareOtherFields;
             return;
         }
 
@@ -332,7 +473,7 @@ public sealed partial class ListingEditor
     [RelayCommand]
     private void BackToShareSteps()
     {
-        if (_shareListing is { } listed && !ModIds.Equals(listed.Listing.Id, Id.Trim()))
+        if (_shareListing is { } listed && !ModIds.Equals(listed.Id, Id.Trim()))
         {
             _shareListing = null;
             RefreshShare();

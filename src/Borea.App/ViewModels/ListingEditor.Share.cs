@@ -12,7 +12,9 @@ namespace Borea.App.ViewModels;
 
 /// <summary>A vehicle or a save that the player shares from the instance page, with what Borea read from it.</summary>
 /// <param name="LastAuthor">The authors and license of the player's last new listing, which a share starts with, or null.</param>
-internal sealed record GameSaveShareStart(Guid InstanceId, GameSaveEntry Entry, GameFolderContent Content, ContentShare Proposal, SharedContentAuthor? LastAuthor);
+/// <param name="SharedEntry">What this computer last published from the folder, or null.</param>
+/// <param name="InstalledListingId">The listing that the item was installed from, or null.</param>
+internal sealed record GameSaveShareStart(Guid InstanceId, GameSaveEntry Entry, GameFolderContent Content, ContentShare Proposal, SharedContentAuthor? LastAuthor, SharedContentEntry? SharedEntry = null, string? InstalledListingId = null);
 
 /// <summary>
 /// A new vehicle or save listing (RFC 0085): the editor starts with the dependencies Borea proposes, shows what it could not map,
@@ -71,9 +73,9 @@ public sealed partial class ListingEditor
             Dependencies = share.Proposal.Dependencies,
         });
         _share = share;
-        _shareListing = FindShareListing();
         ShareFlowStep = ShareFlowStep.Describe;
         Step = ListingStep.Share;
+        LookUpShareListing(share);
         RefreshShare();
         StartShareHosts();
         Refresh();
@@ -83,6 +85,8 @@ public sealed partial class ListingEditor
     {
         _share = null;
         _shareListing = null;
+        _askedShareListing = null;
+        _declinedShareListings.Clear();
         _refusedShareId = null;
         _savedArchive = null;
         _choseOtherLicense = false;
@@ -106,6 +110,13 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareStatusChoices));
         OnPropertyChanged(nameof(SelectedShareStatus));
         OnPropertyChanged(nameof(IsNewVersionShare));
+        OnPropertyChanged(nameof(IsAskingShareListing));
+        OnPropertyChanged(nameof(ShowsShareFields));
+        OnPropertyChanged(nameof(ShowsPreviewCard));
+        OnPropertyChanged(nameof(ShareLooksLikeText));
+        OnPropertyChanged(nameof(ShareVersionOnlineText));
+        OnPropertyChanged(nameof(ShareAsNewVersionText));
+        OnPropertyChanged(nameof(ShareIsDifferentText));
         OnPropertyChanged(nameof(ShareDescribeHeading));
         OnPropertyChanged(nameof(ShareSentenceExample));
         OnPropertyChanged(nameof(ShareModsHint));

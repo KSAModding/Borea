@@ -258,7 +258,7 @@ public partial class MainViewModel : ViewModelBase
         {
             GameSaveRenameReason = null;
             _afterShareRename = null;
-            _nameTheHostRefused = null;
+            _nameTheShareCannotKeep = null;
         }
     }
 

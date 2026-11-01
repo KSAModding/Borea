@@ -2187,6 +2187,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareChannelHint => Resources.ShareChannelHint;
 
+    public string ShareIsDifferentVehicle => Resources.ShareIsDifferentVehicle;
+
+    public string ShareIsDifferentSave => Resources.ShareIsDifferentSave;
+
     public string ShareFolderCheckVehicle => Resources.ShareFolderCheckVehicle;
 
     public string ShareFolderCheckSave => Resources.ShareFolderCheckSave;
@@ -4627,6 +4631,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatShareModVersion(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareModVersionFormat, version);
+
+    public string FormatShareLooksLike(string listing, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareLooksLikeFormat, listing, host);
+
+    public string FormatShareVersionOnline(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareVersionOnlineFormat, version);
+
+    public string FormatShareAsNewVersion(string listing)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareAsNewVersionFormat, listing);
+
+    public string FormatShareFolderTakenVehicle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderTakenVehicleFormat, name);
+
+    public string FormatShareFolderTakenSave(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderTakenSaveFormat, name);
 
     public string FormatShareNewVersionLine(string listing, string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareNewVersionLineFormat, listing, host);
