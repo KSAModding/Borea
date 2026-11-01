@@ -438,21 +438,30 @@ public sealed class GameDetectionTests
     }
 
     /// <summary>A first start that finds one game, with the detection held in its first read of the folders until <paramref name="release"/> is set.</summary>
-    private static Task<ViewModelHarness> CreateWithHeldDetectionAsync(ManualResetEventSlim release)
+    private static async Task<ViewModelHarness> CreateWithHeldDetectionAsync(ManualResetEventSlim release)
     {
         var reads = 0;
-        return ViewModelHarness.CreateAsync(
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var harness = await ViewModelHarness.CreateAsync(
             candidates: h =>
             {
                 h.Candidates.Games.Add(PlaceGame(h, "KSA"));
                 // a slow runner must not let the detection finish before the test acts
                 h.Candidates.Reading = () =>
                 {
-                    if (Interlocked.Increment(ref reads) == 1 && !release.Wait(TimeSpan.FromSeconds(30)))
+                    if (Interlocked.Increment(ref reads) != 1)
+                        return;
+
+                    held.SetResult();
+                    if (!release.Wait(TimeSpan.FromSeconds(30)))
                         throw new TimeoutException("The test did not release the held game detection.");
                 };
             },
             waitForDetection: false);
+
+        // the first read belongs to the detection of the start, and not to a read that the test starts on its own thread, which nothing could release
+        await held.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        return harness;
     }
 
     private static string PlaceGame(ViewModelHarness harness, string name)

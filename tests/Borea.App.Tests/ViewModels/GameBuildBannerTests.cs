@@ -546,7 +546,11 @@ public sealed class GameBuildBannerTests
         var viewModel = harness.ViewModel;
         Assert.True(viewModel.ShowGameBuildBanner);
 
-        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetBoreaSettingsPath())!, "Game", "KSA.dll"), overwrite: true);
+        // a load that started with the page can still hold the file, and a rename does not wait for its lock on Linux and macOS
+        await harness.WhenIdleAsync();
+        var gameFile = Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetBoreaSettingsPath())!, "Game", "KSA.dll");
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), gameFile + ".new");
+        File.Move(gameFile + ".new", gameFile, overwrite: true);
         await viewModel.RefreshInstalledGameAsync();
 
         Assert.Equal(InstalledBuild, viewModel.InstalledVersionText);
