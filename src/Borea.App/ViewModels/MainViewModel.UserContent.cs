@@ -29,7 +29,8 @@ public partial class MainViewModel
 
     /// <summary>Plans the install of a vehicle or save into an instance, or the update of the record that the instance has of it.</summary>
     /// <param name="name">A new name the player chose in the name modal, or null.</param>
-    internal async Task PlanContentAsync(IContentPlanRow row, Guid instanceId, ModVersionMetadata release, string? name = null, bool discardChanges = false)
+    /// <param name="whenHeld">Runs once the plan waits on the row. With it every plan waits, for an install that a borea:// link asked for.</param>
+    internal async Task PlanContentAsync(IContentPlanRow row, Guid instanceId, ModVersionMetadata release, string? name = null, bool discardChanges = false, Action? whenHeld = null)
     {
         if (_services is not { } services || row.IsInstalling)
             return;
@@ -61,7 +62,7 @@ public partial class MainViewModel
         switch (plan.Check.Outcome)
         {
             case UserContentOutcome.NameTaken:
-                AskContentName(row, instanceId, plan, discardChanges);
+                AskContentName(row, instanceId, plan, discardChanges, whenHeld);
                 return;
             case UserContentOutcome.Ready or UserContentOutcome.Changed:
                 break;
@@ -74,15 +75,17 @@ public partial class MainViewModel
         {
             row.Choices = NewChoices(instanceId, [new RequestedMod(release, InstallReason.Manual)], plan.Mods);
             HoldContentPlan(row, plan);
+            whenHeld?.Invoke();
         }
         else if (!plan.Mods.IsReady)
         {
             row.InstallError = Describe(plan.Mods.Conflicts.Concat(plan.Mods.UnresolvedChoices));
         }
-        else if (plan.Check.Outcome == UserContentOutcome.Changed || plan.Mods.Warnings.Count > 0 || plan.Enables.Count > 0
+        else if (whenHeld is not null || plan.Check.Outcome == UserContentOutcome.Changed || plan.Mods.Warnings.Count > 0 || plan.Enables.Count > 0
             || AddedMods(plan.Mods, null).Any() || InstallStepsOf(plan.Mods).Count > 0)
         {
             HoldContentPlan(row, plan);
+            whenHeld?.Invoke();
         }
         else
         {
@@ -232,7 +235,7 @@ public partial class MainViewModel
     }
 
     /// <summary>Opens the name modal of #556 for an item whose name is taken. The new name plans the item again.</summary>
-    private void AskContentName(IContentPlanRow row, Guid instanceId, UserContentPlan plan, bool discardChanges)
+    private void AskContentName(IContentPlanRow row, Guid instanceId, UserContentPlan plan, bool discardChanges, Action? whenHeld)
     {
         var release = plan.Release;
         var name = ContentName(release.ModId);
@@ -244,7 +247,7 @@ public partial class MainViewModel
         RenamingGameSave = null;
         ModalInstanceName = FreeNameSuggestion(taken);
         var explanation = Localization.FormatContentNameTaken(taken, release.Type == ContentType.Save ? Localization.InstanceGroupSaves : Localization.InstanceGroupVehicles);
-        NamingPackContent = new PackContentNaming(release.ModId, name, explanation, names, () => PlanContentAsync(row, instanceId, release, names[release.ModId], discardChanges), IsPackMember: false);
+        NamingPackContent = new PackContentNaming(release.ModId, name, explanation, names, () => PlanContentAsync(row, instanceId, release, names[release.ModId], discardChanges, whenHeld), IsPackMember: false);
     }
 
     /// <summary>Why the folder step stopped, in the language of the App.</summary>
