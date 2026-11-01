@@ -2002,6 +2002,10 @@ public sealed class ShareHostShareTests
 
     private sealed record Publish(string UploadId, string Version, string Status, ListingDraft? Listing);
 
+    private sealed record ListingChange(string Type, string Id, ShareListingChange Fields);
+
+    private sealed record TakeDown(string Type, string Id, string Version);
+
     private sealed class FakeHost : IShareHostClient
     {
         private bool _signedIn;
@@ -2077,6 +2081,31 @@ public sealed class ShareHostShareTests
                 await during();
 
             return (RefuseToken() ?? PublishFailure) is { } failure ? throw failure : new SharePublished(PublishedId, version, PullRequest, Page);
+        }
+
+        public ConcurrentQueue<ListingChange> Changes { get; } = new();
+
+        public ConcurrentQueue<TakeDown> TakeDowns { get; } = new();
+
+        public ShareHostException? ManageFailure { get; set; }
+
+        public async Task<ShareListingChanged> ChangeListingAsync(ShareHost host, string type, string id, ShareListingChange change, CancellationToken cancellationToken = default)
+        {
+            Changes.Enqueue(new ListingChange(type, id, change));
+            if (DuringSend is { } during)
+                await during();
+
+            return (RefuseToken() ?? ManageFailure) is { } failure ? throw failure : new ShareListingChanged(PullRequest, Page);
+        }
+
+        public async Task TakeDownReleaseAsync(ShareHost host, string type, string id, string version, CancellationToken cancellationToken = default)
+        {
+            TakeDowns.Enqueue(new TakeDown(type, id, version));
+            if (DuringSend is { } during)
+                await during();
+
+            if ((RefuseToken() ?? ManageFailure) is { } failure)
+                throw failure;
         }
 
         private ShareHostException? RefuseToken()

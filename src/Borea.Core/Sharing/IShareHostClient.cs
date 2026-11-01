@@ -30,6 +30,19 @@ public interface IShareHostClient
     /// <param name="listing">The new listing, or null for a new version of a listing on the host.</param>
     /// <exception cref="ShareHostException">The host refused it, or it could not be reached.</exception>
     Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default);
+
+    /// <summary>Changes the text of a listing for its owner. A host need not offer this request, and then the failure is <see cref="ShareHostFailure.NotOffered"/>.</summary>
+    /// <param name="type">vehicle or save.</param>
+    /// <exception cref="ShareHostException">The host refused it, or it could not be reached.</exception>
+    Task<ShareListingChanged> ChangeListingAsync(ShareHost host, string type, string id, ShareListingChange change, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Takes one version of a listing down for its owner, which cannot be undone, so a caller sends it only after the player confirmed that version.
+    /// A host need not offer this request, and then the failure is <see cref="ShareHostFailure.NotOffered"/>.
+    /// </summary>
+    /// <param name="type">vehicle or save.</param>
+    /// <exception cref="ShareHostException">The host refused it, or it could not be reached.</exception>
+    Task TakeDownReleaseAsync(ShareHost host, string type, string id, string version, CancellationToken cancellationToken = default);
 }
 
 /// <param name="Id">The upload id, which the publish names.</param>
@@ -50,6 +63,13 @@ public sealed record ShareCheck(string Name, bool Passed, string? Message);
 /// <param name="Page">The public page of the listing on the host, or null when the host names none that Borea can trust.</param>
 public sealed record SharePublished(string? Id, string Version, Uri? PullRequest, Uri? Page = null);
 
+/// <summary>The fields of a listing to change. A null field stays as it is on the host, and an empty description or tag list clears it.</summary>
+public sealed record ShareListingChange(string? Name = null, string? Abstract = null, string? Description = null, string? License = null, IReadOnlyList<string>? Tags = null);
+
+/// <param name="PullRequest">The pull request that brings the change to the index, or null when the host could not reach GitHub and tries again later.</param>
+/// <param name="Page">The public page of the listing on the host, or null when the host names none that Borea can trust.</param>
+public sealed record ShareListingChanged(Uri? PullRequest, Uri? Page);
+
 public enum ShareHostFailure
 {
     /// <summary>The host answered with an error, whose message is for the player.</summary>
@@ -68,6 +88,9 @@ public enum ShareHostFailure
 
     /// <summary>The host answered with a 5xx and no message for the player, so it has a problem right now.</summary>
     Unavailable,
+
+    /// <summary>The host answered an optional request with a 404 that no code of that request explains, so it does not offer the request.</summary>
+    NotOffered,
 }
 
 public sealed class ShareHostException : Exception
