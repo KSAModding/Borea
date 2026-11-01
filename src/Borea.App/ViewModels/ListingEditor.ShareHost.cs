@@ -119,7 +119,7 @@ public sealed partial class ListingEditor
     private ShareHostRow? _selectedShareHostRow;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing), nameof(ShowsShareCheckButton), nameof(ShareHostProgressText), nameof(IsSendingSharePublish), nameof(CanCancelShareHost), nameof(ShareSignedInText), nameof(ShareSignOutText))]
+    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing), nameof(ShowsShareCheckButton), nameof(ShareHostProgressText), nameof(IsSendingSharePublish), nameof(IsSendingSharePictures), nameof(IsSendingShare), nameof(CanCancelShareHost), nameof(ShareSignedInText), nameof(ShareSignOutText), nameof(CanRetrySharePictures), nameof(SharePicturesResultText))]
     private string? _shareHostProgress;
 
     [ObservableProperty]
@@ -262,6 +262,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(HasSeveralShareHosts));
         OnPropertyChanged(nameof(ShareNoHostText));
         OnPropertyChanged(nameof(ShareHostHeadingText));
+        OnPropertyChanged(nameof(ShowsSharePictures));
         RefreshShareRun();
     }
 
@@ -565,19 +566,20 @@ public sealed partial class ListingEditor
             if (_shareHostRun != cancel)
                 return;
 
+            // A publish without an id in its answer is a new version, which always has the id of the listing on the host.
+            var id = published.Id ?? shared.ListingId!;
             _shareUpload = null;
             _sharePublished = (ShareListingName, shared.Host, published.Page, listing is null);
             SharePullRequest = published.PullRequest;
             IsShareDetailsOpen = false;
             RefreshShareRun();
+            HoldSharePictures(shared.Host, id, cancel);
             ShareFlowStep = ShareFlowStep.Done;
-
-            // A publish without an id in its answer is a new version, which always has the id of the listing on the host.
-            var id = published.Id ?? shared.ListingId!;
             await services.SharedContent.RecordAsync(
                 new SharedContentEntry(share.Entry.Kind.ToContentType(), shared.Host.Key, shared.Host.Name, id, share.Entry.FolderName, published.Version, published.Page),
                 listing is null ? null : new SharedContentAuthor(listing.Authors, listing.License));
             await _owner.ShowSharedContentAsync(share.Entry.Kind);
+            await SendSharePicturesAsync();
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {

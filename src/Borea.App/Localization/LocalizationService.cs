@@ -2236,6 +2236,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareAddMod => Resources.ShareAddMod;
 
+    public string SharePicturesHeading => Resources.SharePicturesHeading;
+
+    public string SharePictureAdd => Resources.SharePictureAdd;
+
+    public string SharePictureCover => Resources.SharePictureCover;
+
+    public string SharePictureUnreadable => Resources.SharePictureUnreadable;
+
+    public string SharePicturesSent => Resources.SharePicturesSent;
+
     public string ShareOtherFields => Resources.ShareOtherFields;
 
     public string ShareEditAll => Resources.ShareEditAll;
@@ -4031,6 +4041,42 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatShareSummaryMods(string mods)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareSummaryModsFormat, mods);
+
+    public string FormatSharePicturesHint(int count, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesHintFormat, count, size);
+
+    public string FormatSharePicturesNewVersionHint(int count, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesNewVersionHintFormat, count, size);
+
+    public string FormatSharePictureTooLarge(string name, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureTooLargeFormat, name, size);
+
+    public string FormatSharePictureNotImage(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureNotImageFormat, name);
+
+    public string FormatSharePictureAnimated(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureAnimatedFormat, name);
+
+    public string FormatShareSummaryPictures(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSummaryPicturesFormat, count);
+
+    public string FormatSharePicturesSending(int position, int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesSendingFormat, position, count);
+
+    public string FormatSharePicturesMissing(int missing, int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesMissingFormat, missing, count);
+
+    public string FormatSharePictureLostAnswer(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureLostAnswerFormat, host);
+
+    public string FormatSharePictureNotOwner(string host, string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureNotOwnerFormat, host, name);
+
+    public string FormatSharePicturesNotOffered(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesNotOfferedFormat, host);
+
+    public string FormatSharePictureTooLargeOnHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureTooLargeOnHostFormat, host);
 
     public string FormatShareNeedsBuild(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareNeedsBuildFormat, build);

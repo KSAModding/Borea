@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Share.ShareDescribeStep"
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
@@ -128,6 +129,45 @@
                 </Grid>
                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ShareAddMod}" Margin="0,8,0,0" />
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ListingDependencySearch}" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" Padding="24" IsVisible="{Binding ListingEditor.ShowsSharePictures}">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="heading-md" Text="{Binding Localization.SharePicturesHeading}" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.SharePicturesHint}" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding ListingEditor.SharePictures}" IsVisible="{Binding !!ListingEditor.SharePictures.Count}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SharePictureRow">
+                            <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="12">
+                                <Grid ColumnDefinitions="Auto,12,*,8,Auto">
+                                    <Border Width="96" Height="54" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Brush.Surface}">
+                                        <views:SharePictureView Bytes="{Binding Bytes}" Stretch="UniformToFill" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Classes="heading-sm" Text="{Binding Name}" TextWrapping="Wrap" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.SharePictureCover}" IsVisible="{Binding IsCover}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="4" Classes="link" Command="{Binding RemoveCommand}" VerticalAlignment="Center">
+                                        <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" />
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.SharePictureError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.SharePictureError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.AddSharePictureCommand}" IsEnabled="{Binding ListingEditor.CanAddSharePicture}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
+                        <TextBlock Classes="action-md" Text="{Binding Localization.SharePictureAdd}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Border>
 

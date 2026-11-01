@@ -4,6 +4,7 @@ using System.Net;
 using Borea.App.ViewModels;
 using Borea.Core.GitHub;
 using Borea.Core.Index;
+using Borea.Core.Instances;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Sharing;
@@ -77,6 +78,282 @@ public sealed class ShareHostShareTests
         Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
         Assert.All(editor.ShareSteps, step => Assert.Equal(ListingStepState.Done, step.State));
         Assert.Null(editor.ShareHostError);
+    }
+
+    [Fact]
+    public async Task Pictures_GoUpInOrderRightAfterThePublish_AndTheDoneStepSaysSo()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await SharePicturesAsync(harness, 2);
+        Assert.Equal([true, false], editor.SharePictures.Select(row => row.IsCover));
+        Assert.Equal(harness.Localization.FormatShareSummaryPictures(2), editor.ShareSummaryPicturesText);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.Empty(host.ImageUploads);
+        var thumbnailReleased = false;
+        editor.SharePictures[0].PropertyChanged += (_, args) => thumbnailReleased |= args.PropertyName == nameof(SharePictureRow.Bytes);
+        bool? keptOnTheDoneStep = null;
+        editor.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(ListingEditor.ShareFlowStep) && editor.ShareFlowStep == ShareFlowStep.Done)
+                keptOnTheDoneStep = editor.HasShareOnTheWay && editor.IsSendingShare && !editor.CanCancelShareHost;
+        };
+
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal([new ImageUpload("vehicle", "ExampleRover", Picture(1).Length), new ImageUpload("vehicle", "ExampleRover", Picture(2).Length)], host.ImageUploads);
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.All(editor.SharePictures, row => Assert.True(row.IsSent));
+        Assert.Equal(harness.Localization.SharePicturesSent, editor.SharePicturesResultText);
+        Assert.False(editor.CanRetrySharePictures);
+        Assert.False(editor.IsSharing);
+        Assert.True(thumbnailReleased);
+        Assert.True(keptOnTheDoneStep);
+    }
+
+    [Fact]
+    public async Task NoPictures_SendsNoneAndSaysNothingAboutThem()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+
+        var editor = await PublishPicturesAsync(harness, 0);
+
+        Assert.Empty(host.ImageUploads);
+        Assert.Null(editor.SharePicturesResultText);
+        Assert.False(editor.CanRetrySharePictures);
+        Assert.False(editor.IsSharing);
+    }
+
+    [Fact]
+    public async Task NewVersion_SendsPicturesToItsListing_WhichKeepsItsCover()
+    {
+        var host = new FakeHost { PublishedId = null };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+        var window = new PictureWindow { File = new PickedBinaryFile("shot.png", Picture(1)) };
+        harness.ViewModel.WindowServices = window;
+        Assert.False(editor.ShowsSharePictures);
+
+        editor.ShareAsNewVersionCommand.Execute(null);
+        await editor.AddSharePictureCommand.ExecuteAsync(null);
+
+        Assert.True(editor.ShowsSharePictures);
+        Assert.False(Assert.Single(editor.SharePictures).IsCover);
+        Assert.Equal(harness.Localization.FormatSharePicturesNewVersionHint(6, "10 MB"), editor.SharePicturesHint);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+        Assert.Equal(new ImageUpload("vehicle", "ExampleRover", Picture(1).Length), Assert.Single(host.ImageUploads));
+    }
+
+    [Fact]
+    public async Task AddPicture_TakesSixAndRefusesWhatTheHostWouldRefuse()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var localization = harness.Localization;
+        var editor = await ShareAsync(harness);
+        var window = new PictureWindow();
+        harness.ViewModel.WindowServices = window;
+        var still = ListingEditorTests.Png(16, 9);
+        (byte[] Bytes, string Problem)[] refused =
+        [
+            (new byte[ShareImageLimits.MaxBytes + 1], localization.FormatSharePictureTooLarge("bad.png", "10 MB")),
+            ([1, 2, 3], localization.FormatSharePictureNotImage("bad.png")),
+            ([.. still[..33], 0, 0, 0, 8, .. "acTL"u8, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, .. still[33..]], localization.FormatSharePictureAnimated("bad.png")),
+        ];
+        foreach (var (bytes, problem) in refused)
+        {
+            window.File = new PickedBinaryFile("bad.png", bytes);
+            await editor.AddSharePictureCommand.ExecuteAsync(null);
+            Assert.Equal(problem, editor.SharePictureError);
+            Assert.Empty(editor.SharePictures);
+        }
+
+        window.File = new PickedBinaryFile("shot.png", [.. still, .. new byte[ShareImageLimits.MaxBytes - still.Length]]);
+        for (var count = 0; count < ShareImageLimits.MaxCount + 1; count++)
+            await editor.AddSharePictureCommand.ExecuteAsync(null);
+
+        Assert.Null(editor.SharePictureError);
+        Assert.Equal(ShareImageLimits.MaxCount, editor.SharePictures.Count);
+        Assert.False(editor.CanAddSharePicture);
+
+        editor.SharePictures[0].RemoveCommand.Execute(null);
+
+        Assert.True(editor.CanAddSharePicture);
+        Assert.True(editor.SharePictures[0].IsCover);
+    }
+
+    [Fact]
+    public async Task AddPicture_FileThatCannotBeRead_SaysSo()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+        harness.ViewModel.WindowServices = new PictureWindow { Failure = new IOException("Locked.") };
+
+        await editor.AddSharePictureCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.SharePictureUnreadable, editor.SharePictureError);
+    }
+
+    [Theory]
+    [InlineData("invalid_request", "A listing has at most 6 screenshots.")]
+    [InlineData("too_large", "Too large.")]
+    public async Task RefusedPicture_KeepsThePublish_TheOthersGoOn_AndTryAgainSendsOnlyWhatIsMissing(string code, string message)
+    {
+        var host = new FakeHost();
+        host.ImageFailures.Enqueue(new ShareHostException(ShareHostFailure.Host, message, code));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+
+        var editor = await PublishPicturesAsync(harness, 2);
+
+        var expected = code == "too_large" ? harness.Localization.FormatSharePictureTooLargeOnHost("ksamods.gg") : harness.Localization.FormatListingShareHostSaid("ksamods.gg", message);
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.Equal(harness.Localization.FormatShareDoneHeading("Example Rover"), editor.ShareDoneHeadingText);
+        Assert.Single(await harness.Services.SharedContent.ListAsync());
+        Assert.Equal(expected, editor.SharePictures[0].Error);
+        Assert.True(editor.SharePictures[1].IsSent);
+        Assert.Equal(harness.Localization.FormatSharePicturesMissing(1, 2), editor.SharePicturesResultText);
+        Assert.True(editor.CanRetrySharePictures);
+
+        await editor.RetrySharePicturesCommand.ExecuteAsync(null);
+
+        Assert.Equal([Picture(1).Length, Picture(2).Length, Picture(1).Length], host.ImageUploads.Select(upload => upload.Size));
+        Assert.Null(editor.SharePictures[0].Error);
+        Assert.Equal(harness.Localization.SharePicturesSent, editor.SharePicturesResultText);
+        Assert.Single(host.Publishes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PictureThatGetsNoAnswer_StopsTheRest_SaysThatItMayBeThere_AndAnEntryKeepsTheTry(bool serverError)
+    {
+        var host = new FakeHost();
+        host.ImageFailures.Enqueue(serverError
+            ? new ShareHostException(ShareHostFailure.Host, "Try later.", "busy") { IsServerError = true }
+            : new ShareHostException(ShareHostFailure.NetworkError, "The share host could not be reached."));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+
+        var editor = await PublishPicturesAsync(harness, 2);
+
+        var lost = harness.Localization.FormatSharePictureLostAnswer("ksamods.gg");
+        Assert.Single(host.ImageUploads);
+        Assert.Equal(serverError ? $"{lost}\nTry later." : lost, editor.SharePictures[0].Error);
+        Assert.False(editor.SharePictures[1].IsSent);
+        Assert.Equal(harness.Localization.FormatSharePicturesMissing(2, 2), editor.SharePicturesResultText);
+
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        Assert.Equal((ShareFlowStep.Done, 2), (editor.ShareFlowStep, editor.SharePictures.Count));
+
+        await editor.RetrySharePicturesCommand.ExecuteAsync(null);
+
+        Assert.Equal([Picture(1).Length, Picture(1).Length, Picture(2).Length], host.ImageUploads.Select(upload => upload.Size));
+        Assert.Equal(harness.Localization.SharePicturesSent, editor.SharePicturesResultText);
+    }
+
+    [Fact]
+    public async Task HostWithoutThePictureRequest_OffersNoPictures_NowAndAtTheNextShare()
+    {
+        var host = new FakeHost();
+        host.ImageFailures.Enqueue(new ShareHostException(ShareHostFailure.UnexpectedResponse, "ksamods.gg answered with 404.") { IsNotFound = true });
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+
+        var editor = await PublishPicturesAsync(harness, 2);
+
+        Assert.Single(host.ImageUploads);
+        Assert.Empty(editor.SharePictures);
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.Equal(harness.Localization.FormatSharePicturesNotOffered("ksamods.gg"), editor.SharePicturesResultText);
+        Assert.False(editor.CanRetrySharePictures);
+
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        await editor.ShareHostsLoad;
+        await editor.ShareIsDifferentCommand.ExecuteAsync(null);
+
+        Assert.False(editor.IsAskingShareListing);
+        Assert.False(editor.ShowsSharePictures);
+
+        FillRequiredFields(editor);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.Null(editor.SharePicturesResultText);
+    }
+
+    [Fact]
+    public async Task PictureOfANotFoundListing_IsAFailure_AndTheHostStillOffersPictures()
+    {
+        var host = new FakeHost();
+        host.ImageFailures.Enqueue(new ShareHostException(ShareHostFailure.Host, "No such listing.", "not_owner") { IsNotFound = true });
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+
+        var editor = await PublishPicturesAsync(harness, 1);
+
+        Assert.Equal(harness.Localization.FormatSharePictureNotOwner("ksamods.gg", "Example Rover"), Assert.Single(editor.SharePictures).Error);
+        Assert.True(editor.CanRetrySharePictures);
+        Assert.True(editor.ShowsSharePictures);
+    }
+
+    [Fact]
+    public async Task PictureAfterTheSignInEnded_SignsInAgainAndGoesOn()
+    {
+        var host = new FakeHost();
+        host.ImageFailures.Enqueue(new ShareHostException(ShareHostFailure.SignedOut, "ksamods.gg no longer takes the sign-in."));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+
+        var editor = await PublishPicturesAsync(harness, 1);
+
+        Assert.Equal(2, host.SignIns);
+        Assert.True(Assert.Single(editor.SharePictures).IsSent);
+    }
+
+    [Fact]
+    public async Task WhilePicturesGoUp_AnEntryKeepsThem_AndCancelLeavesThemForAnotherTry()
+    {
+        var host = new FakeHost { ImageGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await SharePicturesAsync(harness, 2);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        var publish = editor.PublishToShareHostCommand.ExecuteAsync(null);
+        await host.ImageStarted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.True(editor.IsSendingSharePictures);
+        Assert.Equal(harness.Localization.FormatSharePicturesSending(1, 2), editor.ShareHostProgress);
+        Assert.True(editor.CanCancelShareHost);
+        Assert.False(editor.CanRetrySharePictures);
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        Assert.Equal((ShareFlowStep.Done, 2), (editor.ShareFlowStep, editor.SharePictures.Count));
+
+        editor.CancelShareHostCommand.Execute(null);
+        await publish;
+
+        Assert.Single(host.ImageUploads);
+        Assert.False(editor.IsSharing);
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.Equal(harness.Localization.FormatSharePicturesMissing(2, 2), editor.SharePicturesResultText);
+        Assert.Equal(harness.Localization.FormatSharePictureLostAnswer("ksamods.gg"), editor.SharePictures[0].Error);
+        Assert.True(editor.CanRetrySharePictures);
+
+        host.ImageGate = null;
+        await editor.RetrySharePicturesCommand.ExecuteAsync(null);
+
+        Assert.Null(editor.SharePictures[0].Error);
+        Assert.Equal(harness.Localization.SharePicturesSent, editor.SharePicturesResultText);
+    }
+
+    [Fact]
+    public async Task ShareAnother_ForgetsThePictures()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await PublishPicturesAsync(harness, 1);
+
+        editor.ShareAnotherCommand.Execute(null);
+        await editor.ShareChooseLoad;
+
+        Assert.Empty(editor.SharePictures);
+        Assert.Null(editor.SharePicturesResultText);
     }
 
     [Fact]
@@ -1917,6 +2194,32 @@ public sealed class ShareHostShareTests
     internal static Task<ViewModelHarness> ListedRoverHarnessAsync() =>
         ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost());
 
+    /// <summary>A new listing on the publish step with two pictures, which then go to a host that takes them.</summary>
+    internal static async Task<ViewModelHarness> PictureHarnessAsync(bool publish)
+    {
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await SharePicturesAsync(harness, 2);
+        if (publish)
+        {
+            await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+            await editor.PublishToShareHostCommand.ExecuteAsync(null);
+        }
+
+        return harness;
+    }
+
+    /// <summary>A published listing whose host holds the first of two pictures until the run is cancelled. The test cancels and awaits the task that this returns.</summary>
+    internal static async Task<(ViewModelHarness Harness, Task Publish)> HeldPictureHarnessAsync()
+    {
+        var host = new FakeHost { ImageGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await SharePicturesAsync(harness, 2);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        var publish = editor.PublishToShareHostCommand.ExecuteAsync(null);
+        await host.ImageStarted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        return (harness, publish);
+    }
+
     /// <summary>A share of a new listing that a host with a request has published.</summary>
     internal static async Task<ViewModelHarness> PublishedHarnessAsync()
     {
@@ -1940,6 +2243,33 @@ public sealed class ShareHostShareTests
         await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
         var editor = harness.ViewModel.ListingEditor;
         await editor.ShareHostsLoad;
+        return editor;
+    }
+
+    /// <summary>A valid picture whose length tells it from the others, because the bytes after the end of a PNG do not count.</summary>
+    private static byte[] Picture(int number) => [.. ListingEditorTests.Png(16, 9), .. new byte[number]];
+
+    /// <summary>A share of a new listing that stands on the publish step, with pictures numbered from 1.</summary>
+    private static async Task<ListingEditor> SharePicturesAsync(ViewModelHarness harness, int count)
+    {
+        var editor = await ShareAsync(harness);
+        var window = new PictureWindow();
+        harness.ViewModel.WindowServices = window;
+        for (var number = 1; number <= count; number++)
+        {
+            window.File = new PickedBinaryFile($"shot{number}.png", Picture(number));
+            await editor.AddSharePictureCommand.ExecuteAsync(null);
+        }
+
+        FillRequiredFields(editor);
+        return editor;
+    }
+
+    private static async Task<ListingEditor> PublishPicturesAsync(ViewModelHarness harness, int count)
+    {
+        var editor = await SharePicturesAsync(harness, count);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
         return editor;
     }
 
@@ -2002,6 +2332,25 @@ public sealed class ShareHostShareTests
 
     private sealed record Publish(string UploadId, string Version, string Status, ListingDraft? Listing);
 
+    private sealed record ImageUpload(string ListingType, string ListingId, int Size);
+
+    private sealed class PictureWindow : IWindowServices
+    {
+        public PickedBinaryFile? File { get; set; }
+
+        public Exception? Failure { get; init; }
+
+        public Task<string?> SaveTextFileAsync(string title, string suggestedFileName, string fileTypeName, string text) => Task.FromResult<string?>(null);
+
+        public Task<string?> SaveFileAsync(string title, string suggestedFileName, string extension, string fileTypeName, Func<Stream, Task> write) => Task.FromResult<string?>(null);
+
+        public Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName) => Task.FromResult<PickedTextFile?>(null);
+
+        public Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes) => Failure is { } failure ? throw failure : Task.FromResult(File);
+
+        public Task CopyTextAsync(string text) => Task.CompletedTask;
+    }
+
     private sealed class FakeHost : IShareHostClient
     {
         private bool _signedIn;
@@ -2011,6 +2360,16 @@ public sealed class ShareHostShareTests
         public ConcurrentQueue<Upload> Uploads { get; } = new();
 
         public ConcurrentQueue<Publish> Publishes { get; } = new();
+
+        public ConcurrentQueue<ImageUpload> ImageUploads { get; } = new();
+
+        /// <summary>The answer to each picture in turn, where null takes it, and the host takes every picture after the queue.</summary>
+        public Queue<ShareHostException?> ImageFailures { get; } = new();
+
+        public TaskCompletionSource ImageStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Holds each picture until the test lets it through, for what the player does during the send.</summary>
+        public TaskCompletionSource? ImageGate { get; set; }
 
         public ShareHostException? UploadFailure { get; set; }
 
@@ -2077,6 +2436,20 @@ public sealed class ShareHostShareTests
                 await during();
 
             return (RefuseToken() ?? PublishFailure) is { } failure ? throw failure : new SharePublished(PublishedId, version, PullRequest, Page);
+        }
+
+        public async Task UploadImageAsync(ShareHost host, string listingType, string listingId, ReadOnlyMemory<byte> image, CancellationToken cancellationToken = default)
+        {
+            ImageUploads.Enqueue(new ImageUpload(listingType, listingId, image.Length));
+            ImageStarted.TrySetResult();
+            if (ImageGate is { } gate)
+                await gate.Task.WaitAsync(cancellationToken);
+
+            if (RefuseToken() is { } refused)
+                throw refused;
+
+            if (ImageFailures.TryDequeue(out var failure) && failure is not null)
+                throw failure;
         }
 
         private ShareHostException? RefuseToken()
