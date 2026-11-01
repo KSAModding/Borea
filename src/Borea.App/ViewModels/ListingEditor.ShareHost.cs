@@ -35,7 +35,7 @@ public sealed partial class ListingEditor
     private ShareHost? _checkedHost;
     private IReadOnlyList<ShareCheck> _shareChecks = [];
     private (ShareHost Host, ShareUpload Upload, string? ListingId)? _shareUpload;
-    private (string Name, ShareHost Host, Uri? Page, bool IsNewVersion)? _sharePublished;
+    private (string Name, ShareHost Host, Uri? Page, bool IsNewVersion, string? SiteLink)? _sharePublished;
     private (string HostName, string Page, string? CompletePage, string Code)? _shareHostCode;
     private CancellationTokenSource? _publishRun;
     private CancellationTokenSource? _signInRun;
@@ -299,6 +299,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareDoneHeadingText));
         OnPropertyChanged(nameof(ShareDoneDiscoverText));
         OnPropertyChanged(nameof(ShareDoneLink));
+        OnPropertyChanged(nameof(ShareDoneCopyLink));
         OnPropertyChanged(nameof(ShareDoneOpenText));
         RefreshShareErrorAction();
         RefreshShareHostCode();
@@ -571,7 +572,7 @@ public sealed partial class ListingEditor
             // A publish without an id in its answer is a new version, which always has the id of the listing on the host.
             var id = published.Id ?? shared.ListingId!;
             _shareUpload = null;
-            _sharePublished = (ShareListingName, shared.Host, published.Page, listing is null);
+            _sharePublished = (ShareListingName, shared.Host, published.Page, listing is null, ShareLinks.ForPublished(share.Entry.Kind.ToContentType(), id));
             SharePullRequest = published.PullRequest;
             IsShareDetailsOpen = false;
             RefreshShareRun();

@@ -11,7 +11,9 @@
   var BLOCK_CONTROL = /[\x00-\x08\x0b-\x1f\x7f]/g;
   var DOT = String.fromCharCode(0xb7);
   // No prototype, so an author key such as "constructor" finds nothing.
-  var TYPES = Object.assign(Object.create(null), { mod: "Mod", "mod-loader": "Mod loader", modpack: "Modpack" });
+  var TYPES = Object.assign(Object.create(null), { mod: "Mod", "mod-loader": "Mod loader", modpack: "Modpack", vehicle: "Vehicle", save: "Save" });
+  // The files next to the main document and the root keys of their arrays, the same as the generator.
+  var TYPE_FILES = Object.assign(Object.create(null), { vehicle: { file: "snapshot-vehicles.json", key: "vehicles" }, save: { file: "snapshot-saves.json", key: "saves" } });
   var LINKS = Object.assign(Object.create(null), { forums: "Forum", repository: "Repository", spacedock: "SpaceDock", bugtracker: "Bug tracker", homepage: "Homepage", discussions: "Discussions" });
   var LINK_ORDER = Object.keys(LINKS);
   // ReleaseChannels in Borea.Core: stable offers stable releases, testing adds testing ones, and dev offers every status.
@@ -151,14 +153,21 @@
     return links.sort(function (a, b) { return a.rank - b.rank; });
   }
 
+  // The site of the homepage link, which a share host sets to its page of the listing (RFC 0094).
+  function sourceOf(links) {
+    var homepage = links.filter(function (item) { return item.label === LINKS.homepage; })[0];
+    return homepage ? homepage.url : null;
+  }
+
   function authorsOf(authored) {
     return Array.isArray(authored.authors) ? authored.authors.map(text).filter(Boolean) : [];
   }
 
-  function displayTags(snapshot, tags) {
+  function displayTags(snapshot, tags, kind) {
     var written = Array.isArray(tags) ? tags.map(text).filter(Boolean) : [];
     var chosen = written.map(function (name) { return name.toLowerCase(); });
-    var curated = isObject(snapshot) && isObject(snapshot.tags) && Array.isArray(snapshot.tags.mod) ? snapshot.tags.mod : [];
+    // The vocabulary holds mods and packs only.
+    var curated = !TYPE_FILES[kind] && isObject(snapshot) && isObject(snapshot.tags) && Array.isArray(snapshot.tags.mod) ? snapshot.tags.mod : [];
     var known = [];
     var names = [];
     curated.forEach(function (tag) {
@@ -449,7 +458,8 @@
     return null;
   }
 
-  function listingView(entry, snapshot) {
+  function listingView(entry, snapshot, kind) {
+    kind = kind || "mod";
     var authored = entry.authored;
     var versions = isObject(snapshot.game_versions) && Array.isArray(snapshot.game_versions.versions) ? snapshot.game_versions.versions : [];
     var release = newestRelease(Array.isArray(entry.releases) ? entry.releases : []);
@@ -462,8 +472,9 @@
       game = gameText(text(compatibility.game_min), text(compatibility.game_max));
     }
     var channel = release ? text(release.release_status) : null;
+    var links = linksOf(authored);
     var view = {
-      kind: "mod",
+      kind: kind,
       id: entry.id,
       name: text(authored.name) || entry.id,
       type: TYPES[text(authored.type)] || "Mod",
@@ -479,9 +490,10 @@
       modCount: null,
       forumList: null,
       newer: [],
-      tags: displayTags(snapshot, authored.tags),
-      links: linksOf(authored),
+      tags: displayTags(snapshot, authored.tags, kind),
+      links: links,
       images: imageRecords(authored),
+      source: TYPE_FILES[kind] ? sourceOf(links) : null,
       notices: []
     };
     var notice = statusNotice(entry);
@@ -490,7 +502,7 @@
     }
     if (authored.status === "deprecated") {
       var successor = authored.superseded_by;
-      var known = validId(successor) ? findEntry(snapshot.listings, successor) : null;
+      var known = validId(successor) ? findEntry(TYPE_FILES[kind] ? snapshot[TYPE_FILES[kind].key] : snapshot.listings, successor) : null;
       if (known && isObject(known.authored)) {
         view.notices.push({ text: "Deprecated by its author. Its successor is", link: { label: text(known.authored.name) || known.id, id: known.id } });
       } else {
@@ -528,6 +540,7 @@
       tags: displayTags(snapshot, authored.tags),
       links: linksOf(authored),
       images: imageRecords(authored),
+      source: null,
       notices: []
     };
     (Array.isArray(authored.mods) ? authored.mods : []).forEach(function (pin) {
@@ -753,7 +766,8 @@
   function actionNodes(view, base) {
     var fragment = document.createDocumentFragment();
     var actions = element("div", "actions");
-    actions.appendChild(link("borea://" + view.kind + "/" + view.id, "Open in Borea", "button desktop-only"));
+    // The generator explains why a vehicle or save opens through a mod link.
+    actions.appendChild(link("borea://" + (view.kind === "pack" ? "pack" : "mod") + "/" + view.id, "Open in Borea", "button desktop-only"));
     actions.appendChild(link("borea://install/" + view.id, "Install with Borea", "button secondary desktop-only"));
     var copy = element("button", "button handheld-only", "Copy link");
     copy.setAttribute("type", "button");
@@ -797,7 +811,7 @@
       line.setAttribute("role", "note");
       if (notice.link) {
         line.appendChild(document.createTextNode(" "));
-        line.appendChild(link(root + "mod/" + notice.link.id + "/", notice.link.label));
+        line.appendChild(link(root + view.kind + "/" + notice.link.id + "/", notice.link.label));
         line.appendChild(document.createTextNode("."));
       }
       intro.appendChild(line);
@@ -884,6 +898,11 @@
     if (view.license) {
       fact("License", view.license);
     }
+    if (view.source) {
+      var source = link(view.source.href, view.source.hostname);
+      source.rel = "nofollow noopener";
+      fact("Source", source);
+    }
     details.appendChild(facts);
     panel.appendChild(details);
     body.appendChild(panel);
@@ -920,7 +939,7 @@
   }
 
   var root = new URL(document.baseURI).pathname;
-  var found = new RegExp("^" + root.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(mod|pack)/([^/]+)/?$").exec(location.pathname);
+  var found = new RegExp("^" + root.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(mod|vehicle|save|pack)/([^/]+)/?$").exec(location.pathname);
   var notFound = document.getElementById("not-found");
   var loading = document.getElementById("loading");
   var page = document.getElementById("page");
@@ -938,20 +957,38 @@
   notFound.hidden = true;
   loading.hidden = false;
 
-  fetch(SNAPSHOT)
-    .then(function (response) {
+  var typeFile = TYPE_FILES[kind];
+
+  function read(address) {
+    return fetch(address).then(function (response) {
+      // A type file that is not there is empty.
+      if (typeFile && address !== SNAPSHOT && response.status === 404) {
+        return { snapshot_version: 1 };
+      }
       if (!response.ok) {
         throw new Error("HTTP " + response.status);
       }
       return response.json();
-    })
-    .then(function (snapshot) {
+    });
+  }
+
+  Promise.all([read(SNAPSHOT), typeFile ? read(new URL(typeFile.file, SNAPSHOT).href) : null])
+    .then(function (documents) {
+      var snapshot = documents[0];
       if (!isObject(snapshot) || snapshot.snapshot_version !== 1) {
         throw new Error("unknown snapshot");
       }
-      var entry = findEntry(kind === "mod" ? snapshot.listings : snapshot.packs, id);
+      if (typeFile) {
+        if (!isObject(documents[1]) || documents[1].snapshot_version !== 1) {
+          throw new Error("unknown snapshot");
+        }
+        snapshot[typeFile.key] = documents[1][typeFile.key];
+      }
+      var entry = findEntry(typeFile ? snapshot[typeFile.key] : kind === "mod" ? snapshot.listings : snapshot.packs, id);
       if (!entry) {
-        showNotFound("The content index has no " + kind + " with this id.");
+        showNotFound(typeFile
+          ? "This " + kind + " is not listed yet. A new one can take some hours to show up here."
+          : "The content index has no " + kind + " with this id.");
         return;
       }
       if (stateOf(entry) === "delisted") {
@@ -962,7 +999,8 @@
         location.replace(root + kind + "/" + entry.id + "/");
         return;
       }
-      var view = kind === "mod" ? (isObject(entry.authored) ? listingView(entry, snapshot) : null) : packView(entry, snapshot);
+      var view = kind === "pack" ? packView(entry, snapshot)
+        : isObject(entry.authored) && (!typeFile || entry.authored.type === kind) ? listingView(entry, snapshot, kind) : null;
       if (view) {
         render(view);
       } else {

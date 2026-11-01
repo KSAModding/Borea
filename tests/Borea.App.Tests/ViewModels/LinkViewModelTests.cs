@@ -7,9 +7,11 @@ using Borea.App.Links;
 using Borea.App.Tests.Links;
 using Borea.App.ViewModels;
 using Borea.Core.History;
+using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
+using static Borea.App.Tests.ViewModels.UserContentFixtures;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -256,6 +258,125 @@ public sealed class LinkViewModelTests
         Assert.Equal(harness.Localization.FormatLinkAlreadyInstalled("tools-pack", "Main"), viewModel.Toasts.Items[^1].Message);
     }
 
+    [Theory]
+    [InlineData("ExampleRover", "Example Rover")]
+    [InlineData("CampaignSave", "Campaign")]
+    public async Task InstallLink_VehicleOrSave_WaitsEvenWithoutAWarning_AndTheGoInstalls(string id, string name)
+    {
+        var rover = RoverArchive();
+        var campaign = SaveArchive("<Universe />");
+        var types = new Dictionary<string, string>(TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")));
+        foreach (var (file, content) in TypeFiles(ContentIndexTypeFiles.Saves, SaveEntry(("1.0.0", campaign))))
+            types[file] = content;
+        using var harness = await CreateWithGameAsync(
+            snapshot => snapshot,
+            typeFiles: types.ToDictionary(type => type.Key, type => type.Value.Replace("\"game_min\": \"2026.8.19.5261\", \"game_min_revision\": 5261", "\"game_min\": \"2026.8.3.5117\", \"game_min_revision\": 5117", StringComparison.Ordinal)),
+            respond: request => request.RequestUri?.AbsoluteUri switch
+            {
+                RoverUrl => UserContentFixtures.ArchiveResponse(rover),
+                SaveUrl => UserContentFixtures.ArchiveResponse(campaign),
+                _ => null,
+            });
+        var instance = await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.OpenLinkAsync($"borea://install/{id}");
+
+        var row = viewModel.SelectedContent!;
+        Assert.True(viewModel.CurrentWindowContent);
+        Assert.Equal(id, row.ModId);
+        Assert.Null(row.InstallWarning);
+        Assert.True(row.IsConfirmingInstall);
+        Assert.Equal(harness.Localization.FormatLinkInstall($"{name} 1.0.0", "Main"), row.LinkRequestText);
+        Assert.Empty(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        Assert.Equal(id, Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).ListingId);
+        Assert.Null(row.LinkRequestText);
+
+        await viewModel.OpenLinkAsync($"borea://install/{id}");
+
+        Assert.False(viewModel.SelectedContent!.IsConfirmingInstall);
+        Assert.Equal(harness.Localization.FormatLinkAlreadyInstalled(name, "Main"), viewModel.Toasts.Items[^1].Message);
+    }
+
+    [Fact]
+    public async Task InstallLink_VehicleThatNeedsAMod_HoldsTheModInThePlan()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync(dependencies: Required("MeasureTools"));
+        var instance = await ActivateInstanceAsync(harness);
+
+        await harness.ViewModel.OpenLinkAsync("borea://install/examplerover");
+
+        var row = harness.ViewModel.SelectedContent!;
+        Assert.Equal("1.1.0", row.PendingContentPlan!.Release.Version.ToString());
+        Assert.Equal("MeasureTools", row.PendingPlan!.Operations.Single().Release.ModId);
+        Assert.NotNull(row.AddedModsText);
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task InstallLink_VehicleWithAVersion_HoldsThatVersion_AndAVersionNotInTheIndexOffersTheNewest()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.OpenLinkAsync("borea://install/ExampleRover?version=1.0.0");
+
+        var row = viewModel.SelectedContent!;
+        Assert.Equal("1.0.0", row.PendingContentPlan!.Release.Version.ToString());
+        Assert.Equal(harness.Localization.FormatLinkInstall("Example Rover 1.0.0", "Main"), row.LinkRequestText);
+
+        await viewModel.OpenLinkAsync("borea://install/ExampleRover?version=9.9.9");
+
+        Assert.Equal("1.1.0", row.PendingContentPlan!.Release.Version.ToString());
+        Assert.StartsWith(harness.Localization.FormatLinkVersionMissing("9.9.9"), row.LinkRequestText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InstallLink_VehicleInTheInstance_SaysSo_AndAnotherVersionWaitsAsAnUpdate()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        var instance = await UserContentViewModelTests.ActiveInstanceWithRoverAsync(harness);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.OpenLinkAsync("borea://install/ExampleRover");
+
+        Assert.False(viewModel.SelectedContent!.IsConfirmingInstall);
+        Assert.Equal(harness.Localization.FormatLinkAlreadyInstalled("Example Rover", "Main"), viewModel.Toasts.Items[^1].Message);
+
+        await viewModel.OpenLinkAsync("borea://install/ExampleRover?version=1.1.0");
+
+        var row = viewModel.SelectedContent!;
+        Assert.Equal("1.1.0", row.PendingContentPlan!.Release.Version.ToString());
+        Assert.NotNull(row.PendingContentPlan.Installed);
+        Assert.Equal(harness.Localization.FormatLinkInstall("Example Rover 1.1.0", "Main"), row.LinkRequestText);
+        Assert.Equal("1.0.0", Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version.ToString());
+    }
+
+    [Fact]
+    public async Task InstallLink_VehicleWithATakenName_AsksForAName_ThenWaitsWithTheRequest()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        var instance = await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+        Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover"));
+
+        await viewModel.OpenLinkAsync("borea://install/ExampleRover");
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Null(viewModel.SelectedContent!.LinkRequestText);
+
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsNameModalOpen);
+        Assert.Equal(harness.Localization.FormatLinkInstall("Example Rover 1.1.0", "Main"), viewModel.SelectedContent.LinkRequestText);
+        Assert.Empty(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+    }
+
     [Fact]
     public async Task InstallLink_Pack_WaitsForTheConfirmation()
     {
@@ -389,7 +510,7 @@ public sealed class LinkViewModelTests
         => harness.NewViewModel(harness.Services.AppPreferences, preferences, linkHandler: new LinkHandler(registrar, "/opt/Borea/borea", writeLauncher));
 
     /// <summary>A harness whose game folder holds a game of version 2026.8.3.5117.</summary>
-    private static Task<ViewModelHarness> CreateWithGameAsync(Func<string, string> editSnapshot) =>
+    private static Task<ViewModelHarness> CreateWithGameAsync(Func<string, string> editSnapshot, IReadOnlyDictionary<string, string>? typeFiles = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null) =>
         ViewModelHarness.CreateAsync(
             services =>
             {
@@ -397,7 +518,9 @@ public sealed class LinkViewModelTests
                 File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
                 return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
             },
-            editSnapshot: editSnapshot);
+            editSnapshot: editSnapshot,
+            typeFiles: typeFiles,
+            respond: respond);
 
     /// <summary>Makes MeasureTools 1.1.10 support the game of <see cref="CreateWithGameAsync"/>.</summary>
     private static string Compatible(string snapshot)
