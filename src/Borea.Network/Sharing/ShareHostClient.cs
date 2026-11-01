@@ -152,8 +152,7 @@ public sealed class ShareHostClient : IShareHostClient
         if (upload?.Id is not { Length: > 0 } id)
             throw Unexpected(host, reply);
 
-        var checks = upload.Checks?.Where(check => check.Name is { Length: > 0 }).Select(check => new ShareCheck(check.Name!, check.Passed, check.Message)).ToList() ?? [];
-        return new ShareUpload(id, checks, upload.Version, upload.Listing);
+        return new ShareUpload(id, ToChecks(upload.Checks ?? []), upload.Version, upload.Listing);
     }
 
     public async Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
@@ -176,23 +175,37 @@ public sealed class ShareHostClient : IShareHostClient
 
         using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
         var reply = await SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, cancellationToken).ConfigureAwait(false);
-        var published = Parse<ShareHostJson.Published>(reply.Body);
-
-        if (published?.Id is not { Length: > 0 } id || published.Version is not { Length: > 0 } released)
-            throw Unexpected(host, reply);
+        var published = Parse<ShareHostJson.Published>(reply.Body) ?? new ShareHostJson.Published();
 
         // Borea opens this page in the browser, and the host opens every listing pull request on GitHub.
-        Uri? pullRequest = null;
-        if (published.PullRequest is not null
-            && (!Uri.TryCreate(published.PullRequest, UriKind.Absolute, out pullRequest)
-                || pullRequest.Scheme != Uri.UriSchemeHttps
-                || !string.Equals(pullRequest.Host, "github.com", StringComparison.OrdinalIgnoreCase)))
-        {
-            throw Unexpected(host, reply);
-        }
-
-        return new SharePublished(id, released, pullRequest);
+        var pullRequest = Https(ShareHostJson.Text(published.PullRequest)) is { } link && string.Equals(link.Host, "github.com", StringComparison.OrdinalIgnoreCase) ? link : null;
+        return new SharePublished(
+            ShareHostJson.Text(published.Id) is { Length: > 0 } id ? id : listing?.Id,
+            ShareHostJson.Text(published.Version) is { Length: > 0 } released ? released : version,
+            pullRequest,
+            PageOnHost(host, ShareHostJson.Text(published.Page)));
     }
+
+    /// <summary>
+    /// The address when it is https on the host of the api, or on a sub-domain or a parent of it, because a host may serve its pages
+    /// and its api from different names. A top-level name such as gg counts as no parent.
+    /// </summary>
+    internal static Uri? PageOnHost(ShareHost host, string? address)
+    {
+        if (Https(address) is not { } page)
+            return null;
+
+        var api = host.Api.Host;
+        var site = page.Host;
+        return string.Equals(site, api, StringComparison.OrdinalIgnoreCase)
+            || site.EndsWith("." + api, StringComparison.OrdinalIgnoreCase)
+            || (site.Contains('.') && api.EndsWith("." + site, StringComparison.OrdinalIgnoreCase))
+                ? page
+                : null;
+    }
+
+    private static Uri? Https(string? address) =>
+        Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps ? uri : null;
 
     /// <summary>Signs in with the kept token. A refresh token that the host refuses is deleted.</summary>
     private async Task<bool> ResumeAsync(ShareHost host, CancellationToken cancellationToken)
@@ -347,23 +360,57 @@ public sealed class ShareHostClient : IShareHostClient
 
     // A verification page outside the host would send the player somewhere the host does not control.
     private static GitHubDeviceCode? ToDeviceCode(ShareHost host, ShareHostJson.DeviceCode code) =>
-        !string.IsNullOrWhiteSpace(code.UserCode)
-        && Uri.TryCreate(code.VerificationUri, UriKind.Absolute, out var page)
-        && page.Scheme == Uri.UriSchemeHttps
-        && string.Equals(page.Host, host.Api.Host, StringComparison.OrdinalIgnoreCase)
-            ? new GitHubDeviceCode(code.UserCode, page.AbsoluteUri)
+        !string.IsNullOrWhiteSpace(code.UserCode) && OnApiHost(host, code.VerificationUri) is { } page
+            ? new GitHubDeviceCode(code.UserCode, page.AbsoluteUri, OnApiHost(host, ShareHostJson.Text(code.VerificationUriComplete))?.AbsoluteUri)
             : null;
+
+    private static Uri? OnApiHost(ShareHost host, string? address) =>
+        Https(address) is { } page && string.Equals(page.Host, host.Api.Host, StringComparison.OrdinalIgnoreCase) ? page : null;
 
     private static ShareHostException Refused(ShareHost host, Reply reply) =>
         Parse<ShareHostJson.Error>(reply.Body) is { Message.Length: > 0 } error
             ? new ShareHostException(ShareHostFailure.Host, error.Message, error.Code)
+            {
+                Checks = ReadChecks(error.Checks),
+                RetryAfter = error.RetryAfter.ValueKind == JsonValueKind.Number && error.RetryAfter.TryGetInt32(out var seconds) && seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
+                FieldErrors = ReadFieldErrors(error.FieldErrors),
+            }
             : Unexpected(host, reply);
+
+    private static IReadOnlyList<ShareCheck>? ReadChecks(JsonElement checks) =>
+        checks.ValueKind == JsonValueKind.Array && Parse<List<ShareHostJson.Check>>(checks.GetRawText()) is { } list ? ToChecks(list) : null;
+
+    // A JSON null in the list reads as a null entry, which OfType leaves out.
+    private static List<ShareCheck> ToChecks(List<ShareHostJson.Check> checks) =>
+        [.. checks.OfType<ShareHostJson.Check>().Where(check => check.Name is { Length: > 0 }).Select(check => new ShareCheck(check.Name!, check.Passed, check.Message))];
+
+    /// <summary>Takes a string or a list of strings for each field and skips anything else, because the API names no exact shape.</summary>
+    private static Dictionary<string, IReadOnlyList<string>>? ReadFieldErrors(JsonElement errors)
+    {
+        if (errors.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var fields = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (var field in errors.EnumerateObject())
+        {
+            List<string> lines = field.Value.ValueKind switch
+            {
+                JsonValueKind.String => [field.Value.GetString()!],
+                JsonValueKind.Array => [.. field.Value.EnumerateArray().Where(line => line.ValueKind == JsonValueKind.String).Select(line => line.GetString()!)],
+                _ => [],
+            };
+            if (lines.Count > 0)
+                fields[field.Name] = lines;
+        }
+
+        return fields;
+    }
 
     private static ShareHostException SignInError(ShareHost host, string error, string? description) =>
         new(ShareHostFailure.Host, description ?? $"{host.Name} refused the sign-in with {error}.", error);
 
     private static ShareHostException Unexpected(ShareHost host, Reply reply) =>
-        new(ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.");
+        new((int)reply.Status >= 500 ? ShareHostFailure.Unavailable : ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.");
 
     private static ShareHostException Network() => new(ShareHostFailure.NetworkError, "The share host could not be reached.");
 

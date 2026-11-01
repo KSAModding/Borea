@@ -29,7 +29,7 @@ public sealed class ShareHostShareTests
         } }
         """;
 
-    private static readonly ShareUpload Checked = new("u42", [new ShareCheck("meta.toml", true, null), new ShareCheck("install.folder", true, null)], "1.0.0", "id = \"ExampleRover\"\n");
+    private static readonly ShareUpload Checked = new("u42", [new ShareCheck("meta.toml", true, null), new ShareCheck("folder", true, null)], "1.0.0", "id = \"ExampleRover\"\n");
 
     [Fact]
     public async Task FirstShare_SignsInUploadsShowsTheChecksAndPublishes()
@@ -50,7 +50,7 @@ public sealed class ShareHostShareTests
         Assert.Equal(("Example Rover.zip", null), (upload.FileName, upload.ListingId));
         Assert.True(upload.Size > 0);
         Assert.Equal(("ExamplePartsMod", "required"), (upload.Dependencies[0].Id, upload.Dependencies[0].Kind));
-        Assert.Equal([new ShareCheckRow(harness.Localization.FormatListingShareCheckPassed("meta.toml"), true), new ShareCheckRow(harness.Localization.FormatListingShareCheckPassed("install.folder"), true)], editor.ShareHostChecks);
+        Assert.Equal([new ShareCheckRow(harness.Localization.FormatListingShareCheckPassed("meta.toml"), true), new ShareCheckRow(harness.Localization.FormatListingShareCheckPassed("folder"), true)], editor.ShareHostChecks);
         Assert.Equal(("1.0.0", "id = \"ExampleRover\"\n"), (editor.ShareHostVersion, editor.ShareHostListingText));
         Assert.True(editor.CanPublishToShareHost);
 
@@ -161,19 +161,33 @@ public sealed class ShareHostShareTests
     [Fact]
     public async Task FailedCheck_IsMarkedAndBlocksThePublish()
     {
-        var host = new FakeHost { Upload = new ShareUpload("u42", [new ShareCheck("meta.toml", true, null), new ShareCheck("install.folder", false, "Taken by OtherRover.")], "1.0.0", null) };
+        var host = new FakeHost { Upload = new ShareUpload("u42", [new ShareCheck("meta.toml", true, null), new ShareCheck("folder", false, "Taken by OtherRover.")], "1.0.0", null) };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
         var editor = await ShareAsync(harness);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
         var failed = editor.ShareHostChecks[1];
-        Assert.Equal((harness.Localization.FormatListingShareCheckFailed("install.folder", "Taken by OtherRover."), true), (failed.Text, failed.Failed));
+        Assert.Equal((harness.Localization.FormatListingShareCheckFailed("folder", "Taken by OtherRover."), true), (failed.Text, failed.Failed));
         Assert.False(editor.ShareHostChecks[0].Failed);
         Assert.False(editor.CanPublishToShareHost);
         Assert.Equal(harness.Localization.ListingShareHostChecksFailed, editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
         Assert.True(editor.ShowsIndexOnlyCards);
+    }
+
+    [Fact]
+    public async Task RefusedUpload_ShowsItsChecks()
+    {
+        var failure = new ShareHostException(ShareHostFailure.Host, "A check failed.", "invalid_archive") { Checks = [new ShareCheck("meta.toml", true, null), new ShareCheck("meta.toml", true, "Read twice."), new ShareCheck("folder", false, "Taken by OtherRover.")] };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost { UploadFailure = failure });
+        var editor = await ShareAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal([new ShareCheckRow(harness.Localization.FormatListingShareCheckPassed("meta.toml"), true), new ShareCheckRow(harness.Localization.FormatListingShareCheckFailed("folder", "Taken by OtherRover."), false)], editor.ShareHostChecks);
+        Assert.Equal(harness.Localization.FormatListingShareHostSaid("ksamods.gg", "A check failed."), editor.ShareHostError);
+        Assert.False(editor.HasShareUpload);
     }
 
     [Fact]
@@ -195,6 +209,19 @@ public sealed class ShareHostShareTests
         Assert.Null(editor.SharePullRequest);
         Assert.Null(editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
+    }
+
+    [Fact]
+    public async Task NewVersionAnswerWithoutId_ShowsTheIdOfTheListing()
+    {
+        var host = new FakeHost { PublishedId = null, PullRequest = null };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatListingShareHostReleased("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
     }
 
     [Fact]
@@ -269,6 +296,8 @@ public sealed class ShareHostShareTests
 
         public Uri? PullRequest { get; init; } = new("https://github.com/KSAModding/content-index/pull/250");
 
+        public string? PublishedId { get; init; } = "ExampleRover";
+
         public bool IsSignedIn(ShareHost host) => _signedIn;
 
         public Task SignInAsync(ShareHost host, IProgress<GitHubDeviceCode>? progress = null, bool keepSignedIn = false, CancellationToken cancellationToken = default)
@@ -290,7 +319,7 @@ public sealed class ShareHostShareTests
         public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
         {
             Publishes.Enqueue(new Publish(uploadId, version, status, listing));
-            return Task.FromResult(new SharePublished("ExampleRover", version, PullRequest));
+            return Task.FromResult(new SharePublished(PublishedId, version, PullRequest));
         }
     }
 }

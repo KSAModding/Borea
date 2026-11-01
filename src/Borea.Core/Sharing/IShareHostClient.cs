@@ -40,11 +40,15 @@ public sealed record ShareUpload(string Id, IReadOnlyList<ShareCheck> Checks, st
 
 public sealed record ShareCheck(string Name, bool Passed, string? Message);
 
+/// <summary>A release that is live, because the host answered the publish with a 2xx, also when the rest of its answer is odd.</summary>
+/// <param name="Id">The id the host names, else the id of the listing that was sent. Null for a new version when the host names none, because that publish sends no id.</param>
+/// <param name="Version">The version the host names, else the version that was sent.</param>
 /// <param name="PullRequest">
 /// The listing pull request the host opened on GitHub, or null. A new version whose dependency list did not change needs none,
 /// and a host may open the pull request of a new listing later, together with others.
 /// </param>
-public sealed record SharePublished(string Id, string Version, Uri? PullRequest);
+/// <param name="Page">The public page of the listing on the host, or null when the host names none that Borea can trust.</param>
+public sealed record SharePublished(string? Id, string Version, Uri? PullRequest, Uri? Page = null);
 
 public enum ShareHostFailure
 {
@@ -61,6 +65,9 @@ public enum ShareHostFailure
 
     /// <summary>The host answered with something that does not follow the API.</summary>
     UnexpectedResponse,
+
+    /// <summary>The host answered with a 5xx and no message for the player, so it has a problem right now.</summary>
+    Unavailable,
 }
 
 public sealed class ShareHostException : Exception
@@ -76,4 +83,13 @@ public sealed class ShareHostException : Exception
 
     /// <summary>The machine-readable error of the host, or null.</summary>
     public string? Error { get; }
+
+    /// <summary>What the host checked in a refused archive, or null when the answer names no checks.</summary>
+    public IReadOnlyList<ShareCheck>? Checks { get; init; }
+
+    /// <summary>How long the host asks the player to wait, or null when the answer names no time.</summary>
+    public TimeSpan? RetryAfter { get; init; }
+
+    /// <summary>The lines of the host for each field of a refused request, or null when the answer has none.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>>? FieldErrors { get; init; }
 }
