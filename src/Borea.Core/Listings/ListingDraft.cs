@@ -20,6 +20,9 @@ public sealed record ListingDraft
 
     public const int SpecVersion = 1;
 
+    /// <summary>The length in runes above which an abstract is too long for the list views.</summary>
+    public const int AbstractLimit = 280;
+
     /// <summary>The listed document this draft changes, or for a pack the listed version it follows. Null for a new document.</summary>
     public AuthoredTable? Original { get; init; }
 
