@@ -614,4 +614,36 @@
             </Border>
         </Button>
     </DataTemplate>
+    <!-- the search over the listed mods that adds an entry, on the full form of a listing and on the share steps -->
+    <DataTemplate x:Key="ListingDependencySearch" x:DataType="vm:MainViewModel">
+        <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,8,Auto">
+                <TextBox Classes="field search" Text="{Binding ListingEditor.DependencyQuery}" PlaceholderText="{Binding Localization.DiscoverSearchPlaceholder}" AutomationProperties.Name="{Binding Localization.ListingSearchDependencies}">
+                    <TextBox.InnerLeftContent>
+                        <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingAddMember}" Command="{Binding ListingEditor.AddListedDependencyCommand}" />
+            </Grid>
+            <ListBox ItemsSource="{Binding ListingEditor.DependencyMatches}" SelectedItem="{Binding ListingEditor.SelectedDependencyMatch}" MaxHeight="240" AutomationProperties.Name="{Binding Localization.ListingSearchDependencies}" IsVisible="{Binding !!ListingEditor.DependencyMatches.Count}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ListedListing">
+                        <Grid ColumnDefinitions="*,16,Auto">
+                            <StackPanel Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsLoader}">
+                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeModLoader}" />
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding AuthorsText}" MaxWidth="240" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedMatch}" IsVisible="{Binding ListingEditor.HasNoDependencyMatch}" />
+        </StackPanel>
+    </DataTemplate>
 </ResourceDictionary>

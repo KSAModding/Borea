@@ -660,33 +660,7 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0">
-                                    <TextBox Classes="field search" Text="{Binding ListingEditor.DependencyQuery}" PlaceholderText="{Binding Localization.ListingSearchDependencies}" AutomationProperties.Name="{Binding Localization.ListingSearchDependencies}">
-                                        <TextBox.InnerLeftContent>
-                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />
-                                        </TextBox.InnerLeftContent>
-                                    </TextBox>
-                                    <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingAddMember}" Command="{Binding ListingEditor.AddListedDependencyCommand}" />
-                                </Grid>
-                                <ListBox ItemsSource="{Binding ListingEditor.DependencyMatches}" SelectedItem="{Binding ListingEditor.SelectedDependencyMatch}" MaxHeight="240" AutomationProperties.Name="{Binding Localization.ListingSearchDependencies}" IsVisible="{Binding !!ListingEditor.DependencyMatches.Count}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:ListedListing">
-                                            <Grid ColumnDefinitions="*,16,Auto">
-                                                <StackPanel Spacing="2">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsLoader}">
-                                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeModLoader}" />
-                                                        </Border>
-                                                    </StackPanel>
-                                                    <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                                <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding AuthorsText}" MaxWidth="240" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedMatch}" IsVisible="{Binding ListingEditor.HasNoDependencyMatch}" />
+                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ListingDependencySearch}" Margin="0,4,0,0" />
                                 <TextBlock Classes="body-sm" Text="{Binding ListingEditor.LoaderSetText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.LoaderSetText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 <Button Classes="link" Command="{Binding ListingEditor.AddDependencyCommand}" HorizontalAlignment="Left">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
