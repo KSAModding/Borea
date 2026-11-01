@@ -1591,6 +1591,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveRenameSaveTitle => Resources.GameSaveRenameSaveTitle;
 
+    public string GameSaveRenameContinue => Resources.GameSaveRenameContinue;
+
+    public string GameSaveRenameChooseAnother => Resources.GameSaveRenameChooseAnother;
+
     public string GameSaveRenameVehicleTitle => Resources.GameSaveRenameVehicleTitle;
 
     public string GameSaveNameRules => Resources.GameSaveNameRules;

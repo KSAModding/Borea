@@ -4,6 +4,12 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.InstanceNameModal"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <!-- on the part of the template, because the focus style of the theme sets the border there -->
+        <Style Selector="TextBox.invalid /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Danger}" />
+        </Style>
+    </UserControl.Styles>
     <!-- modal: new instance, rename instance, rename save or vehicle, and a new name for a pinned vehicle or save of a pack -->
     <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
@@ -30,12 +36,13 @@
                     <!-- Instance Name -->
                     <StackPanel Grid.Row="0" Spacing="6">
                         <TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalNameLabel}" />
-                        <TextBox Classes="field" Text="{Binding ModalInstanceName}" PlaceholderText="{Binding NameModalPlaceholder}" AutomationProperties.Name="{Binding Localization.ModalNameLabel}" HorizontalAlignment="Stretch">
+                        <TextBox Classes="field" Classes.invalid="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" Text="{Binding ModalInstanceName}" PlaceholderText="{Binding NameModalPlaceholder}" AutomationProperties.Name="{Binding Localization.ModalNameLabel}" HorizontalAlignment="Stretch">
                             <TextBox.KeyBindings>
                                 <KeyBinding Gesture="Enter" Command="{Binding ConfirmNameModalCommand}" />
                                 <KeyBinding Gesture="Escape" Command="{Binding CancelNameModalCommand}" />
                             </TextBox.KeyBindings>
                         </TextBox>
+                        <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <!-- Game Settings Preset -->
                     <StackPanel Grid.Row="1" Spacing="6" Margin="0,16,0,0" IsVisible="{Binding CanPickGameSettingsPreset}">
@@ -75,7 +82,6 @@
                     </StackPanel>
                 </Grid>
                 <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedProfileImporting}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding IsSharedProfileImportRunning}" />
-                <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
         </Border>
     </Panel>

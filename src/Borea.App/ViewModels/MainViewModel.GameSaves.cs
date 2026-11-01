@@ -25,6 +25,12 @@ public partial class MainViewModel
     private GameSaveSection? _savesSection;
     private IReadOnlyList<GameSaveSection> _sectionsWithProfileItems = [];
 
+    /// <summary>What a share does after the rename it asked for. A cancelled rename drops it, and a refused one keeps the modal open.</summary>
+    private Func<GameSaveEntry, Task>? _afterShareRename;
+
+    /// <summary>The name that a failed check of a host refused, so keeping it would upload the same files to the same refusal. A rename from the row has none, because the name of the list can still repair meta.toml there.</summary>
+    private string? _nameTheHostRefused;
+
     public GameSaveSection VehiclesSection => _vehiclesSection ??= new GameSaveSection(this, GameSaveKind.Vehicle);
 
     public GameSaveSection SavesSection => _savesSection ??= new GameSaveSection(this, GameSaveKind.Save);
@@ -87,10 +93,9 @@ public partial class MainViewModel
             // the index checks the name the way the game names a new save, which an item from an older build can fail
             if (!GameSaveName.IsValid(content.Name))
             {
-                BeginRenameGameSave(item);
+                BeginShareRename(item, Localization.FormatGameSaveShareRename(content.Name), renamed => ShareGameSaveAsync(new GameSaveItem(this, item.Section, item.InstanceId, renamed, installed: null)));
                 if (GameSaveName.Sanitize(content.Name) is { Length: > 0 } sanitized)
                     ModalInstanceName = sanitized;
-                GameSaveRenameReason = Localization.FormatGameSaveShareRename(content.Name);
                 return;
             }
 
@@ -385,6 +390,41 @@ public partial class MainViewModel
         RenamingGameSave = item;
     }
 
+    /// <summary>Opens the rename of a shared item, whose row the instance page may not show. The share goes on after it.</summary>
+    internal void BeginShareRename(GameSaveShareStart share, string reason, Func<GameSaveEntry, Task> next)
+    {
+        var section = share.Entry.Kind == GameSaveKind.Vehicle ? VehiclesSection : SavesSection;
+        var row = section.Items.FirstOrDefault(item => item.InstanceId == share.InstanceId && item.FolderName == share.Entry.FolderName);
+        BeginShareRename(row ?? new GameSaveItem(this, section, share.InstanceId, share.Entry, installed: null), reason, next);
+        _nameTheHostRefused = share.Content.Name;
+    }
+
+    private void BeginShareRename(GameSaveItem item, string reason, Func<GameSaveEntry, Task> next)
+    {
+        BeginRenameGameSave(item);
+        GameSaveRenameReason = reason;
+        _afterShareRename = next;
+        OnPropertyChanged(nameof(NameModalConfirmText));
+    }
+
+    /// <summary>Lists the instance again, because the rename moved the folder, and goes on with the entry of the new name.</summary>
+    private async Task GoOnAfterShareRenameAsync(GameSaveItem item, string name, Func<GameSaveEntry, Task> next)
+    {
+        if (_services is not { } services)
+            return;
+
+        try
+        {
+            var entries = await services.GameSaves.ListAsync(item.InstanceId, item.Entry.Kind);
+            if (entries.FirstOrDefault(entry => string.Equals(entry.FolderName, name, StringComparison.OrdinalIgnoreCase)) is { } renamed)
+                await next(renamed);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), exception.Message);
+        }
+    }
+
     /// <summary>Keeps the modal open with the reason when the rename is refused or fails.</summary>
     private async Task RenameGameSaveFromModalAsync(GameSaveItem item)
     {
@@ -393,6 +433,12 @@ public partial class MainViewModel
         if (name == item.Name && name == item.FolderName && GameSaveRenameReason is null)
         {
             RenamingGameSave = null;
+            return;
+        }
+
+        if (name == _nameTheHostRefused && name == item.FolderName)
+        {
+            InstanceError = Localization.GameSaveRenameChooseAnother;
             return;
         }
 
@@ -406,6 +452,8 @@ public partial class MainViewModel
             return;
         }
 
+        // A Cancel during the rename has cleared the continuation, so the share stays where it is.
+        var next = RenamingGameSave == item ? _afterShareRename : null;
         if (RenamingGameSave == item)
             RenamingGameSave = null;
         ShowSuccessToast(() => Localization.FormatGameSaveRenamed(item.Name, name));
@@ -415,6 +463,9 @@ public partial class MainViewModel
             await ReloadInstancesAsync();
         else
             await LoadGameSavesAsync(item.Section);
+
+        if (next is not null)
+            await GoOnAfterShareRenameAsync(item, name, next);
     }
 
     /// <summary>Null when the item has the new name.</summary>

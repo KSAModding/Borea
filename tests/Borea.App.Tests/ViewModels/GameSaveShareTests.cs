@@ -52,7 +52,7 @@ public sealed class GameSaveShareTests
     }
 
     [Fact]
-    public async Task NameWithTwoSpaces_AsksForARenameFirst()
+    public async Task NameWithTwoSpaces_AsksForARenameFirst_AndACancelContinuesNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example  Rover");
@@ -68,10 +68,19 @@ public sealed class GameSaveShareTests
         Assert.Null(viewModel.InstanceError);
         Assert.False(viewModel.CurrentWindowListing);
         Assert.False(viewModel.ListingEditor.HasShare);
+        Assert.Equal(harness.Localization.GameSaveRenameContinue, viewModel.NameModalConfirmText);
 
         viewModel.CancelNameModalCommand.Execute(null);
 
         Assert.Null(viewModel.GameSaveRenameReason);
+
+        item.BeginRenameCommand.Execute(null);
+        Assert.Equal(harness.Localization.LibrarySave, viewModel.NameModalConfirmText);
+        viewModel.ModalInstanceName = "Other Rover";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.RenamingGameSave);
+        Assert.False(viewModel.ListingEditor.HasShare);
     }
 
     [Fact]
@@ -110,7 +119,7 @@ public sealed class GameSaveShareTests
     }
 
     [Fact]
-    public async Task NameChangedToAnInvalidNameAfterTheListLoaded_AsksForARenameFirst()
+    public async Task NameChangedToAnInvalidNameAfterTheListLoaded_AsksForARenameFirst_AndTheShareGoesOnAfterIt()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example Rover");
@@ -130,6 +139,9 @@ public sealed class GameSaveShareTests
 
         Assert.Null(viewModel.RenamingGameSave);
         Assert.Contains("name = \"Example Rover\"", File.ReadAllText(Path.Combine(item.Entry.Path, "meta.toml")), StringComparison.Ordinal);
+        Assert.True(viewModel.CurrentWindowListing);
+        Assert.True(viewModel.ListingEditor.HasShare);
+        Assert.Equal(("Example Rover", "ExampleRover"), (viewModel.ListingEditor.Name, viewModel.ListingEditor.Id));
     }
 
     [Fact]

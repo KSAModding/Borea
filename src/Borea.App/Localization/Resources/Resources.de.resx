@@ -2047,7 +2047,13 @@
     <value>Teilen</value>
   </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
-    <value>Das Spiel nimmt den Namen "{0}" nicht mehr an, und der Index prüft Namen genauso. Benenne den Eintrag nach den Regeln unten um und teile ihn dann.</value>
+    <value>Das Spiel nimmt den Namen „{0}“ nicht mehr an, und ein Name, den das Spiel nicht annimmt, lässt sich nicht teilen. Wähle einen Namen nach den Regeln unten.</value>
+  </data>
+  <data name="GameSaveRenameContinue" xml:space="preserve">
+    <value>Speichern und weiter</value>
+  </data>
+  <data name="GameSaveRenameChooseAnother" xml:space="preserve">
+    <value>Wähle einen anderen Namen.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>{0} nach {1} gesichert.</value>

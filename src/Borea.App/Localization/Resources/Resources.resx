@@ -2047,7 +2047,13 @@
     <value>Share</value>
   </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
-    <value>The game no longer accepts the name "{0}", and the index checks names the same way. Rename the item to a name that follows the rules below, then share it.</value>
+    <value>The game does not accept the name "{0}" any more, and a name that the game does not accept cannot be shared. Choose a name that follows the rules below.</value>
+  </data>
+  <data name="GameSaveRenameContinue" xml:space="preserve">
+    <value>Save and continue</value>
+  </data>
+  <data name="GameSaveRenameChooseAnother" xml:space="preserve">
+    <value>Choose another name.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>Backed up {0} to {1}.</value>
