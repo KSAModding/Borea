@@ -535,9 +535,6 @@ public sealed class ShareHostShareTests
         Assert.Null(editor.ShareIdError);
         Assert.False(editor.CanContinueShare);
         Assert.True(editor.ShowsPreviewCard);
-        Assert.Equal("Example Rover", editor.PreviewName);
-        Assert.Equal(harness.Localization.FormatContentByAuthor("Maxi"), editor.PreviewAuthors);
-        Assert.Equal("A small rover.", editor.PreviewAbstract);
         Assert.Contains(editor.Errors, issue => issue.Location == "id");
 
         editor.ShareAsNewVersionCommand.Execute(null);
@@ -550,6 +547,9 @@ public sealed class ShareHostShareTests
         Assert.Null(editor.ShareNextReason);
         Assert.False(editor.HasShareOtherFields);
         Assert.True(editor.ShowsPreviewCard);
+        Assert.Equal("Example Rover", editor.PreviewName);
+        Assert.Equal(harness.Localization.FormatContentByAuthor("Maxi"), editor.PreviewAuthors);
+        Assert.Equal("A small rover.", editor.PreviewAbstract);
         Assert.True(editor.CanContinueShare);
 
         // The full form can open a pull request for a new file, so there the id counts as held.
@@ -1075,7 +1075,7 @@ public sealed class ShareHostShareTests
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
-        Assert.Equal([harness.Localization.FormatListingShareCheckFailed(check, "Taken by OtherRover.")], editor.ShareHostFailedChecks);
+        Assert.Equal([isFolder ? harness.Localization.ShareFolderCheckVehicle : harness.Localization.FormatListingShareCheckFailed(check, "Taken by OtherRover.")], editor.ShareHostFailedChecks);
         Assert.Equal([harness.Localization.FormatListingShareCheckPassed("meta.toml")], editor.ShareHostPassedChecks);
         Assert.False(editor.CanPublishToShareHost);
         Assert.Equal(harness.Localization.FormatListingShareHostChecksFailed("ksamods.gg"), editor.ShareHostError);
@@ -1095,7 +1095,7 @@ public sealed class ShareHostShareTests
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
         Assert.Equal([harness.Localization.FormatListingShareCheckPassed("meta.toml")], editor.ShareHostPassedChecks);
-        Assert.Equal([harness.Localization.FormatListingShareCheckFailed("folder", "Taken by OtherRover.")], editor.ShareHostFailedChecks);
+        Assert.Equal([harness.Localization.ShareFolderCheckVehicle], editor.ShareHostFailedChecks);
         Assert.Equal(harness.Localization.FormatListingShareHostChecksFailed("ksamods.gg"), editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
         Assert.True(editor.ShowsShareRename);
@@ -1470,7 +1470,7 @@ public sealed class ShareHostShareTests
     [InlineData("id_taken", false)]
     [InlineData("version_taken", false)]
     [InlineData("upload_expired", false)]
-    public async Task RefusalOfTheHost_ShowsItsTextTheMessageAndOneAction(string code, bool atUpload)
+    public async Task RefusalOfTheHost_ShowsTheTextOfBorea_TheMessageOfAnUnknownCode_AndOneAction(string code, bool atUpload)
     {
         const string said = "Said by the host.";
         var refusal = new ShareHostException(ShareHostFailure.Host, said, code);
@@ -1484,16 +1484,17 @@ public sealed class ShareHostShareTests
 
         (string Text, string? Detail, string? Action) expected = code switch
         {
-            "not_owner" => (text.FormatShareErrorNotOwner("ksamods.gg", "Example Rover"), said, text.FormatShareSignOut("ksamods.gg")),
-            "too_large" => (text.FormatShareErrorTooLarge("ksamods.gg"), said, null),
-            "type_not_accepted" => (text.FormatShareErrorNoVehicles("ksamods.gg"), said, null),
-            "invalid_archive" => (text.FormatListingShareHostChecksFailed("ksamods.gg"), said, null),
-            "id_taken" => (text.FormatShareErrorIdTaken("ExampleRover", "ksamods.gg"), said, text.ShareBackToDescription),
-            "version_taken" => (text.FormatShareErrorVersionTaken("Example Rover", "1.0.0", "1.1.0"), said, null),
-            "upload_expired" => (text.FormatShareErrorUploadGone("ksamods.gg"), said, text.FormatShareOpenHost("ksamods.gg")),
+            "not_owner" => (text.FormatShareErrorNotOwner("ksamods.gg", "Example Rover"), null, text.FormatShareSignOut("ksamods.gg")),
+            "too_large" => (text.FormatShareErrorTooLarge("ksamods.gg"), null, null),
+            "type_not_accepted" => (text.FormatShareErrorNoVehicles("ksamods.gg"), null, null),
+            "invalid_archive" => (text.FormatListingShareHostChecksFailed("ksamods.gg"), null, null),
+            "id_taken" => (text.FormatShareErrorIdTaken("ExampleRover", "ksamods.gg"), null, text.ShareBackToDescription),
+            "version_taken" => (text.FormatShareErrorVersionTaken("Example Rover", "1.0.0", "1.1.0"), null, null),
+            "upload_expired" => (text.FormatShareErrorUploadGone("ksamods.gg"), null, text.FormatShareOpenHost("ksamods.gg")),
             _ => (text.FormatListingShareHostSaid("ksamods.gg", said), null, null),
         };
         Assert.Equal(expected, (editor.ShareHostError, editor.ShareHostErrorDetail, editor.ShareErrorActionText));
+        Assert.Equal(code == "invalid_archive" ? said : null, editor.ShareHostFileDetail);
         Assert.Equal(code is "id_taken" or "version_taken", editor.HasShareUpload);
         Assert.Equal(code == "version_taken", editor.IsEditingShareVersion);
         Assert.Equal(code == "upload_expired" || atUpload, editor.ShowsShareCheckButton);

@@ -87,7 +87,7 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- a failed check comes first, with the message of the host -->
+                <!-- a failed check comes first -->
                 <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostFailedChecks}" IsVisible="{Binding !!ListingEditor.ShareHostFailedChecks.Count}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -103,7 +103,6 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareFolderCheckText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareFolderCheckText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.RenameForShareCommand}" IsVisible="{Binding ListingEditor.ShowsShareRename}">
                     <TextBlock Classes="action-md" Text="{Binding Localization.ShareRenameAndCheck}" />
                 </Button>

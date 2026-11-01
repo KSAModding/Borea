@@ -121,7 +121,7 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     private string? _shareHostError;
 
-    /// <summary>What the host itself said, under the text of the App, because that text is in the language of the player and the message is not.</summary>
+    /// <summary>What the host itself said when Borea has no text for it, under the text of the App, because that text is in the language of the player and the message is not.</summary>
     [ObservableProperty]
     private string? _shareHostErrorDetail;
 
@@ -701,8 +701,10 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareFolderCheckText));
     }
 
-    private string CheckText(ShareCheck check) => !check.Passed
-        ? Localization.FormatListingShareCheckFailed(check.Name, check.Message ?? string.Empty)
+    /// <summary>A failed check that Borea has a text for says only that text, and any other shows the message of the host, because check names may grow.</summary>
+    private string CheckText(ShareCheck check) => check is { Passed: false, Name: "folder" }
+        ? IsSave ? Localization.ShareFolderCheckSave : Localization.ShareFolderCheckVehicle
+        : !check.Passed ? Localization.FormatListingShareCheckFailed(check.Name, check.Message ?? string.Empty)
         : check.Message is { Length: > 0 } message ? Localization.FormatShareCheckDetail(check.Name, message) : Localization.FormatListingShareCheckPassed(check.Name);
 
     /// <summary>Shows a refused or failed request with its way forward.</summary>
@@ -738,6 +740,10 @@ public sealed partial class ListingEditor
                 _refusedShareId = Draft.Id;
                 Refresh();
                 break;
+            case "invalid_archive" when ShareHostFailedChecks.Count == 0:
+                // Borea has no text for what is wrong in the file, so the message stays one click away.
+                ShareHostFileDetail = exception.Message;
+                break;
             case "not_owner" when _owner.Services is { } services:
                 await services.SharedContent.RemoveAsync(share.Entry.Kind.ToContentType(), host.Key, share.Entry.FolderName);
                 await _owner.ShowSharedContentAsync(share.Entry.Kind);
@@ -746,8 +752,8 @@ public sealed partial class ListingEditor
     }
 
     /// <summary>
-    /// The text in the language of the player, the message of the host below it and the one action. A publish without a clear
-    /// answer can have gone through, so it has its own text, and Publish stays because an upload cannot publish twice.
+    /// The text in the language of the player, the message of the host when Borea has no text for its code, and the one action. A
+    /// publish without a clear answer can have gone through, so it has its own text, and Publish stays because an upload cannot publish twice.
     /// </summary>
     private (string Text, string? Detail, ShareErrorAction Action) ShareHostFailureText(ShareHost host, ShareHostException exception, string? version) => exception switch
     {
@@ -758,24 +764,24 @@ public sealed partial class ListingEditor
         { Failure: ShareHostFailure.NetworkError } => (Localization.FormatListingShareHostNetwork(host.Name), null, ShareErrorAction.None),
         { Failure: ShareHostFailure.Unavailable } => (Localization.FormatShareErrorUnavailable(host.Name), null, ShareErrorAction.None),
         { Failure: not ShareHostFailure.Host } => (Localization.FormatListingShareHostUnexpected(host.Name), null, ShareErrorAction.None),
-        { Error: "id_taken" } => (Localization.FormatShareErrorIdTaken(Draft.Id, host.Name), exception.Message, ShareErrorAction.BackToDescription),
+        { Error: "id_taken" } => (Localization.FormatShareErrorIdTaken(Draft.Id, host.Name), null, ShareErrorAction.BackToDescription),
         { Error: "version_taken" } when ModVersion.TryParse(version, out var taken) =>
-            (Localization.FormatShareErrorVersionTaken(ShareListingName, version!, new ModVersion(taken.Major, taken.Minor + 1, 0).ToString()), exception.Message, ShareErrorAction.None),
-        { Error: "not_owner" } => (Localization.FormatShareErrorNotOwner(host.Name, ShareListingName), exception.Message, ShareErrorAction.SignOut),
+            (Localization.FormatShareErrorVersionTaken(ShareListingName, version!, new ModVersion(taken.Major, taken.Minor + 1, 0).ToString()), null, ShareErrorAction.None),
+        { Error: "not_owner" } => (Localization.FormatShareErrorNotOwner(host.Name, ShareListingName), null, ShareErrorAction.SignOut),
 
         // FormatDuration rounds down, so a wait of some seconds would read as 0 minutes.
         { Error: "rate_limited", RetryAfter: { } wait } =>
-            (Localization.FormatShareErrorRateLimited(host.Name, Localization.FormatDuration(TimeSpan.FromMinutes(Math.Ceiling(wait.TotalMinutes)))), exception.Message, ShareErrorAction.None),
-        { Error: "rate_limited" } => (Localization.FormatShareErrorRateLimitedLater(host.Name), exception.Message, ShareErrorAction.None),
-        { Error: "upload_expired" } => (Localization.FormatShareErrorUploadGone(host.Name), exception.Message, ShareErrorAction.OpenHost),
-        { Error: "too_large" } => (Localization.FormatShareErrorTooLarge(host.Name), exception.Message, ShareErrorAction.None),
-        { Error: "type_not_accepted" } => (IsSave ? Localization.FormatShareErrorNoSaves(host.Name) : Localization.FormatShareErrorNoVehicles(host.Name), exception.Message, ShareErrorAction.None),
+            (Localization.FormatShareErrorRateLimited(host.Name, Localization.FormatDuration(TimeSpan.FromMinutes(Math.Ceiling(wait.TotalMinutes)))), null, ShareErrorAction.None),
+        { Error: "rate_limited" } => (Localization.FormatShareErrorRateLimitedLater(host.Name), null, ShareErrorAction.None),
+        { Error: "upload_expired" } => (Localization.FormatShareErrorUploadGone(host.Name), null, ShareErrorAction.OpenHost),
+        { Error: "too_large" } => (Localization.FormatShareErrorTooLarge(host.Name), null, ShareErrorAction.None),
+        { Error: "type_not_accepted" } => (IsSave ? Localization.FormatShareErrorNoSaves(host.Name) : Localization.FormatShareErrorNoVehicles(host.Name), null, ShareErrorAction.None),
         { Error: "invalid_request", FieldErrors.Count: > 0 } =>
             (Localization.FormatListingShareHostSaid(host.Name, exception.Message), string.Join('\n', exception.FieldErrors!.Values.SelectMany(lines => lines).Distinct()), ShareErrorAction.None),
 
-        // The failed checks already carry the messages of the host.
+        // The failed checks are already listed.
         _ when ShareHostFailedChecks.Count > 0 => (Localization.FormatListingShareHostChecksFailed(host.Name), null, ShareErrorAction.None),
-        { Error: "invalid_archive" } => (Localization.FormatListingShareHostChecksFailed(host.Name), exception.Message, ShareErrorAction.None),
+        { Error: "invalid_archive" } => (Localization.FormatListingShareHostChecksFailed(host.Name), null, ShareErrorAction.None),
         _ => (Localization.FormatListingShareHostSaid(host.Name, exception.Message), null, ShareErrorAction.None),
     };
 
