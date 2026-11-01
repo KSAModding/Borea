@@ -384,9 +384,70 @@ public sealed class ShareHostShareTests
         else
             await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
-        Assert.Equal(harness.Localization.GameSaveCloseGame, harness.ViewModel.Toasts.Items[^1].Detail);
+        Assert.True(editor.ShowsShareGameRunning);
+        Assert.Null(editor.ShareHostError);
+        Assert.Empty(harness.ViewModel.Toasts.Items);
         Assert.Empty(host.Uploads);
         Assert.Null(window.SuggestedFileName);
+        Assert.True(editor.ShowsShareCheckButton);
+
+        // The game gives no signal when it ends outside Borea, so the same action goes on from the step.
+        harness.IsGameProcessRunning = () => false;
+        if (saveToZip)
+            await editor.SaveShareArchiveCommand.ExecuteAsync(null);
+        else
+            await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.False(editor.ShowsShareGameRunning);
+        Assert.Null(editor.ShareHostError);
+        Assert.Equal(saveToZip ? 0 : 1, host.Uploads.Count);
+        Assert.Equal(saveToZip, window.SuggestedFileName is not null);
+    }
+
+    [Fact]
+    public async Task Publish_DropsTheLineAboutTheGame()
+    {
+        var host = new FakeHost { PublishFailure = new ShareHostException(ShareHostFailure.Host, "Refused.", "too_large") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        harness.IsGameProcessRunning = () => true;
+        await editor.SaveShareArchiveCommand.ExecuteAsync(null);
+        Assert.True(editor.ShowsShareGameRunning);
+
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.False(editor.ShowsShareGameRunning);
+    }
+
+    [Theory]
+    [InlineData("id_taken")]
+    [InlineData("version_taken")]
+    public async Task ZipWhileTheGameRuns_KeepsTheRefusalThatStands(string code)
+    {
+        var host = new FakeHost { PublishFailure = new ShareHostException(ShareHostFailure.Host, "Refused.", code) };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        harness.ViewModel.WindowServices = new GameSaveShareTests.ArchiveWindow();
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+        var refusal = (editor.ShareHostError, editor.ShareErrorActionText);
+        Assert.NotNull(refusal.ShareHostError);
+
+        harness.IsGameProcessRunning = () => true;
+        await editor.SaveShareArchiveCommand.ExecuteAsync(null);
+
+        Assert.True(editor.ShowsShareGameRunning);
+        Assert.Equal(refusal, (editor.ShareHostError, editor.ShareErrorActionText));
+        Assert.False(editor.ShowsShareCheckButton);
+        Assert.False(editor.CanPublishToShareHost);
+
+        harness.IsGameProcessRunning = () => false;
+        await editor.SaveShareArchiveCommand.ExecuteAsync(null);
+
+        Assert.False(editor.ShowsShareGameRunning);
+        Assert.Equal(refusal, (editor.ShareHostError, editor.ShareErrorActionText));
+        Assert.False(editor.CanPublishToShareHost);
     }
 
     [Theory]

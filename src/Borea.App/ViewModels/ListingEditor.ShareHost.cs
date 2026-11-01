@@ -125,6 +125,10 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     private string? _shareHostError;
 
+    /// <summary>A check or a zip file stopped because the game runs. It stands apart from <see cref="ShareHostError"/>, because a refusal keeps its text, its link and its hold on Publish while the player waits for the game to close.</summary>
+    [ObservableProperty]
+    private bool _showsShareGameRunning;
+
     /// <summary>What the host itself said when Borea has no text for it, under the text of the App, because that text is in the language of the player and the message is not.</summary>
     [ObservableProperty]
     private string? _shareHostErrorDetail;
@@ -345,6 +349,7 @@ public sealed partial class ListingEditor
         _shareHostCode = null;
         ShareHostProgress = null;
         ShareHostError = null;
+        ShowsShareGameRunning = false;
         ShareHostFileDetail = null;
         ShareHostListingText = null;
         SharePullRequest = null;
@@ -377,6 +382,13 @@ public sealed partial class ListingEditor
         if (Errors.Any(StopsTheUpload))
         {
             ShareHostError = ShareOtherFieldsText ?? Localization.ShareOtherFields;
+            return;
+        }
+
+        // The game can still write the file, and it gives no signal when it ends outside Borea, so the button of the step stays for the next try.
+        if (_owner.IsGameRunning(services))
+        {
+            ShowsShareGameRunning = true;
             return;
         }
 
@@ -545,6 +557,7 @@ public sealed partial class ListingEditor
         _shareHostRun = cancel;
         _publishRun = cancel;
         ShareHostError = null;
+        ShowsShareGameRunning = false;
         try
         {
             var client = services.ShareHostClient;

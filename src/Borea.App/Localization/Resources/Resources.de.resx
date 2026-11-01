@@ -3549,6 +3549,9 @@
   <data name="ShareGameRunning" xml:space="preserve">
     <value>Das Spiel läuft. Schließe es und mache dann weiter, damit Borea vollständige Dateien liest.</value>
   </data>
+  <data name="ShareGameRunningPublish" xml:space="preserve">
+    <value>Das Spiel läuft. Schließe es und versuche es dann erneut, damit Borea vollständige Dateien liest.</value>
+  </data>
   <data name="ShareNoInstance" xml:space="preserve">
     <value>Fahrzeuge und Spielstände liegen in einer Instanz, und du hast noch keine.</value>
   </data>

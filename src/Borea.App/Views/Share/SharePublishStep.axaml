@@ -81,6 +81,11 @@
                     </StackPanel>
                 </Grid>
 
+                <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShowsShareGameRunning}">
+                    <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
+                    <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding Localization.ShareGameRunningPublish}" TextWrapping="Wrap" />
+                </Grid>
+
                 <!-- a failed check comes first -->
                 <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostFailedChecks}" IsVisible="{Binding !!ListingEditor.ShareHostFailedChecks.Count}">
                     <ItemsControl.ItemsPanel>

@@ -296,8 +296,8 @@ public partial class MainViewModel
 
     /// <summary>
     /// Writes the archive of the shared item into a new file in the temporary folder, which the caller deletes. Null when
-    /// the library is busy or the game runs, and a toast says why. A file that cannot be read or written gives an
-    /// <see cref="IOException"/>, which the caller shows.
+    /// the library is busy, and a toast says why. The caller checks that the game does not run. A file that cannot be read
+    /// or written gives an <see cref="IOException"/>, which the caller shows.
     /// </summary>
     internal async Task<(string File, GameSaveArchive Archive)?> WriteShareArchiveToTempAsync(GameSaveShareStart share)
     {
@@ -309,12 +309,6 @@ public partial class MainViewModel
         if (libraryUse is null)
         {
             ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.LibraryFolderBusy);
-            return null;
-        }
-
-        if (IsGameRunning(services))
-        {
-            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.GameSaveCloseGame);
             return null;
         }
 

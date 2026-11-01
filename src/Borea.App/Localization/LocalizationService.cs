@@ -2138,6 +2138,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareGameRunning => Resources.ShareGameRunning;
 
+    public string ShareGameRunningPublish => Resources.ShareGameRunningPublish;
+
     public string ShareNoInstance => Resources.ShareNoInstance;
 
     public string ShareNoVehicles => Resources.ShareNoVehicles;

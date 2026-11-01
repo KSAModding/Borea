@@ -3549,6 +3549,9 @@
   <data name="ShareGameRunning" xml:space="preserve">
     <value>The game is running. Close it, then continue, so Borea reads complete files.</value>
   </data>
+  <data name="ShareGameRunningPublish" xml:space="preserve">
+    <value>The game is running. Close it, then try again, so Borea reads complete files.</value>
+  </data>
   <data name="ShareNoInstance" xml:space="preserve">
     <value>Vehicles and saves live in an instance, and you have none yet.</value>
   </data>
