@@ -209,6 +209,9 @@ public sealed partial class GameSaveItem : IContentPlanRow
 
     public string? ListingName => Listing?.Name;
 
+    /// <summary>The link to the listing, which says what it does when the row already shows the same name.</summary>
+    public string? ListingLinkText => string.Equals(ListingName, Name, StringComparison.OrdinalIgnoreCase) ? _owner.Localization.GameSaveViewPage : ListingName;
+
     public string? InstalledVersionText => Record is { } record ? _owner.Localization.FormatContentDependencyInstalled(record.Version.ToString()) : null;
 
     public string? NewerText => NewerRelease is { } newer ? _owner.Localization.FormatPackMemberNewer(newer.Version.ToString()) : null;
@@ -286,6 +289,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
         OnPropertyChanged(nameof(HasRecord));
         OnPropertyChanged(nameof(ShowsListingLine));
         OnPropertyChanged(nameof(ListingName));
+        OnPropertyChanged(nameof(ListingLinkText));
         OnPropertyChanged(nameof(InstalledVersionText));
         OnPropertyChanged(nameof(NewerText));
         OnPropertyChanged(nameof(UpdateText));
@@ -294,6 +298,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
 
     private void RefreshRecordText()
     {
+        OnPropertyChanged(nameof(ListingLinkText));
         OnPropertyChanged(nameof(InstalledVersionText));
         OnPropertyChanged(nameof(NewerText));
         OnPropertyChanged(nameof(UpdateText));

@@ -108,7 +108,7 @@
                         <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedText}" ToolTip.Tip="{Binding UpdatedText}" TextTrimming="CharacterEllipsis" />
                         <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding ShowsListingLine}">
                             <Button Classes="link" Margin="-8,0,0,0" Command="{Binding OpenPageCommand}" IsVisible="{Binding ListingName, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingName}">
-                                <TextBlock Classes="action-md" Text="{Binding ListingName}" />
+                                <TextBlock Classes="action-md" Text="{Binding ListingLinkText}" />
                             </Button>
                             <TextBlock Classes="body-sm secondary" Text="{Binding InstalledVersionText}" VerticalAlignment="Center" IsVisible="{Binding HasRecord}" />
                             <Border Classes="chip muted" VerticalAlignment="Center" IsVisible="{Binding SharedOnText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SharedOnText}" AutomationProperties.Name="{Binding SharedOnText}">

@@ -646,6 +646,22 @@ public sealed class UserContentViewModelTests
     }
 
     [Fact]
+    public async Task InstancePage_RecordedRow_LinkReadsViewPageOnlyWhileTheNamesMatch()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        await ActiveInstanceWithRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        Assert.Equal(harness.Localization.GameSaveViewPage, Assert.Single(viewModel.VehiclesSection.Items).ListingLinkText);
+
+        Assert.Single(viewModel.VehiclesSection.Items).BeginRenameCommand.Execute(null);
+        viewModel.ModalInstanceName = "Rover 2";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.Equal("Example Rover", Assert.Single(viewModel.VehiclesSection.Items).ListingLinkText);
+    }
+
+    [Fact]
     public async Task InstancePage_OwnFolder_HasNoRecordAndKeepsTheDeleteText()
     {
         using var harness = await VehicleHarnessAsync();
