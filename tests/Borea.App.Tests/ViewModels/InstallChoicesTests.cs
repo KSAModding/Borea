@@ -561,7 +561,7 @@ public sealed class InstallChoicesTests
     private static Func<string, string> MeasureToolsDepends(string dependencies) => json => WithDependencies(json, "MeasureTools", dependencies);
 
     /// <summary>Makes the newest release of every listing compatible with the test game and gives the one of <paramref name="modId"/> these dependencies.</summary>
-    private static string WithDependencies(string json, string modId, string dependencies)
+    internal static string WithDependencies(string json, string modId, string dependencies)
     {
         var root = JsonNode.Parse(json)!;
         foreach (var listing in root["listings"]!.AsArray())

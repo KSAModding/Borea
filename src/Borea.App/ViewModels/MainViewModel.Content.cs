@@ -804,6 +804,11 @@ public sealed record ContentLink(string Label, string Url, string? Key = null);
 /// <summary>The changelog text as Markdown, else the changelog as a link when it is an absolute https URI and as Markdown otherwise.</summary>
 public sealed record ReleaseChangelog(string Title, string? Text, ContentLink? Link)
 {
+    /// <summary>The mod an update names the changelog for, so that a list of the update can group its entries.</summary>
+    public string? ModId { get; init; }
+
+    public string? Version { get; init; }
+
     public static ReleaseChangelog? From(ModVersionMetadata release, string title, string linkLabel)
     {
         if (!string.IsNullOrWhiteSpace(release.ChangelogText))

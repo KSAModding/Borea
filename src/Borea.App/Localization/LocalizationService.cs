@@ -2458,7 +2458,58 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallChoicesSuggested => Resources.InstallChoicesSuggested;
 
+    public string InstallChoicesRecommendedHint => Resources.InstallChoicesRecommendedHint;
+
+    public string InstallChoicesSuggestedHint => Resources.InstallChoicesSuggestedHint;
+
     public string UpdateAnyway => Resources.UpdateAnyway;
+
+    public string FormatUpdateAllTitle(int count, string instanceName)
+        => count == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleOneFormat, instanceName)
+            : string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleFormat, count, instanceName);
+
+    public string FormatUpdateAllTitleNoCount(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleNoCountFormat, instanceName);
+
+    public string FormatUpdateAllConfirm(int count)
+        => count == 1
+            ? Resources.UpdateAllConfirmOne
+            : string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllConfirmFormat, count);
+
+    public string FormatUpdateAllConfirmAnyway(int count)
+        => count == 1
+            ? Resources.UpdateAllConfirmAnywayOne
+            : string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllConfirmAnywayFormat, count);
+
+    public string UpdateAllListHeading => Resources.UpdateAllListHeading;
+
+    public string UpdateAllListHint => Resources.UpdateAllListHint;
+
+    public string UpdateAllNew => Resources.UpdateAllNew;
+
+    public string UpdateAllOlder => Resources.UpdateAllOlder;
+
+    public string FormatUpdateAllVersionChange(string from, string to)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllVersionChangeFormat, from, to);
+
+    public string FormatUpdateAllShowChanges(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllShowChangesFormat, name);
+
+    public string FormatUpdateAllHideChanges(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllHideChangesFormat, name);
+
+    public string UpdateAllMoreMods => Resources.UpdateAllMoreMods;
+
+    public string UpdateAllChooseMod => Resources.UpdateAllChooseMod;
+
+    public string UpdateAllNoNotes => Resources.UpdateAllNoNotes;
+
+    public string UpdateAllChooseFirst => Resources.UpdateAllChooseFirst;
+
+    public string UpdateChecking => Resources.UpdateChecking;
+
+    public string UpdateNothingFound => Resources.UpdateNothingFound;
 
     public string ContentUpdate => Resources.ContentUpdate;
 

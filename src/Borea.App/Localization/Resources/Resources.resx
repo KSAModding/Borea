@@ -3949,7 +3949,7 @@
     <value>The vehicle {1} needs {0}, so after this change the game refuses that vehicle.</value>
   </data>
   <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
-    <value>The save {1} needs {0}, so after this change the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.</value>
+    <value>The save {1} needs {0}. After this change, the game does not load the vehicles that need it, and saving again loses them.</value>
   </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
@@ -5606,5 +5606,71 @@
   </data>
   <data name="PreviewNoticePlannerFallback" xml:space="preserve">
     <value>The needed mods come from the required list of the release</value>
+  </data>
+  <data name="UpdateAllTitleFormat" xml:space="preserve">
+    <value>Update {0} mods in {1}</value>
+  </data>
+  <data name="UpdateAllTitleOneFormat" xml:space="preserve">
+    <value>Update 1 mod in {0}</value>
+  </data>
+  <data name="UpdateAllTitleNoCountFormat" xml:space="preserve">
+    <value>Update the mods in {0}</value>
+  </data>
+  <data name="UpdateAllConfirmFormat" xml:space="preserve">
+    <value>Update {0} mods</value>
+  </data>
+  <data name="UpdateAllConfirmOne" xml:space="preserve">
+    <value>Update 1 mod</value>
+  </data>
+  <data name="UpdateAllConfirmAnywayFormat" xml:space="preserve">
+    <value>Update {0} mods anyway</value>
+  </data>
+  <data name="UpdateAllConfirmAnywayOne" xml:space="preserve">
+    <value>Update 1 mod anyway</value>
+  </data>
+  <data name="UpdateAllListHeading" xml:space="preserve">
+    <value>What changes</value>
+  </data>
+  <data name="UpdateAllListHint" xml:space="preserve">
+    <value>Select a mod to read what changed.</value>
+  </data>
+  <data name="UpdateAllNew" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="UpdateAllOlder" xml:space="preserve">
+    <value>Older version</value>
+  </data>
+  <data name="UpdateAllVersionChangeFormat" xml:space="preserve">
+    <value>{0} to {1}</value>
+  </data>
+  <data name="UpdateAllShowChangesFormat" xml:space="preserve">
+    <value>Show the changes of {0}</value>
+  </data>
+  <data name="UpdateAllHideChangesFormat" xml:space="preserve">
+    <value>Hide the changes of {0}</value>
+  </data>
+  <data name="UpdateAllMoreMods" xml:space="preserve">
+    <value>More mods</value>
+  </data>
+  <data name="UpdateAllChooseMod" xml:space="preserve">
+    <value>Choose a mod</value>
+  </data>
+  <data name="UpdateAllNoNotes" xml:space="preserve">
+    <value>No release notes</value>
+  </data>
+  <data name="UpdateAllChooseFirst" xml:space="preserve">
+    <value>Choose a mod in each list to go on.</value>
+  </data>
+  <data name="UpdateChecking" xml:space="preserve">
+    <value>Checking the updates</value>
+  </data>
+  <data name="UpdateNothingFound" xml:space="preserve">
+    <value>Borea found nothing that it can update now.</value>
+  </data>
+  <data name="InstallChoicesRecommendedHint" xml:space="preserve">
+    <value>Borea adds the mods that you tick.</value>
+  </data>
+  <data name="InstallChoicesSuggestedHint" xml:space="preserve">
+    <value>Borea does not add these mods. You can install them later from Discover.</value>
   </data>
 </root>
