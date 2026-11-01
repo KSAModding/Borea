@@ -278,16 +278,183 @@ public sealed class RepositoryInstallPlannerTests
     [Fact]
     public async Task PlanAsync_TruncatedSearchIsBlocking()
     {
-        var available = new List<ModVersionMetadata>();
-        var requested = new List<RequestedMod>();
-        for (var id = 0; id < 6; id++)
-        {
-            for (var version = 0; version < 10; version++) available.Add(Release($"M{id}", $"1.0.{version}"));
-            requested.Add(new RequestedMod(available[^1], InstallReason.Manual, Exact: false));
-        }
+        // every plan of this group has a conflict, because the mod that all of them require does not exist, so no plan cuts the search short
+        var (available, requested) = LinkedMods("Ghost");
         var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available)));
         Assert.False(plan.IsReady);
-        Assert.Contains(plan.Conflicts, value => value.Code == "search-limit");
+        Assert.Equal("search-limit", Assert.Single(plan.Conflicts).Code);
+        Assert.Empty(plan.Selections);
+    }
+
+    [Theory]
+    [InlineData(16, 1)]
+    [InlineData(8, 4)]
+    [InlineData(30, 12)]
+    public async Task PlanAsync_UnrelatedModsStayReadyAtTheirNewestRelease(int mods, int releases)
+    {
+        var available = Enumerable.Range(0, mods).SelectMany(id => Enumerable.Range(0, releases).Select(version => Release($"M{id:00}", $"1.0.{version}"))).ToList();
+        var requested = available.Where(value => value.Version == ModVersion.Parse("1.0.0")).Select(value => new RequestedMod(value, InstallReason.Manual, Exact: false)).ToList();
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available)));
+        Assert.True(plan.IsReady);
+        Assert.Equal(mods, plan.Selections.Count);
+        Assert.All(plan.Selections, value => Assert.Equal(ModVersion.Parse($"1.0.{releases - 1}"), value.Release.Version));
+    }
+
+    [Fact]
+    public async Task PlanAsync_UpdateOfFiveModsWithSharedDependenciesStaysReady()
+    {
+        var dependencies = new[] { new ModDependency("Extensions", ModDependencyKind.Recommends), new ModDependency("Menu", ModDependencyKind.Suggests), new ModDependency("OldExtensions", ModDependencyKind.Optional) };
+        var available = new List<ModVersionMetadata>
+        {
+            Release("Menu", "1.0.0"), Release("Menu", "1.0.1"),
+            Release("Extensions", "1.0.0"), Release("Extensions", "1.0.1"),
+            Release("OldExtensions", "1.0.0"),
+        };
+        foreach (var (id, releases, needs) in new (string Id, int Releases, IReadOnlyList<ModDependency> Needs)[] { ("Flight", 13, dependencies), ("Map", 9, []), ("Armory", 12, []), ("Engineer", 6, [Required("Menu")]) })
+            available.AddRange(Enumerable.Range(0, releases).Select(version => Release(id, $"1.0.{version}", needs)));
+        var mods = new[] { "Armory", "Engineer", "Flight", "Map", "Menu" }.Select(id => InstalledRelease(available.First(value => value.ModId == id))).ToList();
+        var plan = await PlanAsync(new InstallPlanningRequest(InstanceWith(mods), mods.Select(Update).ToList(), new FakeRepository(available)));
+        Assert.True(plan.IsReady);
+        Assert.Equal(["Armory 1.0.11", "Engineer 1.0.5", "Flight 1.0.12", "Map 1.0.8", "Menu 1.0.1"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_BlockedModDoesNotHideTheOtherMods()
+    {
+        // the optional and the suggested mod belong to every release and still do not tie the mods together
+        var extras = new[] { new ModDependency("Shared", ModDependencyKind.Suggests), new ModDependency("Other", ModDependencyKind.Optional) };
+        var available = Enumerable.Range(0, 6).SelectMany(id => Enumerable.Range(0, 10).Select(version => Release($"M{id}", $"1.0.{version}", extras))).ToList();
+        var requested = available.Where(value => value.Version == ModVersion.Parse("1.0.0")).Select(value => new RequestedMod(value, InstallReason.Manual, Exact: false)).ToList();
+        var blocked = Release("Blocked", dependencies: extras, gameMinRevision: 9000);
+        available.Add(blocked);
+        requested.Add(new RequestedMod(blocked, InstallReason.Manual, Exact: false));
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available), Game));
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal(("Blocked", "incompatible"), (conflict.ModId, conflict.Code));
+        Assert.Equal(["Blocked 1.0.0", "M0 1.0.9", "M1 1.0.9", "M2 1.0.9", "M3 1.0.9", "M4 1.0.9", "M5 1.0.9"], Picks(plan));
+        Assert.Equal(7, plan.Choices.Count(value => value.Kind == PlanningChoiceKind.Suggestion));
+    }
+
+    [Fact]
+    public async Task PlanAsync_RequiredModTiesAFallbackToItsGroupOnly()
+    {
+        var available = new List<ModVersionMetadata>
+        {
+            Release("A", "2.0.0", [Required("B", "9.0.0")]), Release("A", "1.0.0", [Required("B")]), Release("B"),
+            Release("C", "1.0.0"), Release("C", "3.0.0"),
+        };
+        var requested = new[] { available[0], available[3] }.Select(value => new RequestedMod(value, InstallReason.Manual, Exact: false)).ToList();
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available)));
+        Assert.True(plan.IsReady);
+        Assert.Equal(["A 1.0.0", "B 1.0.0", "C 3.0.0"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_ConflictTiesTwoRequestsToOneGroup()
+    {
+        var available = new List<ModVersionMetadata> { Release("A", "2.0.0", [new ModDependency("B", ModDependencyKind.Conflict)]), Release("A", "1.0.0"), Release("B") };
+        var requested = new[] { available[0], available[2] }.Select(value => new RequestedMod(value, InstallReason.Manual, Exact: false)).ToList();
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available)));
+        Assert.True(plan.IsReady);
+        Assert.Equal(["A 1.0.0", "B 1.0.0"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_SelectedRecommendationTiesItsTargetToTheGroup()
+    {
+        var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Recommends)]);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B")]), Recommended: new HashSet<string> { "A:dependency:0:recommendation" });
+        var plan = await PlanAsync(request);
+        Assert.True(plan.IsReady);
+        Assert.Equal(["A 1.0.0", "B 1.0.0"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_RetainedAlternativeTiesItsTargetsToOneGroup()
+    {
+        var x = Installed("X", dependencies: [ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B", maxVersion: ModVersion.Parse("1.0.0")), new ModDependencyAlternative("C", maxVersion: ModVersion.Parse("1.0.0"))])]);
+        var available = new List<ModVersionMetadata> { Release("B", "2.0.0"), Release("B", "1.0.0"), Release("C", "2.0.0"), Release("C", "1.0.0") };
+        var requested = new[] { available[0], available[2] }.Select(value => new RequestedMod(value, InstallReason.Manual, Exact: false)).ToList();
+        var plan = await PlanAsync(new InstallPlanningRequest(InstanceWith([x]), requested, new FakeRepository(available)));
+        Assert.True(plan.IsReady);
+        Assert.Equal(["B 2.0.0", "C 1.0.0"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_EqualPlansOfAGroupKeepTheFirstInSortedIdOrder()
+    {
+        // both 1.0.0 and 2.0.0 of each mod fit, and only the two newest releases together conflict, so A 2.0.0 with B 1.0.0 and A 1.0.0 with B 2.0.0 rank the same
+        var available = new List<ModVersionMetadata>
+        {
+            Release("R", dependencies: [Required("B")]),
+            Release("B", "2.0.0", [Required("A")]), Release("B", "1.0.0", [Required("A")]),
+            Release("A", "2.0.0", [new ModDependency("B", ModDependencyKind.Conflict, ModVersion.Parse("2.0.0"))]), Release("A", "1.0.0"),
+        };
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(available[0], InstallReason.Manual)], new FakeRepository(available)));
+        Assert.True(plan.IsReady);
+        Assert.Equal(["A 2.0.0", "B 1.0.0", "R 1.0.0"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_PlanOfEqualAgeWithFewerWarningsWins()
+    {
+        // A 2.0.0 with B 1.0.0 comes first and carries a warning, and A 1.0.0 with B 2.0.0 has the same age without one
+        var available = new List<ModVersionMetadata>
+        {
+            Release("A", "2.0.0", [new ModDependency("B", ModDependencyKind.Conflict, ModVersion.Parse("2.0.0"))]), Release("A", "1.0.0"),
+            Release("B", "2.0.0"), Release("B", "1.0.0", os: ["linux"]),
+        };
+        var requested = new[] { available[0], available[2] }.Select(value => new RequestedMod(value, InstallReason.Manual, Exact: false)).ToList();
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available), TargetPlatform: Borea.Core.Game.OsPlatform.Windows));
+        Assert.True(plan.IsReady);
+        Assert.Equal(["A 1.0.0", "B 2.0.0"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_GroupThatOnlyASuggestionReachesIsNotSearched()
+    {
+        // a walk of the group of the suggested mod passes the limit, because it has 2 candidates and each of its 4 required mods has 15
+        var libraries = Enumerable.Range(0, 4).SelectMany(id => Enumerable.Range(0, 14).Select(version => Release($"D{id}", $"1.0.{version}"))).ToList();
+        var suggested = Release("S", dependencies: Enumerable.Range(0, 4).Select(id => Required($"D{id}")).ToList());
+        var root = Release("R", dependencies: [new ModDependency("S", ModDependencyKind.Suggests)]);
+        var plan = await PlanAsync([root], [root, suggested, .. libraries]);
+        Assert.True(plan.IsReady);
+        Assert.Equal(["R 1.0.0"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_LinkedModsStayReadyAtTheirNewestRelease()
+    {
+        var (available, requested) = LinkedMods("Hub");
+        available.AddRange([Release("Hub", "1.0.0"), Release("Hub", "2.0.0")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available)));
+        Assert.True(plan.IsReady);
+        Assert.Equal(["Hub 2.0.0", "M0 1.0.13", "M1 1.0.13", "M2 1.0.13", "M3 1.0.13", "M4 1.0.13", "M5 1.0.13"], Picks(plan));
+    }
+
+    [Fact]
+    public async Task PlanAsync_ConflictOfAnotherGroupDoesNotLengthenTheSearchOfThisGroup()
+    {
+        var (available, requested) = LinkedMods("Hub");
+        available.Add(Release("Hub"));
+        var plan = await PlanAsync(new InstallPlanningRequest(InstanceWith([Installed("X", dependencies: [Required("Ghost")])]), requested, new FakeRepository(available)));
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal(("X", "retained-unsatisfied"), (conflict.ModId, conflict.Code));
+        Assert.Equal(7, plan.Selections.Count);
+    }
+
+    [Fact]
+    public async Task PlanAsync_InitialConflictInTheGroupDoesNotLengthenTheSearch()
+    {
+        var (available, requested) = LinkedMods("Hub");
+        var hub = Owned("Hub", pinned: true);
+        var other = Release("Hub", "2.0.0");
+        available.AddRange([hub.Metadata, other]);
+        requested.Add(new RequestedMod(other, InstallReason.Manual));
+        var plan = await PlanAsync(new InstallPlanningRequest(InstanceWith([hub]), requested, new FakeRepository(available)));
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal(("Hub", "pinned"), (conflict.ModId, conflict.Code));
+        Assert.Equal(7, plan.Selections.Count);
     }
 
     [Fact]
@@ -1109,6 +1276,15 @@ public sealed class RepositoryInstallPlannerTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new RepositoryInstallPlanner(new ModDependencyResolver(), (ReleaseChannel)42));
     }
+
+    private static (List<ModVersionMetadata> Available, List<RequestedMod> Requested) LinkedMods(string hub)
+    {
+        var available = Enumerable.Range(0, 6).SelectMany(id => Enumerable.Range(0, 14).Select(version => Release($"M{id}", $"1.0.{version}", [Required(hub)]))).ToList();
+        return (available, available.Where(value => value.Version == ModVersion.Parse("1.0.0")).Select(value => new RequestedMod(value, InstallReason.Manual, Exact: false)).ToList());
+    }
+
+    private static IEnumerable<string> Picks(InstallPlan plan) => plan.Selections.Select(value => $"{value.Release.ModId} {value.Release.Version}");
+    private static InstalledMod InstalledRelease(ModVersionMetadata release) => new(release.ModId, release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release);
 
     private static Instance EmptyInstance() => new("Test", InstanceSource.Custom.Value);
     private static Instance InstanceWith(IReadOnlyList<InstalledMod> mods) => Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, false);
