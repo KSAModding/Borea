@@ -308,6 +308,10 @@
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
         </Style>
+        <Style Selector="TextBlock.heading-xs, SelectableTextBlock.heading-xs">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
         <Style Selector="TextBlock.heading-sm, SelectableTextBlock.heading-sm">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />

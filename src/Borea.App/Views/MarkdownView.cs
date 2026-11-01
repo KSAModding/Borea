@@ -28,6 +28,9 @@ public sealed class MarkdownView : StackPanel
     public static readonly StyledProperty<DescriptionImages?> ImagesProperty =
         AvaloniaProperty.Register<MarkdownView, DescriptionImages?>(nameof(Images));
 
+    public static readonly StyledProperty<bool> IsCompactProperty =
+        AvaloniaProperty.Register<MarkdownView, bool>(nameof(IsCompact));
+
     internal static readonly FontFamily MonoFont = new("avares://Borea.App/Assets/Fonts#IBM Plex Mono");
 
     private const string Bullet = "\u2022";
@@ -51,19 +54,31 @@ public sealed class MarkdownView : StackPanel
         set => SetValue(ImagesProperty, value);
     }
 
+    /// <summary>Small sizes for a text that is one part of a list, such as a changelog, where the heading of an author must not outgrow the name of the mod.</summary>
+    public bool IsCompact
+    {
+        get => GetValue(IsCompactProperty);
+        set => SetValue(IsCompactProperty, value);
+    }
+
+    private MarkdownMetrics Metrics => IsCompact ? MarkdownMetrics.Compact : MarkdownMetrics.Regular;
+
     public MarkdownView()
     {
-        Spacing = 12;
+        Spacing = MarkdownMetrics.Regular.BlockSpacing;
         new MarkdownSelection(this);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == ImagesProperty)
+        if (change.Property == IsCompactProperty)
+            Spacing = Metrics.BlockSpacing;
+
+        if (change.Property == ImagesProperty || change.Property == IsCompactProperty)
             Clear();
 
-        if (change.Property == MarkdownProperty || change.Property == ImagesProperty)
+        if (change.Property == MarkdownProperty || change.Property == ImagesProperty || change.Property == IsCompactProperty)
             Rebuild();
     }
 
@@ -106,7 +121,7 @@ public sealed class MarkdownView : StackPanel
         for (var index = start; index < blocks.Count - end; index++)
         {
             var count = built.Count;
-            AddBlocks(built, [blocks[index]], Images);
+            AddBlocks(built, [blocks[index]], Images, Metrics);
             shown.Add((sources[index], built.Count - count));
         }
 
@@ -136,23 +151,23 @@ public sealed class MarkdownView : StackPanel
         string.Join('\n', document.OfType<LinkReferenceDefinitionGroup>().SelectMany(group => group.Links).Select(link => $"{link.Key}\n{link.Value.Url}\n{link.Value.Title}"));
 
     /// <summary>A link reference definition, and any block that CommonMark has but this view does not draw, shows nothing.</summary>
-    private static void AddBlocks(Controls target, IEnumerable<Block> blocks, DescriptionImages? images)
+    private static void AddBlocks(Controls target, IEnumerable<Block> blocks, DescriptionImages? images, MarkdownMetrics metrics)
     {
         foreach (var block in blocks)
         {
             switch (block)
             {
                 case HeadingBlock heading:
-                    MarkdownText.Write(target, heading.Inline, HeadingClass(heading.Level), images);
+                    MarkdownText.Write(target, heading.Inline, metrics.HeadingClass(heading.Level), images, metrics);
                     break;
                 case ParagraphBlock paragraph:
-                    MarkdownText.Write(target, paragraph.Inline, textClass: null, images);
+                    MarkdownText.Write(target, paragraph.Inline, textClass: null, images, metrics);
                     break;
                 case CodeBlock code:
-                    target.Add(Code(code.Lines.ToString()));
+                    target.Add(Code(code.Lines.ToString(), metrics));
                     break;
                 case HtmlBlock html when MarkdownText.HtmlBlockText(html) is { Length: > 0 } text:
-                    var body = MarkdownText.Body();
+                    var body = MarkdownText.Body(metrics);
                     body.Inlines!.Add(new Run(text));
                     target.Add(body);
                     break;
@@ -160,7 +175,7 @@ public sealed class MarkdownView : StackPanel
                     target.Add(new Border { Height = 1, Background = Resource<IBrush>("Brush.BorderStrong") });
                     break;
                 case ListBlock list:
-                    target.Add(List(list, images));
+                    target.Add(List(list, images, metrics));
                     break;
                 case QuoteBlock quote:
                     target.Add(new Border
@@ -168,46 +183,39 @@ public sealed class MarkdownView : StackPanel
                         BorderBrush = Resource<IBrush>("Brush.BorderStrong"),
                         BorderThickness = new Thickness(3, 0, 0, 0),
                         Padding = new Thickness(16, 0, 0, 0),
-                        Child = Blocks(quote, images),
+                        Child = Blocks(quote, images, metrics),
                     });
                     break;
                 case Table table:
-                    target.Add(Table(table, images));
+                    target.Add(Table(table, images, metrics));
                     break;
             }
         }
     }
 
-    private static StackPanel Blocks(ContainerBlock container, DescriptionImages? images)
+    private static StackPanel Blocks(ContainerBlock container, DescriptionImages? images, MarkdownMetrics metrics)
     {
-        var panel = new StackPanel { Spacing = 12 };
-        AddBlocks(panel.Children, container, images);
+        var panel = new StackPanel { Spacing = metrics.BlockSpacing };
+        AddBlocks(panel.Children, container, images, metrics);
         return panel;
     }
 
-    private static string HeadingClass(int level) => level switch
-    {
-        1 => "heading-lg",
-        2 => "heading-md",
-        _ => "heading-sm",
-    };
-
     /// <summary>Each item is a row of its marker and its blocks, so a nested list sits one indent deeper than the item that holds it.</summary>
-    private static StackPanel List(ListBlock list, DescriptionImages? images)
+    private static StackPanel List(ListBlock list, DescriptionImages? images, MarkdownMetrics metrics)
     {
-        var panel = new StackPanel { Spacing = 12, Margin = new Thickness(20, 0, 0, 0) };
+        var panel = new StackPanel { Spacing = metrics.ListItemSpacing, Margin = new Thickness(metrics.ListIndent, 0, 0, 0) };
         var number = list.IsOrdered && int.TryParse(list.OrderedStart, NumberStyles.None, CultureInfo.InvariantCulture, out var start) ? start : 1;
         foreach (var item in list.OfType<ListItemBlock>())
         {
             var marker = list.IsOrdered ? (number++).ToString(CultureInfo.InvariantCulture) + list.OrderedDelimiter : Bullet;
-            var content = Blocks(item, images);
+            var content = Blocks(item, images, metrics);
             Grid.SetColumn(content, 1);
             panel.Children.Add(new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("Auto,*"),
                 Children =
                 {
-                    new TextBlock { Text = marker + "  ", Classes = { "body-md" }, FontSize = 16, LineHeight = 26 },
+                    new TextBlock { Text = marker + "  ", Classes = { "body-md" }, FontSize = metrics.BodySize, LineHeight = metrics.BodyLineHeight },
                     content,
                 },
             });
@@ -220,7 +228,7 @@ public sealed class MarkdownView : StackPanel
     /// The header row decides the number of columns, as GFM does. Each column gets a share of the width by the
     /// longest cell in it, so the cells wrap inside the view instead of pushing it wider.
     /// </summary>
-    private static Border Table(Table table, DescriptionImages? images)
+    private static Border Table(Table table, DescriptionImages? images, MarkdownMetrics metrics)
     {
         var rows = table.OfType<TableRow>().ToList();
         var columns = rows.Count > 0 ? rows[0].Count : 0;
@@ -241,8 +249,8 @@ public sealed class MarkdownView : StackPanel
                 {
                     BorderBrush = Resource<IBrush>("Brush.BorderStrong"),
                     BorderThickness = new Thickness(column > 0 ? 1 : 0, index > 0 ? 1 : 0, 0, 0),
-                    Padding = new Thickness(12, 8),
-                    Child = column < row.Count ? Blocks((TableCell)row[column], images) : new StackPanel(),
+                    Padding = metrics.TableCellPadding,
+                    Child = column < row.Count ? Blocks((TableCell)row[column], images, metrics) : new StackPanel(),
                 };
                 if (row.IsHeader)
                 {
@@ -319,12 +327,12 @@ public sealed class MarkdownView : StackPanel
     }
 
     /// <summary>The text classes style only a TextBlock, so the selectable code block takes the font of label-md itself.</summary>
-    private static SelectableTextBlock Code(string code) => new()
+    private static SelectableTextBlock Code(string code, MarkdownMetrics metrics) => new()
     {
         Text = code,
         FontFamily = MonoFont,
         Foreground = Resource<IBrush>("Brush.TextSecondary"),
-        FontSize = 13,
+        FontSize = metrics.CodeBlockSize,
         TextWrapping = TextWrapping.Wrap,
         Padding = new Thickness(12),
         Background = Resource<IBrush>("Brush.SurfaceHeader"),

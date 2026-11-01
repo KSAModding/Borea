@@ -128,8 +128,8 @@
     <!-- the changelog of one release an update passes, as Markdown or as a link -->
     <DataTemplate x:Key="ChangelogEntry" x:DataType="vm:ReleaseChangelog">
         <StackPanel Spacing="4">
-            <TextBlock Classes="label-md" Text="{Binding Title}" />
-            <views:MarkdownView Markdown="{Binding Text}" IsVisible="{Binding Text, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="label-md" Text="{Binding Title}" IsVisible="{Binding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <views:MarkdownView IsCompact="True" Markdown="{Binding Text}" IsVisible="{Binding Text, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <Button Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding Link}" ToolTip.Tip="{Binding Link.Url}" IsVisible="{Binding Link, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <TextBlock Classes="action-md" Text="{Binding Link.Label}" />
             </Button>

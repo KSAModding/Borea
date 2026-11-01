@@ -50,6 +50,31 @@ public sealed partial class MarkdownViewTests
             }
         });
 
+    [Theory]
+    [InlineData(false, 16, 14, 16, 26, 12, 12, 20)]
+    [InlineData(true, 14, 12, 12, 18, 6, 2, 12)]
+    public async Task IsCompact_SetsTheSizesOfTheBlocks(bool compact, double heading, double smallHeading, double body, double lineHeight, double blockSpacing, double itemSpacing, double indent)
+    {
+        const string Text = "## Title\n\n### Part\n\nThe body.\n\n- One\n- Two\n";
+
+        var seen = await RenderAsync(Text, (_, view) =>
+        {
+            view.IsCompact = compact;
+            view.UpdateLayout();
+            var list = view.Children.OfType<StackPanel>().Single();
+            return (
+                Heading: Find(view, "Title").FontSize,
+                SmallHeading: Find(view, "Part").FontSize,
+                Body: Find(view, "The body.").FontSize,
+                Find(view, "The body.").LineHeight,
+                view.Spacing,
+                ItemSpacing: list.Spacing,
+                Indent: list.Margin.Left);
+        });
+
+        Assert.Equal((heading, smallHeading, body, lineHeight, blockSpacing, itemSpacing, indent), seen);
+    }
+
     private static List<TextBlock> TextBlocks(Visual view) => view.GetVisualDescendants().OfType<TextBlock>().ToList();
 
     private static string Text(TextBlock text) => text.Inlines is { Count: > 0 } inlines ? string.Concat(inlines.OfType<Run>().Select(run => run.Text)) : text.Text ?? string.Empty;

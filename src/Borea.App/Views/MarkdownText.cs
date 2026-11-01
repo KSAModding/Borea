@@ -34,12 +34,14 @@ internal sealed partial class MarkdownText
     private readonly Controls _target;
     private readonly string? _textClass;
     private readonly DescriptionImages? _images;
+    private readonly MarkdownMetrics _metrics;
     private readonly List<MarkdownLink> _links = [];
     private TextBlock _text;
     private int _length;
 
-    private MarkdownText(Controls target, string? textClass, DescriptionImages? images)
+    private MarkdownText(Controls target, string? textClass, DescriptionImages? images, MarkdownMetrics metrics)
     {
+        _metrics = metrics;
         _target = target;
         _textClass = textClass;
         _images = images;
@@ -47,25 +49,25 @@ internal sealed partial class MarkdownText
     }
 
     /// <param name="textClass">The text class of a heading, or null for body text.</param>
-    public static void Write(Controls target, ContainerInline? inlines, string? textClass, DescriptionImages? images)
+    public static void Write(Controls target, ContainerInline? inlines, string? textClass, DescriptionImages? images, MarkdownMetrics metrics)
     {
-        var writer = new MarkdownText(target, textClass, images);
+        var writer = new MarkdownText(target, textClass, images, metrics);
         if (inlines is not null)
             writer.WriteChildren(inlines, default);
         writer.Flush();
     }
 
     /// <summary>The text classes style only a TextBlock, so the selectable body text sets its size, line height and color itself.</summary>
-    public static SelectableTextBlock Body() => new()
+    public static SelectableTextBlock Body(MarkdownMetrics metrics) => new()
     {
         TextWrapping = TextWrapping.Wrap,
-        FontSize = 16,
-        LineHeight = 26,
+        FontSize = metrics.BodySize,
+        LineHeight = metrics.BodyLineHeight,
         Foreground = MarkdownView.Resource<IBrush>("Brush.Text"),
     };
 
     private TextBlock NewText() => _textClass is null
-        ? Body()
+        ? Body(_metrics)
         : new SelectableTextBlock { TextWrapping = TextWrapping.Wrap, Classes = { _textClass } };
 
     private void WriteChildren(ContainerInline container, RunStyle style)
@@ -88,7 +90,7 @@ internal sealed partial class MarkdownText
                 Append(lineBreak.IsHard ? LineFeed : " ", style);
                 break;
             case CodeInline code:
-                Add(new Run(code.Content) { FontFamily = MarkdownView.MonoFont, FontSize = 14, Background = MarkdownView.Resource<IBrush>("Brush.SurfaceRaised") }, style.Link);
+                Add(new Run(code.Content) { FontFamily = MarkdownView.MonoFont, FontSize = _metrics.InlineCodeSize, Background = MarkdownView.Resource<IBrush>("Brush.SurfaceRaised") }, style.Link);
                 break;
             case AutolinkInline autolink:
                 Append(autolink.Url, style with { Link = MainViewModel.WebLink(autolink.Url) });
