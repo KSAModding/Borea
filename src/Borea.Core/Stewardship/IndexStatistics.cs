@@ -19,6 +19,7 @@ namespace Borea.Core.Stewardship;
 /// <param name="NoRecentUpdate">The listings whose last update is older than <see cref="NoUpdateDays"/>, by name. A listing whose date the index does not report is not in it.</param>
 /// <param name="NoForumsThread">The listings whose type requires a forums thread and whose forums link names no thread, by name.</param>
 /// <param name="ReleaseHosts">The hosts of the [releases] table. A listing whose releases enter the index by pull request has none.</param>
+/// <param name="TotalDownloads">The downloads of every listing that reports them, so also of a listing past the end of <paramref name="MostDownloaded"/>.</param>
 public sealed record IndexStatistics(
     GameVersion? CurrentBuild,
     int ModsOnCurrentBuild,
@@ -33,7 +34,8 @@ public sealed record IndexStatistics(
     IReadOnlyList<IndexStatistics.NameCount> Tags,
     IReadOnlyList<IndexStatistics.NameCount> Licenses,
     IReadOnlyList<IndexStatistics.NameCount> ReleaseHosts,
-    IReadOnlyList<IndexStatistics.DownloadCount> MostDownloaded)
+    IReadOnlyList<IndexStatistics.DownloadCount> MostDownloaded,
+    long TotalDownloads)
 {
     /// <summary>How long a listing can go without an update before the upkeep card names it.</summary>
     public const int NoUpdateDays = 180;
@@ -53,6 +55,11 @@ public sealed record IndexStatistics(
     public sealed record NameCount(string Name, int Count);
 
     public sealed record DownloadCount(string Id, string Name, long Total);
+
+    public sealed record UpkeepRow(string Id, string Name, bool NoCurrentRelease, bool NoRecentUpdate, bool NoImage, bool NoForumsThread)
+    {
+        public int ProblemCount => (NoCurrentRelease ? 1 : 0) + (NoRecentUpdate ? 1 : 0) + (NoImage ? 1 : 0) + (NoForumsThread ? 1 : 0);
+    }
 
     private sealed record Entry(string Id, string Name, ContentType Type, IReadOnlyList<string> Tags, string License, string? ForumUrl, ContentImages? Images, DateTimeOffset? UpdatedAt, GameCompatibility Compatibility);
 
@@ -99,8 +106,28 @@ public sealed record IndexStatistics(
                 .Select(listing => new DownloadCount(listing.Id, names[listing.Id].First(), listing.Downloads!.Total))
                 .OrderByDescending(listing => listing.Total)
                 .ThenBy(listing => listing.Name, StringComparer.OrdinalIgnoreCase)
-                .Take(RankedRows)]);
+                .Take(RankedRows)],
+            listings.Sum(listing => listing.Downloads?.Total ?? 0));
     }
+
+    /// <summary>One row per listing that has a problem in the upkeep lists, the most problems first, so a listing that is in several lists shows once.</summary>
+    public IReadOnlyList<UpkeepRow> UpkeepRows()
+    {
+        var noCurrentRelease = Ids(NoCurrentRelease);
+        var noRecentUpdate = Ids(NoRecentUpdate);
+        var noImage = Ids(NoImage);
+        var noForumsThread = Ids(NoForumsThread);
+        return
+        [
+            .. NoCurrentRelease.Concat(NoRecentUpdate).Concat(NoImage).Concat(NoForumsThread)
+                .DistinctBy(listing => listing.Id, ModIds.Comparer)
+                .Select(listing => new UpkeepRow(listing.Id, listing.Name, noCurrentRelease.Contains(listing.Id), noRecentUpdate.Contains(listing.Id), noImage.Contains(listing.Id), noForumsThread.Contains(listing.Id)))
+                .OrderByDescending(row => row.ProblemCount)
+                .ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase),
+        ];
+    }
+
+    private static HashSet<string> Ids(IEnumerable<Listing> listings) => listings.Select(listing => listing.Id).ToHashSet(ModIds.Comparer);
 
     /// <summary>A listing fits the build when one release that Borea offers fits it, whichever channel that release is in.</summary>
     private static Entry EntryOf(ContentIndexListing listing, GameVersion? build)

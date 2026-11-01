@@ -127,6 +127,37 @@ public sealed class IndexStatisticsTests
     }
 
     [Fact]
+    public void TotalDownloads_AlsoCountsAListingPastTheEndOfTheRankedList()
+    {
+        var count = IndexStatistics.RankedRows + 1;
+
+        var statistics = From([.. Enumerable.Range(0, count).Select(number => Listing($"Mod{number:D2}", downloads: Downloads(1), releases: []))]);
+
+        Assert.Equal(count, statistics.TotalDownloads);
+    }
+
+    [Fact]
+    public void UpkeepRows_ShowEachListingOnce_WithItsProblems_TheMostProblemsFirst_ThenByName()
+    {
+        var old = Now - TimeSpan.FromDays(IndexStatistics.NoUpdateDays + 1);
+        var statistics = From(
+            Listing("Clean", images: Icon, releases: [Release("Clean", "1.0.0")]),
+            Listing("Beta", images: Icon, releases: []),
+            Listing("Alpha", name: "alpha", images: Icon, releases: []),
+            Listing("Two", releases: []),
+            Listing("Worst", forums: "https://example.com/somewhere", updatedAt: old, releases: []));
+
+        Assert.Equal(
+            [
+                new IndexStatistics.UpkeepRow("Worst", "Worst", true, true, true, true),
+                new IndexStatistics.UpkeepRow("Two", "Two", true, false, true, false),
+                new IndexStatistics.UpkeepRow("Alpha", "alpha", true, false, false, false),
+                new IndexStatistics.UpkeepRow("Beta", "Beta", true, false, false, false),
+            ],
+            statistics.UpkeepRows());
+    }
+
+    [Fact]
     public void Upkeep_NamesAListingThatIsNotUpdatedOnlyPastTheLimit_AndNotOneWithoutADate()
     {
         var limit = TimeSpan.FromDays(IndexStatistics.NoUpdateDays);
