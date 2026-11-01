@@ -117,6 +117,40 @@ public sealed class GameSaveShareViewTests
         Assert.DoesNotContain(harness.Localization.ListingForumsHint, texts);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PublishStep_ShowsTheSummaryAndTheLimitOfEachHost(bool hasSeveralHosts)
+    {
+        const string host = """
+            "ksamods": { "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/", "types": ["vehicle"], "max_bytes": { "vehicle": 10485760 } }
+            """;
+        const string other = """
+            "another": { "kind": "share", "name": "another.example", "api": "https://another.example/api/share/v1/", "types": ["vehicle"], "max_bytes": { "vehicle": 20971520 } }
+            """;
+        var hosts = "{" + host + (hasSeveralHosts ? "," + other : string.Empty) + "}";
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(hosts));
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+        await editor.ShareHostsLoad;
+        editor.ShareFlowStep = ShareFlowStep.Publish;
+
+        var texts = await PageTextsAsync(harness);
+
+        var localization = harness.Localization;
+        Assert.Contains(localization.ShareEdit, texts);
+        Assert.Contains(editor.ShareSummaryModsText, texts);
+        Assert.Contains(editor.ShareNeedsBuildText, texts);
+        Assert.Contains(editor.ShareHostHeadingText, texts);
+        Assert.Contains(localization.FormatShareHostLimitVehicle("10 MB"), texts);
+        Assert.Equal(hasSeveralHosts, texts.Contains(localization.FormatShareHostLimitVehicle("20 MB")));
+        Assert.Contains(editor.ShareCheckOnHostText, texts);
+        Assert.Contains(editor.ShareCheckHintText, texts);
+        Assert.DoesNotContain(localization.ShareRenameAndCheck, texts);
+    }
+
     [Fact]
     public async Task EditAllFields_OpensTheFormAtItsTop()
     {

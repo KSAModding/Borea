@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using Borea.App.Localization;
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
@@ -106,6 +107,17 @@ public sealed partial class ListingEditor
         [.. ShareLicenses.Select(license => new ShareLicenseChoice(license.Spdx, license.Label(Localization))), new ShareLicenseChoice(null, Localization.ShareLicenseOther)];
 
     public bool IsOtherShareLicense => _choseOtherLicense;
+
+    /// <summary>The license in words, or the text that the player typed for another license.</summary>
+    public string ShareLicenseText => ShareLicenseChoices.FirstOrDefault(choice => choice.Value == License.Trim())?.Label ?? License.Trim();
+
+    public string ShareSummaryModsText => Dependencies.Where(row => row.Kind == "required").Select(row => row.ModName).ToList() is { Count: > 0 } mods
+        ? Localization.FormatShareSummaryMods(string.Join(", ", mods))
+        : Localization.ShareSummaryNoMods;
+
+    public string? ShareNeedsBuildText => _share?.Content.GameBuild is { } build
+        ? Localization.FormatShareNeedsBuild(GameVersion.TryParse(build, out var version) ? version.ToString() : build)
+        : null;
 
     public ShareLicenseChoice? SelectedShareLicense
     {
@@ -225,7 +237,19 @@ public sealed partial class ListingEditor
             IsShareMoreOptionsOpen = true;
     }
 
-    partial void OnShareFlowStepChanged(ShareFlowStep value) => RefreshShareSteps();
+    partial void OnShareFlowStepChanged(ShareFlowStep value)
+    {
+        RefreshShareSteps();
+        RefreshShareSummary();
+    }
+
+    /// <summary>Only the steps before can change the summary, so it follows the step and the language.</summary>
+    private void RefreshShareSummary()
+    {
+        OnPropertyChanged(nameof(ShareLicenseText));
+        OnPropertyChanged(nameof(ShareSummaryModsText));
+        OnPropertyChanged(nameof(ShareNeedsBuildText));
+    }
 
     private void RefreshShareSteps()
     {

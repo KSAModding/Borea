@@ -3,73 +3,187 @@
              xmlns:vm="using:Borea.App.ViewModels"
              x:Class="Borea.App.Views.Share.SharePublishStep"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <Style Selector="Path.opened">
+            <Setter Property="RenderTransform" Value="rotate(180deg)" />
+        </Style>
+    </UserControl.Styles>
+    <UserControl.Resources>
+        <!-- the limit and the rules of a host, from hosts.toml -->
+        <DataTemplate x:Key="ShareHostFacts" x:DataType="vm:ShareHostRow">
+            <WrapPanel ItemSpacing="12" LineSpacing="4">
+                <TextBlock Classes="body-sm secondary" Text="{Binding LimitText}" TextWrapping="Wrap" VerticalAlignment="Center" IsVisible="{Binding LimitText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Button Classes="link" Margin="-8,0,0,0" VerticalAlignment="Center" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ListingEditor.OpenShareHostRulesCommand}" CommandParameter="{Binding Host}" IsVisible="{Binding RulesText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Classes="action-md" Text="{Binding RulesText}" />
+                </Button>
+            </WrapPanel>
+        </DataTemplate>
+    </UserControl.Resources>
     <StackPanel Spacing="16">
-        <!-- a share host of hosts.toml that takes this type (RFC 0094) -->
-        <Border Classes="card" Padding="24" IsVisible="{Binding ListingEditor.HasShareHosts}">
-            <StackPanel Spacing="8">
-                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostHeading}" />
-                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingShareHostHint}" TextWrapping="Wrap" />
-                <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostRows}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel ItemSpacing="8" LineSpacing="8" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ShareHostRow">
-                            <Button Classes="text" Content="{Binding Label}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).ListingEditor.CanUploadToShareHost}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <WrapPanel ItemSpacing="8" LineSpacing="8" IsVisible="{Binding ListingEditor.ShareHostProgress, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostProgress}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" />
-                </WrapPanel>
-                <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.ShareHostUserCode, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostCodeText}" TextWrapping="Wrap" />
-                    <SelectableTextBlock Text="{Binding ListingEditor.ShareHostUserCode}" FontFamily="{StaticResource Font.Mono}" FontSize="28" HorizontalAlignment="Left" />
-                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.GitHubSignInCodeWarning}" TextWrapping="Wrap" />
-                    <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.CopyShareHostCodeAndOpenCommand}" HorizontalAlignment="Left">
-                        <TextBlock Classes="action-md" Text="{Binding Localization.ListingShareHostCopyCode}" />
-                    </Button>
+        <!-- what goes out, which only the step before can change -->
+        <Border Classes="card" Padding="24">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareItemText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsNewVersionShare}" />
+                <StackPanel Spacing="6" IsVisible="{Binding !ListingEditor.IsNewVersionShare}">
+                    <TextBlock Classes="heading-sm" Text="{Binding ListingEditor.Name}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.Authors}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-md" Text="{Binding ListingEditor.Abstract}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareLicenseText}" TextWrapping="Wrap" />
                 </StackPanel>
-                <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostChecks}" IsVisible="{Binding !!ListingEditor.ShareHostChecks.Count}">
+                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareSummaryModsText}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareNeedsBuildText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareNeedsBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.BackToShareDescribeCommand}">
+                    <TextBlock Classes="action-md" Text="{Binding Localization.ShareEdit}" />
+                </Button>
+            </StackPanel>
+        </Border>
+        <Border Classes="card" Padding="24">
+            <StackPanel Spacing="8">
+                <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.ShareNoHostText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareNoHostText}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="text" Content="{Binding Localization.DiscoverIndexRetry}" Command="{Binding ListingEditor.RetryShareHostsCommand}" />
+                        <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" IsVisible="{Binding ListingEditor.RetryShareHostsCommand.IsRunning}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- a share host of hosts.toml that takes this type (RFC 0094) -->
+                <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.HasShareHosts}">
+                    <TextBlock Classes="heading-sm" Text="{Binding ListingEditor.ShareHostHeadingText}" TextWrapping="Wrap" />
+                    <ContentControl Content="{Binding ListingEditor.SelectedShareHostRow}" ContentTemplate="{StaticResource ShareHostFacts}" IsVisible="{Binding !ListingEditor.HasSeveralShareHosts}" />
+                    <ListBox ItemsSource="{Binding ListingEditor.ShareHostRows}" SelectedItem="{Binding ListingEditor.SelectedShareHostRow}" SelectionMode="AlwaysSelected" IsEnabled="{Binding ListingEditor.ShowsShareCheckButton}" AutomationProperties.Name="{Binding Localization.ShareHostChoiceHeading}" IsVisible="{Binding ListingEditor.HasSeveralShareHosts}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ShareHostRow">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Host.Name}" TextWrapping="Wrap" />
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ShareHostFacts}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.ShowsShareCheckButton}">
+                        <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding ListingEditor.SelectedShareHostRow}">
+                            <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareCheckOnHostText}" VerticalAlignment="Center" />
+                        </Button>
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareCheckHintText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                <!-- a failed check comes first, with the message of the host -->
+                <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostFailedChecks}" IsVisible="{Binding !!ListingEditor.ShareHostFailedChecks.Count}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Spacing="4" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ShareCheckRow">
-                            <TextBlock Classes="body-sm" Classes.danger="{Binding Failed}" Text="{Binding Text}" TextWrapping="Wrap" Margin="12,0,0,0" />
+                        <DataTemplate x:DataType="x:String">
+                            <Grid ColumnDefinitions="Auto,8,*">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
+                                <TextBlock Grid.Column="2" Classes="body-sm" Text="{Binding}" TextWrapping="Wrap" />
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.ShareHostListingText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Classes="body-sm" Text="{Binding Localization.ListingShareHostListing}" />
-                    <SelectableTextBlock Classes="body-sm secondary" FontFamily="{StaticResource Font.Mono}" Text="{Binding ListingEditor.ShareHostListingText}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareFolderCheckText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareFolderCheckText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.RenameForShareCommand}" IsVisible="{Binding ListingEditor.ShowsShareRename}">
+                    <TextBlock Classes="action-md" Text="{Binding Localization.ShareRenameAndCheck}" />
+                </Button>
+
+                <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareChecksPassedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Path Classes="icon size-16" Data="{StaticResource Icon.CheckCircle}" Stroke="{StaticResource Brush.Positive}" VerticalAlignment="Top" />
+                    <TextBlock Grid.Column="2" Classes="body-md" Text="{Binding ListingEditor.ShareChecksPassedText}" TextWrapping="Wrap" />
+                </Grid>
+
+                <!-- the rest stays closed, because a player does not need it to go on -->
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.ToggleShareDetailsCommand}" AutomationProperties.Name="{Binding Localization.LaunchShowDetails}" IsVisible="{Binding ListingEditor.HasShareDetails}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.LaunchShowDetails}" VerticalAlignment="Center" />
+                        <Path Classes="icon size-16" Classes.opened="{Binding ListingEditor.IsShareDetailsOpen}" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.IsShareDetailsOpen}">
+                    <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostPassedChecks}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Classes="body-sm secondary" Text="{Binding}" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.ShareHostListingText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareDetailsListingText}" TextWrapping="Wrap" />
+                        <SelectableTextBlock Classes="body-sm secondary" FontFamily="{StaticResource Font.Mono}" Text="{Binding ListingEditor.ShareHostListingText}" TextWrapping="Wrap" />
+                    </StackPanel>
                 </StackPanel>
-                <WrapPanel ItemSpacing="16" LineSpacing="8" IsVisible="{Binding ListingEditor.HasShareUpload}">
-                    <StackPanel Spacing="6">
-                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostVersion}" />
-                        <TextBox Classes="field" Width="160" Text="{Binding ListingEditor.ShareHostVersion}" PlaceholderText="1.0.0" AutomationProperties.Name="{Binding Localization.ListingShareHostVersion}" />
+
+                <!-- one row each, with one layout at every width -->
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+                    <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.HasShareUpload}">
+                        <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding !ListingEditor.IsEditingShareVersion}">
+                            <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareVersionLineText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <Button Grid.Column="2" Classes="link" VerticalAlignment="Center" Command="{Binding ListingEditor.EditShareVersionCommand}">
+                                <TextBlock Classes="action-md" Text="{Binding Localization.ShareChange}" />
+                            </Button>
+                        </Grid>
+                        <StackPanel Spacing="6" IsVisible="{Binding ListingEditor.IsEditingShareVersion}">
+                            <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostVersion}" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareVersionHint}" TextWrapping="Wrap" />
+                            <TextBox Classes="field" Width="160" HorizontalAlignment="Left" Text="{Binding ListingEditor.ShareHostVersion}" PlaceholderText="1.0.0" AutomationProperties.Name="{Binding Localization.ListingShareHostVersion}" />
+                            <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareVersionError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareVersionError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Classes="heading-sm" Text="{Binding Localization.ContentChannelHeader}" Margin="0,10,0,0" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareChannelHint}" TextWrapping="Wrap" />
+                            <ComboBox ItemsSource="{Binding ListingEditor.ShareStatusChoices}" SelectedItem="{Binding ListingEditor.SelectedShareStatus}" AutomationProperties.Name="{Binding Localization.ContentChannelHeader}" MinWidth="160">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ShareStatusChoice">
+                                        <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
                     </StackPanel>
-                    <StackPanel Spacing="6">
-                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostStatus}" />
-                        <ComboBox ItemsSource="{Binding ListingEditor.ShareStatusChoices}" SelectedItem="{Binding ListingEditor.SelectedShareStatus}" AutomationProperties.Name="{Binding Localization.ListingShareHostStatus}" MinWidth="140">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ShareStatusChoice">
-                                    <TextBlock Text="{Binding Label}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                    <StackPanel Grid.Row="1" Spacing="4" Margin="0,16,0,0" IsVisible="{Binding ListingEditor.HasShareUpload}">
+                        <TextBlock Classes="body-sm" Text="{Binding ListingEditor.SharePublicNoticeText}" TextWrapping="Wrap" />
+                        <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.OpenShareHostRulesCommand}" CommandParameter="{Binding ListingEditor.ShareUploadHost}" IsVisible="{Binding ListingEditor.ShareUploadRulesText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareUploadRulesText}" />
+                        </Button>
                     </StackPanel>
-                    <Button Classes="cta" Command="{Binding ListingEditor.PublishToShareHostCommand}" IsEnabled="{Binding ListingEditor.CanPublishToShareHost}" VerticalAlignment="Bottom">
-                        <TextBlock Classes="action-lg" Text="{Binding Localization.ListingShareHostPublish}" VerticalAlignment="Center" />
+                    <WrapPanel Grid.Row="2" ItemSpacing="12" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.HasShareUpload}">
+                        <Button Classes="cta" Command="{Binding ListingEditor.PublishToShareHostCommand}" IsEnabled="{Binding ListingEditor.CanPublishToShareHost}">
+                            <TextBlock Classes="action-lg" Text="{Binding ListingEditor.SharePublishText}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" IsVisible="{Binding !ListingEditor.IsSharing}" VerticalAlignment="Center" />
+                    </WrapPanel>
+                    <Grid Grid.Row="3" ColumnDefinitions="Auto,8,*,8,Auto" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.IsSharing}">
+                        <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                        <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostProgressText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Grid.Column="4" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+
+                <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.ShareHostUserCode, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostCodeText}" TextWrapping="Wrap" />
+                    <SelectableTextBlock Text="{Binding ListingEditor.ShareHostUserCode}" FontFamily="{StaticResource Font.Mono}" FontSize="36" HorizontalAlignment="Left" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareCodeWarningText}" TextWrapping="Wrap" />
+                    <WrapPanel ItemSpacing="8" LineSpacing="4" Margin="-8,0,0,0" IsVisible="{Binding ListingEditor.HasShareCodePage}">
+                        <Button Classes="link" Command="{Binding ListingEditor.OpenShareHostCodePageCommand}">
+                            <TextBlock Classes="action-md" Text="{Binding Localization.ShareOpenPageAgain}" />
+                        </Button>
+                        <Button Classes="link" Command="{Binding ListingEditor.CopyShareHostCodeCommand}">
+                            <TextBlock Classes="action-md" Text="{Binding Localization.ShareCopyCode}" />
+                        </Button>
+                    </WrapPanel>
+                    <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.CopyShareHostCodeAndOpenCommand}" HorizontalAlignment="Left" IsVisible="{Binding !ListingEditor.HasShareCodePage}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ListingShareHostCopyCode}" />
                     </Button>
-                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" IsVisible="{Binding !ListingEditor.IsSharing}" VerticalAlignment="Bottom" />
-                </WrapPanel>
-                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </StackPanel>
+
                 <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostOutcome}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostOutcome, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.OpenSharePullRequestCommand}" HorizontalAlignment="Left" IsVisible="{Binding ListingEditor.SharePullRequest, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingEditor.SharePullRequest}">
                     <TextBlock Classes="action-md" Text="{Binding Localization.ListingOpenYourPullRequest}" />

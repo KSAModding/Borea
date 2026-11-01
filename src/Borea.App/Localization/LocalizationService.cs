@@ -2119,6 +2119,36 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareBackToSteps => Resources.ShareBackToSteps;
 
+    public string ShareEdit => Resources.ShareEdit;
+
+    public string ShareChange => Resources.ShareChange;
+
+    public string ShareSummaryNoMods => Resources.ShareSummaryNoMods;
+
+    public string ShareHostChoiceHeading => Resources.ShareHostChoiceHeading;
+
+    public string ShareNoHostVehicle => Resources.ShareNoHostVehicle;
+
+    public string ShareNoHostSave => Resources.ShareNoHostSave;
+
+    public string ShareWaitingForApproval => Resources.ShareWaitingForApproval;
+
+    public string ShareOpenPageAgain => Resources.ShareOpenPageAgain;
+
+    public string ShareCopyCode => Resources.ShareCopyCode;
+
+    public string ShareVersionHint => Resources.ShareVersionHint;
+
+    public string ShareVersionInvalid => Resources.ShareVersionInvalid;
+
+    public string ShareChannelHint => Resources.ShareChannelHint;
+
+    public string ShareFolderCheckVehicle => Resources.ShareFolderCheckVehicle;
+
+    public string ShareFolderCheckSave => Resources.ShareFolderCheckSave;
+
+    public string ShareRenameAndCheck => Resources.ShareRenameAndCheck;
+
     public string ListingShareHeading => Resources.ListingShareHeading;
 
     public string ListingShareIntro => Resources.ListingShareIntro;
@@ -2147,25 +2177,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingShareArchiveFileType => Resources.ListingShareArchiveFileType;
 
-    public string ListingShareHostHint => Resources.ListingShareHostHint;
-
-    public string ListingShareHostHeading => Resources.ListingShareHostHeading;
-
     public string ListingShareHostWriting => Resources.ListingShareHostWriting;
 
     public string ListingShareHostCopyCode => Resources.ListingShareHostCopyCode;
 
-    public string ListingShareHostUploading => Resources.ListingShareHostUploading;
-
     public string ListingShareHostPublishing => Resources.ListingShareHostPublishing;
 
-    public string ListingShareHostChecksFailed => Resources.ListingShareHostChecksFailed;
-
-    public string ListingShareHostListing => Resources.ListingShareHostListing;
-
     public string ListingShareHostVersion => Resources.ListingShareHostVersion;
-
-    public string ListingShareHostStatus => Resources.ListingShareHostStatus;
 
     public string ListingShareHostPublish => Resources.ListingShareHostPublish;
 
@@ -3807,11 +3825,65 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingShareArchiveSaved(string fileName, string sha256, long size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareArchiveSavedFormat, fileName, sha256, size);
 
-    public string FormatListingShareOnHost(string host)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOnHostFormat, host);
-
     public string FormatListingShareHostSigningIn(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSigningInFormat, host);
+
+    public string FormatListingShareHostUploading(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostUploadingFormat, host);
+
+    public string FormatListingShareHostChecksFailed(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostChecksFailedFormat, host);
+
+    public string FormatListingShareHostOpenFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostOpenFailedFormat, reason);
+
+    public string FormatShareSummaryMods(string mods)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSummaryModsFormat, mods);
+
+    public string FormatShareNeedsBuild(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareNeedsBuildFormat, build);
+
+    public string FormatShareHostOne(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareHostOneFormat, host);
+
+    public string FormatShareHostLimitVehicle(string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareHostLimitVehicleFormat, size);
+
+    public string FormatShareHostLimitSave(string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareHostLimitSaveFormat, size);
+
+    public string FormatShareHostRules(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareHostRulesFormat, host);
+
+    public string FormatShareCheckOnHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareCheckOnHostFormat, host);
+
+    public string FormatShareCheckHint(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareCheckHintFormat, host);
+
+    public string FormatShareSignIn(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSignInFormat, host);
+
+    public string FormatShareCodeWarning(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareCodeWarningFormat, host);
+
+    public string FormatShareChecksPassed(int count, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareChecksPassedFormat, count, host);
+
+    public string FormatShareCheckDetail(string check, string message)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareCheckDetailFormat, check, message);
+
+    public string FormatShareDetailsListing(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareDetailsListingFormat, host);
+
+    public string FormatShareVersionLine(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareVersionLineFormat, version);
+
+    public string FormatSharePublicNotice(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePublicNoticeFormat, host);
+
+    public string FormatSharePublishVersion(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePublishVersionFormat, version);
 
     public string FormatListingShareHostCode(string page)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostCodeFormat, page);
