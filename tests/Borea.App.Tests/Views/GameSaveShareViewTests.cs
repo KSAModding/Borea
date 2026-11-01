@@ -4,6 +4,7 @@ using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
 using Borea.App.Views.Pages;
+using Borea.Core.Instances;
 
 namespace Borea.App.Tests.Views;
 
@@ -42,6 +43,8 @@ public sealed class GameSaveShareViewTests
         Assert.Contains(localization.ShareFlowIntro, texts);
         Assert.Contains(localization.ShareDescribeVehicle, texts);
         Assert.Contains(localization.ShareNext, texts);
+        Assert.Contains(localization.NavigationBack, texts);
+        Assert.Contains(localization.ShareChange, texts);
         Assert.Contains(harness.ViewModel.ListingEditor.ShareNextReason, texts);
         Assert.Contains(localization.ShareEditAll, texts);
         Assert.Contains(localization.SharePreviewVehicle, texts);
@@ -65,6 +68,87 @@ public sealed class GameSaveShareViewTests
         Assert.DoesNotContain(localization.ListingShareHint, texts);
         Assert.DoesNotContain(localization.ShareModsNone, texts);
         Assert.DoesNotContain(localization.ShareModProblem, texts);
+    }
+
+    [Fact]
+    public async Task ChooseStep_ShowsTheRowsWithTheirChipsAndTheNoteOfTheSelectedRow()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.RecordAsync(harness, instance, Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Example Rover"));
+        await harness.Services.Instances.SetActiveInstanceAsync(instance);
+        harness.IsGameProcessRunning = () => true;
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        await harness.ViewModel.ListingEditor.ShareRowCompare;
+
+        var texts = await PageTextsAsync(harness);
+
+        var localization = harness.Localization;
+        Assert.Contains(localization.ShareChooseHeading, texts);
+        Assert.Contains(localization.ShareChooseHint, texts);
+        Assert.Contains(localization.ContentTypeVehicle, texts);
+        Assert.Contains(localization.ContentTypeSave, texts);
+        Assert.Contains(localization.ShareGameRunning, texts);
+        Assert.Contains("Main", texts);
+        Assert.Contains(localization.LibraryActiveHeading, texts);
+        Assert.Contains("Example Rover", texts);
+        Assert.Contains(localization.FormatSharePickFrom("ExampleRover"), texts);
+        Assert.Contains(localization.FormatShareUnchangedCopy("ExampleRover"), texts);
+        Assert.Contains(localization.ShareNext, texts);
+        Assert.DoesNotContain(localization.ShareSaveHoldsAll, texts);
+        Assert.DoesNotContain(localization.SharePreviewVehicle, texts);
+        Assert.DoesNotContain(localization.NavigationBack, texts);
+    }
+
+    [Fact]
+    public async Task ChooseStep_OnAPageThatStandsBeforeTheInstancesLoad_OffersNoNewInstanceWhenOneExists()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+
+        var texts = await PageTextsAsync(harness, async () =>
+        {
+            await harness.ViewModel.LoadAsync();
+            await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        });
+
+        Assert.Contains(harness.Localization.ShareNoVehicles, texts);
+        Assert.DoesNotContain(harness.Localization.DiscoverCreateInstance, texts);
+    }
+
+    [Fact]
+    public async Task ChooseStep_InstanceCreatedFromTheEmptyList_MovesToTheTextOfThatInstance()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        var texts = await PageTextsAsync(harness, async () =>
+        {
+            await viewModel.LoadAsync();
+            await viewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+            viewModel.BeginCreateInstanceCommand.Execute(null);
+            viewModel.ModalInstanceName = "Main";
+            await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        });
+
+        Assert.Contains(harness.Localization.ShareNoVehicles, texts);
+        Assert.DoesNotContain(harness.Localization.ShareNoInstance, texts);
+        Assert.DoesNotContain(harness.Localization.DiscoverCreateInstance, texts);
+    }
+
+    [Fact]
+    public async Task ChooseStep_WithNoInstance_ShowsItsTextAndOneActionAndNoNext()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+
+        var texts = await PageTextsAsync(harness);
+
+        Assert.Contains(harness.Localization.ShareNoInstance, texts);
+        Assert.Contains(harness.Localization.DiscoverCreateInstance, texts);
+        Assert.DoesNotContain(harness.Localization.ShareNext, texts);
     }
 
     [Fact]
@@ -186,6 +270,7 @@ public sealed class GameSaveShareViewTests
         Assert.Contains(localization.ShareDoneNow, texts);
         Assert.Contains(localization.FormatShareOpenHost("ksamods.gg"), texts);
         Assert.Contains(localization.ContentCopyLink, texts);
+        Assert.Contains(localization.ShareAnother, texts);
         Assert.Contains(localization.ShareDoneNewListing, texts);
         Assert.Contains("No browser.", texts);
         Assert.Contains(localization.ShareTechnicalDetails, texts);
@@ -222,16 +307,19 @@ public sealed class GameSaveShareViewTests
         Assert.Equal(0, after);
     }
 
-    private static Task<List<string?>> PageTextsAsync(ViewModelHarness harness) =>
-        HeadlessApp.RunAsync(harness, () =>
+    private static Task<List<string?>> PageTextsAsync(ViewModelHarness harness, Func<Task>? afterShow = null) =>
+        HeadlessApp.RunAsync(harness, async () =>
         {
             var page = new ListingPage { DataContext = harness.ViewModel };
             var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
             window.Show();
+            if (afterShow is not null)
+                await afterShow();
+
             window.UpdateLayout();
             var texts = page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
             window.Close();
-            return Task.FromResult(texts);
+            return texts;
         });
 
     private static Task<List<string?>> VehicleMenuAsync(ViewModelHarness harness) =>

@@ -1900,16 +1900,16 @@
     <value>Could not share {0}</value>
   </data>
   <data name="ShareFolderFileMissingFormat" xml:space="preserve">
-    <value>The folder has no {0}.</value>
+    <value>The folder is incomplete, because {0} is missing. Save it again in the game, then try again.</value>
   </data>
   <data name="ShareFolderNotTomlFormat" xml:space="preserve">
-    <value>{0} is not TOML.</value>
+    <value>{0} is damaged, so Borea cannot read it. Save it again in the game, then try again.</value>
   </data>
   <data name="ShareFolderNoNameFormat" xml:space="preserve">
-    <value>{0} has no name.</value>
+    <value>{0} has no name, so the game cannot list it. Save it again in the game, then try again.</value>
   </data>
   <data name="ShareFolderNotXmlFormat" xml:space="preserve">
-    <value>{0} is not well-formed XML.</value>
+    <value>{0} is damaged, so Borea cannot read it. Save it again in the game, then try again.</value>
   </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Could not back up the saves</value>
@@ -3395,6 +3395,60 @@
   </data>
   <data name="ShareStepChoose" xml:space="preserve">
     <value>Choose</value>
+  </data>
+  <data name="ShareChooseHeading" xml:space="preserve">
+    <value>What do you want to share?</value>
+  </data>
+  <data name="ShareChooseHint" xml:space="preserve">
+    <value>Borea lists the vehicles and saves of all your instances. Pick one.</value>
+  </data>
+  <data name="ShareSaveHoldsAll" xml:space="preserve">
+    <value>A save holds your whole game, with every vehicle in it.</value>
+  </data>
+  <data name="ShareChooseLoading" xml:space="preserve">
+    <value>Reading your instances...</value>
+  </data>
+  <data name="ShareChooseFirst" xml:space="preserve">
+    <value>Choose a vehicle or a save first.</value>
+  </data>
+  <data name="ShareGameRunning" xml:space="preserve">
+    <value>The game is running. Close it, then continue, so Borea reads complete files.</value>
+  </data>
+  <data name="ShareNoInstance" xml:space="preserve">
+    <value>Vehicles and saves live in an instance, and you have none yet.</value>
+  </data>
+  <data name="ShareNoVehicles" xml:space="preserve">
+    <value>You have no vehicles to share yet. Build one in the game and save it, then come back.</value>
+  </data>
+  <data name="ShareNoSaves" xml:space="preserve">
+    <value>You have no saves to share yet. Start a game and save it, then come back.</value>
+  </data>
+  <data name="ShareProfileVehicles" xml:space="preserve">
+    <value>Your game profile has vehicles from playing without Borea. Copy them into an instance first.</value>
+  </data>
+  <data name="ShareProfileSaves" xml:space="preserve">
+    <value>Your game profile has saves from playing without Borea. Copy them into an instance first.</value>
+  </data>
+  <data name="SharePickFromFormat" xml:space="preserve">
+    <value>From {0}</value>
+  </data>
+  <data name="ShareNeedsNewName" xml:space="preserve">
+    <value>Needs a new name</value>
+  </data>
+  <data name="ShareUnchangedCopyFormat" xml:space="preserve">
+    <value>You installed {0} from Discover and have not changed it, so there is nothing of yours to share.</value>
+  </data>
+  <data name="ShareChangedVehicleFormat" xml:space="preserve">
+    <value>This vehicle came from {0}. Share it only if you made it, or if the author allows it.</value>
+  </data>
+  <data name="ShareChangedSaveFormat" xml:space="preserve">
+    <value>This save came from {0}. Share it only if you made it, or if the author allows it.</value>
+  </data>
+  <data name="ShareNoBuild" xml:space="preserve">
+    <value>The file does not say which game build wrote it, so the sharing site would refuse it. Load it in the game and save it again.</value>
+  </data>
+  <data name="ShareAnother" xml:space="preserve">
+    <value>Share another</value>
   </data>
   <data name="ShareStepDescribe" xml:space="preserve">
     <value>Describe</value>

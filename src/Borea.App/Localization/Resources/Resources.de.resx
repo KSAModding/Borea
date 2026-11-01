@@ -1900,16 +1900,16 @@
     <value>{0} konnte nicht geteilt werden</value>
   </data>
   <data name="ShareFolderFileMissingFormat" xml:space="preserve">
-    <value>Im Ordner fehlt {0}.</value>
+    <value>Der Ordner ist unvollständig, denn es fehlt {0}. Speichere ihn im Spiel erneut und versuche es dann noch einmal.</value>
   </data>
   <data name="ShareFolderNotTomlFormat" xml:space="preserve">
-    <value>{0} ist kein gültiges TOML.</value>
+    <value>{0} ist beschädigt, darum kann Borea es nicht lesen. Speichere es im Spiel erneut und versuche es dann noch einmal.</value>
   </data>
   <data name="ShareFolderNoNameFormat" xml:space="preserve">
-    <value>{0} enthält keinen Namen.</value>
+    <value>{0} hat keinen Namen, darum kann das Spiel es nicht auflisten. Speichere es im Spiel erneut und versuche es dann noch einmal.</value>
   </data>
   <data name="ShareFolderNotXmlFormat" xml:space="preserve">
-    <value>{0} ist kein gültiges XML.</value>
+    <value>{0} ist beschädigt, darum kann Borea es nicht lesen. Speichere es im Spiel erneut und versuche es dann noch einmal.</value>
   </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Die Spielstände konnten nicht gesichert werden</value>
@@ -3395,6 +3395,60 @@
   </data>
   <data name="ShareStepChoose" xml:space="preserve">
     <value>Auswählen</value>
+  </data>
+  <data name="ShareChooseHeading" xml:space="preserve">
+    <value>Was möchtest du teilen?</value>
+  </data>
+  <data name="ShareChooseHint" xml:space="preserve">
+    <value>Borea zeigt die Fahrzeuge und Spielstände aller deiner Instanzen. Wähle eines aus.</value>
+  </data>
+  <data name="ShareSaveHoldsAll" xml:space="preserve">
+    <value>Ein Spielstand enthält dein ganzes Spiel mit allen Fahrzeugen darin.</value>
+  </data>
+  <data name="ShareChooseLoading" xml:space="preserve">
+    <value>Deine Instanzen werden gelesen...</value>
+  </data>
+  <data name="ShareChooseFirst" xml:space="preserve">
+    <value>Wähle zuerst ein Fahrzeug oder einen Spielstand.</value>
+  </data>
+  <data name="ShareGameRunning" xml:space="preserve">
+    <value>Das Spiel läuft. Schließe es und mache dann weiter, damit Borea vollständige Dateien liest.</value>
+  </data>
+  <data name="ShareNoInstance" xml:space="preserve">
+    <value>Fahrzeuge und Spielstände liegen in einer Instanz, und du hast noch keine.</value>
+  </data>
+  <data name="ShareNoVehicles" xml:space="preserve">
+    <value>Du hast noch keine Fahrzeuge zum Teilen. Baue eins im Spiel und speichere es, dann komm wieder.</value>
+  </data>
+  <data name="ShareNoSaves" xml:space="preserve">
+    <value>Du hast noch keine Spielstände zum Teilen. Starte ein Spiel und speichere es, dann komm wieder.</value>
+  </data>
+  <data name="ShareProfileVehicles" xml:space="preserve">
+    <value>Dein Spielprofil hat Fahrzeuge aus der Zeit ohne Borea. Kopiere sie zuerst in eine Instanz.</value>
+  </data>
+  <data name="ShareProfileSaves" xml:space="preserve">
+    <value>Dein Spielprofil hat Spielstände aus der Zeit ohne Borea. Kopiere sie zuerst in eine Instanz.</value>
+  </data>
+  <data name="SharePickFromFormat" xml:space="preserve">
+    <value>Aus {0}</value>
+  </data>
+  <data name="ShareNeedsNewName" xml:space="preserve">
+    <value>Braucht einen neuen Namen</value>
+  </data>
+  <data name="ShareUnchangedCopyFormat" xml:space="preserve">
+    <value>Du hast {0} von der Seite Entdecken installiert und nicht verändert, darum gibt es nichts von dir zu teilen.</value>
+  </data>
+  <data name="ShareChangedVehicleFormat" xml:space="preserve">
+    <value>Dieses Fahrzeug stammt von {0}. Teile es nur, wenn du es gemacht hast oder der Autor es erlaubt.</value>
+  </data>
+  <data name="ShareChangedSaveFormat" xml:space="preserve">
+    <value>Dieser Spielstand stammt von {0}. Teile ihn nur, wenn du ihn gemacht hast oder der Autor es erlaubt.</value>
+  </data>
+  <data name="ShareNoBuild" xml:space="preserve">
+    <value>Die Datei nennt nicht den Spiel-Build, der sie geschrieben hat, darum würde die Plattform sie ablehnen. Lade sie im Spiel und speichere sie erneut.</value>
+  </data>
+  <data name="ShareAnother" xml:space="preserve">
+    <value>Weiteres teilen</value>
   </data>
   <data name="ShareStepDescribe" xml:space="preserve">
     <value>Beschreiben</value>

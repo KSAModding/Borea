@@ -50,7 +50,7 @@ public sealed partial class ListingEditor
     private bool _choseOtherLicense;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsShareDescribe), nameof(IsSharePublish), nameof(IsShareDone))]
+    [NotifyPropertyChangedFor(nameof(IsShareChoose), nameof(IsShareDescribe), nameof(IsSharePublish), nameof(IsShareDone), nameof(ShowsPreviewCard))]
     private ShareFlowStep _shareFlowStep;
 
     [ObservableProperty]
@@ -81,6 +81,8 @@ public sealed partial class ListingEditor
     /// <summary>Whether the item names no mod at all. A proposed mod that the player removed, a note or a file that a mod wrote says that it may need one that the list does not name.</summary>
     [ObservableProperty]
     private bool _hasNoShareMods;
+
+    public bool IsShareChoose => ShareFlowStep == ShareFlowStep.Choose;
 
     public bool IsShareDescribe => ShareFlowStep == ShareFlowStep.Describe;
 
@@ -122,7 +124,7 @@ public sealed partial class ListingEditor
 
     private string ShareListingName => _shareListing is { } shared ? shared.Listing.Authored?.Name ?? shared.Listing.Id : Draft.Name;
 
-    public bool ShowsPreviewCard => !IsShareStep || !IsNewVersionShare;
+    public bool ShowsPreviewCard => !IsShareStep || (!IsShareChoose && !IsNewVersionShare);
 
     public string PreviewHeading => !IsShareStep ? Localization.ListingPreview : IsSave ? Localization.SharePreviewSave : Localization.SharePreviewVehicle;
 
@@ -278,7 +280,7 @@ public sealed partial class ListingEditor
     {
         MainViewModel.Arrange(ShareSteps,
         [
-            new ListingStepItem("choose", Localization.ShareStepChoose, ListingStepState.Done, string.Empty),
+            Row("choose", Localization.ShareStepChoose, ShareFlowStep.Choose),
             Row("describe", Localization.ShareStepDescribe, ShareFlowStep.Describe),
             Row("publish", Localization.ListingShareHostPublish, ShareFlowStep.Publish),
             Row("done", Localization.ListingStepDone, ShareFlowStep.Done),
@@ -294,8 +296,13 @@ public sealed partial class ListingEditor
     /// <summary>A click on a row of the side panel, which goes back by the same rule as the Back button.</summary>
     internal void OpenShareStep(string key)
     {
-        if (key == "describe" && ShareFlowStep == ShareFlowStep.Publish && !IsSendingSharePublish)
+        if (IsSendingSharePublish)
+            return;
+
+        if (key == "describe" && ShareFlowStep == ShareFlowStep.Publish)
             BackToShareDescribe();
+        else if (key == "choose" && ShareFlowStep is ShareFlowStep.Describe or ShareFlowStep.Publish)
+            BackToShareChoose();
     }
 
     [RelayCommand]

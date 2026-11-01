@@ -2033,6 +2033,34 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareStepChoose => Resources.ShareStepChoose;
 
+    public string ShareChooseHeading => Resources.ShareChooseHeading;
+
+    public string ShareChooseHint => Resources.ShareChooseHint;
+
+    public string ShareSaveHoldsAll => Resources.ShareSaveHoldsAll;
+
+    public string ShareChooseLoading => Resources.ShareChooseLoading;
+
+    public string ShareChooseFirst => Resources.ShareChooseFirst;
+
+    public string ShareGameRunning => Resources.ShareGameRunning;
+
+    public string ShareNoInstance => Resources.ShareNoInstance;
+
+    public string ShareNoVehicles => Resources.ShareNoVehicles;
+
+    public string ShareNoSaves => Resources.ShareNoSaves;
+
+    public string ShareProfileVehicles => Resources.ShareProfileVehicles;
+
+    public string ShareProfileSaves => Resources.ShareProfileSaves;
+
+    public string ShareNeedsNewName => Resources.ShareNeedsNewName;
+
+    public string ShareNoBuild => Resources.ShareNoBuild;
+
+    public string ShareAnother => Resources.ShareAnother;
+
     public string ShareStepDescribe => Resources.ShareStepDescribe;
 
     public string ShareNext => Resources.ShareNext;
@@ -3970,6 +3998,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatShareErrorLostAnswer(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorLostAnswerFormat, host);
+
+    public string FormatSharePickFrom(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePickFromFormat, name);
+
+    public string FormatShareUnchangedCopy(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareUnchangedCopyFormat, name);
+
+    public string FormatShareChangedVehicle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareChangedVehicleFormat, name);
+
+    public string FormatShareChangedSave(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareChangedSaveFormat, name);
 
     public string FormatShareErrorFile(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorFileFormat, name);

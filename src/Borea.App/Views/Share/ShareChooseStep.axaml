@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.Share.ShareChooseStep"
+             x:DataType="vm:MainViewModel">
+    <StackPanel Spacing="16">
+        <Border Classes="card" Padding="24">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="heading-md" Text="{Binding Localization.ShareChooseHeading}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-md secondary" Text="{Binding Localization.ShareChooseHint}" TextWrapping="Wrap" />
+                <WrapPanel ItemSpacing="4" LineSpacing="4" Margin="0,4,0,0">
+                    <Button Classes="tab" Classes.active="{Binding ListingEditor.IsShareChooseVehicle}" Content="{Binding Localization.ContentTypeVehicle}" Command="{Binding ListingEditor.ShowShareChooseVehiclesCommand}" IsVisible="{Binding VehiclesSection.CanShare}" />
+                    <Button Classes="tab" Classes.active="{Binding ListingEditor.IsShareChooseSave}" Content="{Binding Localization.ContentTypeSave}" Command="{Binding ListingEditor.ShowShareChooseSavesCommand}" IsVisible="{Binding SavesSection.CanShare}" />
+                </WrapPanel>
+                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareSaveHoldsAll}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsShareChooseSave}" />
+
+                <views:Banner Kind="Outline" Margin="0,8,0,0" Message="{Binding Localization.ShareGameRunning}" ActionText="{Binding Localization.DiscoverIndexRetry}" ActionCommand="{Binding ListingEditor.CheckShareGameRunningCommand}" IsVisible="{Binding ListingEditor.IsShareGameRunning}" />
+
+                <ListBox ItemsSource="{Binding ListingEditor.ShareChooseRows}" SelectedItem="{Binding ListingEditor.SelectedShareRow}" Margin="0,8,0,0" AutomationProperties.Name="{Binding Localization.ShareChooseHeading}" IsVisible="{Binding !!ListingEditor.ShareChooseRows.Count}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShareChooseRow">
+                            <StackPanel Spacing="6">
+                                <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding InstanceName, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <TextBlock Classes="label-md" Text="{Binding InstanceName}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsFirstOfActiveInstance}">
+                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActiveHeading}" />
+                                    </Border>
+                                </WrapPanel>
+                                <Grid ColumnDefinitions="Auto,12,*">
+                                    <Path Classes="icon" Data="{StaticResource Icon.Cylinder}" VerticalAlignment="Top" IsVisible="{Binding Item.IsVehicle}" />
+                                    <Path Classes="icon" Data="{StaticResource Icon.Planet}" VerticalAlignment="Top" IsVisible="{Binding !Item.IsVehicle}" />
+                                    <StackPanel Grid.Column="2" Spacing="4">
+                                        <TextBlock Classes="heading-sm" Text="{Binding Item.Name}" TextWrapping="Wrap" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding Item.UpdatedText}" TextWrapping="Wrap" />
+                                        <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                            <Border Classes="chip" ToolTip.Tip="{Binding FromText}" IsVisible="{Binding FromText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <TextBlock Text="{Binding FromText}" TextTrimming="CharacterEllipsis" />
+                                            </Border>
+                                            <Border Classes="chip" ToolTip.Tip="{Binding NeedsNewNameTip}" IsVisible="{Binding NeedsNewName}">
+                                                <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ShareNeedsNewName}" />
+                                            </Border>
+                                            <Border Classes="chip" IsVisible="{Binding Item.SharedOnText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <TextBlock Text="{Binding Item.SharedOnText}" />
+                                            </Border>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding NoteText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Question}" VerticalAlignment="Top" />
+                                    <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding NoteText}" TextWrapping="Wrap" />
+                                </Grid>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareChooseLoading}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsLoadingShareChoose}" />
+
+                <StackPanel Spacing="8" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.ShareChooseEmptyText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareChooseEmptyText}" TextWrapping="Wrap" />
+                    <Button Classes="text" HorizontalAlignment="Left" Content="{Binding Localization.DiscoverCreateInstance}" Command="{Binding BeginCreateInstanceCommand}" IsVisible="{Binding ListingEditor.ShowsShareCreateInstance}" />
+                    <Button Classes="text" HorizontalAlignment="Left" Content="{Binding Localization.ToastOpenInstance}" Command="{Binding ListingEditor.OpenShareProfileInstanceCommand}" IsVisible="{Binding ListingEditor.ShareProfileInstance, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareChooseError, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
+                    <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding ListingEditor.ShareChooseError}" TextWrapping="Wrap" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareFormCommand}" IsVisible="{Binding ListingEditor.HasFormBehindShareChoose}" />
+                <!-- an empty state has no Next, because a disabled button there leads nowhere -->
+                <Button Classes="cta" Command="{Binding ListingEditor.ContinueShareChooseCommand}" IsEnabled="{Binding ListingEditor.CanContinueShareChoose}" IsVisible="{Binding !!ListingEditor.ShareChooseRows.Count}">
+                    <TextBlock Classes="action-lg" Text="{Binding Localization.ShareNext}" VerticalAlignment="Center" />
+                </Button>
+                <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}">
+                    <ProgressBar.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                            <Binding Path="ListingEditor.IsComparingShareRow" />
+                            <Binding Path="ListingEditor.ContinueShareChooseCommand.IsRunning" />
+                        </MultiBinding>
+                    </ProgressBar.IsVisible>
+                </ProgressBar>
+            </StackPanel>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareChooseFirst}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShowsShareChooseFirst}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

@@ -20,6 +20,7 @@
                     <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareDoneOpenText}" VerticalAlignment="Center" />
                 </Button>
                 <Button Classes="text" Content="{Binding Localization.ContentCopyLink}" Command="{Binding ListingEditor.CopyShareDoneLinkCommand}" VerticalAlignment="Center" />
+                <Button Classes="text" Content="{Binding Localization.ShareAnother}" Command="{Binding ListingEditor.ShareAnotherCommand}" VerticalAlignment="Center" />
             </WrapPanel>
             <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />

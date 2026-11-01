@@ -130,8 +130,8 @@ public partial class MainViewModel
         || needed.HasConflict
         || needed.Accepts(version);
 
-    /// <summary>True while the game or an instance runs, when the loader folder is in use and a replace would fail halfway.</summary>
-    private bool IsGameRunning(BoreaServices services) =>
+    /// <summary>True while the game or an instance runs, when the loader folder is in use and a replace would fail halfway, and the game can still write a file that a share reads.</summary>
+    internal bool IsGameRunning(BoreaServices services) =>
         services.IsGameProcessRunning() || Instances.Any(instance => services.Launcher.IsRunning(instance.InstanceId));
 
     private void RefreshLoaderUpdateText()
