@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Borea.Core.GitHub;
+using Borea.Core.Index;
 using Borea.Core.Listings;
 using Borea.Core.Secrets;
 using Borea.Core.Sharing;
@@ -202,6 +203,28 @@ public sealed class ShareHostClient : IShareHostClient
             ShareHostJson.Text(published.Version) is { Length: > 0 } released ? released : version,
             pullRequest,
             PageOnHost(host, ShareHostJson.Text(published.Page)));
+    }
+
+    /// <summary>The answer lists the pictures of the listing, and Borea does not read it, because a 2xx already says that the host took this one.</summary>
+    public async Task UploadImageAsync(ShareHost host, string listingType, string listingId, ReadOnlyMemory<byte> image, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentException.ThrowIfNullOrEmpty(listingType);
+        ArgumentException.ThrowIfNullOrEmpty(listingId);
+        var (mediaType, extension) = ContentImageBytes.Inspect(image.Span)?.Format switch
+        {
+            "PNG" => ("image/png", "png"),
+            "JPEG" => ("image/jpeg", "jpg"),
+            _ => ("image/webp", "webp"),
+        };
+        using var content = new MultipartFormDataContent();
+        var file = new ReadOnlyMemoryContent(image);
+        file.Headers.ContentType = new MediaTypeHeaderValue(mediaType);
+
+        // The name of the file on the computer of the player stays there, because the host names its copy itself.
+        content.Add(file, ShareHostJson.Image, $"{ShareHostJson.Image}.{extension}");
+        var path = $"{ShareHostApi.ListingsPath}/{Uri.EscapeDataString(listingType)}/{Uri.EscapeDataString(listingId)}/{ShareHostApi.ImagesPath}";
+        await SendAsync(host, HttpMethod.Post, path, content, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -403,8 +426,9 @@ public sealed class ShareHostClient : IShareHostClient
                 RetryAfter = error.RetryAfter.ValueKind == JsonValueKind.Number && error.RetryAfter.TryGetInt32(out var seconds) && seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
                 FieldErrors = ReadFieldErrors(error.FieldErrors),
                 IsServerError = (int)reply.Status >= 500,
+                IsNotFound = reply.Status == HttpStatusCode.NotFound,
             }
-            : Unexpected(host, reply);
+            : Unexpected(host, reply, isNotFound: reply.Status == HttpStatusCode.NotFound);
 
     private static IReadOnlyList<ShareCheck>? ReadChecks(JsonElement checks) =>
         checks.ValueKind == JsonValueKind.Array && Parse<List<ShareHostJson.Check>>(checks.GetRawText()) is { } list ? ToChecks(list) : null;
@@ -438,8 +462,12 @@ public sealed class ShareHostClient : IShareHostClient
     private static ShareHostException SignInError(ShareHost host, string error, string? description) =>
         new(ShareHostFailure.Host, description ?? $"{host.Name} refused the sign-in with {error}.", error);
 
-    private static ShareHostException Unexpected(ShareHost host, Reply reply) =>
-        new((int)reply.Status >= 500 ? ShareHostFailure.Unavailable : ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.");
+    /// <param name="isNotFound">Only a request of the upload API passes this, because a 404 of the sign-in says nothing about the request that it interrupted.</param>
+    private static ShareHostException Unexpected(ShareHost host, Reply reply, bool isNotFound = false) =>
+        new((int)reply.Status >= 500 ? ShareHostFailure.Unavailable : ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.")
+        {
+            IsNotFound = isNotFound,
+        };
 
     private static ShareHostException Network() => new(ShareHostFailure.NetworkError, "The share host could not be reached.");
 

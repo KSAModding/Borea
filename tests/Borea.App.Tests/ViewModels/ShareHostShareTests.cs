@@ -2079,6 +2079,8 @@ public sealed class ShareHostShareTests
             return (RefuseToken() ?? PublishFailure) is { } failure ? throw failure : new SharePublished(PublishedId, version, PullRequest, Page);
         }
 
+        public Task UploadImageAsync(ShareHost host, string listingType, string listingId, ReadOnlyMemory<byte> image, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
         private ShareHostException? RefuseToken()
         {
             if (TokenRefusals == 0)

@@ -18,6 +18,15 @@ public sealed class ShareHostClientTests
     private const string UploadJson = """{"upload":"u42","checks":[{"name":"meta.toml","passed":true},{"name":"folder","passed":false,"message":"Taken by OtherRover."}],"version":"1.0.0","listing":"id = \"ExampleRover\"\n"}""";
     private const string PublishedJson = """{"id":"ExampleRover","version":"1.0.0","pull_request":"https://github.com/KSAModding/content-index/pull/250"}""";
 
+    /// <summary>Only the format of the bytes matters to the client, so this is the smallest PNG that its check reads.</summary>
+    private static readonly byte[] Png =
+    [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x44, 0x41, 0x54, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0x00, 0x00, 0x00, 0x00,
+    ];
+
     private static readonly ShareHost Host = new("ksamods", "ksamods.gg", new Uri(Api), ["vehicle", "save"], new Dictionary<string, long> { ["vehicle"] = 1024 });
 
     private readonly StepTimeProvider _time = new();
@@ -450,6 +459,60 @@ public sealed class ShareHostClientTests
 
         Assert.Equal(ShareHostFailure.SignedOut, exception.Failure);
         Assert.Empty(_sent);
+    }
+
+    [Fact]
+    public async Task UploadImageAsync_SendsTheFileAsImageBelowTheListing_WithoutTheNameOfTheFile()
+    {
+        _apiAnswer = _ => Json("not a list of pictures", HttpStatusCode.Created);
+        var client = await SignedInAsync();
+
+        await client.UploadImageAsync(Host, "vehicle", "Example Rover", Png);
+
+        var sent = _sent.Last();
+        Assert.Equal(Api + "listings/vehicle/Example%20Rover/images", sent.Url);
+        Assert.Equal("Bearer at1", sent.Authorization);
+        var part = Assert.Single(sent.Parts);
+        Assert.Equal(("image", "image.png", "image/png"), (part.Name, part.FileName, part.MediaType));
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("<html>Not Found</html>", null)]
+    [InlineData("""{"message":"Not Found."}""", null)]
+    [InlineData("""{"error":"not_owner","message":"No such listing."}""", "not_owner")]
+    public async Task UploadImageAsync_NotFound_SaysSo(string? body, string? error)
+    {
+        _apiAnswer = _ => body is null ? new HttpResponseMessage(HttpStatusCode.NotFound) : Json(body, HttpStatusCode.NotFound);
+        var client = await SignedInAsync();
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.UploadImageAsync(Host, "vehicle", "ExampleRover", Png));
+
+        Assert.Equal((error, true), (exception.Error, exception.IsNotFound));
+    }
+
+    [Theory]
+    [InlineData("""{"error":"invalid_request","message":"A listing has at most 6 screenshots."}""", HttpStatusCode.UnprocessableEntity, "invalid_request")]
+    [InlineData("""{"error":"too_large","message":"Too large."}""", HttpStatusCode.RequestEntityTooLarge, "too_large")]
+    public async Task UploadImageAsync_Refused_IsNoMissingRequest(string body, HttpStatusCode status, string error)
+    {
+        _apiAnswer = _ => Json(body, status);
+        var client = await SignedInAsync();
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.UploadImageAsync(Host, "vehicle", "ExampleRover", Png));
+
+        Assert.Equal((error, false), (exception.Error, exception.IsNotFound));
+    }
+
+    [Fact]
+    public async Task SignInAsync_NotFound_IsNoMissingRequest()
+    {
+        _deviceJson = "<html>Not Found</html>";
+        _deviceStatus = HttpStatusCode.NotFound;
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => Client().SignInAsync(Host));
+
+        Assert.Equal((ShareHostFailure.UnexpectedResponse, false), (exception.Failure, exception.IsNotFound));
     }
 
     private async Task<ShareHostClient> SignedInAsync(bool keep = false)
