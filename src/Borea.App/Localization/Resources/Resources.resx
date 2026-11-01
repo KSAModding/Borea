@@ -6147,6 +6147,24 @@
   <data name="PreviewResetView" xml:space="preserve">
     <value>Reset view</value>
   </data>
+  <data name="PreviewSavePicture" xml:space="preserve">
+    <value>Save picture</value>
+  </data>
+  <data name="PreviewSavePictureTip" xml:space="preserve">
+    <value>Saves this view as a PNG file on your computer. Nothing is uploaded.</value>
+  </data>
+  <data name="PreviewPictureFileType" xml:space="preserve">
+    <value>PNG picture</value>
+  </data>
+  <data name="PreviewPictureFailed" xml:space="preserve">
+    <value>The picture could not be saved.</value>
+  </data>
+  <data name="PreviewFactPartsFormat" xml:space="preserve">
+    <value>Parts: {0}</value>
+  </data>
+  <data name="PreviewFactStagesFormat" xml:space="preserve">
+    <value>Stages: {0}</value>
+  </data>
   <data name="PreviewAttribution" xml:space="preserve">
     <value>Parts are drawn from your own KSA install. Borea does not ship game files.</value>
   </data>

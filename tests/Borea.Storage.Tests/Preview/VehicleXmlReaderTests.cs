@@ -8,6 +8,31 @@ namespace Borea.Storage.Tests.Preview;
 public sealed class VehicleXmlReaderTests
 {
     [Fact]
+    public void TheStageCount_IsTheDifferentPositiveSequenceNumbersInsideTheParts_AndTheWalkFindsNoOtherPart()
+    {
+        const string body = """
+            <RootPartRef InstanceOf="Capsule" LocalInstanceId="1" Sequence="1">
+              <SubPartRef InstanceOf="Hatch" LocalInstanceId="2" Sequence="0">
+                <DecouplerData Sequence="2" />
+                <EngineController Sequence="3"><Transform><Position X="9" /></Transform></EngineController>
+                <PartRef InstanceOf="NotAPart" LocalInstanceId="9" />
+              </SubPartRef>
+              <PartRef InstanceOf="Tank" LocalInstanceId="3" Sequence="many">
+                <SubPartRef InstanceOf="Nozzle" LocalInstanceId="4"><EngineController Sequence="3" /></SubPartRef>
+              </PartRef>
+            </RootPartRef>
+            <SequenceEnvironment Sequence="8" />
+            """;
+
+        var vehicle = VehicleXmlReader.Read(Vehicle(body));
+
+        Assert.Empty(vehicle.Problems);
+        Assert.Equal(3, vehicle.StageCount);
+        Assert.Equal([("Capsule", 1u), ("Tank", 3u)], vehicle.Parts.Select(part => (part.InstanceOf, part.LocalInstanceId)));
+        Assert.Equal(Matrix4x4.Identity, vehicle.Parts[0].Transform);
+    }
+
+    [Fact]
     public void AChildPartRef_KeepsItsOwnGlobalTransform_AndPartRefTextUnderSymmetryIsNotAPart()
     {
         const string body = """
