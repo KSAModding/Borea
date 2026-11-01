@@ -239,6 +239,31 @@ public sealed class ContentIndexReaderTests : IDisposable
         Assert.Equal(["vehicle"], own.Types);
         Assert.Null(own.MaxBytesFor("vehicle"));
         Assert.Equal("https://own.example/", own.Page.AbsoluteUri);
+        Assert.Equal("https://data.own.example/share/", own.Data!.AbsoluteUri);
+        Assert.Equal(["https://cdn.own.example/"], own.Downloads.Select(prefix => prefix.AbsoluteUri));
+        Assert.True(own.KeepsNoDownloadCount);
+        Assert.False(storage.KeepsNoDownloadCount);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Hosts_ADownloadPrefixThatIsNotAnHttpsBaseUrl_IsLeftOut()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: $$"""
+            "hosts": {
+                "ownhost": {
+                    "kind": "share",
+                    "api": "https://own.example/api",
+                    "data": "https://data.own.example/share/",
+                    "downloads": ["http://cdn.own.example/", "https://cdn.own.example/files", 7],
+                    "types": ["vehicle"]
+                }
+            },
+            """));
+
+        var host = Assert.Single((await _reader.ReadAsync()).ShareHosts);
+
+        Assert.Empty(host.Downloads);
+        Assert.False(host.KeepsNoDownloadCount);
     }
 
     [Theory]
