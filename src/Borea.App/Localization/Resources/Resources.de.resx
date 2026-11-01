@@ -4158,11 +4158,17 @@
   <data name="ShareTakeDownChoose" xml:space="preserve">
     <value>Wähle die Version, die du entfernen willst.</value>
   </data>
+  <data name="ShareTakeDownPlaceholder" xml:space="preserve">
+    <value>Version wählen</value>
+  </data>
+  <data name="ShareTakeDownButton" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
   <data name="ShareTakeDownNoVersion" xml:space="preserve">
     <value>Borea kennt keine Version, die du entfernen kannst. Nutze den Link unten.</value>
   </data>
   <data name="ShareTakeDownWarningFormat" xml:space="preserve">
-    <value>Damit wird Version {0} von {1} auf {2} entfernt. Ihre Datei und ihre Kopie im Internet Archive werden gelöscht. Das lässt sich nicht rückgängig machen, und die Versionsnummer {0} lässt sich nie wieder verwenden. Der Download kann noch bis zu 10 Minuten funktionieren.</value>
+    <value>Damit wird Version {0} von {1} auf {2} entfernt. Die Datei der Version und ihre Kopie im Internet Archive werden gelöscht. Das lässt sich nicht rückgängig machen, und die Versionsnummer {0} lässt sich nie wieder verwenden. Der Download kann noch bis zu 10 Minuten funktionieren.</value>
   </data>
   <data name="ShareTakeDownVersionFormat" xml:space="preserve">
     <value>Version {0} entfernen</value>

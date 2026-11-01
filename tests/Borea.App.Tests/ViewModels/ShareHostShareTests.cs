@@ -2793,6 +2793,8 @@ public sealed class ShareHostShareTests
         Assert.Equal(["1.2.0", "1.0.0"], dialog.Versions);
         Assert.Null(dialog.SelectedVersion);
         Assert.Null(dialog.TakeDownWarning);
+        Assert.True(dialog.ShowsTakeDownButton);
+        Assert.Equal(localization.ShareTakeDownButton, dialog.TakeDownText);
         Assert.False(dialog.TakeDownCommand.CanExecute(null));
 
         dialog.SelectedVersion = "1.2.0";
@@ -2858,7 +2860,7 @@ public sealed class ShareHostShareTests
     }
 
     [Fact]
-    public async Task Refusal_NotOwner_ShowsItsMessage_KeepsTheRecord_AndOffersAnotherAccount()
+    public async Task Refusal_NotOwner_ShowsTheTextOfBorea_KeepsTheRecord_AndOffersAnotherAccount()
     {
         var host = new FakeHost { ManageFailure = new ShareHostException(ShareHostFailure.Host, "Your account does not own ExampleRover.", "not_owner") };
         using var harness = await OwnedPageAsync(host, OwnRecord);
@@ -2867,7 +2869,7 @@ public sealed class ShareHostShareTests
 
         await dialog.SendChangeCommand.ExecuteAsync(null);
 
-        Assert.Equal("Your account does not own ExampleRover.", dialog.Error);
+        Assert.Equal(harness.Localization.FormatShareErrorNotOwner("ksamods.gg", "Example Rover"), dialog.Error);
         Assert.Null(dialog.DoneText);
         Assert.Equal(harness.Localization.FormatShareSignOut("ksamods.gg"), dialog.SignOutText);
         Assert.Single(await harness.Services.SharedContent.ListAsync());

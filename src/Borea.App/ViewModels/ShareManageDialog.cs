@@ -109,7 +109,7 @@ public sealed partial class ShareManageDialog : ObservableObject
 
     /// <summary>What the host did, which ends the dialog.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowsChangeFields), nameof(ShowsTakeDown), nameof(CanSend), nameof(CanTakeDown))]
+    [NotifyPropertyChangedFor(nameof(ShowsChangeFields), nameof(ShowsTakeDown), nameof(ShowsTakeDownButton), nameof(CanSend), nameof(CanTakeDown))]
     [NotifyCanExecuteChangedFor(nameof(SendChangeCommand), nameof(TakeDownCommand))]
     private string? _doneText;
 
@@ -340,7 +340,11 @@ public sealed partial class ShareManageDialog : ObservableObject
     /// <summary>The confirmation names one version, so nothing shows until the player chose one.</summary>
     public string? TakeDownWarning => SelectedVersion is { } version ? Localization.FormatShareTakeDownWarning(version, _target.Name, _target.Host.Name) : null;
 
-    public string? TakeDownText => SelectedVersion is { } version ? Localization.FormatShareTakeDownVersion(version) : null;
+    /// <summary>The button names the chosen version, and before a choice it says only what it will do, so the player sees the next step.</summary>
+    public string TakeDownText => SelectedVersion is { } version ? Localization.FormatShareTakeDownVersion(version) : Localization.ShareTakeDownButton;
+
+    /// <summary>A listing with no known version has nothing to take down here, so the button would never turn on.</summary>
+    public bool ShowsTakeDownButton => ShowsTakeDown && !HasNoVersion;
 
     public bool CanTakeDown => SelectedVersion is not null && !IsRunning && DoneText is null;
 
@@ -489,7 +493,7 @@ public sealed partial class ShareManageDialog : ObservableObject
             { Failure: not (ShareHostFailure.Host or ShareHostFailure.SignedOut or ShareHostFailure.SignInRefused) } or { Failure: ShareHostFailure.Host, IsServerError: true } when takenDownVersion is { } version =>
                 Localization.FormatShareTakeDownLostAnswer(host, version),
             _ when ListingEditor.AnyRequestFailureText(Localization, host, exception) is { } text => text,
-            { Error: "not_owner" } => exception.Message,
+            { Error: "not_owner" } => Localization.FormatShareErrorNotOwner(host, _target.Name),
             _ => Localization.FormatListingShareHostSaid(host, exception.Message),
         };
     }

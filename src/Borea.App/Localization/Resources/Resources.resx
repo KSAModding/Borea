@@ -4158,6 +4158,12 @@
   <data name="ShareTakeDownChoose" xml:space="preserve">
     <value>Choose the version to take down.</value>
   </data>
+  <data name="ShareTakeDownPlaceholder" xml:space="preserve">
+    <value>Choose a version</value>
+  </data>
+  <data name="ShareTakeDownButton" xml:space="preserve">
+    <value>Take down</value>
+  </data>
   <data name="ShareTakeDownNoVersion" xml:space="preserve">
     <value>Borea knows no version to take down. Use the link below.</value>
   </data>

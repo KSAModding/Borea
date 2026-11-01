@@ -2319,6 +2319,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareTakeDownChoose => Resources.ShareTakeDownChoose;
 
+    public string ShareTakeDownPlaceholder => Resources.ShareTakeDownPlaceholder;
+
+    public string ShareTakeDownButton => Resources.ShareTakeDownButton;
+
     public string ShareTakeDownNoVersion => Resources.ShareTakeDownNoVersion;
 
     public string ShareDoneNow => Resources.ShareDoneNow;
