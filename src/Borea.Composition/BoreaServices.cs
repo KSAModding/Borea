@@ -360,6 +360,10 @@ public sealed class BoreaServices : IDisposable
         new TomlListingFormat(),
         secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null))));
 
+    /// <summary>The client of the vehicle files that Borea fetches by itself. It follows no redirect and keeps no cookie, because a share host needs neither.</summary>
+    private static readonly Lazy<HttpClient> ProcessShareFiles = new(() =>
+        BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false, UseCookies = false }));
+
     private BoreaServices(HttpClient http)
     {
         _http = http;
@@ -590,7 +594,8 @@ public sealed class BoreaServices : IDisposable
 
         // The preview plans over the offline repository only, so opening a vehicle page never sends a request.
         var previewThumbnails = new PreviewThumbnailCache(paths, log);
-        var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, instanceGames, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log, previewThumbnails);
+        var shareFiles = httpHandler is null ? ProcessShareFiles.Value : new HttpClient(httpHandler, disposeHandler: false);
+        var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, instanceGames, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log, previewThumbnails, host => new ShareFileDownloader(shareFiles, host));
         var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning, instanceGames, log), instances), log);
         // the index lists every loader, and the offline SpaceDock throws on a list of all mods, so the keeper reads only the cached index

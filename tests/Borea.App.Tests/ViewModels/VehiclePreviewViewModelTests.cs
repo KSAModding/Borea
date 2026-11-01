@@ -7,6 +7,7 @@ using Borea.App.ViewModels;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preview;
+using Borea.Core.Sharing;
 using Borea.Preview.Loading;
 using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
@@ -710,10 +711,10 @@ public sealed class VehiclePreviewViewModelTests
 
     private static readonly PreviewAssetRef TriangleFile = new("Core", "Triangle.glb");
 
-    private static readonly IReadOnlyDictionary<string, byte[]> TriangleFiles = new Dictionary<string, byte[]> { [TriangleFile.Path] = TriangleGlb() };
+    internal static readonly IReadOnlyDictionary<string, byte[]> TriangleFiles = new Dictionary<string, byte[]> { [TriangleFile.Path] = TriangleGlb() };
 
     /// <summary>A vehicle of one triangle part, and the given boxes where parts did not resolve.</summary>
-    private static ResolvedVehicle TriangleVehicle(params ResolvedPlaceholder[] boxes) => new(
+    internal static ResolvedVehicle TriangleVehicle(params ResolvedPlaceholder[] boxes) => new(
         [new PreviewMeshRef(TriangleFile, 0, "Triangle")],
         [],
         [new ResolvedDraw(0, -1, Matrix4x4.Identity, "Body", PreviewModelKind.Model)],
@@ -798,6 +799,9 @@ internal sealed class FakeThumbnails : IPreviewThumbnails, IPngEncoder
 
     public string? TryGetPath(string? vehicleSha256, string? gameBuild) => null;
 
+    public string? TryGetSceneKey(string? vehicleSha256, string? gameBuild) =>
+        vehicleSha256 is not null && gameBuild is not null ? _keys.GetValueOrDefault((vehicleSha256, gameBuild)) : null;
+
     public bool NeedsUpdate(string? vehicleSha256, string? gameBuild, string? sceneKey) =>
         vehicleSha256 is not null && gameBuild is not null && (!_keys.TryGetValue((vehicleSha256, gameBuild), out var key) || key != sceneKey);
 
@@ -830,18 +834,27 @@ internal sealed class FakeThumbnails : IPreviewThumbnails, IPngEncoder
 internal sealed class FakeVehiclePreview : IVehiclePreview
 {
     private readonly ConcurrentQueue<ModVersionMetadata> _prepares = new();
+    private readonly ConcurrentQueue<string> _shareFetches = new();
     private readonly ConcurrentQueue<Guid?> _targets = new();
     private readonly ConcurrentQueue<(bool FetchVehicle, bool FetchMods)> _loads = new();
     private readonly ConcurrentQueue<(ModVersion Release, CancellationToken Token)> _loadTokens = new();
 
-    public VehiclePreviewPlanState PlanState { get; init; } = VehiclePreviewPlanState.CanBuildLocally;
+    public VehiclePreviewPlanState PlanState { get; set; } = VehiclePreviewPlanState.CanBuildLocally;
+
+    /// <summary>What a fetch from a share host throws, or null when it works and the plan can then build locally.</summary>
+    public Exception? ShareFetchFailure { get; init; }
+
+    /// <summary>The hash and the build that a ready result names.</summary>
+    public (string Sha256, string GameBuild) ResultNames { get; set; } = (new string('a', 64), "2026.10.19.5638");
+
+    public string SceneKey { get; set; } = "scene";
 
     public Exception? PrepareFailure { get; init; }
 
-    public IReadOnlyList<VehiclePreviewMissingMod> Missing { get; init; } = [];
+    public IReadOnlyList<VehiclePreviewMissingMod> Missing { get; set; } = [];
 
     /// <summary>The vehicle of a ready result, which has no part unless a test gives one.</summary>
-    public ResolvedVehicle Vehicle { get; init; } = new([], [], [], [], [], 0, 0);
+    public ResolvedVehicle Vehicle { get; set; } = new([], [], [], [], [], 0, 0);
 
     /// <summary>The asset files of a ready result, by path.</summary>
     public IReadOnlyDictionary<string, byte[]>? Files { get; init; }
@@ -850,6 +863,8 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
     public Func<ModVersionMetadata, Task<VehiclePreviewResult>?>? HoldLoad { get; init; }
 
     public IReadOnlyList<ModVersionMetadata> Prepares => [.. _prepares];
+
+    public IReadOnlyList<string> ShareFetches => [.. _shareFetches];
 
     public IReadOnlyList<Guid?> Targets => [.. _targets];
 
@@ -884,9 +899,19 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
         assets,
         missing ?? Missing,
         [],
-        "scene",
-        new string('a', 64),
-        "2026.10.19.5638");
+        SceneKey,
+        ResultNames.Sha256,
+        ResultNames.GameBuild);
+
+    public Task FetchFromShareHostAsync(ModVersionMetadata release, ShareHost host, CancellationToken cancellationToken = default)
+    {
+        _shareFetches.Enqueue(host.Key);
+        if (ShareFetchFailure is { } failure)
+            return Task.FromException(failure);
+
+        PlanState = VehiclePreviewPlanState.CanBuildLocally;
+        return Task.CompletedTask;
+    }
 
     public Task StartMaintenance() => Task.CompletedTask;
 

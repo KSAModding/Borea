@@ -7,6 +7,7 @@ using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.Preview;
+using Borea.Core.Sharing;
 using Borea.Storage.Files;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
@@ -59,6 +60,23 @@ public sealed class VehiclePreviewTests : IDisposable
     {
         if (Directory.Exists(_root))
             Directory.Delete(_root, recursive: true);
+    }
+
+    [Fact]
+    public async Task AFetchFromAShareHost_UsesItsOwnDownloader_OnceForAVersion_AndTheVehicleThenBuildsLocally()
+    {
+        var zip = VehicleZip();
+        var release = Vehicle(zip, size: zip.Length);
+        var shareFiles = new FakeModDownloader { Bytes = zip };
+        using var preview = Preview(shareFiles: shareFiles);
+        var host = new ShareHost("files", "files.example", new Uri("https://files.example/api/"), ["vehicle"], new Dictionary<string, long>());
+
+        await preview.FetchFromShareHostAsync(release, host);
+        await preview.FetchFromShareHostAsync(release, host);
+
+        Assert.Single(shareFiles.ArchivePaths);
+        Assert.Empty(_downloader.ArchivePaths);
+        Assert.Equal(VehiclePreviewPlanState.CanBuildLocally, (await preview.PrepareAsync(release, null)).State);
     }
 
     [Fact]
@@ -360,7 +378,8 @@ public sealed class VehiclePreviewTests : IDisposable
         PreviewArchiveCache? archives = null,
         IInstalledGameVersionProvider? gameVersion = null,
         IInstanceRepository? instances = null,
-        IInstallPlanner? planner = null)
+        IInstallPlanner? planner = null,
+        IModDownloader? shareFiles = null)
     {
         paths ??= _paths;
         return new VehiclePreview(
@@ -377,7 +396,8 @@ public sealed class VehiclePreviewTests : IDisposable
             _downloader,
             new PlentyOfSpace(),
             new RecordingLog(),
-            new PreviewThumbnailCache(paths, new RecordingLog()));
+            new PreviewThumbnailCache(paths, new RecordingLog()),
+            shareFiles is null ? null : _ => shareFiles);
     }
 
     private static byte[] VehicleZip() => Zip(("meta.toml", "name = \"Rover\""), ("vehicle.xml", Rover));

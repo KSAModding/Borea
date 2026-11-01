@@ -4,8 +4,8 @@ namespace Borea.Core.Preview;
 
 /// <summary>
 /// The still images of vehicle previews that Discover shows, one for each vehicle archive and game build. The vehicle
-/// page stores a still only after its preview showed the whole vehicle, and Discover only looks one up, so a listed
-/// vehicle costs Discover no fetch, no part read and no plan.
+/// page stores a still after its preview showed the whole vehicle, and Discover draws one only for a row without an
+/// icon near the window, so listing vehicles costs Discover no fetch, no part read and no plan.
 /// </summary>
 public interface IPreviewThumbnails
 {
@@ -16,6 +16,9 @@ public interface IPreviewThumbnails
     /// <param name="vehicleSha256">The SHA-256 of the vehicle archive that the release names.</param>
     /// <param name="gameBuild">The installed game build, as <see cref="PreviewGameBuild.Of"/> gives it.</param>
     string? TryGetPath(string? vehicleSha256, string? gameBuild);
+
+    /// <summary>The scene key of the stored still of this vehicle archive and game build, or null when there is none or it cannot be read.</summary>
+    string? TryGetSceneKey(string? vehicleSha256, string? gameBuild);
 
     /// <summary>
     /// True when no still is stored for this vehicle archive and game build, or when the stored one was made from
