@@ -225,12 +225,20 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>
     /// The mods of the content index with the most recent newest release,
-    /// newest first. The index reports download totals but no trend over time,
-    /// so Home shows what changed instead of what is trending (#8).
+    /// newest first.
     /// </summary>
-    public ObservableCollection<RecentItem> RecentItems { get; } = [];
+    public ObservableCollection<RecentItem> RecentItems => _recentlyUpdated.Items;
 
-    public bool HasRecentItems => RecentItems.Count > 0;
+    private readonly HomeGroup _recentlyUpdated;
+
+    private readonly HomeGroup _newMods;
+
+    private readonly HomeGroup _newVehicles;
+
+    private readonly HomeGroup _mostDownloaded;
+
+    /// <summary>The groups of tiles in the order Home shows them. A group without tiles stays hidden.</summary>
+    public IReadOnlyList<HomeGroup> HomeGroups { get; }
 
     public ObservableCollection<InstanceItem> Instances { get; } = [];
 
@@ -375,6 +383,11 @@ public partial class MainViewModel : ViewModelBase
         _instances = services?.Instances;
         AttachGitHubSession(previous: null, services);
         _currentTheme = appPreferences.ResolveSelectedThemeName(BundledThemeNames, DefaultThemeName);
+        _recentlyUpdated = new HomeGroup(this, () => Localization.HomeRecentlyUpdated, () => Localization.HomeDiscoverMods, ContentType.Mod, DiscoverSortOrder.RecentlyUpdated);
+        _newMods = new HomeGroup(this, () => Localization.HomeNewMods, () => Localization.HomeDiscoverMods, ContentType.Mod, DiscoverSortOrder.RecentlyListed);
+        _newVehicles = new HomeGroup(this, () => Localization.HomeNewVehicles, () => Localization.HomeDiscoverVehicles, ContentType.Vehicle, DiscoverSortOrder.RecentlyListed);
+        _mostDownloaded = new HomeGroup(this, () => Localization.HomeMostDownloaded, () => Localization.HomeDiscoverMods, ContentType.Mod, DiscoverSortOrder.Popularity);
+        HomeGroups = [_recentlyUpdated, _newMods, _newVehicles, _mostDownloaded];
         RegionalFormat.PropertyChanged += OnRegionalFormatChanged;
         Localization.PropertyChanged += OnLocalizationChanged;
     }
@@ -404,7 +417,7 @@ public partial class MainViewModel : ViewModelBase
         StartCrashCheck();
         await RefreshContentIndexAtStartAsync();
         StartLoaderUpdateCheck();
-        await LoadRecentItemsAsync();
+        await LoadHomeGroupsAsync();
         UpdateIndexRefreshStatus();
         RefreshGameSetup();
         await RefreshGameShapeAsync();
@@ -460,20 +473,23 @@ public partial class MainViewModel : ViewModelBase
     internal const int RecentItemCount = 14;
 
     /// <summary>
-    /// Fills the Home grid from the cached content index. A failure leaves the
-    /// grid empty, and Home hides the section.
+    /// Fills the Home groups from the cached content index, each in the order of
+    /// the Discover sort it links to. Only a listing with a release in the saved
+    /// channel gets a tile. A failure leaves the groups empty, and Home hides them.
     /// </summary>
-    private async Task LoadRecentItemsAsync()
+    private async Task LoadHomeGroupsAsync()
     {
         if (_services is null)
             return;
 
-        var recent = new List<RecentItem>();
+        var mods = new List<HomeListing>();
+        var vehicles = new List<HomeListing>();
         try
         {
-            var icons = new Dictionary<string, IconImage?>(ModIds.Comparer);
-            foreach (var entry in (await _services.IndexSnapshots.GetSnapshotAsync()).Listings)
-                icons.TryAdd(entry.Id, entry.Images?.Icon);
+            var snapshot = await _services.IndexSnapshots.GetSnapshotAsync();
+            var entries = new Dictionary<string, ContentIndexListing>(ModIds.Comparer);
+            foreach (var entry in snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves))
+                entries.TryAdd(entry.Id, entry);
 
             foreach (var listing in await _services.ContentIndex.GetAvailableModsAsync())
             {
@@ -482,18 +498,58 @@ public partial class MainViewModel : ViewModelBase
 
                 var release = await _services.ContentIndex.GetLatestReleaseInChannelAsync(listing.ModId, _services.Settings.ReleaseChannel);
                 if (release is not null)
-                    recent.Add(new RecentItem(this, listing, release.ReleaseDate, IconFor(icons.GetValueOrDefault(listing.ModId))));
+                    mods.Add(new HomeListing(listing, entries.GetValueOrDefault(listing.ModId), release.ReleaseDate));
+            }
+
+            foreach (var listing in await _services.UserContent.GetAvailableAsync())
+            {
+                if (listing.Type != ContentType.Vehicle)
+                    continue;
+
+                var release = await _services.UserContent.GetLatestReleaseAsync(listing.ModId, _services.Settings.ReleaseChannel);
+                if (release is not null)
+                    vehicles.Add(new HomeListing(listing, entries.GetValueOrDefault(listing.ModId), release.ReleaseDate));
             }
         }
         catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
-            recent.Clear();
+            mods.Clear();
+            vehicles.Clear();
         }
 
-        RecentItems.Clear();
-        foreach (var item in recent.OrderByDescending(item => item.UpdatedAt).Take(RecentItemCount))
-            RecentItems.Add(item);
-        OnPropertyChanged(nameof(HasRecentItems));
+        Fill(_recentlyUpdated, mods
+            .OrderByDescending(mod => mod.Released)
+            .ThenBy(mod => mod.Listing.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(mod => new RecentItem(this, mod.Listing, mod.Released, IconFor(mod.Icon))));
+        Fill(_newMods, NewestListed(mods));
+        Fill(_newVehicles, NewestListed(vehicles));
+        Fill(_mostDownloaded, mods
+            .Where(mod => mod.Downloads > 0)
+            .OrderByDescending(mod => mod.Downloads)
+            .ThenBy(mod => mod.Listing.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(mod => RecentItem.Downloaded(this, mod.Listing, mod.Downloads!.Value, IconFor(mod.Icon))));
+    }
+
+    private IEnumerable<RecentItem> NewestListed(List<HomeListing> listings) => listings
+        .Where(listing => listing.ListedAt is not null)
+        .OrderByDescending(listing => listing.ListedAt)
+        .ThenBy(listing => listing.Listing.Name, StringComparer.CurrentCultureIgnoreCase)
+        .Select(listing => RecentItem.Listed(this, listing.Listing, listing.ListedAt!.Value, IconFor(listing.Icon)));
+
+    private static void Fill(HomeGroup group, IEnumerable<RecentItem> items)
+    {
+        group.Items.Clear();
+        foreach (var item in items.Take(RecentItemCount))
+            group.Items.Add(item);
+    }
+
+    private readonly record struct HomeListing(ModMetadata Listing, ContentIndexListing? Entry, DateTimeOffset Released)
+    {
+        public IconImage? Icon => Entry?.Images?.Icon;
+
+        public DateTimeOffset? ListedAt => Entry?.ListedAt;
+
+        public long? Downloads => Entry?.Downloads?.Total;
     }
 
     /// <summary>
@@ -973,8 +1029,8 @@ public partial class MainViewModel : ViewModelBase
     {
         foreach (var instance in Instances)
             instance.RefreshText();
-        foreach (var item in RecentItems)
-            item.RefreshText();
+        foreach (var group in HomeGroups)
+            group.RefreshText();
         foreach (var item in _listings)
             item.RefreshText();
         // a content page opened from a Home card can show a row that Discover does not hold
@@ -1079,11 +1135,13 @@ public partial class MainViewModel : ViewModelBase
 }
 
 /// <summary>
-/// One card in the Home grid: a mod and the date of its newest release.
+/// One tile of a Home group: a listing and the fact that orders the group, which is an age or a download count.
 /// </summary>
 public sealed partial class RecentItem : ObservableObject
 {
     private readonly MainViewModel _owner;
+    private readonly Func<string> _factText;
+    private readonly Func<string> _factToolTip;
 
     internal ModMetadata Listing { get; }
 
@@ -1093,26 +1151,44 @@ public sealed partial class RecentItem : ObservableObject
 
     public ListingImage? Icon { get; }
 
-    public DateTimeOffset UpdatedAt { get; }
+    public bool IsVehicle => Listing.Type == ContentType.Vehicle;
 
-    /// <summary>How long ago the release came out.</summary>
-    public string UpdatedText => _owner.ShortAgeText(UpdatedAt);
+    public string TypeText => IsVehicle ? _owner.Localization.ContentTypeVehicle : _owner.Localization.ContentTypeMod;
 
-    /// <summary>The tooltip of the age, the release date after "Updated on".</summary>
-    public string UpdatedDateText => _owner.Localization.FormatContentUpdatedOn(MainViewModel.DateText(UpdatedAt));
+    /// <summary>The fact is a download count, so the tile shows the download icon in place of the clock.</summary>
+    public bool ShowsDownloads { get; private init; }
 
+    public string FactText => _factText();
+
+    public string FactToolTip => _factToolTip();
+
+    /// <summary>A tile that shows how long ago the newest release came out.</summary>
     public RecentItem(MainViewModel owner, ModMetadata listing, DateTimeOffset updatedAt, ListingImage? icon = null)
+        : this(owner, listing, icon, () => owner.ShortAgeText(updatedAt), () => owner.Localization.FormatContentUpdatedOn(MainViewModel.DateText(updatedAt)))
+    {
+    }
+
+    private RecentItem(MainViewModel owner, ModMetadata listing, ListingImage? icon, Func<string> factText, Func<string> factToolTip)
     {
         _owner = owner;
         Listing = listing;
-        UpdatedAt = updatedAt;
         Icon = icon;
+        _factText = factText;
+        _factToolTip = factToolTip;
     }
+
+    /// <summary>A tile that shows how long ago the listing came into the index.</summary>
+    internal static RecentItem Listed(MainViewModel owner, ModMetadata listing, DateTimeOffset listedAt, ListingImage? icon) =>
+        new(owner, listing, icon, () => owner.ShortAgeText(listedAt), () => owner.Localization.FormatHomeListedOn(MainViewModel.DateText(listedAt)));
+
+    internal static RecentItem Downloaded(MainViewModel owner, ModMetadata listing, long downloads, ListingImage? icon) =>
+        new(owner, listing, icon, () => MainViewModel.CompactCount(downloads), () => owner.Localization.FormatContentDownloadsExact(downloads.ToString("N0", CultureInfo.CurrentCulture))) { ShowsDownloads = true };
 
     internal void RefreshText()
     {
-        OnPropertyChanged(nameof(UpdatedText));
-        OnPropertyChanged(nameof(UpdatedDateText));
+        OnPropertyChanged(nameof(TypeText));
+        OnPropertyChanged(nameof(FactText));
+        OnPropertyChanged(nameof(FactToolTip));
     }
 
     [RelayCommand]

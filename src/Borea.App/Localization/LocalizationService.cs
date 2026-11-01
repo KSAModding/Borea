@@ -1496,6 +1496,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeDiscoverMods => Resources.HomeDiscoverMods;
 
+    public string HomeDiscoverVehicles => Resources.HomeDiscoverVehicles;
+
+    public string HomeNewMods => Resources.HomeNewMods;
+
+    public string HomeNewVehicles => Resources.HomeNewVehicles;
+
+    public string HomeMostDownloaded => Resources.HomeMostDownloaded;
+
+    public string FormatHomeListedOn(string date)
+        => string.Format(CultureInfo.CurrentCulture, Resources.HomeListedOnFormat, date);
+
     public string HomeNoGameVersion => Resources.HomeNoGameVersion;
 
     public string HomeSetupNotSaved => Resources.HomeSetupNotSaved;

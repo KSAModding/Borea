@@ -94,7 +94,7 @@ public sealed class HomePageTests
         var (visible, top, bottom, centre, tileCentre, nameTop) = await RenderAsync(harness, window, page =>
         {
             var tile = page.GetVisualDescendants().OfType<TileRowPanel>().Single().Children.Single();
-            var puzzle = tile.GetVisualDescendants().OfType<ListingImageView>().Single().GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().Single();
+            var puzzle = tile.GetVisualDescendants().OfType<ListingImageView>().Single().GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().Single(path => path.IsVisible);
             var name = tile.GetVisualDescendants().OfType<TextBlock>().First(text => text.Text == listing.Name);
             var start = puzzle.TranslatePoint(default, tile)!.Value;
             var end = puzzle.TranslatePoint(new Point(puzzle.Bounds.Width, puzzle.Bounds.Height), tile)!.Value;
@@ -105,6 +105,70 @@ public sealed class HomePageTests
         Assert.True(bottom - top >= 48, $"the placeholder is {bottom - top} px tall");
         Assert.Equal(tileCentre, centre, 0.5);
         Assert.True(bottom <= nameTop, $"the placeholder ends at {bottom}, the name starts at {nameTop}");
+    }
+
+    [Fact]
+    public async Task Groups_ShowOnlyWithTilesAndTheTilesNameTheirTypeAndFact()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(
+            editSnapshot: json => HomeViewModelTests.With(json, "KSArmory", """ "downloads": { "total": 1234, "hosts": { "github": 1234 } },"""),
+            typeFiles: HomeViewModelTests.Vehicles());
+        var localization = harness.Localization;
+
+        var (headings, rover, armory) = await RenderAsync(harness, 1280, page =>
+        {
+            var visible = page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+            return (visible, TileOf(page, "Example Rover"), TileOf(page, "KSArmory"));
+        });
+
+        Assert.Contains(localization.HomeNewVehicles, headings);
+        Assert.Contains(localization.HomeDiscoverVehicles, headings);
+        Assert.Contains(localization.HomeMostDownloaded, headings);
+        Assert.DoesNotContain(localization.HomeNewMods, headings);
+        Assert.Contains(localization.ContentTypeVehicle, rover.Texts);
+        Assert.Equal(["Icon.Cylinder", "Icon.Clock"], rover.Icons);
+        Assert.Contains(MainViewModel.CompactCount(1234), armory.Texts);
+        Assert.Contains(localization.ContentTypeMod, armory.Texts);
+        Assert.Equal(["Icon.PuzzlePiece", "Icon.Download"], armory.Icons);
+    }
+
+    /// <summary>The texts and visible icons of the last tile with this name, because a listing can sit in more than one group.</summary>
+    private static (List<string?> Texts, List<string> Icons) TileOf(Control page, string name)
+    {
+        var tile = page.GetVisualDescendants().OfType<TileRowPanel>()
+            .SelectMany(panel => panel.Children)
+            .Last(child => child.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == name));
+        var icons = tile.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>()
+            .Where(path => path.IsEffectivelyVisible)
+            .Select(path => IconNames.Single(icon => ReferenceEquals(page.FindResource(icon), path.Data)))
+            .ToList();
+        return (tile.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text).ToList(), icons);
+    }
+
+    private static readonly string[] IconNames = ["Icon.Cylinder", "Icon.PuzzlePiece", "Icon.Clock", "Icon.Download"];
+
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1004)]
+    [InlineData(1280)]
+    public async Task VehicleTile_CutsTheTypeInGermanBeforeItReachesTheFact(double window)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(typeFiles: HomeViewModelTests.Vehicles());
+        Assert.True(harness.Localization.TrySetCulture("de"));
+        var group = harness.ViewModel.HomeGroups[2];
+        var tile = RecentItem.Listed(harness.ViewModel, group.Items[0].Listing, DateTimeOffset.UtcNow.AddHours(-15), null);
+        group.Items.Clear();
+        group.Items.Add(tile);
+
+        var (typeEnd, factStart) = await RenderAsync(harness, window, page =>
+        {
+            var texts = page.GetVisualDescendants().OfType<TextBlock>().ToList();
+            var type = texts.Single(text => text.Text == harness.Localization.ContentTypeVehicle);
+            var fact = texts.Single(text => text.Text == tile.FactText).GetVisualParent<Control>()!;
+            return (type.TranslatePoint(default, page)!.Value.X + type.TextLayout.Width, fact.TranslatePoint(default, page)!.Value.X);
+        });
+
+        Assert.True(typeEnd <= factStart, $"the type ends at {typeEnd}, the fact starts at {factStart}");
     }
 
     [Fact]

@@ -155,11 +155,11 @@ public partial class MainViewModel
         return error is null ? services.IndexRefresh.Status.Outcome : ContentIndexRefreshOutcome.Failed;
     }
 
-    /// <summary>Builds the Home grid, the Discover list, the open mod page and the update counts from the snapshot.</summary>
+    /// <summary>Builds the Home groups, the Discover list, the open mod page and the update counts from the snapshot.</summary>
     private async Task ReloadFromIndexAsync()
     {
         StartIconRebuild();
-        await LoadRecentItemsAsync();
+        await LoadHomeGroupsAsync();
         _discoverLoad = null;
         await EnsureDiscoverLoadedAsync();
         await ReloadContentPageAsync();
