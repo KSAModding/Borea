@@ -61,6 +61,22 @@ public sealed class FileSharedContentRecordsTests : IDisposable
     }
 
     [Fact]
+    public async Task Remove_DropsOnlyTheEntryOfTheTypeHostAndFolder()
+    {
+        var save = Rover with { Type = ContentType.Save };
+        var otherHost = Rover with { HostKey = "ownhost", HostName = "own.example" };
+        var otherFolder = Rover with { FolderName = "Rover 2" };
+        await _records.RecordAsync(Rover, Maxi);
+        await _records.RecordAsync(save, author: null);
+        await _records.RecordAsync(otherHost, author: null);
+        await _records.RecordAsync(otherFolder, author: null);
+
+        await _records.RemoveAsync(ContentType.Vehicle, "ksamods", "EXAMPLE ROVER");
+
+        Assert.Equal([save, otherHost, otherFolder], await _records.ListAsync());
+    }
+
+    [Fact]
     public async Task RenameFolder_MovesTheEntriesOfTheType()
     {
         var save = Rover with { Type = ContentType.Save };

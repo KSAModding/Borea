@@ -384,6 +384,7 @@ public sealed class ShareHostClient : IShareHostClient
                 Checks = ReadChecks(error.Checks),
                 RetryAfter = error.RetryAfter.ValueKind == JsonValueKind.Number && error.RetryAfter.TryGetInt32(out var seconds) && seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
                 FieldErrors = ReadFieldErrors(error.FieldErrors),
+                IsServerError = (int)reply.Status >= 500,
             }
             : Unexpected(host, reply);
 

@@ -315,6 +315,7 @@ public sealed class ShareHostClientTests
         var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.PublishAsync(Host, "u42", "1.0.0", "stable", null));
 
         Assert.Equal(failure, exception.Failure);
+        Assert.Equal(failure == ShareHostFailure.Host && (int)status >= 500, exception.IsServerError);
         if (message is not null)
             Assert.Equal(message, exception.Message);
     }
