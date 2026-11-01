@@ -714,6 +714,22 @@ public sealed class VehiclePreviewViewModelTests
     }
 
     [Fact]
+    public async Task TheFacts_CountAModOfAMissingPartOnce_AndNeverSayThatTheVehicleNeedsNoMods()
+    {
+        var service = new FakeVehiclePreview
+        {
+            Vehicle = TriangleVehicle(),
+            Files = TriangleFiles,
+            Missing = [new VehiclePreviewMissingMod("Wings", ModVersion.Parse("1.0.0"), 3, null, true), new VehiclePreviewMissingMod("Engines", ModVersion.Parse("2.0.0"), null, null, true)],
+        };
+        using var preview = Start(service, release: RoverOfSize(2_500_000, [new("Wings", ModDependencyKind.Required)]));
+        await preview.Loading;
+
+        Assert.Equal([Localization.FormatPreviewFactParts(1), Localization.FormatShareSummaryMods("2")], preview.Facts);
+        Assert.DoesNotContain(Localization.ShareSummaryNoMods, preview.Facts);
+    }
+
+    [Fact]
     public async Task SavePicture_WritesThePngOfTheViewToThePickedFile()
     {
         var picks = new List<string>();
