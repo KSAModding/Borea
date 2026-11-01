@@ -38,7 +38,8 @@ public sealed class PreviewStillView : Decorator
     private Bitmap? _bitmap;
     private int _generation;
     private bool _failed;
-    private TextBlock? _note;
+    private Border? _note;
+    private TextBlock? _noteText;
     private DiscoverItem? _row;
     private bool _nearWindow;
     private bool _inView;
@@ -61,7 +62,7 @@ public sealed class PreviewStillView : Decorator
         set => SetValue(BackgroundProperty, value);
     }
 
-    /// <summary>A small text over the still, or null for none. Most rows never have one, so only a row with one builds its text.</summary>
+    /// <summary>A small text on a dark strip at the bottom of the still, or null for none. Most rows never have one, so only a row with one builds its text.</summary>
     public string? Note
     {
         get => GetValue(NoteProperty);
@@ -250,15 +251,16 @@ public sealed class PreviewStillView : Decorator
     {
         if (Note is not null && _note is null)
         {
-            _note = new TextBlock { Classes = { "body-sm", "still-note" }, IsHitTestVisible = false };
+            _noteText = new TextBlock { Classes = { "body-sm", "still-note" } };
+            _note = new Border { Classes = { "still-note-strip" }, IsHitTestVisible = false, Child = _noteText };
             LogicalChildren.Add(_note);
             VisualChildren.Add(_note);
         }
 
-        if (_note is { } note)
+        if (_note is { } note && _noteText is { } text)
         {
-            note.Text = Note;
-            note.IsVisible = Note is not null && _bitmap is not null;
+            text.Text = Note;
+            text.IsVisible = note.IsVisible = Note is not null && _bitmap is not null;
         }
     }
 
