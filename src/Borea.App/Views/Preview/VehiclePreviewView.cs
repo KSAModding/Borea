@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Borea.App.ViewModels;
 using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
 using PreviewRenderOptions = Borea.Preview.Rendering.RenderOptions;
@@ -55,6 +56,17 @@ public sealed class VehiclePreviewView : Control
     /// <summary>A count that a view model raises to ask for <see cref="ResetView"/>. Each change frames the scene again.</summary>
     public static readonly StyledProperty<int> ResetCountProperty =
         AvaloniaProperty.Register<VehiclePreviewView, int>(nameof(ResetCount));
+
+    /// <summary>
+    /// The camera of the view. The view writes it after each change of the camera and applies a value that another
+    /// view of the same scene wrote, so two views, such as the one in a page and the expanded one, show the same pose.
+    /// </summary>
+    public static readonly StyledProperty<PreviewViewPose> PoseProperty =
+        AvaloniaProperty.Register<VehiclePreviewView, PreviewViewPose>(nameof(Pose), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+
+    /// <summary>True when the view takes the keyboard focus as soon as it shows, so the keys of the camera and Escape work without a click.</summary>
+    public static readonly StyledProperty<bool> FocusWhenShownProperty =
+        AvaloniaProperty.Register<VehiclePreviewView, bool>(nameof(FocusWhenShown));
 
     // The renderer clears to transparent and the Background brush shows through, so the bitmap uses straight alpha.
     private static readonly PreviewRenderOptions Options = new();
@@ -118,6 +130,18 @@ public sealed class VehiclePreviewView : Control
     {
         get => GetValue(ResetCountProperty);
         set => SetValue(ResetCountProperty, value);
+    }
+
+    public PreviewViewPose Pose
+    {
+        get => GetValue(PoseProperty);
+        set => SetValue(PoseProperty, value);
+    }
+
+    public bool FocusWhenShown
+    {
+        get => GetValue(FocusWhenShownProperty);
+        set => SetValue(FocusWhenShownProperty, value);
     }
 
     internal float CameraDistance => _camera.Distance;
@@ -209,12 +233,28 @@ public sealed class VehiclePreviewView : Control
         {
             ResetView();
         }
+        else if (change.Property == PoseProperty)
+        {
+            // The view publishes its own pose, which then comes back here equal to the fields and changes nothing.
+            var pose = change.GetNewValue<PreviewViewPose>();
+            if (pose != CurrentPose())
+            {
+                (_orbitX, _orbitY, _zoomSteps, _axisOffset) = (pose.OrbitX, pose.OrbitY, pose.ZoomSteps, pose.AxisOffset);
+                RequestRender(full: true);
+            }
+        }
+        else if (change.Property == IsVisibleProperty && IsVisible)
+        {
+            RequestRender(full: true);
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         RequestRender(full: true);
+        if (FocusWhenShown)
+            Dispatcher.UIThread.Post(() => Focus(NavigationMethod.Unspecified));
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -449,7 +489,12 @@ public sealed class VehiclePreviewView : Control
         _axisOffset = camera.AxisOffset;
         _camera = camera;
 
-        if (VisualRoot is null || scene is null || size.Width <= 0 || size.Height <= 0)
+        // Without a scene the pose only resets, such as while the page takes the view apart, and that must not reach the other view.
+        if (scene is not null)
+            SetCurrentValue(PoseProperty, CurrentPose());
+
+        // A view that does not show, such as the one in the page under the expanded view, draws again when it shows.
+        if (VisualRoot is null || scene is null || size.Width <= 0 || size.Height <= 0 || !IsVisible)
             return;
 
         var frameScale = full ? 1 : _dragScales.Scale;
@@ -462,6 +507,8 @@ public sealed class VehiclePreviewView : Control
         else
             Queue(request);
     }
+
+    private PreviewViewPose CurrentPose() => new(_orbitX, _orbitY, _zoomSteps, _axisOffset);
 
     private void Queue(RenderRequest request)
     {
