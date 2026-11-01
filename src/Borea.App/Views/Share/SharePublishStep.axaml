@@ -32,7 +32,7 @@
                 </StackPanel>
                 <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareSummaryModsText}" TextWrapping="Wrap" />
                 <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareNeedsBuildText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareNeedsBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.BackToShareDescribeCommand}">
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.BackToShareDescribeCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
                     <TextBlock Classes="action-md" Text="{Binding Localization.ShareEdit}" />
                 </Button>
             </StackPanel>
@@ -61,6 +61,12 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+                    <WrapPanel ItemSpacing="12" LineSpacing="4" IsVisible="{Binding ListingEditor.ShareSignedInText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareSignedInText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Classes="link" Margin="-8,0,0,0" VerticalAlignment="Center" Command="{Binding ListingEditor.SignOutOfShareHostCommand}" IsEnabled="{Binding !ListingEditor.IsSharing}">
+                            <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareSignOutText}" />
+                        </Button>
+                    </WrapPanel>
                     <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.ShowsShareCheckButton}">
                         <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding ListingEditor.SelectedShareHostRow}">
                             <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareCheckOnHostText}" VerticalAlignment="Center" />
@@ -69,7 +75,17 @@
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <!-- the text in the language of the player, the message of the host and the one way forward -->
+                <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
+                    <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock Classes="body-md danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostErrorDetail}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostErrorDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.RunShareErrorActionCommand}" IsVisible="{Binding ListingEditor.ShareErrorActionText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareErrorActionText}" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
 
                 <!-- a failed check comes first, with the message of the host -->
                 <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostFailedChecks}" IsVisible="{Binding !!ListingEditor.ShareHostFailedChecks.Count}">
@@ -105,6 +121,7 @@
                     </StackPanel>
                 </Button>
                 <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.IsShareDetailsOpen}">
+                    <SelectableTextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostFileDetail}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostFileDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostPassedChecks}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -163,7 +180,7 @@
                     <Grid Grid.Row="3" ColumnDefinitions="Auto,8,*,8,Auto" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.IsSharing}">
                         <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                         <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostProgressText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                        <Button Grid.Column="4" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" VerticalAlignment="Center" />
+                        <Button Grid.Column="4" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" IsVisible="{Binding ListingEditor.CanCancelShareHost}" VerticalAlignment="Center" />
                     </Grid>
                 </Grid>
 
@@ -204,7 +221,7 @@
                 <SelectableTextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareArchiveText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareArchiveText, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
         </Panel>
-        <WrapPanel ItemSpacing="16" LineSpacing="8">
+        <WrapPanel ItemSpacing="16" LineSpacing="8" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
             <Button Classes="text" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareDescribeCommand}" />
             <Button Classes="link" Margin="-8,0,0,0" VerticalAlignment="Center" Command="{Binding ListingEditor.EditAllShareFieldsCommand}">
                 <TextBlock Classes="action-md" Text="{Binding Localization.ShareEditAll}" />

@@ -36,6 +36,18 @@ public sealed partial class ListingEditor
     private IReadOnlyList<ShareCheck> _shareChecks = [];
     private (ShareHost Host, ShareUpload Upload, string? ListingId)? _shareUpload;
     private (string HostName, string Page, string? CompletePage, string Code)? _shareHostCode;
+    private CancellationTokenSource? _publishRun;
+    private CancellationTokenSource? _signInRun;
+    private ShareErrorAction _shareErrorAction;
+
+    /// <summary>The one way forward that an error of a host offers.</summary>
+    private enum ShareErrorAction
+    {
+        None,
+        BackToDescription,
+        SignOut,
+        OpenHost,
+    }
 
     /// <summary>The sections whose values a share host does not take.</summary>
     private static readonly string[] IndexOnlySections = ["links", "releases", "compatibility", "images"];
@@ -73,7 +85,7 @@ public sealed partial class ListingEditor
 
     public string? ShareChecksPassedText => _shareUpload is { Upload.Checks.Count: > 0 } shared ? Localization.FormatShareChecksPassed(shared.Upload.Checks.Count, shared.Host.Name) : null;
 
-    public bool HasShareDetails => ShareHostPassedChecks.Count > 0 || ShareHostListingText is not null;
+    public bool HasShareDetails => ShareHostPassedChecks.Count > 0 || ShareHostListingText is not null || ShareHostFileDetail is not null;
 
     public string? ShareDetailsListingText => _checkedHost is { } host ? Localization.FormatShareDetailsListing(host.Name) : null;
 
@@ -98,15 +110,23 @@ public sealed partial class ListingEditor
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShareHostHeadingText), nameof(ShareCheckOnHostText), nameof(ShareCheckHintText))]
+    [NotifyPropertyChangedFor(nameof(ShareHostHeadingText), nameof(ShareCheckOnHostText), nameof(ShareCheckHintText), nameof(ShareSignedInText), nameof(ShareSignOutText))]
     private ShareHostRow? _selectedShareHostRow;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing), nameof(ShowsShareCheckButton), nameof(ShareHostProgressText))]
+    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing), nameof(ShowsShareCheckButton), nameof(ShareHostProgressText), nameof(IsSendingSharePublish), nameof(CanCancelShareHost), nameof(ShareSignedInText), nameof(ShareSignOutText))]
     private string? _shareHostProgress;
 
     [ObservableProperty]
     private string? _shareHostError;
+
+    /// <summary>What the host itself said, under the text of the App, because that text is in the language of the player and the message is not.</summary>
+    [ObservableProperty]
+    private string? _shareHostErrorDetail;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasShareDetails))]
+    private string? _shareHostFileDetail;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasShareDetails))]
@@ -152,6 +172,26 @@ public sealed partial class ListingEditor
     public bool IsSharing => ShareHostProgress is not null;
 
     public bool CanUploadToShareHost => !IsSharing;
+
+    /// <summary>A publish is out at the host, and leaving cannot take it back. A sign-in during the publish can still be left, because the host refused what was sent before it.</summary>
+    public bool IsSendingSharePublish => IsSharing && _shareHostRun == _publishRun && _shareHostRun != _signInRun;
+
+    public bool CanCancelShareHost => IsSharing && !IsSendingSharePublish;
+
+    public string? ShareErrorActionText => _shareErrorAction switch
+    {
+        ShareErrorAction.BackToDescription => Localization.ShareBackToDescription,
+        ShareErrorAction.SignOut when _checkedHost is { } host => Localization.FormatShareSignOut(host.Name),
+        ShareErrorAction.OpenHost when _checkedHost is { } host => Localization.FormatShareOpenHost(host.Name),
+        _ => null,
+    };
+
+    /// <summary>The host that the line about the account names. An error that offers the sign-out itself takes its place, so the button shows once.</summary>
+    private ShareHost? SignedInShareHost => _shareErrorAction != ShareErrorAction.SignOut && SelectedShareHostRow?.Host is { } host && _owner.Services is { } services && services.ShareHostClient.IsSignedIn(host) ? host : null;
+
+    public string? ShareSignedInText => SignedInShareHost is { } host ? Localization.FormatShareSignedIn(host.Name) : null;
+
+    public string? ShareSignOutText => SignedInShareHost is { } host ? Localization.FormatShareSignOut(host.Name) : null;
 
     public bool CanPublishToShareHost => _shareUpload is not null && IsShareVersionValid && !IsSharing;
 
@@ -247,6 +287,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(SharePublicNoticeText));
         OnPropertyChanged(nameof(ShareUploadHost));
         OnPropertyChanged(nameof(ShareUploadRulesText));
+        RefreshShareErrorAction();
         RefreshShareHostCode();
     }
 
@@ -259,6 +300,21 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareHostProgressText));
     }
 
+    private void RefreshShareErrorAction()
+    {
+        OnPropertyChanged(nameof(ShareErrorActionText));
+        OnPropertyChanged(nameof(ShareSignedInText));
+        OnPropertyChanged(nameof(ShareSignOutText));
+    }
+
+    /// <summary>A text from any source starts with no detail and no action, and <see cref="ShowShareHostFailureAsync"/> sets them after it.</summary>
+    partial void OnShareHostErrorChanged(string? value)
+    {
+        ShareHostErrorDetail = null;
+        _shareErrorAction = ShareErrorAction.None;
+        RefreshShareErrorAction();
+    }
+
     /// <summary>Drops a running share and its result, because they belong to the item before.</summary>
     private void ForgetShareHostRun()
     {
@@ -268,6 +324,7 @@ public sealed partial class ListingEditor
         _shareHostCode = null;
         ShareHostProgress = null;
         ShareHostError = null;
+        ShareHostFileDetail = null;
         ShareHostListingText = null;
         ShareHostOutcome = null;
         SharePullRequest = null;
@@ -359,14 +416,16 @@ public sealed partial class ListingEditor
         }
         catch (ShareHostException exception) when (_shareHostRun == cancel)
         {
-            if (exception.Checks is { Count: > 0 } checks)
-                ShowShareChecks(checks);
-
-            ShareHostError = ShareHostFailedChecks.Count > 0 ? Localization.FormatListingShareHostChecksFailed(host.Name) : ShareHostErrorText(host, exception);
+            await ShowShareHostFailureAsync(host, share, exception, version: null);
         }
-        catch (IOException exception) when (_shareHostRun == cancel)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            ShareHostError = exception.Message;
+            // A run that was cancelled has no step left to show it on, and the exception must not end the App.
+            if (_shareHostRun == cancel)
+            {
+                ShareHostError = Localization.FormatShareErrorFile(share.Content.Name);
+                ShareHostFileDetail = exception.Message;
+            }
         }
         finally
         {
@@ -383,6 +442,7 @@ public sealed partial class ListingEditor
     /// <summary>Signs in and shows the code until the sign-in ends. A host that names a page with the code filled in gets that page opened, so the player does not type the code.</summary>
     private async Task SignInToShareHostAsync(ShareHost host, IShareHostClient client, CancellationTokenSource cancel)
     {
+        _signInRun = cancel;
         ShareHostProgress = Localization.FormatListingShareHostSigningIn(host.Name);
         var progress = new Progress<GitHubDeviceCode>(code =>
         {
@@ -404,6 +464,7 @@ public sealed partial class ListingEditor
         {
             if (_shareHostRun == cancel)
             {
+                _signInRun = null;
                 _shareHostCode = null;
 
                 // An error that the page could not be opened belongs to the code that is gone.
@@ -462,6 +523,7 @@ public sealed partial class ListingEditor
         var status = ShareHostStatus;
         using var cancel = new CancellationTokenSource();
         _shareHostRun = cancel;
+        _publishRun = cancel;
         ShareHostError = null;
         try
         {
@@ -490,7 +552,7 @@ public sealed partial class ListingEditor
         }
         catch (ShareHostException exception) when (_shareHostRun == cancel)
         {
-            ShareHostError = ShareHostErrorText(shared.Host, exception);
+            await ShowShareHostFailureAsync(shared.Host, share, exception, version);
         }
         finally
         {
@@ -642,12 +704,113 @@ public sealed partial class ListingEditor
         ? Localization.FormatListingShareCheckFailed(check.Name, check.Message ?? string.Empty)
         : check.Message is { Length: > 0 } message ? Localization.FormatShareCheckDetail(check.Name, message) : Localization.FormatListingShareCheckPassed(check.Name);
 
-    private string ShareHostErrorText(ShareHost host, ShareHostException exception) => exception.Failure switch
+    /// <summary>Shows a refused or failed request with its way forward.</summary>
+    /// <param name="version">The version that a publish sent, or null for an upload.</param>
+    private async Task ShowShareHostFailureAsync(ShareHost host, GameSaveShareStart share, ShareHostException exception, string? version)
     {
-        ShareHostFailure.Host => Localization.FormatListingShareHostSaid(host.Name, exception.Message),
-        ShareHostFailure.SignedOut => Localization.ListingShareHostSignedOut,
-        ShareHostFailure.SignInRefused => Localization.ListingShareHostSignInRefused,
-        ShareHostFailure.NetworkError => Localization.ListingShareHostNetwork,
-        _ => Localization.FormatListingShareHostUnexpected(host.Name),
+        if (exception.Checks is { Count: > 0 } checks)
+            ShowShareChecks(checks);
+
+        // The host no longer has this upload, so Publish could only fail again and the step offers a new check.
+        if (exception.Error == "upload_expired")
+            ForgetShareHostRun();
+
+        // A check can fail at the publish after it passed at the upload, and an upload with a failed check is not kept.
+        if (ShareHostFailedChecks.Count > 0)
+        {
+            _shareUpload = null;
+            RefreshShareRun();
+        }
+
+        var (text, detail, action) = ShareHostFailureText(host, exception, version);
+        ShareHostError = text;
+        ShareHostErrorDetail = detail;
+        _shareErrorAction = action;
+        RefreshShareErrorAction();
+
+        switch (exception.Error)
+        {
+            case "version_taken":
+                IsEditingShareVersion = true;
+                break;
+            case "id_taken":
+                _refusedShareId = Draft.Id;
+                Refresh();
+                break;
+            case "not_owner" when _owner.Services is { } services:
+                await services.SharedContent.RemoveAsync(share.Entry.Kind.ToContentType(), host.Key, share.Entry.FolderName);
+                await _owner.ShowSharedContentAsync(share.Entry.Kind);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The text in the language of the player, the message of the host below it and the one action. A publish without a clear
+    /// answer can have gone through, so it has its own text, and Publish stays because an upload cannot publish twice.
+    /// </summary>
+    private (string Text, string? Detail, ShareErrorAction Action) ShareHostFailureText(ShareHost host, ShareHostException exception, string? version) => exception switch
+    {
+        { Failure: ShareHostFailure.SignedOut } => (Localization.FormatListingShareHostSignedOut(host.Name), null, ShareErrorAction.None),
+        { Failure: ShareHostFailure.SignInRefused } => (Localization.FormatListingShareHostSignInRefused(host.Name), null, ShareErrorAction.None),
+        { Failure: not ShareHostFailure.Host } when version is not null => (Localization.FormatShareErrorLostAnswer(host.Name), null, ShareErrorAction.OpenHost),
+        { IsServerError: true } when version is not null => (Localization.FormatShareErrorLostAnswer(host.Name), exception.Message, ShareErrorAction.OpenHost),
+        { Failure: ShareHostFailure.NetworkError } => (Localization.FormatListingShareHostNetwork(host.Name), null, ShareErrorAction.None),
+        { Failure: ShareHostFailure.Unavailable } => (Localization.FormatShareErrorUnavailable(host.Name), null, ShareErrorAction.None),
+        { Failure: not ShareHostFailure.Host } => (Localization.FormatListingShareHostUnexpected(host.Name), null, ShareErrorAction.None),
+        { Error: "id_taken" } => (Localization.FormatShareErrorIdTaken(Draft.Id, host.Name), exception.Message, ShareErrorAction.BackToDescription),
+        { Error: "version_taken" } when ModVersion.TryParse(version, out var taken) =>
+            (Localization.FormatShareErrorVersionTaken(ShareListingName, version!, new ModVersion(taken.Major, taken.Minor + 1, 0).ToString()), exception.Message, ShareErrorAction.None),
+        { Error: "not_owner" } => (Localization.FormatShareErrorNotOwner(host.Name, ShareListingName), exception.Message, ShareErrorAction.SignOut),
+
+        // FormatDuration rounds down, so a wait of some seconds would read as 0 minutes.
+        { Error: "rate_limited", RetryAfter: { } wait } =>
+            (Localization.FormatShareErrorRateLimited(host.Name, Localization.FormatDuration(TimeSpan.FromMinutes(Math.Ceiling(wait.TotalMinutes)))), exception.Message, ShareErrorAction.None),
+        { Error: "rate_limited" } => (Localization.FormatShareErrorRateLimitedLater(host.Name), exception.Message, ShareErrorAction.None),
+        { Error: "upload_expired" } => (Localization.FormatShareErrorUploadGone(host.Name), exception.Message, ShareErrorAction.OpenHost),
+        { Error: "too_large" } => (Localization.FormatShareErrorTooLarge(host.Name), exception.Message, ShareErrorAction.None),
+        { Error: "type_not_accepted" } => (IsSave ? Localization.FormatShareErrorNoSaves(host.Name) : Localization.FormatShareErrorNoVehicles(host.Name), exception.Message, ShareErrorAction.None),
+        { Error: "invalid_request", FieldErrors.Count: > 0 } =>
+            (Localization.FormatListingShareHostSaid(host.Name, exception.Message), string.Join('\n', exception.FieldErrors!.Values.SelectMany(lines => lines).Distinct()), ShareErrorAction.None),
+
+        // The failed checks already carry the messages of the host.
+        _ when ShareHostFailedChecks.Count > 0 => (Localization.FormatListingShareHostChecksFailed(host.Name), null, ShareErrorAction.None),
+        { Error: "invalid_archive" } => (Localization.FormatListingShareHostChecksFailed(host.Name), exception.Message, ShareErrorAction.None),
+        _ => (Localization.FormatListingShareHostSaid(host.Name, exception.Message), null, ShareErrorAction.None),
     };
+
+    [RelayCommand]
+    private void RunShareErrorAction()
+    {
+        switch (_shareErrorAction)
+        {
+            case ShareErrorAction.BackToDescription:
+                BackToShareDescribe();
+                break;
+            case ShareErrorAction.SignOut when _checkedHost is { } host:
+                SignOutOf(host);
+                break;
+            case ShareErrorAction.OpenHost when _checkedHost is { } host:
+                // The text of the error stays, because it says what the player can do without the page.
+                if (_owner.OpenListingPage(host.Page.AbsoluteUri) is { } error)
+                    ShareHostErrorDetail = Localization.FormatListingShareHostOpenFailed(error);
+                break;
+        }
+    }
+
+    [RelayCommand]
+    private void SignOutOfShareHost()
+    {
+        if (SelectedShareHostRow is { } row)
+            SignOutOf(row.Host);
+    }
+
+    /// <summary>An upload belongs to the account that sent it, so it goes with the sign-in.</summary>
+    private void SignOutOf(ShareHost host)
+    {
+        if (_owner.Services is not { } services)
+            return;
+
+        services.ShareHostClient.SignOut(host);
+        ForgetShareHostRun();
+    }
 }

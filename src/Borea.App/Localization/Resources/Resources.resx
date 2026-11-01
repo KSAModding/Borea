@@ -3721,7 +3721,7 @@
     <value>Publishing...</value>
   </data>
   <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
-    <value>The archive is {0}, and {1} takes at most {2}. Nothing was sent.</value>
+    <value>Your file is {0}, but {1} accepts at most {2}. Nothing was uploaded. Check the folder for large files that the vehicle or save does not need.</value>
   </data>
   <data name="ListingShareCheckPassedFormat" xml:space="preserve">
     <value>{0}: passed</value>
@@ -3756,17 +3756,74 @@
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>The share host no longer takes the sign-in. Share again to sign in.</value>
   </data>
+  <data name="ListingShareHostSignedOutFormat" xml:space="preserve">
+    <value>Your sign-in on {0} ended. Sign in again to go on.</value>
+  </data>
   <data name="ListingShareHostSignInRefused" xml:space="preserve">
     <value>The sign-in was refused, or its code expired.</value>
+  </data>
+  <data name="ListingShareHostSignInRefusedFormat" xml:space="preserve">
+    <value>You did not approve Borea on {0}, or the code ran out of time. Try again.</value>
   </data>
   <data name="ListingShareHostNetwork" xml:space="preserve">
     <value>The share host could not be reached.</value>
   </data>
+  <data name="ListingShareHostNetworkFormat" xml:space="preserve">
+    <value>{0} could not be reached. Check your connection and try again.</value>
+  </data>
   <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
-    <value>{0} answered in a way that Borea does not understand.</value>
+    <value>{0} sent an answer that Borea cannot read. Try again later.</value>
   </data>
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}: {1}</value>
+  </data>
+  <data name="ShareOpenHostFormat" xml:space="preserve">
+    <value>Open {0}</value>
+  </data>
+  <data name="ShareSignedInFormat" xml:space="preserve">
+    <value>Signed in on {0}. Not you?</value>
+  </data>
+  <data name="ShareSignOutFormat" xml:space="preserve">
+    <value>Sign out of {0}</value>
+  </data>
+  <data name="ShareBackToDescription" xml:space="preserve">
+    <value>Back to the description</value>
+  </data>
+  <data name="ShareErrorIdTakenFormat" xml:space="preserve">
+    <value>The short name {0} is already used on {1}, by a mod, a vehicle or a save. Go back and choose another one.</value>
+  </data>
+  <data name="ShareErrorVersionTakenFormat" xml:space="preserve">
+    <value>{0} already had version {1}, also if it was taken down. Enter a higher version, for example {2}.</value>
+  </data>
+  <data name="ShareErrorNotOwnerFormat" xml:space="preserve">
+    <value>You are signed in to {0} with an account that does not own {1}. Sign out and sign in with the account you first shared it with.</value>
+  </data>
+  <data name="ShareErrorRateLimitedFormat" xml:space="preserve">
+    <value>{0} asks you to wait before the next share. Try again in {1}. Your entries stay.</value>
+  </data>
+  <data name="ShareErrorRateLimitedLaterFormat" xml:space="preserve">
+    <value>{0} asks you to wait before the next share. Try again later. Your entries stay.</value>
+  </data>
+  <data name="ShareErrorUploadGoneFormat" xml:space="preserve">
+    <value>The upload is no longer on {0}. It may have run out of time, or it is already published. Check the page on {0}, then check the file again.</value>
+  </data>
+  <data name="ShareErrorTooLargeFormat" xml:space="preserve">
+    <value>{0} says that this file is too large. Check the folder for large files that the vehicle or save does not need.</value>
+  </data>
+  <data name="ShareErrorNoVehiclesFormat" xml:space="preserve">
+    <value>{0} does not take vehicles at the moment.</value>
+  </data>
+  <data name="ShareErrorNoSavesFormat" xml:space="preserve">
+    <value>{0} does not take saves at the moment.</value>
+  </data>
+  <data name="ShareErrorUnavailableFormat" xml:space="preserve">
+    <value>{0} has a problem right now. Nothing changed on your computer. Try again later.</value>
+  </data>
+  <data name="ShareErrorLostAnswerFormat" xml:space="preserve">
+    <value>Borea got no answer from {0}, so it does not know whether this is published. Click Publish again. An upload cannot publish twice.</value>
+  </data>
+  <data name="ShareErrorFileFormat" xml:space="preserve">
+    <value>Borea could not read or write the file of {0}. Check that its folder is still there, then try again.</value>
   </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>

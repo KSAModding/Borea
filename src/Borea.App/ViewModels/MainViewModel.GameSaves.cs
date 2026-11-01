@@ -184,7 +184,8 @@ public partial class MainViewModel
 
     /// <summary>
     /// Writes the archive of the shared item into a new file in the temporary folder, which the caller deletes. Null when
-    /// nothing was written, and a toast says why.
+    /// the library is busy or the game runs, and a toast says why. A file that cannot be read or written gives an
+    /// <see cref="IOException"/>, which the caller shows.
     /// </summary>
     internal async Task<(string File, GameSaveArchive Archive)?> WriteShareArchiveToTempAsync(GameSaveShareStart share)
     {
@@ -214,8 +215,9 @@ public partial class MainViewModel
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             TryDeleteFile(file);
-            ShowErrorToast(() => Localization.FormatToastShareFailed(name), exception.Message);
-            return null;
+
+            // The step of the share says this, because a toast with the exception text is gone before the player can act on it.
+            throw new IOException(exception.Message, exception);
         }
     }
 

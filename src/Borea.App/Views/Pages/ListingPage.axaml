@@ -208,7 +208,7 @@
                     <StackPanel Spacing="16" Margin="0,24,0,0" IsVisible="{Binding ListingEditor.IsShareStep}">
                         <Grid ColumnDefinitions="*,16,Auto">
                             <TextBlock Classes="heading-lg" Text="{Binding Localization.ShareFlowTitle}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                            <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingStartOver}" Command="{Binding ListingEditor.StartOverCommand}" />
+                            <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingStartOver}" Command="{Binding ListingEditor.StartOverCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}" />
                         </Grid>
                         <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.IntroText}" TextWrapping="Wrap" />
                         <Grid>

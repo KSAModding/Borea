@@ -54,6 +54,9 @@ public sealed class FileSharedContentRecords : ISharedContentRecords
             return moved.Count > 0 || dropped > 0;
         }, cancellationToken);
 
+    public Task RemoveAsync(ContentType type, string hostKey, string folderName, CancellationToken cancellationToken = default) =>
+        ChangeAsync(dto => dto.Items.RemoveAll(item => item.HostKey == hostKey && Matches(item, type, folderName)) > 0, cancellationToken);
+
     private async Task<SharedContentDto?> ReadLockedAsync(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);

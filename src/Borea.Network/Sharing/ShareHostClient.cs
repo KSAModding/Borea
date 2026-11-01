@@ -29,6 +29,13 @@ public sealed class ShareHostClient : IShareHostClient
 
     private static readonly TimeSpan SlowDownStep = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// How long a publish waits for its answer. The timeout of the HTTP client is long because of large uploads, and a publish
+    /// offers no Cancel, so a silent host would otherwise hold the player for that time. A publish that ends here counts as a
+    /// request with no answer, and the player can send it again because an upload cannot publish twice.
+    /// </summary>
+    internal TimeSpan PublishAnswerLimit { get; init; } = TimeSpan.FromMinutes(2);
+
     private readonly HttpClient _http;
     private readonly IListingFormat _format;
     private readonly TimeProvider _time;
@@ -174,7 +181,18 @@ public sealed class ShareHostClient : IShareHostClient
         }
 
         using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
-        var reply = await SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, cancellationToken).ConfigureAwait(false);
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        limit.CancelAfter(PublishAnswerLimit);
+        Reply reply;
+        try
+        {
+            reply = await SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, limit.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw Network();
+        }
+
         var published = Parse<ShareHostJson.Published>(reply.Body) ?? new ShareHostJson.Published();
 
         // Borea opens this page in the browser, and the host opens every listing pull request on GitHub.
@@ -384,6 +402,7 @@ public sealed class ShareHostClient : IShareHostClient
                 Checks = ReadChecks(error.Checks),
                 RetryAfter = error.RetryAfter.ValueKind == JsonValueKind.Number && error.RetryAfter.TryGetInt32(out var seconds) && seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
                 FieldErrors = ReadFieldErrors(error.FieldErrors),
+                IsServerError = (int)reply.Status >= 500,
             }
             : Unexpected(host, reply);
 

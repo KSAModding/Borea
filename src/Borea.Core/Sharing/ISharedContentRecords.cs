@@ -20,6 +20,9 @@ public interface ISharedContentRecords
 
     /// <summary>Moves the entries of the old name to the new one, and drops every other entry of the new name, because the renamed item now holds it.</summary>
     Task RenameFolderAsync(ContentType type, string oldFolderName, string newFolderName, CancellationToken cancellationToken = default);
+
+    /// <summary>Drops the entry of the type, host and folder, because the host says that the account does not own its listing.</summary>
+    Task RemoveAsync(ContentType type, string hostKey, string folderName, CancellationToken cancellationToken = default);
 }
 
 /// <param name="ListingId">The id that the host returned.</param>

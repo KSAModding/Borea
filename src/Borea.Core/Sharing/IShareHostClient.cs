@@ -92,4 +92,7 @@ public sealed class ShareHostException : Exception
 
     /// <summary>The lines of the host for each field of a refused request, or null when the answer has none.</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<string>>? FieldErrors { get; init; }
+
+    /// <summary>The host answered with a 5xx and a message, so the request can have taken effect although it reads as refused.</summary>
+    public bool IsServerError { get; init; }
 }
