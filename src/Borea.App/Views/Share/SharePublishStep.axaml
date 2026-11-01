@@ -9,6 +9,17 @@
         <Style Selector="Path.opened">
             <Setter Property="RenderTransform" Value="rotate(180deg)" />
         </Style>
+        <Style Selector="Border.cover-picture">
+            <Setter Property="Width" Value="144" />
+            <Setter Property="Height" Value="144" />
+        </Style>
+        <!-- a narrow page gives the text beside the cover more of the width -->
+        <ContainerQuery Name="page-body" Query="max-width:520">
+            <Style Selector="Border.cover-picture">
+                <Setter Property="Width" Value="96" />
+                <Setter Property="Height" Value="96" />
+            </Style>
+        </ContainerQuery>
     </UserControl.Styles>
     <UserControl.Resources>
         <!-- the limit and the rules of a host, from hosts.toml -->
@@ -50,13 +61,13 @@
                     <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding Localization.ShareCoverDrawing}" TextWrapping="Wrap" VerticalAlignment="Center" />
                 </Grid>
                 <Grid ColumnDefinitions="Auto,16,*" IsVisible="{Binding ListingEditor.ShowsShareCoverPicture}">
-                    <Border Width="144" Height="144" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Brush.Surface}">
+                    <Border Classes="cover-picture" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Brush.Surface}">
                         <views:SharePictureView Bytes="{Binding ListingEditor.ShareCoverBytes}" Stretch="Uniform" />
                     </Border>
                     <StackPanel Grid.Column="2" Spacing="8">
                         <TextBlock Classes="body-md" Text="{Binding Localization.ShareCoverHint}" TextWrapping="Wrap" />
-                        <WrapPanel ItemSpacing="12" LineSpacing="4" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
-                            <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.AddSharePictureCommand}">
+                        <WrapPanel ItemSpacing="4" LineSpacing="4" Margin="-8,0,0,0" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
+                            <Button Classes="link" Command="{Binding ListingEditor.AddSharePictureCommand}">
                                 <TextBlock Classes="action-md" Text="{Binding Localization.ShareCoverOwn}" />
                             </Button>
                             <Button Classes="link" Command="{Binding ListingEditor.LeaveOutShareCoverCommand}">
