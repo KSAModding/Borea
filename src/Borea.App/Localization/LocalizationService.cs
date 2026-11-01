@@ -2246,6 +2246,22 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SharePicturesSent => Resources.SharePicturesSent;
 
+    public string ShareCoverDrawing => Resources.ShareCoverDrawing;
+
+    public string ShareCoverMissing => Resources.ShareCoverMissing;
+
+    public string ShareCoverHint => Resources.ShareCoverHint;
+
+    public string ShareCoverOwn => Resources.ShareCoverOwn;
+
+    public string ShareCoverLeaveOut => Resources.ShareCoverLeaveOut;
+
+    public string ShareCoverLeftOut => Resources.ShareCoverLeftOut;
+
+    public string ShareCoverUseDrawn => Resources.ShareCoverUseDrawn;
+
+    public string ShareCoverRowName => Resources.ShareCoverRowName;
+
     public string ShareOtherFields => Resources.ShareOtherFields;
 
     public string ShareEditAll => Resources.ShareEditAll;

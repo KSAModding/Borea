@@ -863,6 +863,8 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
     /// <summary>Holds a load of a vehicle folder until the test completes the task, or null to answer at once.</summary>
     public Task? FolderGate { get; init; }
 
+    public Exception? FolderFailure { get; init; }
+
     /// <summary>The progress of the last load, so a test can report a stage after the load ended.</summary>
     public IProgress<VehiclePreviewStage>? LastProgress { get; private set; }
 
@@ -889,6 +891,9 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
         _folderLoads.Enqueue(vehicleFolder);
         if (FolderGate is { } gate)
             await gate.WaitAsync(cancellationToken);
+
+        if (FolderFailure is { } failure)
+            throw failure;
 
         return Ready(new FakeAssets(Files), []);
     }

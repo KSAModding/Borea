@@ -7,7 +7,9 @@ using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
+using Borea.Core.Preview;
 using Borea.Core.Sharing;
+using Borea.Preview.Rendering;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -123,6 +125,293 @@ public sealed class ShareHostShareTests
         Assert.Null(editor.SharePicturesResultText);
         Assert.False(editor.CanRetrySharePictures);
         Assert.False(editor.IsSharing);
+    }
+
+    [Fact]
+    public async Task Cover_ShowsOnThePublishStep_AndGoesUpFirstOnlyAfterThePublish()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var (service, encoder) = CoverParts();
+        var editor = await ShareWithCoverAsync(harness, service, encoder);
+
+        Assert.True(editor.ShowsShareCoverCard);
+        Assert.True(editor.ShowsShareCoverPicture);
+        Assert.False(editor.ShowsShareCoverDrawing);
+        Assert.EndsWith("Example Rover", Assert.Single(service.FolderLoads));
+        Assert.Equal((VehicleCoverPicture.Size, VehicleCoverPicture.Size, true), (encoder.Width, encoder.Height, encoder.IsOpaque));
+        Assert.Null(editor.ShareSummaryPicturesText);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.Empty(host.ImageUploads);
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(new ImageUpload("vehicle", "ExampleRover", CoverEncoder.Png.Length), Assert.Single(host.ImageUploads));
+        var row = Assert.Single(editor.SharePictures);
+        Assert.Equal((harness.Localization.ShareCoverRowName, true, true), (row.Name, row.IsCover, row.IsSent));
+        Assert.False(editor.ShowsShareCoverCard);
+    }
+
+    [Fact]
+    public async Task Cover_LeftOut_SendsNoPicture_AndTheStepCanTakeItBack()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var (service, encoder) = CoverParts();
+        var editor = await ShareWithCoverAsync(harness, service, encoder);
+
+        editor.LeaveOutShareCoverCommand.Execute(null);
+        Assert.Equal((false, true, true), (editor.ShowsShareCoverPicture, editor.ShowsShareCoverLeftOut, editor.ShowsShareCoverCard));
+        editor.UseShareCoverCommand.Execute(null);
+        Assert.Equal((true, false), (editor.ShowsShareCoverPicture, editor.ShowsShareCoverLeftOut));
+        editor.LeaveOutShareCoverCommand.Execute(null);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Empty(host.ImageUploads);
+        Assert.Empty(editor.SharePictures);
+    }
+
+    [Fact]
+    public async Task Cover_LeftOutWhileThePublishRuns_StaysOut()
+    {
+        ListingEditor? editor = null;
+        var publishing = false;
+        var host = new FakeHost
+        {
+            DuringSend = () =>
+            {
+                if (publishing)
+                    editor!.LeaveOutShareCoverCommand.Execute(null);
+                return Task.CompletedTask;
+            },
+        };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var (service, encoder) = CoverParts();
+        editor = await ShareWithCoverAsync(harness, service, encoder);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        publishing = true;
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Single(host.Publishes);
+        Assert.Empty(host.ImageUploads);
+    }
+
+    [Fact]
+    public async Task OwnPicture_WinsOverTheCover_AndRemovingItOffersTheCoverAgain()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var (service, encoder) = CoverParts();
+        var editor = await ShareWithCoverAsync(harness, service, encoder);
+        harness.ViewModel.WindowServices = new PictureWindow { File = new PickedBinaryFile("shot.png", Picture(1)) };
+
+        await editor.AddSharePictureCommand.ExecuteAsync(null);
+        Assert.False(editor.ShowsShareCoverCard);
+
+        editor.BackToShareDescribeCommand.Execute(null);
+        editor.ContinueShareCommand.Execute(null);
+        await editor.ShareCoverDraw;
+        Assert.Single(service.FolderLoads);
+        Assert.False(editor.ShowsShareCoverCard);
+
+        editor.BackToShareDescribeCommand.Execute(null);
+        editor.SharePictures[0].RemoveCommand.Execute(null);
+        editor.ContinueShareCommand.Execute(null);
+        await editor.ShareCoverDraw;
+        Assert.True(editor.ShowsShareCoverPicture);
+
+        await editor.AddSharePictureCommand.ExecuteAsync(null);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(new ImageUpload("vehicle", "ExampleRover", Picture(1).Length), Assert.Single(host.ImageUploads));
+        Assert.Equal("shot.png", Assert.Single(editor.SharePictures).Name);
+    }
+
+    [Fact]
+    public async Task Cover_PublishWaitsForTheDrawing_SoThePlayerSeesThePictureFirst()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var service = new FakeVehiclePreview { Vehicle = VehiclePreviewViewModelTests.TriangleVehicle(), Files = VehiclePreviewViewModelTests.TriangleFiles, FolderGate = gate.Task };
+        harness.ViewModel.VehiclePreviewServiceOf = _ => service;
+        harness.ViewModel.VehiclePreviewEncoder = new CoverEncoder();
+        var editor = await ShareWithFieldsAsync(harness);
+        Assert.True(editor.ShowsShareCoverDrawing);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.False(editor.CanPublishToShareHost);
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+        Assert.Empty(host.Publishes);
+
+        var raised = new List<string?>();
+        editor.PropertyChanged += (_, change) => raised.Add(change.PropertyName);
+        gate.TrySetResult();
+        await editor.ShareCoverDraw;
+        Assert.Contains(nameof(ListingEditor.CanPublishToShareHost), raised);
+        Assert.True(editor.CanPublishToShareHost);
+
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+        Assert.Single(host.ImageUploads);
+    }
+
+    [Fact]
+    public async Task Cover_ADrawingThatTheStepStopped_DoesNotComeBackWhenItEnds()
+    {
+        var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var (service, _) = CoverParts();
+        harness.ViewModel.VehiclePreviewServiceOf = _ => service;
+        harness.ViewModel.VehiclePreviewEncoder = new CoverEncoder { Reached = reached, Gate = gate.Task };
+        var editor = await ShareWithFieldsAsync(harness);
+        var draw = editor.ShareCoverDraw;
+
+        // The stop comes after the last check of the token, so the drawing still gives a picture.
+        await reached.Task;
+        editor.BackToShareDescribeCommand.Execute(null);
+        gate.TrySetResult();
+        await draw;
+
+        Assert.Null(editor.ShareCoverBytes);
+    }
+
+    [Fact]
+    public async Task Cover_IsDrawnAgainAtACheck_OnlyWhenTheFilesOfTheVehicleChanged()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var (service, encoder) = CoverParts();
+        var editor = await ShareWithCoverAsync(harness, service, encoder);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.Single(service.FolderLoads);
+
+        var file = Directory.EnumerateFiles(service.FolderLoads[0], "*", SearchOption.AllDirectories).First();
+        File.SetLastWriteTimeUtc(file, File.GetLastWriteTimeUtc(file).AddMinutes(5));
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.ShareCoverDraw;
+
+        Assert.Equal(2, service.FolderLoads.Count);
+        Assert.True(editor.ShowsShareCoverPicture);
+    }
+
+    [Fact]
+    public async Task Cover_StaysOutWhenThePublishEndsWhileThePickerIsOpen_AndThePickedPictureGoesFirst()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var (service, encoder) = CoverParts();
+        var editor = await ShareWithCoverAsync(harness, service, encoder);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        var answer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        harness.ViewModel.WindowServices = new PictureWindow { File = new PickedBinaryFile("shot.png", Picture(1)), Gate = answer.Task };
+
+        var pick = editor.AddSharePictureCommand.ExecuteAsync(null);
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.Empty(host.ImageUploads);
+
+        answer.TrySetResult();
+        await pick;
+        await editor.RetrySharePicturesCommand.ExecuteAsync(null);
+
+        Assert.Equal(new ImageUpload("vehicle", "ExampleRover", Picture(1).Length), Assert.Single(host.ImageUploads));
+        Assert.Equal("shot.png", Assert.Single(editor.SharePictures).Name);
+    }
+
+    [Fact]
+    public async Task Cover_AFailedDrawing_LeavesTheStepUsable_AndSaysThatNoCoverComes()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var service = new FakeVehiclePreview { FolderFailure = new OutOfMemoryException() };
+        harness.ViewModel.VehiclePreviewServiceOf = _ => service;
+        harness.ViewModel.VehiclePreviewEncoder = new CoverEncoder();
+        var editor = await ShareWithFieldsAsync(harness);
+        await Assert.ThrowsAsync<OutOfMemoryException>(() => editor.ShareCoverDraw);
+        Assert.Equal((false, true), (editor.ShowsShareCoverDrawing, editor.ShowsShareCoverMissing));
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.Empty(host.ImageUploads);
+    }
+
+    [Fact]
+    public async Task PictureError_OfTheDescribeStep_DoesNotFollowToThePublishStep()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var (service, encoder) = CoverParts();
+        var editor = await ShareWithCoverAsync(harness, service, encoder);
+        editor.BackToShareDescribeCommand.Execute(null);
+        harness.ViewModel.WindowServices = new PictureWindow { File = new PickedBinaryFile("bad.png", [1, 2, 3]) };
+        await editor.AddSharePictureCommand.ExecuteAsync(null);
+        Assert.NotNull(editor.SharePictureError);
+
+        editor.ContinueShareCommand.Execute(null);
+
+        Assert.Null(editor.SharePictureError);
+    }
+
+    [Fact]
+    public async Task Cover_IsNotOfferedWhenAPartIsABox()
+    {
+        var box = new ResolvedPlaceholder(System.Numerics.Matrix4x4.Identity, System.Numerics.Vector3.One, "Wing", PlaceholderReason.UnknownPart, null);
+        foreach (var vehicle in new[] { VehiclePreviewViewModelTests.TriangleVehicle(box), new ResolvedVehicle([], [], [], [], [], 0, 0) })
+        {
+            var host = new FakeHost();
+            using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+            var service = new FakeVehiclePreview { Vehicle = vehicle, Files = VehiclePreviewViewModelTests.TriangleFiles };
+            var editor = await ShareWithCoverAsync(harness, service, new CoverEncoder());
+
+            Assert.Single(service.FolderLoads);
+            Assert.Equal((false, true), (editor.ShowsShareCoverPicture, editor.ShowsShareCoverMissing));
+
+            await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+            await editor.PublishToShareHostCommand.ExecuteAsync(null);
+            Assert.Empty(host.ImageUploads);
+        }
+    }
+
+    [Fact]
+    public async Task Cover_IsNotDrawnForASaveOrANewVersion()
+    {
+        var (forSave, encoder) = CoverParts();
+        using (var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost()))
+        {
+            harness.ViewModel.VehiclePreviewServiceOf = _ => forSave;
+            harness.ViewModel.VehiclePreviewEncoder = encoder;
+            var instance = await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+            GameSaveShareTests.WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance), "Moon Base", "universe.xml", "<UniverseData><System><Id Id=\"Sol\" /></System></UniverseData>");
+            await GameSaveShareTests.OpenAsync(harness);
+            await Assert.Single(harness.ViewModel.SavesSection.Items).ShareCommand.ExecuteAsync(null);
+            var editor = harness.ViewModel.ListingEditor;
+            await editor.ShareHostsLoad;
+            FillRequiredFields(editor);
+
+            Assert.Equal(ShareFlowStep.Publish, editor.ShareFlowStep);
+            Assert.Empty(forSave.FolderLoads);
+            Assert.False(editor.ShowsShareCoverCard);
+        }
+
+        var (forVersion, versionEncoder) = CoverParts();
+        using (var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost { PublishedId = null }))
+        {
+            harness.ViewModel.VehiclePreviewServiceOf = _ => forVersion;
+            harness.ViewModel.VehiclePreviewEncoder = versionEncoder;
+            var editor = await ShareAsync(harness);
+            editor.ShareAsNewVersionCommand.Execute(null);
+            editor.ContinueShareCommand.Execute(null);
+
+            Assert.Equal(ShareFlowStep.Publish, editor.ShareFlowStep);
+            Assert.Empty(forVersion.FolderLoads);
+            Assert.False(editor.ShowsShareCoverCard);
+        }
     }
 
     [Fact]
@@ -2220,6 +2509,28 @@ public sealed class ShareHostShareTests
         return (harness, publish);
     }
 
+    /// <summary>A new listing on the publish step, which shows the cover that Borea drew.</summary>
+    internal static async Task<ViewModelHarness> CoverHarnessAsync()
+    {
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var (service, encoder) = CoverParts();
+        await ShareWithCoverAsync(harness, service, encoder);
+        return harness;
+    }
+
+    private static (FakeVehiclePreview Service, CoverEncoder Encoder) CoverParts() =>
+        (new FakeVehiclePreview { Vehicle = VehiclePreviewViewModelTests.TriangleVehicle(), Files = VehiclePreviewViewModelTests.TriangleFiles }, new CoverEncoder());
+
+    /// <summary>A share of a new listing that stands on the publish step and has finished its drawing.</summary>
+    private static async Task<ListingEditor> ShareWithCoverAsync(ViewModelHarness harness, FakeVehiclePreview service, CoverEncoder encoder)
+    {
+        harness.ViewModel.VehiclePreviewServiceOf = _ => service;
+        harness.ViewModel.VehiclePreviewEncoder = encoder;
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.ShareCoverDraw;
+        return editor;
+    }
+
     /// <summary>A share of a new listing that a host with a request has published.</summary>
     internal static async Task<ViewModelHarness> PublishedHarnessAsync()
     {
@@ -2334,11 +2645,40 @@ public sealed class ShareHostShareTests
 
     private sealed record ImageUpload(string ListingType, string ListingId, int Size);
 
+    /// <summary>Gives a small valid PNG in place of the frame, and keeps what a test asks about that frame.</summary>
+    private sealed class CoverEncoder : IPngEncoder
+    {
+        public static readonly byte[] Png = ListingEditorTests.Png(16, 16);
+
+        public int Width { get; private set; }
+
+        public int Height { get; private set; }
+
+        public bool IsOpaque { get; private set; }
+
+        public TaskCompletionSource? Reached { get; init; }
+
+        /// <summary>Holds the encode, which comes after the last check of a cancel, until the test completes the task.</summary>
+        public Task? Gate { get; init; }
+
+        public byte[] Encode(FrameBuffer frame)
+        {
+            (Width, Height) = (frame.Width, frame.Height);
+            IsOpaque = frame.Rgba.Where((_, index) => index % 4 == 3).All(alpha => alpha == 255);
+            Reached?.TrySetResult();
+            Gate?.GetAwaiter().GetResult();
+            return Png;
+        }
+    }
+
     private sealed class PictureWindow : IWindowServices
     {
         public PickedBinaryFile? File { get; set; }
 
         public Exception? Failure { get; init; }
+
+        /// <summary>Holds the answer of the picker until the test completes the task.</summary>
+        public Task? Gate { get; init; }
 
         public Task<string?> SaveTextFileAsync(string title, string suggestedFileName, string fileTypeName, string text) => Task.FromResult<string?>(null);
 
@@ -2346,7 +2686,13 @@ public sealed class ShareHostShareTests
 
         public Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName) => Task.FromResult<PickedTextFile?>(null);
 
-        public Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes) => Failure is { } failure ? throw failure : Task.FromResult(File);
+        public async Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes)
+        {
+            if (Gate is { } gate)
+                await gate;
+
+            return Failure is { } failure ? throw failure : File;
+        }
 
         public Task CopyTextAsync(string text) => Task.CompletedTask;
     }

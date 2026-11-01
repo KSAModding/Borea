@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
@@ -207,8 +208,8 @@ public partial class MainViewModel
     private string? _vehiclePreviewTarget;
 
     /// <summary>
-    /// The loads of the previews that closed. A closed preview stops at its next check, so until then it can still hold
-    /// a file open below the folders of the library.
+    /// The loads of the previews that closed and the covers of a share. A closed preview stops at its next check, so
+    /// until then it can still hold a file open below the folders of the library.
     /// </summary>
     private Task _closedVehiclePreviewLoads = Task.CompletedTask;
 
@@ -341,6 +342,19 @@ public partial class MainViewModel
             .. instance.Mods.Select(mod => $"{mod.ModId}@{mod.Version}"),
             .. instance.Content.Select(record => $"{record.ListingId}@{record.Metadata.Version}"),
         ]);
+
+    /// <summary>
+    /// Draws the cover that a share offers, or gives null when it cannot. It reads the same folders as a preview, so whatever moves them waits for it too.
+    /// </summary>
+    internal async Task<byte[]?> DrawShareCoverAsync(GameSaveShareStart share, CancellationToken token)
+    {
+        if (_services is not { } services || IsChangingLibraryFolder || VehiclePreviewEncoder is not { } encoder)
+            return null;
+
+        var draw = VehicleCoverPicture.DrawAsync(VehiclePreviewServiceOf(services), VehiclePreviewBuilderOf(), encoder, share.Entry.Path, share.InstanceId, token);
+        _closedVehiclePreviewLoads = Chain(_closedVehiclePreviewLoads, draw);
+        return await draw;
+    }
 
     private void ClearVehiclePreview()
     {
