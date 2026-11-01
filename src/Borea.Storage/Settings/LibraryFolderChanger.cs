@@ -11,10 +11,6 @@ namespace Borea.Storage.Settings;
 
 public sealed class LibraryFolderChanger : ILibraryFolderChanger
 {
-    private const string InstancesFolderName = "Instances";
-    private const string BackupsFolderName = "Backups";
-    private const string StaticModFilesFolderName = "Static Mod Files";
-    private const string GameBuildsFolderName = "Game Builds";
     private const int CopyBufferSize = 1 << 20;
     private const int MaxLinkDepth = 32;
 
@@ -174,7 +170,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         }
 
         // the store goes first, so a copied link to it has its target already
-        var moves = new[] { StaticModFilesFolderName, InstancesFolderName, BackupsFolderName, GameBuildsFolderName }
+        var moves = new[] { GamePathProvider.StaticModFilesFolderName, GamePathProvider.InstancesFolderName, GamePathProvider.BackupsFolderName, GamePathProvider.GameBuildsFolderName }
             .Select(name => new FolderMove(Path.Combine(previous, name), Path.Combine(target, name)))
             .ToList();
         if (moves.Any(move => HasEntries(move.To)))
@@ -422,7 +418,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
 
     private static List<Guid> InstanceFolderIds(string folder)
     {
-        var root = Path.Combine(folder, InstancesFolderName);
+        var root = Path.Combine(folder, GamePathProvider.InstancesFolderName);
         if (!Directory.Exists(root))
             return [];
 
