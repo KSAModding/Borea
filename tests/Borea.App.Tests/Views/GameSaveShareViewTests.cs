@@ -511,7 +511,7 @@ public sealed class GameSaveShareViewTests
     }
 
     [Fact]
-    public async Task ManageModal_TakeDown_ShowsTheWarningAndTheButtonOnlyOnceAVersionIsChosen()
+    public async Task ManageModal_TakeDown_ShowsTheWarningOnceAVersionIsChosen_AndTheButtonStaysOffUntilThen()
     {
         using var harness = await ShareHostShareTests.OwnedPageHarnessAsync();
         var localization = harness.Localization;
@@ -535,13 +535,14 @@ public sealed class GameSaveShareViewTests
         });
 
         Assert.Contains(localization.ShareTakeDownChoose, before);
-        Assert.False(buttonBefore);
+        Assert.Equal((true, false), buttonBefore);
+        Assert.DoesNotContain(localization.FormatShareTakeDownWarning("1.2.0", "Example Rover", "ksamods.gg"), before);
         Assert.Contains(localization.FormatShareTakeDownWarning("1.2.0", "Example Rover", "ksamods.gg"), after);
-        Assert.True(buttonAfter);
+        Assert.Equal((true, true), buttonAfter);
         Assert.Contains(localization.FormatShareManageOnHost("ksamods.gg"), after);
 
-        bool ShowsTakeDownButton(Control modal) =>
-            modal.GetVisualDescendants().OfType<Button>().Any(button => button.IsEffectivelyVisible && button.Command == dialog.TakeDownCommand);
+        (bool Shown, bool Enabled) ShowsTakeDownButton(Control modal) =>
+            modal.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible && button.Command == dialog.TakeDownCommand).Select(button => (true, button.IsEffectivelyEnabled)).SingleOrDefault();
 
         static List<string?> Shown(Control modal) =>
             [.. modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text)];

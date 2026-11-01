@@ -957,6 +957,9 @@ public sealed partial class GameSaveItem : ObservableObject
 
     public string UpdatedText => _owner.Localization.FormatGameSaveUpdated(MainViewModel.DateTimeText(Entry.UpdatedAt));
 
+    /// <summary>The date alone, which fits one line of a narrow row. The tooltip of the row has the time.</summary>
+    public string UpdatedDateText => _owner.Localization.FormatGameSaveUpdated(MainViewModel.DateText(Entry.UpdatedAt));
+
     public string? BuildText => _build?.ToString() ?? Entry.GameBuild;
 
     public string? BuildToolTip => BuildText is { } build ? _owner.Localization.FormatGameSaveBuild(build) : null;
@@ -1038,6 +1041,7 @@ public sealed partial class GameSaveItem : ObservableObject
     internal void RefreshText()
     {
         OnPropertyChanged(nameof(UpdatedText));
+        OnPropertyChanged(nameof(UpdatedDateText));
         OnPropertyChanged(nameof(BuildToolTip));
         OnPropertyChanged(nameof(OlderBuildText));
         OnPropertyChanged(nameof(SizeText));

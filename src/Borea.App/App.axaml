@@ -444,9 +444,13 @@
         <Style Selector="Border.thumbnail > views|PreviewStillView > views|ListingImageView">
             <Setter Property="CornerRadius" Value="7.5" />
         </Style>
-        <Style Selector="views|PreviewStillView > TextBlock.still-note">
-            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
-            <Setter Property="Padding" Value="4,2" />
+        <!-- the note sits on a dark strip, because the still under it can be any color -->
+        <Style Selector="views|PreviewStillView > Border.still-note-strip">
+            <Setter Property="Background" Value="#CC000000" />
+            <Setter Property="Padding" Value="4,3" />
+        </Style>
+        <Style Selector="views|PreviewStillView > Border.still-note-strip > TextBlock.still-note">
+            <Setter Property="Foreground" Value="#FFFFFF" />
             <Setter Property="TextAlignment" Value="Center" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>

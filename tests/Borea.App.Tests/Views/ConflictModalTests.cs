@@ -33,7 +33,7 @@ public sealed class ConflictModalTests
             {
                 window.UpdateLayout();
                 var shown = modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
-                var remove = modal.GetVisualDescendants().OfType<Button>().Single(button => button.Command == conflict.RemoveCommand);
+                var remove = modal.GetVisualDescendants().OfType<Button>().Single(button => button.Command == conflict.RemoveCommand && button.IsEffectivelyVisible);
                 var point = remove.TranslatePoint(new Point(remove.Bounds.Width / 2, remove.Bounds.Height / 2), window)!.Value;
                 window.MouseDown(point, MouseButton.Left);
                 window.MouseUp(point, MouseButton.Left);
@@ -48,6 +48,7 @@ public sealed class ConflictModalTests
 
         Assert.Contains(harness.Localization.ConflictTitle, texts);
         Assert.Contains(harness.Localization.ConflictWhy, texts);
+        Assert.Contains(harness.Localization.ConflictAgain, texts);
         Assert.Contains(conflict.Text, texts);
         Assert.Contains(conflict.RemoveText, texts);
         Assert.False(viewModel.IsConflictOpen);

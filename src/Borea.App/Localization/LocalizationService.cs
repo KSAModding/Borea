@@ -2319,6 +2319,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareTakeDownChoose => Resources.ShareTakeDownChoose;
 
+    public string ShareTakeDownPlaceholder => Resources.ShareTakeDownPlaceholder;
+
+    public string ShareTakeDownButton => Resources.ShareTakeDownButton;
+
     public string ShareTakeDownNoVersion => Resources.ShareTakeDownNoVersion;
 
     public string ShareDoneNow => Resources.ShareDoneNow;
@@ -4895,6 +4899,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ConflictTitle => Resources.ConflictTitle;
 
     public string ConflictWhy => Resources.ConflictWhy;
+
+    public string ConflictAgain => Resources.ConflictAgain;
 
     public string FormatConflictDeclared(string declarer, string other)
         => string.Format(CultureInfo.CurrentCulture, Resources.ConflictDeclaredFormat, declarer, other);

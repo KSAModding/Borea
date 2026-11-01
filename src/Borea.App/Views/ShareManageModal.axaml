@@ -29,8 +29,8 @@
                         <Button Classes="cta" Command="{Binding SendChangeCommand}" IsVisible="{Binding ShowsChangeFields}">
                             <TextBlock Classes="action-lg" Text="{Binding Localization.ShareManageSend}" VerticalAlignment="Center" />
                         </Button>
-                        <!-- the only control that sends a take-down, so it needs a click on the button that names the version -->
-                        <Button Classes="text tall danger" Content="{Binding TakeDownText}" Command="{Binding TakeDownCommand}" VerticalAlignment="Center" IsVisible="{Binding TakeDownText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <!-- the only control that sends a take-down, so it needs a click on the button that names the version. It stands disabled before a choice, so the next step is visible -->
+                        <Button Classes="text tall danger" Content="{Binding TakeDownText}" Command="{Binding TakeDownCommand}" VerticalAlignment="Center" IsVisible="{Binding ShowsTakeDownButton}" />
                         <Button Classes="text tall" Content="{Binding Localization.ModalClose}" Command="{Binding CloseCommand}" VerticalAlignment="Center" IsVisible="{Binding DoneText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </WrapPanel>
                 </StackPanel>
@@ -99,11 +99,12 @@
                             <TextBlock Classes="body-md" Text="{Binding Localization.ShareTakeDownNoVersion}" TextWrapping="Wrap" IsVisible="{Binding HasNoVersion}" />
                             <StackPanel Spacing="6" IsVisible="{Binding ShowsVersionChoice}">
                                 <TextBlock Classes="body-md" Text="{Binding Localization.ShareTakeDownChoose}" TextWrapping="Wrap" />
-                                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion}" AutomationProperties.Name="{Binding Localization.ShareTakeDownChoose}" />
+                                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion}" PlaceholderText="{Binding Localization.ShareTakeDownPlaceholder}" AutomationProperties.Name="{Binding Localization.ShareTakeDownChoose}" />
                             </StackPanel>
                             <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding TakeDownWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
-                                <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding TakeDownWarning}" TextWrapping="Wrap" />
+                                <!-- a caution before the click, so it is not drawn like a failure, which is red -->
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Warning}" Stroke="{StaticResource Brush.Untested}" VerticalAlignment="Top" />
+                                <TextBlock Grid.Column="2" Classes="body-md" Text="{Binding TakeDownWarning}" TextWrapping="Wrap" />
                             </Grid>
                         </StackPanel>
 
@@ -142,12 +143,14 @@
                             <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" />
                         </Grid>
                         <TextBlock Classes="body-sm secondary" Text="{Binding ErrorDetail}" TextWrapping="Wrap" IsVisible="{Binding ErrorDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding SignOutCommand}" IsVisible="{Binding SignOutText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <TextBlock Classes="action-md" Text="{Binding SignOutText}" />
-                        </Button>
-                        <Button Classes="link" Margin="-8,8,0,0" HorizontalAlignment="Left" Command="{Binding OpenManageLinkCommand}" ToolTip.Tip="{Binding ManageLink}" AutomationProperties.ControlTypeOverride="Hyperlink">
-                            <TextBlock Classes="action-md" Text="{Binding ManageLinkText}" />
-                        </Button>
+                        <WrapPanel ItemSpacing="8" LineSpacing="0" Margin="-8,8,0,0">
+                            <Button Classes="link" Command="{Binding SignOutCommand}" IsVisible="{Binding SignOutText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <TextBlock Classes="action-md" Text="{Binding SignOutText}" />
+                            </Button>
+                            <Button Classes="link" Command="{Binding OpenManageLinkCommand}" ToolTip.Tip="{Binding ManageLink}" AutomationProperties.ControlTypeOverride="Hyperlink">
+                                <TextBlock Classes="action-md" Text="{Binding ManageLinkText}" />
+                            </Button>
+                        </WrapPanel>
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>

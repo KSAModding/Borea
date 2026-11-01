@@ -105,7 +105,7 @@
                     </Border>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
                         <TextBlock Classes="heading-sm" Text="{Binding Name}" ToolTip.Tip="{Binding FolderName}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedText}" ToolTip.Tip="{Binding UpdatedText}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedDateText}" ToolTip.Tip="{Binding UpdatedText}" TextWrapping="NoWrap" />
                         <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding ShowsListingLine}">
                             <Button Classes="link" Margin="-8,0,0,0" Command="{Binding OpenPageCommand}" IsVisible="{Binding ListingName, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingName}">
                                 <TextBlock Classes="action-md" Text="{Binding ListingLinkText}" />
@@ -114,18 +114,19 @@
                             <Border Classes="chip muted" VerticalAlignment="Center" IsVisible="{Binding SharedOnText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SharedOnText}" AutomationProperties.Name="{Binding SharedOnText}">
                                 <TextBlock Text="{Binding SharedOnText}" />
                             </Border>
-                            <!-- the link stays in this line, because in the shared actions column its width would come out of the name of every row -->
-                            <Button Classes="link" Margin="-8,0,0,0" VerticalAlignment="Center" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanChangeContent}" ToolTip.Tip="{Binding UpdateText}">
-                                <TextBlock Classes="action-md" Text="{Binding UpdateText}" MaxWidth="240" TextTrimming="CharacterEllipsis" />
-                            </Button>
+                            <!-- the newer version stays named in this line, and the download replaces it with the progress below the row -->
                             <TextBlock Classes="body-sm secondary" Text="{Binding NewerText}" VerticalAlignment="Center">
                                 <TextBlock.IsVisible>
                                     <MultiBinding Converter="{x:Static BoolConverters.And}">
                                         <Binding Path="NewerText" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                                        <Binding Path="!CanUpdate" />
+                                        <Binding Path="!IsInstalling" />
                                     </MultiBinding>
                                 </TextBlock.IsVisible>
                             </TextBlock>
+                            <!-- the same small button as the update of a mod row, and its tooltip names the version. It stays in this line, because in the shared actions column its width would come out of the name of every row -->
+                            <Button Classes="icon" VerticalAlignment="Center" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanChangeContent}" ToolTip.Tip="{Binding UpdateText}" AutomationProperties.Name="{Binding UpdateText}">
+                                <Path Classes="icon" Data="{StaticResource Icon.ArrowsLeftRight}" />
+                            </Button>
                             <Border Classes="chip untested" VerticalAlignment="Center" IsVisible="{Binding IsChanged}" ToolTip.Tip="{Binding ChangedFilesText}">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <Ellipse />
@@ -137,7 +138,6 @@
                         <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" TextWrapping="Wrap" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextWrapping="Wrap" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding ReplaceText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
                     </StackPanel>
                     <Border Grid.Column="3" Classes="chip untested" Margin="24,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding IsOlderBuild}" ToolTip.Tip="{Binding OlderBuildText}">
@@ -183,7 +183,8 @@
                         </Button>
                     </StackPanel>
                     <!-- the copy target and the confirmations open below the row, so they do not make the shared columns of every row wider -->
-                    <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="5" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="5" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="body-sm secondary" Margin="0,4,0,0" Text="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ProgressStatus}" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <ContentControl Margin="0,4,0,0" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <StackPanel Spacing="4" Margin="0,4,0,0" IsVisible="{Binding IsChoosingTarget}">
                             <TextBlock Classes="body-sm secondary" Text="{Binding CopyNoteText}" TextWrapping="Wrap" IsVisible="{Binding CopyNoteText, Converter={x:Static ObjectConverters.IsNotNull}}" />

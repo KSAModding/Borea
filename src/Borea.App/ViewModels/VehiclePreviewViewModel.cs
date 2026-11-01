@@ -141,7 +141,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _autoFetchDelay = autoFetchDelay ?? DefaultAutoFetchDelay;
         _autoFetch = autoFetch;
         _savePicture = savePicture;
-        ShowFacts();
+        ShowFacts(_missingMods);
     }
 
     internal ModVersionMetadata Release => _release;
@@ -339,7 +339,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         OnPropertyChanged(nameof(ShowText));
         ShowMissingMods(_missingMods);
         ShowNotices();
-        ShowFacts();
+        ShowFacts(_missingMods);
     }
 
     private Task TrackRun(Func<CancellationToken, Task> body)
@@ -480,7 +480,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _partCount = result.Vehicle.PartCount;
         _stageCount = result.Vehicle.StageCount;
         _hasUnknownParts = result.Vehicle.Placeholders.Any(placeholder => placeholder.Reason is PlaceholderReason.UnknownPart or PlaceholderReason.UnknownSubPart);
-        ShowFacts();
+        ShowFacts(result.MissingMods);
 
         Step(PreviewStep.BuildingModel);
         var (geometry, geometryNotices) = await _builder.BuildGeometryAsync(result.Vehicle, result.Assets, _options, token);
@@ -639,7 +639,11 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         OnPropertyChanged(nameof(NoticesText));
     }
 
-    private void ShowFacts()
+    /// <summary>
+    /// Names the mods once, as one chip. The count joins the required mods of the release with the mods that the parts of the vehicle come from,
+    /// so a vehicle that has parts from a mod never says that it needs no mods.
+    /// </summary>
+    private void ShowFacts(IReadOnlyList<VehiclePreviewMissingMod> missingMods)
     {
         Facts.Clear();
         if (_partCount > 0)
@@ -648,7 +652,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         if (_stageCount > 0)
             Facts.Add(_localization.FormatPreviewFactStages(_stageCount));
 
-        var mods = _release.Dependencies.Count(dependency => dependency.Kind == ModDependencyKind.Required);
+        var required = _release.Dependencies.Where(dependency => dependency.Kind == ModDependencyKind.Required).ToList();
+        var named = required.Where(dependency => !dependency.IsAnyOf).Select(dependency => dependency.ModId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var mods = required.Count + missingMods.Count(mod => !named.Contains(mod.ModId));
         if (mods > 0)
             Facts.Add(_localization.FormatShareSummaryMods(mods.ToString(CultureInfo.CurrentCulture)));
         else if (!_hasUnknownParts)

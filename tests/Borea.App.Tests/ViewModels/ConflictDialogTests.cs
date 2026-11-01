@@ -69,6 +69,8 @@ public sealed class ConflictDialogTests
         Assert.Null(conflict.ReasonText);
         Assert.Equal(harness.Localization.FormatConflictRemove(viewModel.ContentName(Armory)), conflict.RemoveText);
         Assert.False(conflict.CanOpenPage);
+        Assert.True(viewModel.ConflictDialog.ShowsAgainNote);
+        Assert.Empty(viewModel.Toasts.Items);
 
         await conflict.RemoveCommand.ExecuteAsync(null);
 
@@ -76,6 +78,21 @@ public sealed class ConflictDialogTests
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
         Assert.Null(row.InstallError);
         Assert.True(row.PendingPlan is { IsReady: true });
+    }
+
+    [Fact]
+    public async Task Install_ConflictsWithTwoInstalledMods_MakesOnlyTheFirstRemovalThePrimaryButton()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => Declares(Afc, Armory)(Declares(Afc, Tools)(json)));
+        var instance = await InstalledContent.AddAsync(harness, Armory, activate: true, ownership: ModInstallOwnership.Borea);
+        await InstalledContent.AddAsync(harness, Tools, activate: false, ownership: ModInstallOwnership.Borea, into: instance);
+        var row = await AfcRowAsync(harness);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        var rows = harness.ViewModel.ConflictDialog!.Rows;
+        Assert.Equal(2, rows.Count);
+        Assert.Equal([(true, false), (false, true)], rows.Select(conflict => (conflict.ShowsPrimaryRemove, conflict.ShowsSecondaryRemove)));
     }
 
     [Fact]
