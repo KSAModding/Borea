@@ -15,7 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Borea.App.ViewModels;
 
-/// <summary>A share host that takes the type of the shared item, as a button of the share card.</summary>
+/// <summary>A share host that takes the type of the shared item, as a button of the publish step.</summary>
 public sealed record ShareHostRow(ShareHost Host, string Label);
 
 /// <summary>One check that the host ran on the upload.</summary>
@@ -37,7 +37,6 @@ public sealed partial class ListingEditor
     private CancellationTokenSource? _shareHostRun;
     private (ShareHost Host, ShareUpload Upload, string? ListingId)? _shareUpload;
     private (string Page, string Code)? _shareHostCode;
-    private (bool IndexOnly, bool Listing) _shownCards = (true, true);
 
     /// <summary>The sections whose values a share host does not take.</summary>
     private static readonly string[] IndexOnlySections = ["links", "releases", "compatibility", "images"];
@@ -100,15 +99,6 @@ public sealed partial class ListingEditor
 
     public bool CanUploadToShareHost => !IsSharing;
 
-    /// <summary>
-    /// False from the upload to a share host on, because the host takes no links, releases, compatibility or images. The cards
-    /// of them hide and keep their values, for the pull request path.
-    /// </summary>
-    public bool ShowsIndexOnlyCards => !IsSharing && !HasShareUpload && ShareHostOutcome is null;
-
-    /// <summary>False while an upload for a new version waits, because that publish sends no listing, so the about and tags cards hide too.</summary>
-    public bool ShowsListingCards => _shareUpload?.ListingId is null;
-
     public bool CanPublishToShareHost => _shareUpload is not null && ShareHostVersion.Trim().Length > 0 && !IsSharing;
 
     private void StartShareHosts()
@@ -129,11 +119,16 @@ public sealed partial class ListingEditor
         _shareHosts = hosts;
         RefreshShareHostRows();
         OnPropertyChanged(nameof(ShareHostText));
+        OnPropertyChanged(nameof(ShareNewVersionText));
     }
 
     private void RefreshShareHostRows()
     {
-        var rows = _share is null ? [] : _shareHosts.Where(host => host.Accepts(Type)).Select(host => new ShareHostRow(host, Localization.FormatListingShareOnHost(host.Name))).ToList();
+        // A new version belongs on the host of its listing, because another host has no listing that it could add to.
+        var rows = _share is null ? [] : _shareHosts
+            .Where(host => host.Accepts(Type) && (_shareListing is not { } listed || listed.Entry.Host == host.Key))
+            .Select(host => new ShareHostRow(host, Localization.FormatListingShareOnHost(host.Name)))
+            .ToList();
         MainViewModel.Arrange(ShareHostRows, rows);
         if (_shareUpload is { } shared)
             MainViewModel.Arrange(ShareHostChecks, CheckRows(shared.Upload.Checks));
@@ -159,29 +154,18 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(CanPublishToShareHost));
         OnPropertyChanged(nameof(ShareHostCodeText));
         OnPropertyChanged(nameof(ShareHostUserCode));
-        RefreshShownCards();
     }
 
-    /// <summary>Shows or hides the cards and their steps when the share host path starts or ends.</summary>
-    private void RefreshShownCards()
+    /// <summary>A new version sends only the mods of the draft. A new listing also has to pass in the sections that the host does not take, because the publish checks the whole draft.</summary>
+    private bool StopsTheUpload(ListingIssue issue)
     {
-        if (_shownCards == (ShowsIndexOnlyCards, ShowsListingCards))
-            return;
-
-        _shownCards = (ShowsIndexOnlyCards, ShowsListingCards);
-        OnPropertyChanged(nameof(ShowsIndexOnlyCards));
-        OnPropertyChanged(nameof(ShowsListingCards));
-        Refresh();
+        var section = SectionOf(issue);
+        return section == "dependencies" || (!IsNewVersionShare && IndexOnlySections.Contains(section));
     }
-
-    partial void OnShareHostProgressChanged(string? value) => RefreshShownCards();
-
-    partial void OnShareHostOutcomeChanged(string? value) => RefreshShownCards();
 
     /// <summary>
     /// Writes the archive and refuses one above the limit of the host before any request. Then it signs in when needed and
-    /// uploads, and shows what the host checked with the version it proposes. An error in a card that hides from the upload on
-    /// stops it first, while the player can still see the field.
+    /// uploads, and shows what the host checked with the version it proposes.
     /// </summary>
     [RelayCommand]
     private async Task UploadToShareHostAsync(ShareHostRow? row)
@@ -191,9 +175,9 @@ public sealed partial class ListingEditor
 
         var host = row.Host;
         ForgetShareHostRun();
-        if (ListingOnHost(host) is null && Errors.Any(issue => IndexOnlySections.Contains(SectionOf(issue))))
+        if (Errors.Any(StopsTheUpload))
         {
-            ShareHostError = Localization.ListingFixErrors;
+            ShareHostError = Localization.ShareOtherFields;
             return;
         }
 
@@ -220,7 +204,7 @@ public sealed partial class ListingEditor
             if (!client.IsSignedIn(host))
                 await SignInToShareHostAsync(host, client, cancel);
 
-            var listingId = ListingOnHost(host);
+            var listingId = _shareListing?.Entry.Reference;
             var upload = await SendSignedInAsync(host, client, cancel, Localization.ListingShareHostUploading, async () =>
             {
                 await using var archive = File.OpenRead(file);
@@ -243,7 +227,6 @@ public sealed partial class ListingEditor
             }
 
             OnPropertyChanged(nameof(HasShareUpload));
-            RefreshShownCards();
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
@@ -341,7 +324,7 @@ public sealed partial class ListingEditor
         var listing = shared.ListingId is null ? Draft : null;
         if (listing is not null && !CanOpenPullRequest)
         {
-            ShareHostError = Localization.ListingFixErrors;
+            ShareHostError = Localization.ShareOtherFields;
             return;
         }
 
@@ -390,7 +373,7 @@ public sealed partial class ListingEditor
         }
     }
 
-    /// <summary>Stops the running step, or drops a waiting upload, which shows every card again.</summary>
+    /// <summary>Stops the running step, or drops a waiting upload.</summary>
     [RelayCommand]
     private void CancelShareHost()
     {
@@ -425,14 +408,6 @@ public sealed partial class ListingEditor
     {
         if (SharePullRequest is { } url && _owner.OpenListingPage(url.AbsoluteUri) is { } error)
             ShareHostError = Localization.FormatListingOpenFailed(error);
-    }
-
-    /// <summary>The id of the listed vehicle or save on <paramref name="host"/> that the draft names, for a new version of it, or null for a new listing.</summary>
-    private string? ListingOnHost(ShareHost host)
-    {
-        var listings = Type == ListingFolders.SaveType ? _snapshot?.Saves : _snapshot?.Vehicles;
-        return listings?.FirstOrDefault(listing => ModIds.Equals(listing.Id, Id.Trim()))?.Authored?.Releases?.Hosts
-            .FirstOrDefault(entry => entry.Kind == ReleaseHostKind.Share && entry.Host == host.Key)?.Reference;
     }
 
     // The API allows two checks that read the same, and Arrange takes each row only once.

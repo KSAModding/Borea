@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
@@ -6,7 +7,7 @@ using Borea.App.Views.Pages;
 
 namespace Borea.App.Tests.Views;
 
-/// <summary>Share in the menu of a vehicle, and the card it opens on the listing page.</summary>
+/// <summary>Share in the menu of a vehicle, the steps it opens on the listing page, and the card of the full form.</summary>
 [Collection(HeadlessCollection.Name)]
 public sealed class GameSaveShareViewTests
 {
@@ -26,14 +27,83 @@ public sealed class GameSaveShareViewTests
     }
 
     [Fact]
-    public async Task ListingPage_AfterShare_ShowsTheShareCardAndTheOptionalHints()
+    public async Task ListingPage_AfterShare_ShowsTheDescribeStepWithItsOwnHeadingAndSidePanel()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
         await GameSaveShareTests.OpenAsync(harness);
         await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
 
-        var texts = await HeadlessApp.RunAsync(harness, () =>
+        var texts = await PageTextsAsync(harness);
+
+        var localization = harness.Localization;
+        Assert.Contains(localization.GameSaveShare, texts);
+        Assert.Contains(localization.ShareFlowTitle, texts);
+        Assert.Contains(localization.ShareFlowIntro, texts);
+        Assert.Contains(localization.ShareDescribeVehicle, texts);
+        Assert.Contains(localization.ShareNext, texts);
+        Assert.Contains(harness.ViewModel.ListingEditor.ShareNextReason, texts);
+        Assert.Contains(localization.ShareEditAll, texts);
+        Assert.Contains(localization.SharePreviewVehicle, texts);
+        Assert.Contains(localization.SharePreviewSentence, texts);
+        Assert.Contains(localization.ShareStepChoose, texts);
+        Assert.DoesNotContain(localization.DiscoverListYourMod, texts);
+        Assert.DoesNotContain(localization.ListingShareHeading, texts);
+        Assert.DoesNotContain(localization.ListingSteps, texts);
+        Assert.DoesNotContain(localization.ListingErrorsHeading, texts);
+        Assert.DoesNotContain(localization.ShareShortName, texts);
+    }
+
+    [Fact]
+    public async Task ListingPage_AfterShare_ShowsTheShareCardAndTheOptionalHints()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        harness.ViewModel.ListingEditor.EditAllShareFieldsCommand.Execute(null);
+
+        var texts = await PageTextsAsync(harness);
+
+        Assert.Contains(harness.Localization.ShareBackToSteps, texts);
+        Assert.Contains(harness.Localization.ListingShareHeading, texts);
+        Assert.Contains(harness.ViewModel.ListingEditor.ShareNotes.Single(), texts);
+        Assert.Contains(harness.Localization.ListingShareSaveArchive, texts);
+        Assert.Contains(harness.Localization.ListingForumsOptionalHint, texts);
+        Assert.Contains(harness.Localization.ListingGameMinFromArchiveHint, texts);
+        Assert.DoesNotContain(harness.Localization.ListingForumsHint, texts);
+    }
+
+    [Fact]
+    public async Task EditAllFields_OpensTheFormAtItsTop()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        var (before, after) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 300, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var scroller = page.FindControl<ScrollViewer>("PageScroller")!;
+            scroller.Offset = new Vector(0, 100);
+            var scrolled = scroller.Offset.Y;
+            harness.ViewModel.ListingEditor.EditAllShareFieldsCommand.Execute(null);
+            window.UpdateLayout();
+            var opened = scroller.Offset.Y;
+            window.Close();
+            return Task.FromResult((scrolled, opened));
+        });
+
+        Assert.Equal(100, before);
+        Assert.Equal(0, after);
+    }
+
+    private static Task<List<string?>> PageTextsAsync(ViewModelHarness harness) =>
+        HeadlessApp.RunAsync(harness, () =>
         {
             var page = new ListingPage { DataContext = harness.ViewModel };
             var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
@@ -43,14 +113,6 @@ public sealed class GameSaveShareViewTests
             window.Close();
             return Task.FromResult(texts);
         });
-
-        Assert.Contains(harness.Localization.ListingShareHeading, texts);
-        Assert.Contains(harness.ViewModel.ListingEditor.ShareNotes.Single(), texts);
-        Assert.Contains(harness.Localization.ListingShareSaveArchive, texts);
-        Assert.Contains(harness.Localization.ListingForumsOptionalHint, texts);
-        Assert.Contains(harness.Localization.ListingGameMinFromArchiveHint, texts);
-        Assert.DoesNotContain(harness.Localization.ListingForumsHint, texts);
-    }
 
     private static Task<List<string?>> VehicleMenuAsync(ViewModelHarness harness) =>
         HeadlessApp.RunAsync(harness, () =>

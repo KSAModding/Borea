@@ -17,12 +17,25 @@ public partial class ListingPage : UserControl
         ListedSearch.AddHandler(KeyDownEvent, OnListedKeyDown, RoutingStrategies.Tunnel);
         ListedResults.AddHandler(KeyDownEvent, OnListedKeyDown, RoutingStrategies.Tunnel);
         ListedResults.DoubleTapped += OnListedDoubleTapped;
+
+        // The form and the other steps share one scroller, and each of them starts at its top.
+        FormStep.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == IsVisibleProperty)
+                PageScroller.ScrollToHome();
+        };
     }
 
     private void OnStepClick(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.Tag is not string key)
             return;
+
+        if (DataContext is MainViewModel { ListingEditor: { IsShareStep: true } editor })
+        {
+            editor.OpenShareStep(key);
+            return;
+        }
 
         this.GetVisualDescendants().OfType<Border>().FirstOrDefault(border => Equals(border.Tag, key))?.BringIntoView();
     }

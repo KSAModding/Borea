@@ -35,7 +35,7 @@ public sealed partial class ListingEditor
 
     public bool IsSave => Type == ListingFolders.SaveType;
 
-    public string IntroText => IsVehicleOrSave ? Localization.ListingShareIntro : Localization.ListingIntro;
+    public string IntroText => IsShareStep ? Localization.ShareFlowIntro : IsVehicleOrSave ? Localization.ListingShareIntro : Localization.ListingIntro;
 
     public string IdHint => IsVehicleOrSave ? Localization.ListingShareIdHint : Localization.ListingIdHint;
 
@@ -54,7 +54,7 @@ public sealed partial class ListingEditor
         ? Localization.FormatListingShareArchiveSaved(saved.File, saved.Archive.Sha256, saved.Archive.Size)
         : null;
 
-    /// <summary>Opens a new document of the type, named after meta.toml, with the proposed dependencies. It carries no game_min, which the index takes from the archive.</summary>
+    /// <summary>Opens the share steps on a new document of the type, named after meta.toml, with the proposed dependencies. It carries no game_min, which the index takes from the archive.</summary>
     internal void StartShare(GameSaveShareStart share)
     {
         StartOver();
@@ -71,6 +71,9 @@ public sealed partial class ListingEditor
             Dependencies = share.Proposal.Dependencies,
         });
         _share = share;
+        _shareListing = FindShareListing();
+        ShareFlowStep = ShareFlowStep.Describe;
+        Step = ListingStep.Share;
         RefreshShare();
         StartShareHosts();
         Refresh();
@@ -79,7 +82,11 @@ public sealed partial class ListingEditor
     private void ForgetShare()
     {
         _share = null;
+        _shareListing = null;
         _savedArchive = null;
+        _choseOtherLicense = false;
+        ShareIdError = null;
+        IsShareMoreOptionsOpen = false;
         ForgetShareHostRun();
         RefreshShare();
     }
@@ -93,6 +100,14 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareArchiveText));
         OnPropertyChanged(nameof(ShareStatusChoices));
         OnPropertyChanged(nameof(SelectedShareStatus));
+        OnPropertyChanged(nameof(IsNewVersionShare));
+        OnPropertyChanged(nameof(ShareDescribeHeading));
+        OnPropertyChanged(nameof(ShareSentenceExample));
+        OnPropertyChanged(nameof(ShareItemText));
+        OnPropertyChanged(nameof(ShareNewVersionText));
+        OnPropertyChanged(nameof(ShareLicenseChoices));
+        RefreshLicenseChoice();
+        RefreshShareSteps();
         RefreshShareHostRows();
     }
 

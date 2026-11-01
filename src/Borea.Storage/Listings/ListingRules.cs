@@ -14,8 +14,6 @@ namespace Borea.Storage.Listings;
 /// </summary>
 internal static partial class ListingRules
 {
-    public const int AbstractLimit = 280;
-
     private const string TagsSpecUrl = "https://github.com/KSAModding/content-manager-design/blob/main/spec/tags.md";
 
     public static IEnumerable<ListingIssue> Check(AuthoredTable document, ListingCheckContext context, SpdxLicenseList licenses)
@@ -39,8 +37,8 @@ internal static partial class ListingRules
             CheckInstallFolder(document, own, context.InstallFolder, snapshot, issues);
         }
 
-        if (document.GetString("abstract") is { } text && text.EnumerateRunes().Count() is > AbstractLimit and var length)
-            issues.Add(Note("abstract", $"{length} characters is longer than {AbstractLimit}, and an abstract is one or two sentences for list views"));
+        if (document.GetString("abstract") is { } text && text.EnumerateRunes().Count() is > ListingDraft.AbstractLimit and var length)
+            issues.Add(Note("abstract", $"{length} characters is longer than {ListingDraft.AbstractLimit}, and an abstract is one or two sentences for list views"));
 
         if (context.Archive is { } archive && own is not null)
             CheckArchive(document, own, archive, issues);

@@ -2023,6 +2023,84 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingGameMinFromArchiveHint => Resources.ListingGameMinFromArchiveHint;
 
+    public string ShareFlowTitle => Resources.ShareFlowTitle;
+
+    public string ShareFlowIntro => Resources.ShareFlowIntro;
+
+    public string ShareStepChoose => Resources.ShareStepChoose;
+
+    public string ShareStepDescribe => Resources.ShareStepDescribe;
+
+    public string ShareNext => Resources.ShareNext;
+
+    public string SharePreviewVehicle => Resources.SharePreviewVehicle;
+
+    public string SharePreviewSave => Resources.SharePreviewSave;
+
+    public string SharePreviewSentence => Resources.SharePreviewSentence;
+
+    public string ShareDescribeVehicle => Resources.ShareDescribeVehicle;
+
+    public string ShareDescribeSave => Resources.ShareDescribeSave;
+
+    public string ShareNameHint => Resources.ShareNameHint;
+
+    public string ShareYourName => Resources.ShareYourName;
+
+    public string ShareYourNameHint => Resources.ShareYourNameHint;
+
+    public string ShareOneSentence => Resources.ShareOneSentence;
+
+    public string ShareOneSentenceHint => Resources.ShareOneSentenceHint;
+
+    public string ShareSentenceVehicleExample => Resources.ShareSentenceVehicleExample;
+
+    public string ShareSentenceSaveExample => Resources.ShareSentenceSaveExample;
+
+    public string ShareLicenseHint => Resources.ShareLicenseHint;
+
+    public string ShareLicenseInvalid => Resources.ShareLicenseInvalid;
+
+    public string ShareLicensePlaceholder => Resources.ShareLicensePlaceholder;
+
+    public string ShareLicenseCcBy => Resources.ShareLicenseCcBy;
+
+    public string ShareLicenseCc0 => Resources.ShareLicenseCc0;
+
+    public string ShareLicenseCcBySa => Resources.ShareLicenseCcBySa;
+
+    public string ShareLicenseCcByNc => Resources.ShareLicenseCcByNc;
+
+    public string ShareLicenseOther => Resources.ShareLicenseOther;
+
+    public string ShareMoreOptions => Resources.ShareMoreOptions;
+
+    public string ShareShortName => Resources.ShareShortName;
+
+    public string ShareShortNameHint => Resources.ShareShortNameHint;
+
+    public string ShareIdEmpty => Resources.ShareIdEmpty;
+
+    public string ShareIdInvalid => Resources.ShareIdInvalid;
+
+    public string ShareDescriptionHint => Resources.ShareDescriptionHint;
+
+    public string ShareMissingName => Resources.ShareMissingName;
+
+    public string ShareMissingAuthor => Resources.ShareMissingAuthor;
+
+    public string ShareMissingSentence => Resources.ShareMissingSentence;
+
+    public string ShareMissingLicense => Resources.ShareMissingLicense;
+
+    public string ShareMissingId => Resources.ShareMissingId;
+
+    public string ShareOtherFields => Resources.ShareOtherFields;
+
+    public string ShareEditAll => Resources.ShareEditAll;
+
+    public string ShareBackToSteps => Resources.ShareBackToSteps;
+
     public string ListingShareHeading => Resources.ListingShareHeading;
 
     public string ListingShareIntro => Resources.ListingShareIntro;
@@ -4345,6 +4423,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingStepFix(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingStepFixFormat, count);
+
+    public string FormatShareItemIn(string item, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareItemInFormat, item, instance);
+
+    public string FormatShareNewVersionLine(string listing, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareNewVersionLineFormat, listing, host);
+
+    public string FormatShareSentenceTooLong(int length, int limit)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSentenceTooLongFormat, length, limit);
+
+    public string FormatShareIdHeld(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareIdHeldFormat, id);
 
     public string FormatListingStillMissing(string names)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingStillMissingFormat, names);

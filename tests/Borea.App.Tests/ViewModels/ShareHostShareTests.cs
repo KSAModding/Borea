@@ -98,61 +98,317 @@ public sealed class ShareHostShareTests
     }
 
     [Fact]
-    public async Task ShareOnTheHost_HidesTheCardsThatTheHostDoesNotTake()
+    public async Task Next_WaitsForTheRequiredFieldsAndNamesWhatIsMissing_AndSendsNothing()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var text = harness.Localization;
+        var editor = await ShareAsync(harness);
+
+        Assert.True(editor.IsShareStep);
+        Assert.Equal(text.FormatShareItemIn("Example Rover", "Main"), editor.ShareItemText);
+        Assert.Equal(text.FormatListingStillMissing(string.Join(", ", text.ShareMissingAuthor, text.ShareMissingSentence, text.ShareMissingLicense)), editor.ShareNextReason);
+        Assert.False(editor.CanContinueShare);
+        editor.ContinueShareCommand.Execute(null);
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.Equal([ListingStepState.Done, ListingStepState.Current, ListingStepState.ToDo, ListingStepState.ToDo], editor.ShareSteps.Select(step => step.State));
+
+        editor.Authors = "Maxi";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        editor.License = "CC-BY-4.0";
+
+        Assert.Null(editor.ShareNextReason);
+        Assert.True(editor.CanContinueShare);
+        editor.ContinueShareCommand.Execute(null);
+        Assert.Equal(ShareFlowStep.Publish, editor.ShareFlowStep);
+        Assert.Equal([ListingStepState.Done, ListingStepState.Done, ListingStepState.Current, ListingStepState.ToDo], editor.ShareSteps.Select(step => step.State));
+        Assert.Equal((0, 0), (host.SignIns, host.Uploads.Count));
+    }
+
+    [Theory]
+    [InlineData(ListingDraft.AbstractLimit, false)]
+    [InlineData(ListingDraft.AbstractLimit + 1, true)]
+    public async Task SentenceOverTheLimit_ShowsItsTextAndStopsNext(int length, bool isTooLong)
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
-        Assert.True(harness.ViewModel.ListingEditor.ShowsIndexOnlyCards);
+        var editor = await ShareAsync(harness);
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
 
+        // One rune outside the basic plane is two chars, so the limit has to count runes.
+        editor.Abstract = string.Concat(Enumerable.Repeat("\U0001F680", length));
+
+        var expected = isTooLong ? harness.Localization.FormatShareSentenceTooLong(length, ListingDraft.AbstractLimit) : null;
+        Assert.Equal(expected, editor.ShareSentenceError);
+        Assert.Equal(expected, editor.ShareNextReason);
+        Assert.Equal(!isTooLong, editor.CanContinueShare);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not an id")]
+    [InlineData("TakenRover")]
+    public async Task IdError_ShowsItsOwnTextAndOpensMoreOptions(string id)
+    {
+        var taken = ListedRover.Replace("ExampleRover", "TakenRover", StringComparison.Ordinal).Replace("\"ksamods\": \"TakenRover\"", "\"github\": \"someone/rover\"", StringComparison.Ordinal);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: taken), shareHostClient: new FakeHost());
         var editor = await ShareAsync(harness);
         editor.Authors = "Maxi";
         editor.License = "CC-BY-4.0";
         editor.Abstract = "A six-wheel rover for the Moon.";
-        Assert.True(editor.ShowsIndexOnlyCards);
-        Assert.Equal(["about", "links", "releases", "compatibility", "dependencies", "tags", "images"], editor.Steps.Select(step => step.Key));
-        var changed = new List<string?>();
-        editor.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        Assert.False(editor.IsShareMoreOptionsOpen);
+        Assert.True(editor.CanContinueShare);
 
-        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        editor.Id = id;
 
-        Assert.False(editor.ShowsIndexOnlyCards);
-        Assert.True(editor.ShowsListingCards);
-        Assert.Contains(nameof(ListingEditor.ShowsIndexOnlyCards), changed);
-        Assert.Equal(["about", "dependencies", "tags"], editor.Steps.Select(step => step.Key));
-
-        await editor.PublishToShareHostCommand.ExecuteAsync(null);
-
-        Assert.False(editor.ShowsIndexOnlyCards);
+        var text = harness.Localization;
+        Assert.Equal(id switch { "" => text.ShareIdEmpty, "TakenRover" => text.FormatShareIdHeld(id), _ => text.ShareIdInvalid }, editor.ShareIdError);
+        Assert.True(editor.IsShareMoreOptionsOpen);
+        Assert.False(editor.HasShareOtherFields);
+        Assert.False(editor.CanContinueShare);
     }
 
     [Fact]
-    public async Task ErrorInACardThatHides_StopsTheUploadWhileTheCardShows()
+    public async Task ErrorOutsideTheStep_LeadsToAllFields_AndStopsTheUpload()
     {
         var host = new FakeHost();
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+
         editor.Homepage = "not a link";
 
+        Assert.True(editor.HasShareOtherFields);
+        Assert.Null(editor.ShareNextReason);
+        Assert.False(editor.CanContinueShare);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
-
-        Assert.Equal(harness.Localization.ListingFixErrors, editor.ShareHostError);
+        Assert.Equal(harness.Localization.ShareOtherFields, editor.ShareHostError);
         Assert.Equal((0, 0), (host.SignIns, host.Uploads.Count));
-        Assert.True(editor.ShowsIndexOnlyCards);
+
+        editor.EditAllShareFieldsCommand.Execute(null);
+        Assert.True(editor.IsFormStep);
+        editor.Homepage = "https://example.test/rover";
+        editor.BackToShareStepsCommand.Execute(null);
+
+        Assert.True(editor.IsShareStep);
+        Assert.Equal(("https://example.test/rover", "Maxi"), (editor.Homepage, editor.Authors));
+        Assert.True(editor.CanContinueShare);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DependencyWithNoId_StopsNextAndTheUpload(bool isNewVersion)
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: isNewVersion ? ListedRover : null), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        Assert.True(editor.CanContinueShare);
+
+        editor.AddDependencyCommand.Execute(null);
+
+        Assert.True(editor.HasShareOtherFields);
+        Assert.False(editor.CanContinueShare);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.Equal(harness.Localization.ShareOtherFields, editor.ShareHostError);
+        Assert.Empty(host.Uploads);
     }
 
     [Fact]
-    public async Task CancelAfterTheUpload_DropsItAndShowsEveryCard()
+    public async Task ErrorAfterTheUpload_StopsThePublish()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        editor.Homepage = "not a link";
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.ShareOtherFields, editor.ShareHostError);
+        Assert.Empty(host.Publishes);
+    }
+
+    [Fact]
+    public async Task CancelAfterTheUpload_DropsIt()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
         var editor = await ShareAsync(harness);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
-        Assert.False(editor.ShowsIndexOnlyCards);
 
         editor.CancelShareHostCommand.Execute(null);
 
         Assert.False(editor.HasShareUpload);
         Assert.Empty(editor.ShareHostChecks);
-        Assert.True(editor.ShowsIndexOnlyCards);
-        Assert.Contains(editor.Steps, step => step.Key == "links");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LeavingThePublishStep_DropsTheUpload(bool toAllFields)
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        editor.ContinueShareCommand.Execute(null);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        editor.OpenShareStep("choose");
+        Assert.True(editor.HasShareUpload);
+
+        if (toAllFields)
+            editor.EditAllShareFieldsCommand.Execute(null);
+        else
+            editor.OpenShareStep("describe");
+
+        Assert.True(toAllFields ? editor.IsFormStep : editor.ShareFlowStep == ShareFlowStep.Describe);
+        Assert.False(editor.HasShareUpload);
+        Assert.Empty(editor.ShareHostChecks);
+        Assert.Equal("Maxi", editor.Authors);
+    }
+
+    [Fact]
+    public async Task LicenseList_StartsEmpty_WritesTheValueOfTheChoice_AndAnotherLicenseShowsItsField()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+        Assert.Null(editor.SelectedShareLicense);
+        Assert.False(editor.IsOtherShareLicense);
+
+        editor.SelectedShareLicense = editor.ShareLicenseChoices[0];
+        Assert.Equal("CC-BY-4.0", editor.License);
+        Assert.Equal(editor.ShareLicenseChoices[0], editor.SelectedShareLicense);
+
+        editor.SelectedShareLicense = editor.ShareLicenseChoices[^1];
+        Assert.Equal(string.Empty, editor.License);
+        Assert.True(editor.IsOtherShareLicense);
+        Assert.Equal(editor.ShareLicenseChoices[^1], editor.SelectedShareLicense);
+
+        editor.License = "MIT";
+        Assert.Equal(editor.ShareLicenseChoices[^1], editor.SelectedShareLicense);
+    }
+
+    [Fact]
+    public async Task LicenseFromTheLastShareOffTheList_KeepsItsFieldWhileThePlayerEditsIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "OtherRover", "Other Rover", "1.0.0", null), new SharedContentAuthor(["Maxi"], "MIT"));
+        var editor = await ShareAsync(harness);
+        Assert.True(editor.IsOtherShareLicense);
+
+        editor.License = string.Empty;
+        Assert.True(editor.IsOtherShareLicense);
+
+        editor.License = "CC0-1.0";
+        Assert.True(editor.IsOtherShareLicense);
+        Assert.Equal(editor.ShareLicenseChoices[^1], editor.SelectedShareLicense);
+    }
+
+    [Fact]
+    public async Task LicenseThatBoreaDoesNotKnow_ShowsItsOwnTextAndStopsNext()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+        editor.Authors = "Maxi";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        editor.SelectedShareLicense = editor.ShareLicenseChoices[^1];
+
+        editor.License = "My own license";
+
+        Assert.Equal(harness.Localization.ShareLicenseInvalid, editor.ShareLicenseError);
+        Assert.Equal(harness.Localization.ShareLicenseInvalid, editor.ShareNextReason);
+        Assert.False(editor.HasShareOtherFields);
+        Assert.False(editor.CanContinueShare);
+    }
+
+    [Fact]
+    public async Task NewVersion_ShowsNoIdErrorAndNoMissingLine_AndNextIsEnabled()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost());
+
+        var editor = await ShareAsync(harness);
+
+        Assert.True(editor.IsNewVersionShare);
+        Assert.Equal(harness.Localization.FormatShareNewVersionLine("Example Rover", "ksamods.gg"), editor.ShareNewVersionText);
+        Assert.DoesNotContain(editor.Errors, issue => issue.Location == "id");
+        Assert.Null(editor.ShareIdError);
+        Assert.Null(editor.ShareNextReason);
+        Assert.False(editor.HasShareOtherFields);
+        Assert.False(editor.ShowsPreviewCard);
+        Assert.True(editor.CanContinueShare);
+
+        // The full form can open a pull request for a new file, so there the id counts as held.
+        editor.EditAllShareFieldsCommand.Execute(null);
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        Assert.Contains(editor.Errors, issue => issue.Location == "id");
+        Assert.False(editor.CanOpenPullRequest);
+
+        editor.BackToShareStepsCommand.Execute(null);
+        Assert.DoesNotContain(editor.Errors, issue => issue.Location == "id");
+        Assert.True(editor.CanContinueShare);
+    }
+
+    [Theory]
+    [InlineData("ExampleRover", "ExampleRover")]
+    [InlineData("MyRover", null)]
+    public async Task IdOnTheFullForm_DecidesWhetherTheShareStaysANewVersion(string id, string? listingId)
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+
+        editor.EditAllShareFieldsCommand.Execute(null);
+        editor.Id = id;
+        editor.BackToShareStepsCommand.Execute(null);
+
+        Assert.Equal(listingId is not null, editor.IsNewVersionShare);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.Equal(listingId, Assert.Single(host.Uploads).ListingId);
+    }
+
+    [Fact]
+    public async Task ShareStartedWithoutTheIndex_FindsItsListingAndHostOnceTheIndexIsBack()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost(), indexOffline: true);
+        var editor = await ShareAsync(harness);
+        Assert.False(editor.IsNewVersionShare);
+        Assert.Empty(editor.ShareHostRows);
+
+        harness.IndexOffline = false;
+        await harness.ViewModel.OpenListingAsync();
+        await editor.ShareHostsLoad;
+
+        Assert.True(editor.IsNewVersionShare);
+        Assert.Null(editor.ShareIdError);
+        Assert.Single(editor.ShareHostRows);
+    }
+
+    [Fact]
+    public async Task NewVersion_OffersOnlyTheHostOfItsListing()
+    {
+        const string twoHosts = """
+            {
+              "ksamods": { "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/", "types": ["vehicle"] },
+              "another": { "kind": "share", "name": "another.example", "api": "https://another.example/api/share/v1/", "types": ["vehicle"] }
+            }
+            """;
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(twoHosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost());
+
+        var editor = await ShareAsync(harness);
+
+        Assert.Equal("ksamods", Assert.Single(editor.ShareHostRows).Host.Key);
     }
 
     [Fact]
@@ -168,7 +424,6 @@ public sealed class ShareHostShareTests
         Assert.Equal(harness.Localization.FormatListingShareHostSaid("ksamods.gg", "ExampleRover belongs to another account."), editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
         Assert.Null(editor.ShareHostProgress);
-        Assert.True(editor.ShowsIndexOnlyCards);
         Assert.Equal("https://example.test/rover", editor.Homepage);
     }
 
@@ -202,7 +457,6 @@ public sealed class ShareHostShareTests
         Assert.False(editor.CanPublishToShareHost);
         Assert.Equal(harness.Localization.ListingShareHostChecksFailed, editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
-        Assert.True(editor.ShowsIndexOnlyCards);
     }
 
     [Fact]
@@ -319,8 +573,6 @@ public sealed class ShareHostShareTests
         var editor = await ShareAsync(harness);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
-        Assert.False(editor.ShowsListingCards);
-        Assert.Equal(["dependencies"], editor.Steps.Select(step => step.Key));
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
         Assert.Equal("ExampleRover", Assert.Single(host.Uploads).ListingId);
