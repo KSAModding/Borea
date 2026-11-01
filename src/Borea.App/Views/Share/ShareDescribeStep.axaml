@@ -12,7 +12,12 @@
         <Border Classes="card" Padding="24">
             <StackPanel Spacing="6">
                 <TextBlock Classes="heading-md" Text="{Binding ListingEditor.ShareDescribeHeading}" Margin="0,0,0,6" IsVisible="{Binding !ListingEditor.IsNewVersionShare}" />
-                <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareItemText}" TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="*,8,Auto">
+                    <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareItemText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="2" Classes="link" VerticalAlignment="Center" Command="{Binding ListingEditor.BackToShareChooseCommand}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareChange}" />
+                    </Button>
+                </Grid>
 
                 <!-- a new version keeps the description of its listing -->
                 <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.ShareNewVersionText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsNewVersionShare}" />
@@ -142,9 +147,12 @@
         </Border>
 
         <StackPanel Spacing="8">
-            <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding ListingEditor.ContinueShareCommand}" IsEnabled="{Binding ListingEditor.CanContinueShare}">
-                <TextBlock Classes="action-lg" Text="{Binding Localization.ShareNext}" VerticalAlignment="Center" />
-            </Button>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareChooseCommand}" />
+                <Button Classes="cta" Command="{Binding ListingEditor.ContinueShareCommand}" IsEnabled="{Binding ListingEditor.CanContinueShare}">
+                    <TextBlock Classes="action-lg" Text="{Binding Localization.ShareNext}" VerticalAlignment="Center" />
+                </Button>
+            </StackPanel>
             <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareNextReason}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareNextReason, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-sm danger" Text="{Binding Localization.ShareOtherFields}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasShareOtherFields}" />
             <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.EditAllShareFieldsCommand}">

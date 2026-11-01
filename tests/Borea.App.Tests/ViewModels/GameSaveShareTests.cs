@@ -83,23 +83,323 @@ public sealed class GameSaveShareTests
         Assert.False(viewModel.ListingEditor.HasShare);
     }
 
-    [Fact]
-    public async Task CutOffVehicleFile_NamesTheFileFirstInTheToast()
+    [Theory]
+    [InlineData("vehicle.xml", "<VehicleSaveData Id=", "vehicle.xml is damaged, so Borea cannot read it. Save it again in the game, then try again.")]
+    [InlineData("meta.toml", "name = \"Example Rover\"\n", "The file does not say which game build wrote it, so the sharing site would refuse it. Load it in the game and save it again.")]
+    public async Task FileThatStopsTheShare_ShowsUnderTheListInPlainWords(string file, string content, string expected)
     {
         using var harness = await ViewModelHarness.CreateAsync();
         await CreateInstanceAsync(harness, "Example Rover");
         await OpenAsync(harness);
         var item = Assert.Single(harness.ViewModel.VehiclesSection.Items);
-        var gameFile = Path.Combine(item.Entry.Path, "vehicle.xml");
-        File.WriteAllText(gameFile, Vehicle[..40]);
+        File.WriteAllText(Path.Combine(item.Entry.Path, file), content);
 
         await item.ShareCommand.ExecuteAsync(null);
 
-        var toast = harness.ViewModel.Toasts.Items[^1];
-        Assert.Equal(harness.Localization.FormatToastShareFailed("Example Rover"), toast.Message);
-        Assert.StartsWith(harness.Localization.FormatShareFolderNotXml("vehicle.xml") + "\n", toast.Detail, StringComparison.Ordinal);
-        Assert.Contains(gameFile, toast.Detail, StringComparison.Ordinal);
-        Assert.False(harness.ViewModel.ListingEditor.HasShare);
+        var editor = harness.ViewModel.ListingEditor;
+        Assert.Equal(ShareFlowStep.Choose, editor.ShareFlowStep);
+        Assert.Equal(expected, editor.ShareChooseError);
+        Assert.Equal("Example Rover", editor.SelectedShareRow?.Item.Name);
+        Assert.False(editor.HasShare);
+        Assert.Empty(harness.ViewModel.Toasts.Items);
+    }
+
+    [Fact]
+    public async Task Choose_ListsEveryInstance_WithTheActiveOneFirst_AndNextStartsTheShareOfTheRow()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var main = await CreateInstanceAsync(harness, "Example Rover");
+        WriteItem(harness.Services.Paths.GetInstanceVehiclesFolder(main), "Second Rover", "vehicle.xml", Vehicle);
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance.InstanceId;
+        WriteItem(harness.Services.Paths.GetInstanceVehiclesFolder(other), "Other Rover", "vehicle.xml", Vehicle);
+        var later = (await harness.Services.Instances.CreateAsync("Later", InstanceSource.Custom.Value)).Instance.InstanceId;
+        WriteItem(harness.Services.Paths.GetInstanceVehiclesFolder(later), "Later Rover", "vehicle.xml", Vehicle);
+        await RecordPlayedAsync(harness, main, DateTimeOffset.UtcNow.AddDays(-6));
+        await RecordPlayedAsync(harness, later, DateTimeOffset.UtcNow.AddDays(-1));
+        await harness.Services.Instances.SetActiveInstanceAsync(other);
+        await harness.ViewModel.LoadAsync();
+
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+
+        var editor = harness.ViewModel.ListingEditor;
+        Assert.True(harness.ViewModel.CurrentWindowListing);
+        Assert.Equal(["Other", "Later", "Main", null], editor.ShareChooseRows.Select(row => row.InstanceName));
+        Assert.Equal([true, false, false, false], editor.ShareChooseRows.Select(row => row.IsFirstOfActiveInstance));
+        Assert.Equal("Other Rover", editor.ShareChooseRows[0].Item.Name);
+        Assert.Null(editor.SelectedShareRow);
+        Assert.False(editor.CanContinueShareChoose);
+        Assert.True(editor.ShowsShareChooseFirst);
+        Assert.False(editor.ShowsPreviewCard);
+        Assert.Equal([ListingStepState.Current, ListingStepState.ToDo, ListingStepState.ToDo, ListingStepState.ToDo], editor.ShareSteps.Select(step => step.State));
+
+        var chosen = editor.ShareChooseRows[3];
+        editor.SelectedShareRow = chosen;
+        var load = editor.ShareChooseLoad;
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.Equal(harness.Localization.FormatShareItemIn(chosen.Item.Name, "Main"), editor.ShareItemText);
+        Assert.Same(load, editor.ShareChooseLoad);
+    }
+
+    [Fact]
+    public async Task RowClickedWhileMoreRowsLoad_StaysSelected()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        WriteItem(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Second Rover", "vehicle.xml", Vehicle);
+        await harness.ViewModel.LoadAsync();
+        var editor = harness.ViewModel.ListingEditor;
+        editor.ShareChooseRows.CollectionChanged += (_, change) =>
+        {
+            if (change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && editor.SelectedShareRow is null)
+                editor.SelectedShareRow = (ShareChooseRow)change.NewItems![0]!;
+        };
+
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+
+        Assert.Same(editor.ShareChooseRows[0], editor.SelectedShareRow);
+    }
+
+    [Fact]
+    public async Task Choose_SelectsTheOnlyCandidate_AndAnInvalidNameShowsItsChip()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example  Rover");
+        await harness.ViewModel.LoadAsync();
+
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+
+        var editor = harness.ViewModel.ListingEditor;
+        var row = Assert.Single(editor.ShareChooseRows);
+        Assert.Same(row, editor.SelectedShareRow);
+        Assert.True(row.NeedsNewName);
+        Assert.Equal(harness.Localization.FormatGameSaveShareRename("Example  Rover"), row.NeedsNewNameTip);
+        Assert.True(editor.CanContinueShareChoose);
+        Assert.False(editor.ShowsShareChooseFirst);
+    }
+
+    [Theory]
+    [InlineData(false, false, GameSaveKind.Vehicle, "Vehicles and saves live in an instance, and you have none yet.")]
+    [InlineData(true, false, GameSaveKind.Save, "You have no saves to share yet. Start a game and save it, then come back.")]
+    [InlineData(true, true, GameSaveKind.Vehicle, "Your game profile has vehicles from playing without Borea. Copy them into an instance first.")]
+    public async Task Choose_WithNothingToList_SaysWhatToDo_AndTheProfileLeadsToTheInstance(bool hasInstance, bool hasProfileItems, GameSaveKind kind, string expected)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = hasInstance ? (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance.InstanceId : Guid.Empty;
+        if (hasProfileItems)
+            WriteItem(Path.Combine(harness.Services.Paths.GetSharedProfileRoot(), "vehicles"), "Profile Rover", "vehicle.xml", Vehicle);
+        await harness.ViewModel.LoadAsync();
+
+        await harness.ViewModel.OpenShareFlowAsync(kind);
+
+        var editor = harness.ViewModel.ListingEditor;
+        Assert.Empty(editor.ShareChooseRows);
+        Assert.Equal(expected, editor.ShareChooseEmptyText);
+        Assert.Equal(hasProfileItems ? instance : null, editor.ShareProfileInstance?.InstanceId);
+        Assert.Equal(!hasInstance, editor.ShowsShareCreateInstance);
+    }
+
+    [Fact]
+    public async Task Choose_WithAnErrorAndNoRows_ShowsOnlyTheError()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.OpenListingAsync();
+        var editor = harness.ViewModel.ListingEditor;
+
+        await editor.OpenShareChooseAsync(GameSaveKind.Vehicle, problem: "Could not read.");
+
+        Assert.Equal("Could not read.", editor.ShareChooseError);
+        Assert.Null(editor.ShareChooseEmptyText);
+    }
+
+    [Fact]
+    public async Task EntryThatStopsOnTheList_KeepsTheWayBackToAFormDraft_UntilAShareStarts()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        var viewModel = harness.ViewModel;
+        var editor = viewModel.ListingEditor;
+        var item = Assert.Single(viewModel.VehiclesSection.Items);
+        await viewModel.OpenListingAsync();
+        editor.StartEmptyCommand.Execute(null);
+        editor.Name = "My Mod";
+        harness.IsGameProcessRunning = () => true;
+
+        await item.ShareCommand.ExecuteAsync(null);
+
+        Assert.True(editor.IsShareStep);
+        Assert.True(editor.HasFormBehindShareChoose);
+        editor.BackToShareFormCommand.Execute(null);
+        Assert.True(editor.IsFormStep);
+        Assert.Equal("My Mod", editor.Name);
+        Assert.False(editor.HasFormBehindShareChoose);
+
+        await item.ShareCommand.ExecuteAsync(null);
+        harness.IsGameProcessRunning = () => false;
+        editor.CheckShareGameRunningCommand.Execute(null);
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.False(editor.HasFormBehindShareChoose);
+    }
+
+    [Fact]
+    public async Task Choose_TheTypeSwitch_ShowsTheOtherType()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance), "Moon Base", "universe.xml", "<UniverseData />");
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        var editor = harness.ViewModel.ListingEditor;
+
+        editor.ShowShareChooseSavesCommand.Execute(null);
+        await editor.ShareChooseLoad;
+
+        Assert.True(editor.IsShareChooseSave);
+        Assert.Equal("Moon Base", Assert.Single(editor.ShareChooseRows).Item.Name);
+    }
+
+    [Theory]
+    [InlineData(false, false, "ExampleRover")]
+    [InlineData(true, true, "Example Rover")]
+    public async Task RowWithARecord_OpensTheList_WhereAnUnchangedCopyStopsNextAndAChangedOneNamesItsSource(bool isChanged, bool isListed, string source)
+    {
+        using var harness = isListed ? await ShareHostShareTests.ListedRoverHarnessAsync() : await ViewModelHarness.CreateAsync();
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Example Rover");
+        await RecordAsync(harness, instance, folder);
+        if (isChanged)
+            File.WriteAllText(Path.Combine(folder, "vehicle.xml"), "<VehicleSaveData Id=\"Example Rover\" />");
+        await OpenAsync(harness);
+
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        var editor = harness.ViewModel.ListingEditor;
+        await editor.ShareRowCompare;
+        var text = harness.Localization;
+        Assert.Equal(ShareFlowStep.Choose, editor.ShareFlowStep);
+        var row = editor.SelectedShareRow;
+        Assert.Equal(text.FormatSharePickFrom(source), row?.FromText);
+        Assert.Equal(isChanged ? text.FormatShareChangedVehicle(source) : text.FormatShareUnchangedCopy(source), row?.NoteText);
+        Assert.Equal(isChanged, editor.CanContinueShareChoose);
+        Assert.False(editor.IsComparingShareRow);
+
+        row!.IsUnchangedCopy = null;
+        Assert.False(editor.CanContinueShareChoose);
+        Assert.True(editor.IsComparingShareRow);
+    }
+
+    [Fact]
+    public async Task RowBeforeTheIndexAnswered_StillFindsItsRecord()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        await RecordAsync(harness, instance, Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Example Rover"));
+        await OpenAsync(harness);
+        var viewModel = harness.ViewModel;
+        var entry = Assert.Single(viewModel.VehiclesSection.Items).Entry;
+
+        await new GameSaveItem(viewModel, viewModel.VehiclesSection, instance, entry, installed: null).ShareCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.ListingEditor.IsShareStep);
+        Assert.Equal(ShareFlowStep.Choose, viewModel.ListingEditor.ShareFlowStep);
+        Assert.False(viewModel.ListingEditor.HasShare);
+    }
+
+    [Fact]
+    public async Task RenameOfAChangedCopyFromTheList_GoesOnToDescribe()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Example Rover");
+        await RecordAsync(harness, instance, folder);
+        File.WriteAllText(Path.Combine(folder, "meta.toml"), "name = \"Example  Rover\"\nversion = \"v2026.10.19.5638\"\n");
+        await OpenAsync(harness);
+        var viewModel = harness.ViewModel;
+        var editor = viewModel.ListingEditor;
+
+        await Assert.Single(viewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        await editor.ShareRowCompare;
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.True(editor.HasShare);
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+    }
+
+    [Fact]
+    public async Task RunningGame_ShowsTheBannerAndStopsNext_UntilTheGameIsClosed()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        harness.IsGameProcessRunning = () => true;
+
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        var editor = harness.ViewModel.ListingEditor;
+        Assert.Equal(ShareFlowStep.Choose, editor.ShareFlowStep);
+        Assert.True(editor.IsShareGameRunning);
+        Assert.False(editor.CanContinueShareChoose);
+        Assert.Empty(harness.ViewModel.Toasts.Items);
+
+        harness.IsGameProcessRunning = () => false;
+        editor.CheckShareGameRunningCommand.Execute(null);
+        Assert.True(editor.CanContinueShareChoose);
+
+        harness.IsGameProcessRunning = () => true;
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+
+        Assert.True(editor.IsShareGameRunning);
+        Assert.Equal(ShareFlowStep.Choose, editor.ShareFlowStep);
+    }
+
+    [Fact]
+    public async Task BackToChoose_KeepsTheDraftForTheSameItem_AndAnotherItemStartsANewShare()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        WriteItem(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Second Rover", "vehicle.xml", Vehicle);
+        await OpenAsync(harness);
+        await harness.ViewModel.VehiclesSection.Items.Single(item => item.Name == "Example Rover").ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+        editor.Authors = "Maxi";
+
+        editor.BackToShareChooseCommand.Execute(null);
+        await editor.ShareChooseLoad;
+
+        Assert.Equal("Example Rover", editor.SelectedShareRow?.Item.Name);
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.Equal("Maxi", editor.Authors);
+
+        editor.OpenShareStep("choose");
+        await editor.ShareChooseLoad;
+        editor.SelectedShareRow = editor.ShareChooseRows.Single(row => row.Item.Name == "Second Rover");
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+
+        Assert.Equal(("Second Rover", string.Empty), (editor.Name, editor.Authors));
+    }
+
+    [Fact]
+    public async Task EntryWithNoItem_LeavesAShareOnTheWayAlone()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+        editor.Authors = "Maxi";
+
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Save);
+
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.Equal("Maxi", editor.Authors);
     }
 
     [Fact]
@@ -384,6 +684,23 @@ public sealed class GameSaveShareTests
         await editor.ShareHostsLoad;
 
         Assert.Equal(harness.Localization.FormatListingReleasesShareHost("ksamods.gg", "ExampleRover"), editor.ShareHostText);
+    }
+
+    private static Task RecordPlayedAsync(ViewModelHarness harness, Guid instanceId, DateTimeOffset playedAt) =>
+        harness.Services.Instances.UpdateAsync(instanceId, instance =>
+        {
+            instance.RecordPlayed(playedAt);
+            return true;
+        });
+
+    /// <summary>Records the files of the folder as Borea installed them from the listing ExampleRover.</summary>
+    internal static async Task RecordAsync(ViewModelHarness harness, Guid instance, string folder)
+    {
+        var name = Path.GetFileName(folder);
+        var release = new ModVersionMetadata(1, "ExampleRover", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.9.7.5402", 5402,
+            new DownloadInfo("https://example.invalid/rover.zip", new string('A', 64), null, "application/zip"), null, [], type: ContentType.Vehicle, install: new InstallInfo(name, derived: true, folder: name));
+        var files = Directory.GetFiles(folder).ToDictionary(file => Path.GetFileName(file), file => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file))));
+        await harness.Services.InstalledContent.AddAsync(instance, new InstalledContentRecord(release, name, DateTimeOffset.UnixEpoch, files));
     }
 
     /// <summary>An instance with a vehicle that names a part of ExamplePartsMod, which Borea installed at 1.4.0, and a part no mod defines.</summary>

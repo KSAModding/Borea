@@ -556,6 +556,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(InstalledInText));
         RefreshVehiclePreviewWhenTargetChanged();
         OnPropertyChanged(nameof(ContentShareHostText));
+        if (CurrentWindowListing)
+            await ListingEditor.ReloadEmptyShareChooseAsync();
 
         // the chips follow the build of the active instance, so they are checked again only when that build changes
         var game = _services is null ? null : GameVersionOf(_services, activeGame);

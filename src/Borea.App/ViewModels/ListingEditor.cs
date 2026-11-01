@@ -345,6 +345,9 @@ public sealed partial class ListingEditor : ObservableObject
             StartShareHosts();
         }
 
+        if (IsShareStep && IsShareChoose)
+            await ReloadShareChooseAsync();
+
         Refresh();
     }
 
@@ -829,6 +832,7 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(DependenciesHint));
         OnPropertyChanged(nameof(ShareHostText));
         RefreshShare();
+        RefreshShareChooseText();
         // the proposal keeps its value, so its setter does not raise the text again
         OnPropertyChanged(nameof(GameMinProposalText));
         OnPropertyChanged(nameof(MemberSearchText));

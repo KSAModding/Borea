@@ -19,11 +19,14 @@ public partial class ListingPage : UserControl
         ListedResults.DoubleTapped += OnListedDoubleTapped;
 
         // The form and the other steps share one scroller, and each of them starts at its top.
-        FormStep.PropertyChanged += (_, e) =>
-        {
-            if (e.Property == IsVisibleProperty)
-                PageScroller.ScrollToHome();
-        };
+        FormStep.PropertyChanged += OnStepVisibilityChanged;
+        ChooseStep.PropertyChanged += OnStepVisibilityChanged;
+    }
+
+    private void OnStepVisibilityChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == IsVisibleProperty)
+            PageScroller.ScrollToHome();
     }
 
     private void OnStepClick(object? sender, RoutedEventArgs e)

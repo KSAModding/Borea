@@ -215,6 +215,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" MaxWidth="640" />
                             </Grid.ColumnDefinitions>
+                            <share:ShareChooseStep x:Name="ChooseStep" IsVisible="{Binding ListingEditor.IsShareChoose}" />
                             <share:ShareDescribeStep IsVisible="{Binding ListingEditor.IsShareDescribe}" />
                             <share:SharePublishStep IsVisible="{Binding ListingEditor.IsSharePublish}" />
                             <share:ShareDoneStep IsVisible="{Binding ListingEditor.IsShareDone}" />

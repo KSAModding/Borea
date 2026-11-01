@@ -86,6 +86,7 @@ public sealed partial class ListingEditor
         _refusedShareId = null;
         _savedArchive = null;
         _choseOtherLicense = false;
+        HasFormBehindShareChoose = false;
         _shareHosts = [];
         _hasReadShareHosts = false;
         ShareHostStatus = "stable";

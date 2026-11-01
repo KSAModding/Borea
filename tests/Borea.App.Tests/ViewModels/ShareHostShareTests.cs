@@ -378,7 +378,7 @@ public sealed class ShareHostShareTests
         editor.Abstract = "A six-wheel rover for the Moon.";
         editor.ContinueShareCommand.Execute(null);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
-        editor.OpenShareStep("choose");
+        editor.OpenShareStep("done");
         Assert.True(editor.HasShareUpload);
 
         if (toAllFields)
@@ -390,6 +390,69 @@ public sealed class ShareHostShareTests
         Assert.False(editor.HasShareUpload);
         Assert.Empty(editor.ShareHostPassedChecks);
         Assert.Equal("Maxi", editor.Authors);
+    }
+
+    [Fact]
+    public async Task ChooseInTheSidePanel_DropsTheUpload_AndKeepsTheDraft()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        editor.OpenShareStep("choose");
+        await editor.ShareChooseLoad;
+
+        Assert.Equal(ShareFlowStep.Choose, editor.ShareFlowStep);
+        Assert.False(editor.HasShareUpload);
+        Assert.True(editor.HasShare);
+        Assert.Equal("Example Rover", editor.SelectedShareRow?.Item.Name);
+    }
+
+    [Fact]
+    public async Task ShareAnother_ForgetsTheShare_AndOpensTheList()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await PublishAsync(harness);
+
+        editor.ShareAnotherCommand.Execute(null);
+        await editor.ShareChooseLoad;
+
+        Assert.Equal(ShareFlowStep.Choose, editor.ShareFlowStep);
+        Assert.False(editor.HasShare);
+        Assert.Null(editor.ShareDoneHeadingText);
+        Assert.Equal([ListingStepState.Current, ListingStepState.ToDo, ListingStepState.ToDo, ListingStepState.ToDo], editor.ShareSteps.Select(step => step.State));
+        Assert.True(editor.IsShareChooseVehicle);
+        Assert.Single(editor.ShareChooseRows);
+    }
+
+    [Fact]
+    public async Task EntryDuringARun_OnlyGoesBackToIt()
+    {
+        var arrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var answer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var host = new FakeHost
+        {
+            DuringSend = () =>
+            {
+                arrived.TrySetResult();
+                return answer.Task;
+            },
+        };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        var viewModel = harness.ViewModel;
+        var upload = editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await arrived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        viewModel.SetMainWindowDiscoverCommand.Execute(null);
+
+        await Assert.Single(viewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowListing);
+        Assert.True(editor.IsSharing);
+        answer.SetResult();
+        await upload;
+        Assert.True(editor.HasShareUpload);
+        Assert.Equal(ShareFlowStep.Publish, editor.ShareFlowStep);
     }
 
     [Fact]
@@ -1439,6 +1502,7 @@ public sealed class ShareHostShareTests
         Assert.False(editor.CanCancelShareHost);
         Assert.True(editor.IsSendingSharePublish);
         editor.OpenShareStep("describe");
+        editor.OpenShareStep("choose");
         Assert.Equal(ShareFlowStep.Publish, editor.ShareFlowStep);
 
         answer.SetResult();
