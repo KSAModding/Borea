@@ -9,7 +9,32 @@ namespace Borea.Core.Sharing;
 /// <param name="Policy">The page of the host's policy, or null.</param>
 public sealed record ShareHost(string Key, string Name, Uri Api, IReadOnlyList<string> Types, IReadOnlyDictionary<string, long> MaxBytes, Uri? Policy = null)
 {
+    /// <summary>The base URL of the data files of a host that keeps its archives outside GitHub, or null for a host with GitHub storage.</summary>
+    public Uri? Data { get; init; }
+
+    /// <summary>The URL prefixes that the archives of a host with <see cref="Data"/> are served under, each ending with a slash.</summary>
+    public IReadOnlyList<Uri> Downloads { get; init; } = [];
+
+    /// <summary>
+    /// True when a fetch of an archive raises no public count. The index reads the counts of a share host from the
+    /// release assets of its storage repository, so a host with <see cref="Data"/> gives none.
+    /// </summary>
+    public bool KeepsNoDownloadCount => Data is not null && Downloads.Count > 0;
+
     public bool Accepts(string type) => Types.Contains(type, StringComparer.Ordinal);
+
+    /// <summary>True when <paramref name="url"/> is under a prefix of <see cref="Downloads"/>, and no escaped dot or slash in its path can lead out of that prefix.</summary>
+    public bool ServesDownload(Uri url)
+    {
+        ArgumentNullException.ThrowIfNull(url);
+        if (!Downloads.Any(prefix => url.AbsoluteUri.StartsWith(prefix.AbsoluteUri, StringComparison.Ordinal)))
+            return false;
+
+        var path = url.AbsolutePath;
+        return !path.Contains("%2e", StringComparison.OrdinalIgnoreCase)
+            && !path.Contains("%2f", StringComparison.OrdinalIgnoreCase)
+            && !path.Contains("%5c", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>The largest archive of <paramref name="type"/>, or null when the host names no limit for it.</summary>
     public long? MaxBytesFor(string type) => MaxBytes.TryGetValue(type, out var max) ? max : null;

@@ -548,9 +548,11 @@ public partial class MainViewModel
             item.UpdatedAt = latest?.ReleaseDate;
             item.LatestInChannel = latest;
 
-            // only a lookup of a stored file, so Discover never fetches, reads parts or plans for a vehicle
-            item.PreviewStillPath = item.Type == ContentType.Vehicle ? _services.PreviewThumbnails.TryGetPath(latest?.Download.Sha256, previewBuild) : null;
+            // only a lookup of a stored file, because listing a vehicle fetches nothing, reads no part and plans nothing
+            ShowStoredStill(item, _services.PreviewThumbnails, previewBuild);
         }
+
+        RefreshPreviewStills();
 
         // the Required by and Conflicts with cards read the releases set here, and a page without a release in the channel has nothing else that refreshes it
         RefreshContentDependencies();
@@ -586,7 +588,7 @@ public partial class MainViewModel
         if (_services is not { } services)
             return;
 
-        var path = services.PreviewThumbnails.TryGetPath(vehicleSha256, PreviewStillBuild(services));
+        var build = PreviewStillBuild(services);
         foreach (var item in _listings)
         {
             if (item.Type != ContentType.Vehicle || !string.Equals(item.LatestInChannel?.Download.Sha256, vehicleSha256, StringComparison.OrdinalIgnoreCase))
@@ -594,7 +596,7 @@ public partial class MainViewModel
 
             // a new still has the path of the old one, so the row lets go of the old bitmap first
             item.PreviewStillPath = null;
-            item.PreviewStillPath = path;
+            ShowStoredStill(item, services.PreviewThumbnails, build);
         }
     }
 
@@ -929,11 +931,27 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     public ListingImage? Icon { get; }
 
     /// <summary>
-    /// The still of the last complete preview of a vehicle, which the row shows in place of the icon. Null for other
+    /// The still of a vehicle without an icon, which the page of the vehicle stored or the row drew. Null for other
     /// content and when no still is stored for the latest release and the installed game build.
     /// </summary>
     [ObservableProperty]
     private string? _previewStillPath;
+
+    /// <summary>True when the still was drawn while mods that the vehicle needs were missing, so it shows boxes.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PreviewStillNote))]
+    private bool _previewStillMissingMods;
+
+    public string? PreviewStillNote => PreviewStillMissingMods ? _owner.Localization.DiscoverStillMissingMods : null;
+
+    /// <summary>A listing icon always wins, so only a vehicle without one shows a still.</summary>
+    internal bool HasDrawnStill => IsVehicle && Images?.Icon is null;
+
+    /// <summary>Says that the row came near the window or moved in it, so the queue can draw its still.</summary>
+    internal void ShowNearWindow(bool inView) => _owner.PreviewStills.Show(this, inView);
+
+    /// <summary>Says that the row left the window, so its draw stops.</summary>
+    internal void HideFromWindow() => _owner.PreviewStills.Hide(this);
 
     public string? IconAttribution => Icon?.Attribution;
 
@@ -1207,6 +1225,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(DownloadsText));
         OnPropertyChanged(nameof(DownloadsExactText));
+        OnPropertyChanged(nameof(PreviewStillNote));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
         OnPropertyChanged(nameof(UpdatedText));

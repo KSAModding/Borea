@@ -146,6 +146,7 @@ public partial class MainViewModel
             _libraryFolderChangeEnded = null;
             ended?.TrySetResult();
             RestoreVehiclePreview();
+            RefreshPreviewStills();
         }
     }
 

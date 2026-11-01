@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Borea.Core.Mods;
+using Borea.Core.Sharing;
 
 namespace Borea.Core.Preview;
 
@@ -44,6 +45,13 @@ public interface IVehiclePreview : IDisposable
     /// <param name="instanceId">The instance that holds the folder.</param>
     /// <returns>A result that the caller disposes, as with <see cref="LoadAsync"/>.</returns>
     Task<VehiclePreviewResult> LoadFolderAsync(string vehicleFolder, Guid instanceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Downloads the vehicle archive of the release into the preview cache from <paramref name="host"/>, which keeps no
+    /// download count, with one plain request to the URL of the release, and does nothing when the cache has it.
+    /// </summary>
+    /// <exception cref="DownloadFailedException">The host did not serve the archive of the release.</exception>
+    Task FetchFromShareHostAsync(ModVersionMetadata release, ShareHost host, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Cleans up the preview cache once on a background task: old archives and stills over the size limits and files of fetches

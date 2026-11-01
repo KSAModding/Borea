@@ -3,8 +3,10 @@ using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Borea.App.ViewModels;
 
 namespace Borea.App.Views;
 
@@ -12,7 +14,9 @@ namespace Borea.App.Views;
 /// Shows the stored still of a vehicle preview in the middle part that fits its slot, and shows the child, the icon of
 /// the listing, while no still is set or when the still cannot be read. The default camera of the preview frames the
 /// whole vehicle inside the height of the still, so a square slot cut from its middle still shows all of it. The file
-/// is read and decoded on the thread pool, as <see cref="ListingImageView"/> decodes its images.
+/// is read and decoded on the thread pool, as <see cref="ListingImageView"/> decodes its images. A vehicle row without an
+/// icon also tells its queue when it comes near the window, by the same rule as <see cref="ListingImageView"/>, so a row
+/// far away draws nothing and every other row pays for no viewport events.
 /// </summary>
 public sealed class PreviewStillView : Decorator
 {
@@ -28,9 +32,16 @@ public sealed class PreviewStillView : Decorator
     public static readonly StyledProperty<CornerRadius> CornerRadiusProperty =
         Border.CornerRadiusProperty.AddOwner<PreviewStillView>();
 
+    public static readonly StyledProperty<string?> NoteProperty =
+        AvaloniaProperty.Register<PreviewStillView, string?>(nameof(Note));
+
     private Bitmap? _bitmap;
     private int _generation;
     private bool _failed;
+    private TextBlock? _note;
+    private DiscoverItem? _row;
+    private bool _nearWindow;
+    private bool _inView;
 
     static PreviewStillView()
     {
@@ -48,6 +59,13 @@ public sealed class PreviewStillView : Decorator
     {
         get => GetValue(BackgroundProperty);
         set => SetValue(BackgroundProperty, value);
+    }
+
+    /// <summary>A small text over the still, or null for none. Most rows never have one, so only a row with one builds its text.</summary>
+    public string? Note
+    {
+        get => GetValue(NoteProperty);
+        set => SetValue(NoteProperty, value);
     }
 
     /// <summary>Rounds the corners of the still and of the icon, so both stay inside a rounded thumbnail border.</summary>
@@ -83,6 +101,30 @@ public sealed class PreviewStillView : Decorator
             UpdateChild();
         else if (change.Property == CornerRadiusProperty)
             UpdateClip();
+        else if (change.Property == NoteProperty)
+            UpdateNote();
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        var row = DataContext is DiscoverItem { HasDrawnStill: true } item ? item : null;
+        if (ReferenceEquals(row, _row))
+            return;
+
+        _row?.HideFromWindow();
+        if (_row is null)
+            EffectiveViewportChanged += OnEffectiveViewportChanged;
+        else if (row is null)
+            EffectiveViewportChanged -= OnEffectiveViewportChanged;
+
+        _row = row;
+
+        // a row that gets another item in the same place sees no new viewport, so it asks with the one it knows
+        if (row is null)
+            _nearWindow = _inView = false;
+        else if (_nearWindow)
+            row.ShowNearWindow(_inView);
     }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
@@ -99,8 +141,24 @@ public sealed class PreviewStillView : Decorator
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _row?.HideFromWindow();
+        _nearWindow = _inView = false;
         Release();
         base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        _note?.Measure(availableSize);
+        return base.MeasureOverride(availableSize);
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        if (_note is { } note)
+            note.Arrange(new Rect(0, finalSize.Height - note.DesiredSize.Height, finalSize.Width, note.DesiredSize.Height));
+
+        return base.ArrangeOverride(finalSize);
     }
 
     public override void Render(DrawingContext context)
@@ -112,6 +170,21 @@ public sealed class PreviewStillView : Decorator
             context.FillRectangle(background, new Rect(Bounds.Size));
 
         context.DrawImage(_bitmap, MiddlePart(_bitmap.Size, Bounds.Size), new Rect(Bounds.Size));
+    }
+
+    private void OnEffectiveViewportChanged(object? sender, EffectiveViewportChangedEventArgs e)
+    {
+        var viewport = e.EffectiveViewport;
+        var bounds = new Rect(Bounds.Size);
+        var hasPlace = IsEffectivelyVisible && Bounds.Width > 0 && Bounds.Height > 0;
+        var near = hasPlace && viewport.Inflate(new Thickness(0, viewport.Height)).Intersects(bounds);
+        _inView = hasPlace && viewport.Intersects(bounds);
+        if (near)
+            _row?.ShowNearWindow(_inView);
+        else if (_nearWindow)
+            _row?.HideFromWindow();
+
+        _nearWindow = near;
     }
 
     private void Load()
@@ -160,6 +233,7 @@ public sealed class PreviewStillView : Decorator
         _bitmap = bitmap;
         _failed = bitmap is null;
         UpdateChild();
+        UpdateNote();
         InvalidateVisual();
     }
 
@@ -168,7 +242,24 @@ public sealed class PreviewStillView : Decorator
         _generation++;
         _bitmap?.Dispose();
         _bitmap = null;
+        UpdateNote();
         InvalidateVisual();
+    }
+
+    private void UpdateNote()
+    {
+        if (Note is not null && _note is null)
+        {
+            _note = new TextBlock { Classes = { "body-sm", "still-note" }, IsHitTestVisible = false };
+            LogicalChildren.Add(_note);
+            VisualChildren.Add(_note);
+        }
+
+        if (_note is { } note)
+        {
+            note.Text = Note;
+            note.IsVisible = Note is not null && _bitmap is not null;
+        }
     }
 
     private void UpdateClip()
