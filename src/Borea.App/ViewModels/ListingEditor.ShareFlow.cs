@@ -73,6 +73,10 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     private bool _isShareMoreOptionsOpen;
 
+    /// <summary>Whether the item names no mod at all. A proposed mod that the player removed, a note or a file that a mod wrote says that it may need one that the list does not name.</summary>
+    [ObservableProperty]
+    private bool _hasNoShareMods;
+
     public bool IsShareDescribe => ShareFlowStep == ShareFlowStep.Describe;
 
     public bool IsSharePublish => ShareFlowStep == ShareFlowStep.Publish;
@@ -85,6 +89,8 @@ public sealed partial class ListingEditor
     public string ShareDescribeHeading => IsSave ? Localization.ShareDescribeSave : Localization.ShareDescribeVehicle;
 
     public string ShareSentenceExample => IsSave ? Localization.ShareSentenceSaveExample : Localization.ShareSentenceVehicleExample;
+
+    public string ShareModsHint => IsSave ? Localization.ShareModsSaveHint : Localization.ShareModsVehicleHint;
 
     public string? ShareItemText => _share is { } share ? Localization.FormatShareItemIn(share.Content.Name, _owner.InstanceName(share.InstanceId)) : null;
 
@@ -122,6 +128,13 @@ public sealed partial class ListingEditor
 
     private static bool IsListedLicense(string license) => ShareLicenses.Any(listed => listed.Spdx == license.Trim());
 
+    /// <summary>The name that the index lists for the mod, or the id when it lists none.</summary>
+    internal string ShareModName(string id) => (_snapshot is { } snapshot ? ListingDependencyChoices.Listing(snapshot, id)?.Authored?.Name : null) ?? id;
+
+    internal string ShareModVersionText(string version) => Localization.FormatShareModVersion(version);
+
+    internal string ShareModChangedKindText => Localization.ShareModChangedKind;
+
     private void RefreshLicenseChoice()
     {
         // A license that the list does not name opens the field, which then stays while the player clears or retypes the text.
@@ -148,6 +161,8 @@ public sealed partial class ListingEditor
     {
         if (_share is null)
             return;
+
+        HasNoShareMods = Dependencies.Count == 0 && _share.Proposal.Dependencies.Count == 0 && ShareNotes.Count == 0 && !HasShareExtraFiles;
 
         if (IsNewVersionShare)
         {

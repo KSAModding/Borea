@@ -159,6 +159,7 @@ public sealed class GameSaveShareTests
             editor.ShareNotes);
 
         row.Kind = "recommends";
+        Assert.Equal(harness.Localization.ShareModChangedKind, row.ShareKindText);
         editor.Abstract = "A six-wheel rover for the Moon.";
 
         Assert.Equal("recommends", Assert.Single(editor.Draft.Dependencies).Kind);
@@ -166,6 +167,112 @@ public sealed class GameSaveShareTests
         Assert.Equal("vehicles/ExampleRover.toml", editor.Draft.Path);
         Assert.DoesNotContain("[compatibility]", editor.DocumentText, StringComparison.Ordinal);
         Assert.Equal(harness.Localization.FormatListingStillMissing(string.Join(", ", harness.Localization.ListingAuthors, harness.Localization.ListingLicense)), editor.MissingText);
+    }
+
+    [Fact]
+    public async Task ProposedMod_ShowsItsVersion_AndRemoveTakesItOffTheList()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+
+        var row = Assert.Single(editor.Dependencies);
+
+        Assert.Equal("ExamplePartsMod", row.ModName);
+        Assert.Equal("Version 1.4.0 or newer", row.ShareVersionText);
+        Assert.Null(row.ShareKindText);
+        Assert.Equal("ExamplePartsMod is not in Discover, so players cannot install it.", row.NoteText);
+        Assert.Equal(
+            "Borea could not find a mod that gives part UnknownAntenna. Players without that mod may not be able to load it. Add the mod if you know it.",
+            Assert.Single(editor.ShareNotes));
+
+        row.RemoveCommand.Execute(null);
+
+        Assert.Empty(editor.Draft.Dependencies);
+    }
+
+    [Fact]
+    public async Task RemovingTheOnlyProposedMod_DoesNotSayThatTheItemNeedsNoMods()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        var item = Assert.Single(harness.ViewModel.VehiclesSection.Items);
+        File.WriteAllText(Path.Combine(item.Entry.Path, "vehicle.xml"), "<VehicleSaveData Id=\"Example Rover\"><RootPartRef InstanceOf=\"RoverWheel\" /></VehicleSaveData>");
+        await item.ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+        Assert.Empty(editor.ShareNotes);
+
+        Assert.Single(editor.Dependencies).RemoveCommand.Execute(null);
+
+        Assert.Empty(editor.Dependencies);
+        Assert.False(editor.HasNoShareMods);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("advancedflightcomputer")]
+    public async Task RowThatNeedsAFix_SaysSo_AndRemoveLetsTheShareGoOn(string id)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        var row = Assert.Single(editor.Dependencies);
+        Assert.False(row.HasShareProblem);
+        Assert.True(editor.CanContinueShare);
+
+        row.Id = id;
+
+        Assert.True(row.HasShareProblem);
+        Assert.Equal(id.Length > 0, row.HasModName);
+        Assert.False(editor.CanContinueShare);
+
+        row.RemoveCommand.Execute(null);
+
+        Assert.True(editor.CanContinueShare);
+    }
+
+    [Fact]
+    public async Task ModFromTheSearch_JoinsAsRequiredUnderItsListedName()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+
+        editor.DependencyQuery = "flight computer";
+        editor.AddListedDependencyCommand.Execute(null);
+
+        var row = editor.Dependencies[^1];
+        Assert.Equal(("AdvancedFlightComputer", "required", "Advanced Flight Computer"), (row.Id, row.Kind, row.ModName));
+        Assert.Null(row.ShareVersionText);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VehicleWithOnlyGameParts_SaysThatItNeedsNoMods_UnlessAModWroteAFile(bool hasExtraFile)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        var item = Assert.Single(harness.ViewModel.VehiclesSection.Items);
+        File.WriteAllText(Path.Combine(item.Entry.Path, "vehicle.xml"), "<VehicleSaveData Id=\"Example Rover\" />");
+        if (hasExtraFile)
+            File.WriteAllText(Path.Combine(item.Entry.Path, "unscience.json"), "{}");
+
+        await item.ShareCommand.ExecuteAsync(null);
+
+        Assert.Empty(harness.ViewModel.ListingEditor.Dependencies);
+        Assert.Equal(!hasExtraFile, harness.ViewModel.ListingEditor.HasNoShareMods);
     }
 
     [Fact]
@@ -183,6 +290,7 @@ public sealed class GameSaveShareTests
         Assert.Equal("save", editor.Type);
         Assert.Equal(["unscience.json"], editor.ShareExtraFiles);
         Assert.True(editor.HasShareExtraFiles);
+        Assert.Equal(harness.Localization.ShareModsSaveHint, editor.ShareModsHint);
     }
 
     [Fact]

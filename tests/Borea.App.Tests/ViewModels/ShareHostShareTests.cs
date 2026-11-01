@@ -619,6 +619,10 @@ public sealed class ShareHostShareTests
         Assert.Equal(harness.Localization.FormatListingShareOnHost("own.example"), Assert.Single(editor.ShareHostRows).Label);
     }
 
+    /// <summary>A harness whose index lists the rover of the instance on a share host, so a share of it is a new version.</summary>
+    internal static Task<ViewModelHarness> ListedRoverHarnessAsync() =>
+        ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost());
+
     private static async Task<ListingEditor> ShareAsync(ViewModelHarness harness)
     {
         await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");

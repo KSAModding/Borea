@@ -52,6 +52,48 @@ public sealed class GameSaveShareViewTests
         Assert.DoesNotContain(localization.ListingSteps, texts);
         Assert.DoesNotContain(localization.ListingErrorsHeading, texts);
         Assert.DoesNotContain(localization.ShareShortName, texts);
+        var editor = harness.ViewModel.ListingEditor;
+        Assert.Contains(localization.ShareModsHeading, texts);
+        Assert.Contains(localization.ShareModsVehicleHint, texts);
+        Assert.Contains(editor.Dependencies.Single().ModName, texts);
+        Assert.Contains(editor.Dependencies.Single().ShareVersionText, texts);
+        Assert.Contains(localization.ListingRemove, texts);
+        Assert.Contains(editor.Dependencies.Single().NoteText, texts);
+        Assert.Contains(editor.ShareNotes.Single(), texts);
+        Assert.Contains(localization.ShareAddMod, texts);
+        Assert.Contains(localization.DiscoverSearchPlaceholder, texts);
+        Assert.DoesNotContain(localization.ListingShareHint, texts);
+        Assert.DoesNotContain(localization.ShareModsNone, texts);
+        Assert.DoesNotContain(localization.ShareModProblem, texts);
+    }
+
+    [Fact]
+    public async Task RowWithNoId_SaysThatItNeedsAFix()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        harness.ViewModel.ListingEditor.Dependencies.Single().Id = string.Empty;
+
+        Assert.Contains(harness.Localization.ShareModProblem, await PageTextsAsync(harness));
+    }
+
+    [Fact]
+    public async Task NewVersion_ShowsTheModsCardButNotTheFields()
+    {
+        using var harness = await ShareHostShareTests.ListedRoverHarnessAsync();
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        var texts = await PageTextsAsync(harness);
+
+        Assert.True(harness.ViewModel.ListingEditor.IsNewVersionShare);
+        Assert.Contains(harness.Localization.ShareModsHeading, texts);
+        Assert.DoesNotContain(harness.Localization.ShareYourName, texts);
+        Assert.DoesNotContain(harness.Localization.ShareMoreOptions, texts);
     }
 
     [Fact]
@@ -69,6 +111,7 @@ public sealed class GameSaveShareViewTests
         Assert.Contains(harness.Localization.ListingShareHeading, texts);
         Assert.Contains(harness.ViewModel.ListingEditor.ShareNotes.Single(), texts);
         Assert.Contains(harness.Localization.ListingShareSaveArchive, texts);
+        Assert.Contains(harness.Localization.DiscoverSearchPlaceholder, texts);
         Assert.Contains(harness.Localization.ListingForumsOptionalHint, texts);
         Assert.Contains(harness.Localization.ListingGameMinFromArchiveHint, texts);
         Assert.DoesNotContain(harness.Localization.ListingForumsHint, texts);

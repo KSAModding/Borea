@@ -68,13 +68,15 @@ public sealed partial class ListingDependencyRow : ObservableObject
         $"{Kind}: {string.Join(", ", _preserved?.GetList("any_of")?.OfType<AuthoredTable>().Select(alternative => alternative.GetString("id")).OfType<string>() ?? [Id])}");
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModName), nameof(HasModName), nameof(HasShareProblem))]
     private string _id;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(KindText), nameof(HasKindText), nameof(CanNeedNewest))]
+    [NotifyPropertyChangedFor(nameof(KindText), nameof(HasKindText), nameof(CanNeedNewest), nameof(ShareKindText))]
     private string _kind;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShareVersionText))]
     private string _min;
 
     [ObservableProperty]
@@ -103,6 +105,19 @@ public sealed partial class ListingDependencyRow : ObservableObject
 
     public bool HasKindText => IsEditable && KindText is not null;
 
+    /// <summary>The name of the mod on the share steps, which show no id field.</summary>
+    public string ModName => _owner.ShareModName(Id.Trim());
+
+    public bool HasModName => IsEditable && Id.Trim().Length > 0;
+
+    public string? ShareVersionText => Min.Trim() is { Length: > 0 } version ? _owner.ShareModVersionText(version) : null;
+
+    /// <summary>The share steps propose only required mods, so they speak of a kind only when the full form changed it, and the kinds stay in the full form.</summary>
+    public string? ShareKindText => IsEditable && Kind != ListingDependencyChoices.Required ? _owner.ShareModChangedKindText : null;
+
+    /// <summary>Whether the share steps say that the entry needs a fix. The checks give no error for an entry with no id, because the form counts it as missing.</summary>
+    public bool HasShareProblem => HasErrors || (IsEditable && !HasModName);
+
     /// <summary>The ids the entry names: its id, or each id of its alternatives.</summary>
     internal IEnumerable<string> NamedIds => _preserved?.GetList("any_of") is { } alternatives
         ? alternatives.OfType<AuthoredTable>().Select(alternative => alternative.GetString("id")).OfType<string>()
@@ -110,7 +125,7 @@ public sealed partial class ListingDependencyRow : ObservableObject
 
     /// <summary>The errors that the checks give for the entry, one per line, or null.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasErrors))]
+    [NotifyPropertyChangedFor(nameof(HasErrors), nameof(HasShareProblem))]
     private string? _errorText;
 
     public bool HasErrors => ErrorText is not null;
@@ -130,6 +145,9 @@ public sealed partial class ListingDependencyRow : ObservableObject
         OnPropertyChanged(nameof(KindText));
         OnPropertyChanged(nameof(HasKindText));
         OnPropertyChanged(nameof(NeedsNewestHint));
+        OnPropertyChanged(nameof(ModName));
+        OnPropertyChanged(nameof(ShareVersionText));
+        OnPropertyChanged(nameof(ShareKindText));
     }
 
     /// <summary>Takes the releases of the named mod again, and keeps the list when they are the same, so an open list stays as it is.</summary>
