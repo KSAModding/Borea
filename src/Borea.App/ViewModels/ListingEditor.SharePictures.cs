@@ -78,6 +78,7 @@ public sealed partial class ListingEditor
 
         SharePictureError = null;
         PickedBinaryFile? file;
+        _isPickingSharePicture = true;
         try
         {
             file = await window.OpenImageFileAsync(Localization.ListingChooseFile, Localization.ListingImageFileType, ShareImageLimits.MaxBytes);
@@ -86,6 +87,10 @@ public sealed partial class ListingEditor
         {
             SharePictureError = Localization.SharePictureUnreadable;
             return;
+        }
+        finally
+        {
+            _isPickingSharePicture = false;
         }
 
         if (file is null || _share != share || !CanAddSharePicture)
@@ -251,6 +256,7 @@ public sealed partial class ListingEditor
         SharePictureError = null;
         _sharePictureTarget = null;
         _hostTookNoPictures = false;
+        ForgetShareCover();
     }
 
     private void RefreshSharePictures()
@@ -266,5 +272,6 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareSummaryPicturesText));
         OnPropertyChanged(nameof(CanRetrySharePictures));
         OnPropertyChanged(nameof(SharePicturesResultText));
+        RefreshShareCover();
     }
 }

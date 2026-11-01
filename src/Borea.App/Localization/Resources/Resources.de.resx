@@ -3783,6 +3783,30 @@
   <data name="SharePictureTooLargeOnHostFormat" xml:space="preserve">
     <value>{0} meldet, dass dieses Bild zu groß ist.</value>
   </data>
+  <data name="ShareCoverDrawing" xml:space="preserve">
+    <value>Borea zeichnet ein Bild von deinem Fahrzeug...</value>
+  </data>
+  <data name="ShareCoverMissing" xml:space="preserve">
+    <value>Borea konnte kein Titelbild für dieses Fahrzeug zeichnen. Du kannst ein eigenes Bild verwenden.</value>
+  </data>
+  <data name="ShareCoverHint" xml:space="preserve">
+    <value>Ein Bild, das Borea von deinem Fahrzeug gezeichnet hat, als Titelbild seiner Seite. Es wird öffentlich, wenn du veröffentlichst. Nur dieses Bild wird hochgeladen, ohne Teile oder Texturen des Spiels.</value>
+  </data>
+  <data name="ShareCoverOwn" xml:space="preserve">
+    <value>Eigenes Bild verwenden</value>
+  </data>
+  <data name="ShareCoverLeaveOut" xml:space="preserve">
+    <value>Weglassen</value>
+  </data>
+  <data name="ShareCoverLeftOut" xml:space="preserve">
+    <value>Die Seite startet ohne Titelbild.</value>
+  </data>
+  <data name="ShareCoverUseDrawn" xml:space="preserve">
+    <value>Das von Borea gezeichnete Bild verwenden</value>
+  </data>
+  <data name="ShareCoverRowName" xml:space="preserve">
+    <value>Von Borea gezeichnetes Bild</value>
+  </data>
   <data name="ShareOtherFields" xml:space="preserve">
     <value>Einige Felder außerhalb dieses Schritts müssen korrigiert werden.</value>
   </data>

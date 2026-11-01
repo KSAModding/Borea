@@ -3789,6 +3789,30 @@
   <data name="SharePictureTooLargeOnHostFormat" xml:space="preserve">
     <value>{0} says that this picture is too large.</value>
   </data>
+  <data name="ShareCoverDrawing" xml:space="preserve">
+    <value>Borea is drawing a picture of your vehicle...</value>
+  </data>
+  <data name="ShareCoverMissing" xml:space="preserve">
+    <value>Borea could not draw a cover for this vehicle. You can use your own picture.</value>
+  </data>
+  <data name="ShareCoverHint" xml:space="preserve">
+    <value>A picture that Borea drew from your vehicle, as the cover of its page. It becomes public when you publish. Only this picture goes up, with no parts or textures of the game.</value>
+  </data>
+  <data name="ShareCoverOwn" xml:space="preserve">
+    <value>Use my own picture</value>
+  </data>
+  <data name="ShareCoverLeaveOut" xml:space="preserve">
+    <value>Leave it out</value>
+  </data>
+  <data name="ShareCoverLeftOut" xml:space="preserve">
+    <value>The page starts without a cover.</value>
+  </data>
+  <data name="ShareCoverUseDrawn" xml:space="preserve">
+    <value>Use the picture that Borea drew</value>
+  </data>
+  <data name="ShareCoverRowName" xml:space="preserve">
+    <value>Picture that Borea drew</value>
+  </data>
   <data name="ShareOtherFields" xml:space="preserve">
     <value>Some fields outside this step need a fix.</value>
   </data>
