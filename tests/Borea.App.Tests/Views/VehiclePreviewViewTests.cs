@@ -6,6 +6,7 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Borea.App.ViewModels;
 using Borea.App.Views.Preview;
 using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
@@ -36,6 +37,28 @@ public sealed class VehiclePreviewViewTests
         Assert.NotEqual(Colors.Black, pixels.Center);
         Assert.Equal(Colors.Black, pixels.Corner);
         Assert.Equal(Colors.Black, pixels.Cleared);
+    }
+
+    [Fact]
+    public async Task AViewThatDoesNotShow_ApplyingAPose_RendersOnlyWhenItShows()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (_, view) = Show(PreviewTestScenes.StackedBoxes());
+            await IdleAsync(view, 1);
+            view.IsVisible = false;
+            view.Pose = new PreviewViewPose(40f, 0f, 0f, 0f);
+            await HeadlessApp.FramesAsync(5);
+            var hidden = (view.FramesShown, view.CameraYaw);
+
+            view.IsVisible = true;
+            await IdleAsync(view, 2);
+            return (Hidden: hidden, view.FramesShown, view.CameraYaw);
+        });
+
+        Assert.Equal((1, OrbitCamera.DefaultYaw + 40f * OrbitCamera.RadiansPerPixel), result.Hidden);
+        Assert.Equal(2, result.FramesShown);
+        Assert.Equal(OrbitCamera.DefaultYaw + 40f * OrbitCamera.RadiansPerPixel, result.CameraYaw);
     }
 
     [Theory]

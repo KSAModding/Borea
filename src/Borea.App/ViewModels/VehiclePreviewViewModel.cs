@@ -168,14 +168,32 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     [NotifyPropertyChangedFor(nameof(HasScene))]
     [NotifyCanExecuteChangedFor(nameof(ResetViewCommand))]
     [NotifyCanExecuteChangedFor(nameof(SavePictureCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExpandCommand))]
     private PreviewScene? _scene;
 
     /// <summary>Goes up by one for each Reset view click. The view frames the vehicle again when it changes.</summary>
     [ObservableProperty]
     private int _resetCount;
 
+    /// <summary>The camera of the view. Each view of the scene writes it, so the expanded view starts where the view in the page stopped, and the other way round.</summary>
+    [ObservableProperty]
+    private PreviewViewPose _pose;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Expanded))]
+    private bool _isExpanded;
+
     [ObservableProperty]
     private bool _isNoticesExpanded;
+
+    /// <summary>This preview while its view fills the window, otherwise null. The window shows the expanded view for a value.</summary>
+    public VehiclePreviewViewModel? Expanded => IsExpanded ? this : null;
+
+    partial void OnSceneChanged(PreviewScene? value)
+    {
+        if (value is null)
+            IsExpanded = false;
+    }
 
     public bool HasScene => Scene is not null;
 
@@ -287,6 +305,12 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
             await stream.WriteAsync(png);
         });
     }
+
+    [RelayCommand(CanExecute = nameof(HasScene))]
+    private void Expand() => IsExpanded = true;
+
+    [RelayCommand]
+    private void Collapse() => IsExpanded = false;
 
     [RelayCommand]
     private void OpenSettings() => _openSettings();
