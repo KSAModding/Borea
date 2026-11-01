@@ -282,8 +282,23 @@ public sealed class RepositoryInstallPlannerTests
         var (available, requested) = LinkedMods("Ghost");
         var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available)));
         Assert.False(plan.IsReady);
-        Assert.Equal("search-limit", Assert.Single(plan.Conflicts).Code);
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal("search-limit", conflict.Code);
+        Assert.Equal("M0, M1, M2, M3, M4, M5", conflict.Value);
         Assert.Empty(plan.Selections);
+    }
+
+    [Fact]
+    public async Task PlanAsync_TruncatedSearchWithoutARequestNamesTheModsOfTheGroup()
+    {
+        // the installed mod keeps this group in the search, and the group has no request, so no plan cuts it short
+        var libraries = Enumerable.Range(0, 4).SelectMany(id => Enumerable.Range(0, 14).Select(version => Release($"D{id}", $"1.0.{version}"))).ToList();
+        var suggested = Release("S", dependencies: Enumerable.Range(0, 4).Select(id => Required($"D{id}")).ToList());
+        var root = Release("R", dependencies: [new ModDependency("S", ModDependencyKind.Suggests)]);
+        var plan = await PlanAsync(new InstallPlanningRequest(InstanceWith([Installed("X", dependencies: [Required("D0")])]), [new RequestedMod(root, InstallReason.Manual)], new FakeRepository([root, suggested, .. libraries])));
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal("search-limit", conflict.Code);
+        Assert.Equal("D0, D1, D2, D3, S", conflict.Value);
     }
 
     [Theory]

@@ -85,6 +85,16 @@ public sealed class PlanningTextTests : IDisposable
     }
 
     [Fact]
+    public void SearchLimit_NamesTheModsAndTheNextStep()
+    {
+        var message = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = 100_000, Value = "first, second" };
+
+        var english = Format("en", message);
+        Assert.Equal($"Borea stopped after {100_000.ToString("N0", CultureInfo.CurrentCulture)} combinations and found no plan for first, second. If you changed several mods at once, change fewer of them.", english);
+        Assert.Contains("first, second", Format("de", message));
+    }
+
+    [Fact]
     public void ReleaseChannel_UsesTheStatusOfTheDisplayLanguage()
     {
         var message = new PlanningMessage("flight-tools", PlanningMessageKind.ReleaseChannel) { Version = ModVersion.Parse("2.0.0-dev.1"), Status = ReleaseStatus.Dev, Channel = ReleaseChannel.Stable };

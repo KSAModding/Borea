@@ -82,7 +82,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             Search(0, 0);
             if (states > SearchLimit)
             {
-                var conflict = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = SearchLimit };
+                var conflict = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = SearchLimit, Value = string.Join(", ", groupRoots.Count > 0 ? ids.Where(groupRoots.ContainsKey) : ids) };
                 return new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], [], [], [], [conflict], []);
             }
             foreach (var pair in bestAssigned) chosen[pair.Key] = pair.Value;

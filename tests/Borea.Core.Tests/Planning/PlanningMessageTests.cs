@@ -45,7 +45,7 @@ public sealed class PlanningMessageTests
         { new("A", PlanningMessageKind.RetainedDependent) { Dependency = Library }, "retained-dependent", "Required dependency on mod 'library' >= 1.0.0" },
         { new("A", PlanningMessageKind.RetainedConflict) { Dependency = Library }, "retained-conflict", "Required dependency on mod 'library' >= 1.0.0" },
         { new("A", PlanningMessageKind.RetainedUnsatisfied) { Dependency = Library }, "retained-unsatisfied", "Required dependency on mod 'library' >= 1.0.0" },
-        { new("planning", PlanningMessageKind.SearchLimit) { Limit = 100_000 }, "search-limit", "Planning exceeded the deterministic limit of 100000 candidate states." },
+        { new("planning", PlanningMessageKind.SearchLimit) { Limit = 100_000, Value = "first, second" }, "search-limit", "Planning exceeded the deterministic limit of 100000 candidate states for first, second. If you changed several mods at once, change fewer of them." },
         { new("pack", PlanningMessageKind.RetractedPack), "retracted-pack", "The selected pack version is retracted." },
         { new("pack", PlanningMessageKind.RetractedPack) { Value = "Broken pack." }, "retracted-pack", "Broken pack." },
         { new("A", PlanningMessageKind.UnlistedPin), "unlisted-pin", "The exact pinned release is not listed and cannot be installed by Borea." },

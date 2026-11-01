@@ -8,6 +8,7 @@ using Borea.App.ViewModels;
 using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -95,6 +96,18 @@ public sealed class InstallStopTests
 
         Assert.False(run.IsPlanning);
         Assert.Contains(nameof(InstallRun.IsPlanning), changed);
+    }
+
+    [Fact]
+    public async Task PlanStoppedAtTheSearchLimit_ShowsTheMessageWithoutAModId()
+    {
+        var message = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = 100_000, Value = "AdvancedFlightComputer" };
+        using var harness = await ViewModelHarness.CreateAsync(wrapInstallPlanner: _ => new FixedPlanner(message));
+        var (_, item) = await DiscoverRowAsync(harness);
+
+        await item.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(PlanningText.Message(message), item.InstallError);
     }
 
     [Fact]
@@ -443,15 +456,27 @@ public sealed class InstallStopTests
     /// <summary>The Discover row of AdvancedFlightComputer, waiting for the confirmation of an unknown compatibility.</summary>
     private static async Task<(Instance Instance, DiscoverItem Item)> ConfirmingInstallAsync(ViewModelHarness harness)
     {
+        var (instance, item) = await DiscoverRowAsync(harness);
+        await item.InstallCommand.ExecuteAsync(null);
+        Assert.True(item.IsConfirmingInstall);
+        return (instance, item);
+    }
+
+    /// <summary>The Discover row of AdvancedFlightComputer, with a new instance active.</summary>
+    private static async Task<(Instance Instance, DiscoverItem Item)> DiscoverRowAsync(ViewModelHarness harness)
+    {
         var viewModel = harness.ViewModel;
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
-        var item = viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
-        await item.InstallCommand.ExecuteAsync(null);
-        Assert.True(item.IsConfirmingInstall);
-        return (instance, item);
+        return (instance, viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer"));
+    }
+
+    private sealed class FixedPlanner(PlanningMessage conflict) : IInstallPlanner
+    {
+        public Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], [], [], [], [conflict], []));
     }
 
     /// <summary>A harness with the Starter Pack, whose AdvancedFlightComputer download is served and whose MeasureTools download stalls.</summary>

@@ -678,12 +678,12 @@ public partial class MainViewModel
     /// </summary>
     /// <summary>
     /// The messages after the id of their mod. A message about a recorded vehicle or save comes first and names the mod
-    /// itself, so it stays visible where a row shows only the start of the text.
+    /// itself, so it stays visible where a row shows only the start of the text. A stopped search belongs to no mod, so it has no id.
     /// </summary>
     private static string Describe(IEnumerable<PlanningMessage> messages)
         => string.Join(" ", messages
             .OrderBy(message => !BreaksContent(message))
-            .Select(message => BreaksContent(message) ? PlanningText.Message(message) : $"{message.ModId}: {PlanningText.Message(message)}"));
+            .Select(message => BreaksContent(message) || message.Kind == PlanningMessageKind.SearchLimit ? PlanningText.Message(message) : $"{message.ModId}: {PlanningText.Message(message)}"));
 
     private static bool BreaksContent(PlanningMessage message) => message.Kind is PlanningMessageKind.BreaksVehicle or PlanningMessageKind.BreaksSave;
 }
