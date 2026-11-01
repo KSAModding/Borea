@@ -2047,7 +2047,13 @@
     <value>Teilen</value>
   </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
-    <value>Das Spiel nimmt den Namen "{0}" nicht mehr an, und der Index prüft Namen genauso. Benenne den Eintrag nach den Regeln unten um und teile ihn dann.</value>
+    <value>Das Spiel nimmt den Namen „{0}“ nicht mehr an, und ein Name, den das Spiel nicht annimmt, lässt sich nicht teilen. Wähle einen Namen nach den Regeln unten.</value>
+  </data>
+  <data name="GameSaveRenameContinue" xml:space="preserve">
+    <value>Speichern und weiter</value>
+  </data>
+  <data name="GameSaveRenameChooseAnother" xml:space="preserve">
+    <value>Wähle einen anderen Namen.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>{0} nach {1} gesichert.</value>
@@ -3534,6 +3540,99 @@
   <data name="ShareBackToSteps" xml:space="preserve">
     <value>Zurück zu den Schritten</value>
   </data>
+  <data name="ShareEdit" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="ShareChange" xml:space="preserve">
+    <value>Ändern</value>
+  </data>
+  <data name="ShareSummaryModsFormat" xml:space="preserve">
+    <value>Benötigte Mods: {0}</value>
+  </data>
+  <data name="ShareSummaryNoMods" xml:space="preserve">
+    <value>Braucht keine Mods</value>
+  </data>
+  <data name="ShareNeedsBuildFormat" xml:space="preserve">
+    <value>Spieler brauchen KSA {0} oder neuer für diese Version.</value>
+  </data>
+  <data name="ShareHostChoiceHeading" xml:space="preserve">
+    <value>Wo möchtest du es veröffentlichen?</value>
+  </data>
+  <data name="ShareHostOneFormat" xml:space="preserve">
+    <value>Auf {0} veröffentlichen</value>
+  </data>
+  <data name="ShareHostLimitVehicleFormat" xml:space="preserve">
+    <value>Bis {0} für ein Fahrzeug</value>
+  </data>
+  <data name="ShareHostLimitSaveFormat" xml:space="preserve">
+    <value>Bis {0} für einen Spielstand</value>
+  </data>
+  <data name="ShareHostRulesFormat" xml:space="preserve">
+    <value>Regeln von {0}</value>
+  </data>
+  <data name="ShareNoHostVehicle" xml:space="preserve">
+    <value>Borea hat im Moment keine Plattform gefunden, die Fahrzeuge annimmt. Prüfe deine Verbindung und versuche es erneut.</value>
+  </data>
+  <data name="ShareNoHostSave" xml:space="preserve">
+    <value>Borea hat im Moment keine Plattform gefunden, die Spielstände annimmt. Prüfe deine Verbindung und versuche es erneut.</value>
+  </data>
+  <data name="ShareCheckOnHostFormat" xml:space="preserve">
+    <value>Mit {0} prüfen</value>
+  </data>
+  <data name="ShareCheckHintFormat" xml:space="preserve">
+    <value>Noch wird nichts veröffentlicht. {0} prüft zuerst die Datei.</value>
+  </data>
+  <data name="ShareWaitingForApproval" xml:space="preserve">
+    <value>Warte auf deine Bestätigung im Browser...</value>
+  </data>
+  <data name="ShareSignInFormat" xml:space="preserve">
+    <value>Eine Seite von {0} öffnet sich im Browser. Melde dich dort an, falls sie danach fragt, prüfe, ob sie diesen Code zeigt, und bestätige.</value>
+  </data>
+  <data name="ShareOpenPageAgain" xml:space="preserve">
+    <value>Seite erneut öffnen</value>
+  </data>
+  <data name="ShareCopyCode" xml:space="preserve">
+    <value>Code kopieren</value>
+  </data>
+  <data name="ShareCodeWarningFormat" xml:space="preserve">
+    <value>Verwende diesen Code nur auf {0}. Wenn eine andere Seite danach fragt, schließe sie.</value>
+  </data>
+  <data name="ShareChecksPassedFormat" xml:space="preserve">
+    <value>Alle {0} Prüfungen von {1} bestanden.</value>
+  </data>
+  <data name="ShareCheckDetailFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="ShareDetailsListingFormat" xml:space="preserve">
+    <value>Das speichert {0} zu deiner Datei.</value>
+  </data>
+  <data name="ShareVersionLineFormat" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="ShareVersionHint" xml:space="preserve">
+    <value>Drei Zahlen, zum Beispiel 1.0.0. Eine höhere Zahl zeigt Spielern, dass es neuer ist.</value>
+  </data>
+  <data name="ShareVersionInvalid" xml:space="preserve">
+    <value>Eine Version hat drei Zahlen, zum Beispiel 1.0.0.</value>
+  </data>
+  <data name="ShareChannelHint" xml:space="preserve">
+    <value>Die meisten Spieler bekommen nur stabile Versionen. Wähle test, damit Tester es zuerst ausprobieren.</value>
+  </data>
+  <data name="SharePublicNoticeFormat" xml:space="preserve">
+    <value>Veröffentlichen ist öffentlich. Jeder kann diese Version herunterladen, und ihr Verlauf bleibt öffentlich. Borea kann sie später nicht entfernen. {0} nimmt Inhalte auf Anfrage herunter.</value>
+  </data>
+  <data name="SharePublishVersionFormat" xml:space="preserve">
+    <value>Version {0} veröffentlichen</value>
+  </data>
+  <data name="ShareFolderCheckVehicle" xml:space="preserve">
+    <value>Ein anderes Fahrzeug wird schon unter diesem Namen installiert. Benenne deines um und prüfe dann erneut.</value>
+  </data>
+  <data name="ShareFolderCheckSave" xml:space="preserve">
+    <value>Ein anderer Spielstand wird schon unter diesem Namen installiert. Benenne deinen um und prüfe dann erneut.</value>
+  </data>
+  <data name="ShareRenameAndCheck" xml:space="preserve">
+    <value>Umbenennen und erneut prüfen</value>
+  </data>
   <data name="ListingShareHeading" xml:space="preserve">
     <value>Was du teilst</value>
   </data>
@@ -3589,7 +3688,7 @@
     <value>Auf {0} teilen</value>
   </data>
   <data name="ListingShareHostWriting" xml:space="preserve">
-    <value>Das Archiv wird geschrieben...</value>
+    <value>Deine Datei wird vorbereitet...</value>
   </data>
   <data name="ListingShareHostSigningInFormat" xml:space="preserve">
     <value>Warte auf die Anmeldung bei {0}...</value>
@@ -3600,8 +3699,14 @@
   <data name="ListingShareHostCopyCode" xml:space="preserve">
     <value>Code kopieren und Seite öffnen</value>
   </data>
+  <data name="ListingShareHostOpenFailedFormat" xml:space="preserve">
+    <value>Die Seite konnte nicht geöffnet werden: {0}</value>
+  </data>
   <data name="ListingShareHostUploading" xml:space="preserve">
     <value>Wird hochgeladen, und der Host prüft das Archiv...</value>
+  </data>
+  <data name="ListingShareHostUploadingFormat" xml:space="preserve">
+    <value>Die Datei wird hochgeladen, und {0} prüft sie...</value>
   </data>
   <data name="ListingShareHostPublishing" xml:space="preserve">
     <value>Wird veröffentlicht...</value>
@@ -3617,6 +3722,9 @@
   </data>
   <data name="ListingShareHostChecksFailed" xml:space="preserve">
     <value>Behebe, was der Host gefunden hat, und teile dann erneut.</value>
+  </data>
+  <data name="ListingShareHostChecksFailedFormat" xml:space="preserve">
+    <value>{0} hat ein Problem mit deiner Datei gefunden. Es wurde nichts veröffentlicht.</value>
   </data>
   <data name="ListingShareHostListing" xml:space="preserve">
     <value>Der Eintragstext, den der Host zeigt</value>

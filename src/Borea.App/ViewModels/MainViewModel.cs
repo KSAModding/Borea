@@ -255,7 +255,11 @@ public partial class MainViewModel : ViewModelBase
     partial void OnRenamingGameSaveChanged(GameSaveItem? value)
     {
         if (value is null)
+        {
             GameSaveRenameReason = null;
+            _afterShareRename = null;
+            _nameTheHostRefused = null;
+        }
     }
 
     /// <summary>The name the modal creates or renames an instance, a save or a vehicle with.</summary>
@@ -270,6 +274,7 @@ public partial class MainViewModel : ViewModelBase
         : RenamingInstance is not null ? Localization.ModalRenameInstanceTitle : IsImportingSharedProfile ? Localization.SharedProfileModalTitle : Localization.ModalCreateInstanceTitle;
 
     public string NameModalConfirmText => NamingPackContent is not null ? Localization.PackContentNameConfirm
+        : _afterShareRename is not null ? Localization.GameSaveRenameContinue
         : RenamingInstance is null && RenamingGameSave is null ? Localization.LibraryCreate : Localization.LibrarySave;
 
     public string? NameModalPlaceholder => RenamingGameSave is null && NamingPackContent is null ? Localization.LibraryNewInstancePlaceholder : null;

@@ -85,6 +85,9 @@ public sealed partial class ListingEditor
         _shareListing = null;
         _savedArchive = null;
         _choseOtherLicense = false;
+        _shareHosts = [];
+        _hasReadShareHosts = false;
+        ShareHostStatus = "stable";
         ShareIdError = null;
         IsShareMoreOptionsOpen = false;
         ForgetShareHostRun();
@@ -109,6 +112,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareLicenseChoices));
         RefreshLicenseChoice();
         RefreshShareSteps();
+        RefreshShareSummary();
         RefreshShareHostRows();
     }
 
