@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json.Nodes;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
+using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preview;
@@ -642,6 +643,54 @@ public sealed class VehiclePreviewViewModelTests
         Assert.Equal(["scene" + VehiclePreviewViewModel.PartialKeySuffix, "scene"], thumbnails.Stores.Select(still => still.SceneKey));
     }
 
+    [Fact]
+    public async Task TheFacts_ShowTheRequiredModsAtOnce_AndThePartsAndStagesAfterTheLoad()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile, Vehicle = TriangleVehicle() with { PartCount = 3, StageCount = 2 }, Files = TriangleFiles };
+        ModDependency[] dependencies = [new("Wings", ModDependencyKind.Required), new("Decals", ModDependencyKind.Optional)];
+        using var preview = Start(service, release: RoverOfSize(VehiclePreviewViewModel.AutoFetchVehicleBytes + 1, dependencies));
+        await preview.Loading;
+
+        var mods = Localization.FormatShareSummaryMods("1");
+        Assert.Equal([mods], preview.Facts);
+
+        await preview.ShowCommand.ExecuteAsync(null);
+
+        Assert.Equal([Localization.FormatPreviewFactParts(3), Localization.FormatPreviewFactStages(2), mods], preview.Facts);
+    }
+
+    [Fact]
+    public async Task TheFacts_OfAVehicleWithoutStagesOrMods_ShowNoStageCountAndSayThatItNeedsNoMods()
+    {
+        using var preview = Start(new FakeVehiclePreview { Vehicle = TriangleVehicle(), Files = TriangleFiles });
+        await preview.Loading;
+
+        Assert.Equal([Localization.FormatPreviewFactParts(1), Localization.ShareSummaryNoMods], preview.Facts);
+    }
+
+    [Theory]
+    [InlineData(PlaceholderReason.UnknownPart, false)]
+    [InlineData(PlaceholderReason.UnknownSubPart, false)]
+    [InlineData(PlaceholderReason.UnknownMesh, true)]
+    public async Task TheFacts_SayThatAVehicleNeedsNoMods_OnlyWhenNoPartIsUnknown(PlaceholderReason reason, bool saysNoMods)
+    {
+        var box = new ResolvedPlaceholder(Matrix4x4.Identity, Vector3.One, "Wing", reason, null);
+        using var preview = Start(new FakeVehiclePreview { Vehicle = TriangleVehicle(box), Files = TriangleFiles });
+        await preview.Loading;
+
+        Assert.Equal(saysNoMods, preview.Facts.Contains(Localization.ShareSummaryNoMods));
+    }
+
+    [Fact]
+    public async Task TheFacts_KeepTheCountOfRequiredMods_WhenAPartIsUnknown()
+    {
+        var box = new ResolvedPlaceholder(Matrix4x4.Identity, Vector3.One, "Wing", PlaceholderReason.UnknownPart, null);
+        using var preview = Start(new FakeVehiclePreview { Vehicle = TriangleVehicle(box), Files = TriangleFiles }, release: RoverOfSize(2_500_000, [new("Wings", ModDependencyKind.Required)]));
+        await preview.Loading;
+
+        Assert.Contains(Localization.FormatShareSummaryMods("1"), preview.Facts);
+    }
+
     internal static async Task OpenRoverAsync(MainViewModel viewModel)
     {
         await OpenRoverPageAsync(viewModel);
@@ -696,7 +745,7 @@ public sealed class VehiclePreviewViewModelTests
     }
 
     /// <summary>The Rover release with another stated size of its download, or with none.</summary>
-    private static ModVersionMetadata RoverOfSize(long? size) => new(
+    private static ModVersionMetadata RoverOfSize(long? size, ModDependency[]? dependencies = null) => new(
         specVersion: 1,
         modId: Rover.ModId,
         version: Rover.Version,
@@ -706,7 +755,7 @@ public sealed class VehiclePreviewViewModelTests
         gameMinRevision: Rover.GameMinRevision,
         download: new DownloadInfo(Rover.Download.Url, Rover.Download.Sha256, size, Rover.Download.ContentType),
         installSizeBytes: null,
-        dependencies: []);
+        dependencies: dependencies ?? []);
 
     private static readonly PreviewAssetRef TriangleFile = new("Core", "Triangle.glb");
 

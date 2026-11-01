@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using System.Xml;
 using Borea.Core.Preview;
@@ -25,6 +26,9 @@ internal sealed record VehicleFuelLink(uint PartA, uint PartB, IReadOnlyList<Vec
 internal sealed record VehicleXml(IReadOnlyList<VehiclePartRef> Parts, IReadOnlyList<PreviewNotice> Problems)
 {
     public IReadOnlyList<VehicleFuelLink> FuelLinks { get; init; } = [];
+
+    /// <summary>The number of different stages that the elements inside the parts name.</summary>
+    public int StageCount { get; init; }
 }
 
 /// <summary>
@@ -37,6 +41,11 @@ internal sealed record VehicleXml(IReadOnlyList<VehiclePartRef> Parts, IReadOnly
 /// LocalInstanceId of a part as text (SymmetryLayerInstance.PartLocalInstanceIds), so only a PartRef with an
 /// InstanceOf attribute counts. SubPartRef holds the save data of the subparts that the template already lists, and
 /// PartConnectorRef holds connections without a position, so the preview reads neither.
+/// </para>
+/// <para>
+/// The file has no list of stages. A Sequence attribute on a part, a subpart or a module inside a part gives the number
+/// of the stage that the element belongs to, so the different positive numbers are the stages of the vehicle. A number
+/// that cannot be read counts as no number, because a count must not stop the preview.
 /// </para>
 /// <para>
 /// A full part has no PartParent in the game, so Part.MatrixAsmb2VehicleAsmb is its MatrixAsmb2ParentAsmb, built from
@@ -85,8 +94,9 @@ internal static class VehicleXmlReader
         try
         {
             var links = new List<VehicleFuelLink>();
-            var parts = ReadParts(stream, links, problems);
-            return new VehicleXml(parts, problems) { FuelLinks = links };
+            var stages = new HashSet<int>();
+            var parts = ReadParts(stream, links, stages, problems);
+            return new VehicleXml(parts, problems) { FuelLinks = links, StageCount = stages.Count };
         }
         catch (Exception exception) when (exception is XmlException or FormatException or OverflowException or IOException or InvalidDataException)
         {
@@ -95,7 +105,7 @@ internal static class VehicleXmlReader
         }
     }
 
-    private static List<VehiclePartRef> ReadParts(Stream stream, List<VehicleFuelLink> links, List<PreviewNotice> problems)
+    private static List<VehiclePartRef> ReadParts(Stream stream, List<VehicleFuelLink> links, HashSet<int> stages, List<PreviewNotice> problems)
     {
         using var reader = XmlReader.Create(stream, Settings);
         if (reader.MoveToContent() != XmlNodeType.Element || reader.LocalName != KsaPartSchema.VehicleSaveData)
@@ -133,6 +143,12 @@ internal static class VehicleXmlReader
 
             var isRoot = depth == 1 && !rootSeen && name == KsaPartSchema.RootPartRef;
             var isChild = parentIsPart && name == KsaPartSchema.PartRef && reader.GetAttribute(KsaPartSchema.InstanceOf) is not null;
+            var insideVehicle = isRoot || open.Count > 0;
+            if (insideVehicle
+                && int.TryParse(reader.GetAttribute(KsaPartSchema.Sequence), NumberStyles.None, CultureInfo.InvariantCulture, out var stage)
+                && stage > 0)
+                stages.Add(stage);
+
             if (isRoot || isChild)
             {
                 rootSeen |= isRoot;
@@ -179,7 +195,11 @@ internal static class VehicleXmlReader
                 continue;
             }
 
-            reader.Skip();
+            // The elements below this one can name a stage too, so inside a part the walk goes into them.
+            if (insideVehicle)
+                reader.Read();
+            else
+                reader.Skip();
         }
 
         if (!rootSeen)

@@ -381,6 +381,19 @@
                                             </Border>
                                         </views:AspectRatioPanel>
                                     </Border>
+                                    <!-- the facts of the vehicle, one block that binds only to Facts, so a layout of the page can move it as a whole -->
+                                    <ItemsControl ItemsSource="{Binding Facts}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel ItemSpacing="4" LineSpacing="4" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <Border Classes="chip"><TextBlock Text="{Binding}" /></Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                     <!-- the mods the vehicle needs that are not on this computer, and the click that loads their parts -->
                                     <Border Classes="card" Padding="16,12" IsVisible="{Binding HasMissingMods}">
                                         <StackPanel Spacing="8">

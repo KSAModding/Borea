@@ -3157,6 +3157,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PreviewResetView => Resources.PreviewResetView;
 
+    public string FormatPreviewFactParts(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewFactPartsFormat, count);
+
+    public string FormatPreviewFactStages(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewFactStagesFormat, count);
+
     public string PreviewAttribution => Resources.PreviewAttribution;
 
     /// <param name="mod">The mod Id and its version, such as "Wings 1.0.0".</param>

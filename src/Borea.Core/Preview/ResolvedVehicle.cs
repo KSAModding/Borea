@@ -31,6 +31,9 @@ public sealed record ResolvedVehicle(
 
     /// <summary>The material in <see cref="Materials"/> of a hose, or -1 when the files do not have it.</summary>
     public int HoseMaterial { get; init; } = -1;
+
+    /// <summary>The number of different stages that vehicle.xml names, or 0 when it names none.</summary>
+    public int StageCount { get; init; }
 }
 
 /// <summary>

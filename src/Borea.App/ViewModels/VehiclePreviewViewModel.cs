@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Core.Dependencies;
 using Borea.Core.Mods;
 using Borea.Core.Preview;
 using Borea.Preview.Loading;
@@ -90,6 +92,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     private VehiclePreviewResult? _result;
     private IReadOnlyList<VehiclePreviewMissingMod> _missingMods = [];
     private IReadOnlyList<PreviewNotice> _notices = [];
+    private int _partCount;
+    private int _stageCount;
+    private bool _hasUnknownParts;
     private PreviewStep? _step;
     private string? _message;
     private bool _gameFolderInvalid;
@@ -128,6 +133,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _stillStored = stillStored;
         _autoFetchDelay = autoFetchDelay ?? DefaultAutoFetchDelay;
         _autoFetch = autoFetch;
+        ShowFacts();
     }
 
     internal ModVersionMetadata Release => _release;
@@ -219,6 +225,14 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     public string NoticesText => _localization.FormatPreviewNotices(Notices.Count);
 
     /// <summary>
+    /// The facts of the vehicle page. The mods come from the release, so they show at once. The parts and the stages come
+    /// from vehicle.xml, so they show after a load, and a stage count of 0 shows nothing. Mass and delta-v do not show,
+    /// because vehicle.xml holds only the propellant mass of a tank. A release that names no mod says that it needs none,
+    /// unless a load found a part that nothing here has, because the vehicle then needs something the release does not name.
+    /// </summary>
+    public ObservableCollection<string> Facts { get; } = [];
+
+    /// <summary>
     /// Every preparation and load that still runs, also one that a newer run cancelled, because that one can still
     /// hold a file open. It never fails.
     /// </summary>
@@ -278,6 +292,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         OnPropertyChanged(nameof(ShowText));
         ShowMissingMods(_missingMods);
         ShowNotices();
+        ShowFacts();
     }
 
     private Task TrackRun(Func<CancellationToken, Task> body)
@@ -415,6 +430,10 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _result = result;
         previous?.Dispose();
         _notices = result.Notices;
+        _partCount = result.Vehicle.PartCount;
+        _stageCount = result.Vehicle.StageCount;
+        _hasUnknownParts = result.Vehicle.Placeholders.Any(placeholder => placeholder.Reason is PlaceholderReason.UnknownPart or PlaceholderReason.UnknownSubPart);
+        ShowFacts();
 
         Step(PreviewStep.BuildingModel);
         var (geometry, geometryNotices) = await _builder.BuildGeometryAsync(result.Vehicle, result.Assets, _options, token);
@@ -562,6 +581,22 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
         OnPropertyChanged(nameof(HasNotices));
         OnPropertyChanged(nameof(NoticesText));
+    }
+
+    private void ShowFacts()
+    {
+        Facts.Clear();
+        if (_partCount > 0)
+            Facts.Add(_localization.FormatPreviewFactParts(_partCount));
+
+        if (_stageCount > 0)
+            Facts.Add(_localization.FormatPreviewFactStages(_stageCount));
+
+        var mods = _release.Dependencies.Count(dependency => dependency.Kind == ModDependencyKind.Required);
+        if (mods > 0)
+            Facts.Add(_localization.FormatShareSummaryMods(mods.ToString(CultureInfo.CurrentCulture)));
+        else if (!_hasUnknownParts)
+            Facts.Add(_localization.ShareSummaryNoMods);
     }
 
     private string NoticeKindText(PreviewNoticeKind kind) => kind switch

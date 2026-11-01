@@ -232,7 +232,7 @@ public sealed class VehiclePreview : IVehiclePreview
                 scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, hint, vehicleXml.FuelLinks);
 
             List<PreviewNotice> notices = [.. vehicleXml.Problems, .. mods.Notices, .. fetchNotices, .. catalog.Notices, .. meshIndex.Notices, .. scene.Notices];
-            scene = scene with { Notices = notices };
+            scene = scene with { Notices = notices, StageCount = vehicleXml.StageCount };
 
             var assets = new OwnedAssets(this, new PreviewAssetSet(mods.Cache, mods.Mods.Select(mod => new KeyValuePair<string, IPreviewFiles>(mod.ModId, mod.Files))), mods, vehicle);
             var missing = Missing(mods.Missing, scene);

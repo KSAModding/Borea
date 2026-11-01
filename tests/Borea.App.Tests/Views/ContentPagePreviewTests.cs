@@ -137,6 +137,30 @@ public sealed class ContentPagePreviewTests
         Assert.True(offsets.After < offsets.Before, $"The wheel over the empty panel must scroll the page, but the offset stayed at {offsets.After}.");
     }
 
+    [Fact]
+    public async Task TheFacts_ShowOnThePage_WithTheCountsOfTheVehicle()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var localization = harness.Localization;
+        harness.ViewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview { Vehicle = new ResolvedVehicle([], [], [], [], [], 3, 0) { StageCount = 2 } };
+        await VehiclePreviewViewModelTests.OpenRoverAsync(harness.ViewModel);
+
+        var shown = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ContentPage();
+            var window = new Window { Width = WindowWidth, Height = 1600, DataContext = harness.ViewModel, Content = page };
+            window.Show();
+            page.UpdateLayout();
+            var texts = page.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible).Select(block => block.Text).ToList();
+            window.Close();
+            return Task.FromResult(texts);
+        });
+
+        Assert.Contains(localization.FormatPreviewFactParts(3), shown);
+        Assert.Contains(localization.FormatPreviewFactStages(2), shown);
+        Assert.Contains(localization.ShareSummaryNoMods, shown);
+    }
+
     /// <summary>The page of Example Rover, whose preview builds an empty scene that the test then replaces with boxes.</summary>
     private static async Task<ViewModelHarness> RoverPageAsync()
     {
