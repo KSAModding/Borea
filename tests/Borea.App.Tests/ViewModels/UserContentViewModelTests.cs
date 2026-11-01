@@ -214,7 +214,7 @@ public sealed class UserContentViewModelTests
         Assert.False(members[1].IsInstalled);
         Assert.Equal(harness.Localization.ContentDependencyNotInstalled, members[1].StateText);
         Assert.Equal(harness.Localization.ContentDependencyRequiredItemHint, group.Hint);
-        Assert.Null(viewModel.ContentShareUrl);
+        Assert.Equal("https://ksamodding.github.io/Borea/vehicle/ExampleRover/", viewModel.ContentShareUrl);
     }
 
     [Fact]

@@ -151,7 +151,17 @@ public sealed class ShareHostShareTests
 
         Assert.Equal(isPage ? harness.Localization.ShareOpenPage : harness.Localization.FormatShareOpenHost("ksamods.gg"), editor.ShareDoneOpenText);
         Assert.Equal(link, Assert.Single(opened));
-        Assert.Equal(link, window.CopiedText);
+        Assert.Equal("https://ksamodding.github.io/Borea/vehicle/ExampleRover/", window.CopiedText);
+    }
+
+    [Fact]
+    public async Task DoneStep_IdThatCannotBeAPage_CopiesTheLinkOfTheHost()
+    {
+        var host = new FakeHost { Page = new Uri("https://ksamods.gg/vehicles/ExampleRover"), PublishedId = "../ExampleRover" };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await PublishAsync(harness);
+
+        Assert.Equal("https://ksamods.gg/vehicles/ExampleRover", editor.ShareDoneCopyLink);
     }
 
     [Fact]

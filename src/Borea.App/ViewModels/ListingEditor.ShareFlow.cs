@@ -119,6 +119,9 @@ public sealed partial class ListingEditor
     /// <summary>The page in the answer of the host, else its site, because the address of a page is known only to the host.</summary>
     public Uri? ShareDoneLink => _sharePublished is { } done ? done.Page ?? done.Host.Page : null;
 
+    /// <summary>What Copy link gives, the page on the Borea site, because a link that players pass on must not depend on one host.</summary>
+    public string? ShareDoneCopyLink => _sharePublished?.SiteLink ?? ShareDoneLink?.AbsoluteUri;
+
     public string? ShareDoneOpenText => _sharePublished is not { } done ? null
         : done.Page is null ? Localization.FormatShareOpenHost(done.Host.Name)
         : Localization.ShareOpenPage;
@@ -529,5 +532,5 @@ public sealed partial class ListingEditor
     }
 
     [RelayCommand]
-    private Task CopyShareDoneLinkAsync() => _owner.CopyShareLinkAsync(ShareDoneLink?.AbsoluteUri);
+    private Task CopyShareDoneLinkAsync() => _owner.CopyShareLinkAsync(ShareDoneCopyLink);
 }
