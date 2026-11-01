@@ -357,6 +357,19 @@
         <WrapPanel ItemSpacing="4" />
     </ItemsPanelTemplate>
 
+    <!-- an author name on the one line of a row, whose comma stands before the name, so a name that drops out takes its comma along and the tooltip keeps the whole list -->
+    <DataTemplate x:Key="RowAuthorLink" x:DataType="vm:AuthorLink">
+        <Button Classes="plain" VerticalAlignment="Center" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).FilterByAuthorCommand}" CommandParameter="{Binding}" ToolTip.Tip="{Binding RowHint}" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RowHint}">
+            <TextBlock Classes="body-sm secondary" TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding RowSeparator}" Foreground="{StaticResource Brush.TextSecondary}" /><Run Text="{Binding Name}" />
+            </TextBlock>
+        </Button>
+    </DataTemplate>
+
+    <ItemsPanelTemplate x:Key="RowAuthorLinksPanel">
+        <WrapPanel />
+    </ItemsPanelTemplate>
+
     <!-- c/content-row on Discover -->
     <DataTemplate x:Key="DiscoverRow" x:DataType="vm:DiscoverItem">
         <Button Classes="plain card-button" views:RowButton.IgnoresDisabled="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
@@ -383,7 +396,7 @@
                                     <DockPanel Margin="8,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorBefore}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" Margin="0,0,3,0" VerticalAlignment="Center" />
                                         <!-- one line of 16 px, so an author that does not fit on it drops out whole -->
-                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource AuthorLink}" ItemsPanel="{StaticResource AuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
+                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource RowAuthorLink}" ItemsPanel="{StaticResource RowAuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
                                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorAfter}" TextTrimming="CharacterEllipsis" Margin="3,0,0,0" VerticalAlignment="Center" />
                                     </DockPanel>
                                 </DockPanel>
@@ -520,7 +533,7 @@
                                     <DockPanel Margin="8,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorBefore}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" Margin="0,0,3,0" VerticalAlignment="Center" />
                                         <!-- one line of 16 px, so an author that does not fit on it drops out whole -->
-                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource AuthorLink}" ItemsPanel="{StaticResource AuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
+                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource RowAuthorLink}" ItemsPanel="{StaticResource RowAuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
                                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorAfter}" TextTrimming="CharacterEllipsis" Margin="3,0,0,0" VerticalAlignment="Center" />
                                     </DockPanel>
                                 </DockPanel>
