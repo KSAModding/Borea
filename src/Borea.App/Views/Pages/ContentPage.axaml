@@ -16,6 +16,24 @@
                 <Setter Property="IsVisible" Value="False" />
             </Style>
         </ContainerQuery>
+        <Style Selector="StackPanel.content-tabs">
+            <Setter Property="Spacing" Value="16" />
+        </Style>
+        <!-- three tabs in a long language need the room of their gaps and padding, so a narrow page keeps a margin at the edge of the strip -->
+        <ContainerQuery Name="page-body" Query="max-width:520">
+            <Style Selector="StackPanel.content-tabs">
+                <Setter Property="Spacing" Value="4" />
+            </Style>
+            <Style Selector="StackPanel.content-tabs > Button.tab">
+                <Setter Property="Padding" Value="12,8" />
+            </Style>
+        </ContainerQuery>
+        <!-- a card of the 3D view narrower than the three labeled buttons need -->
+        <ContainerQuery Name="page-body" Query="max-width:540">
+            <Style Selector="TextBlock.hide-compact">
+                <Setter Property="IsVisible" Value="False" />
+            </Style>
+        </ContainerQuery>
         <!-- a listing without any count gets no Downloads column, so the table shows no column of empty cells -->
         <Style Selector="Border.versions-table.no-downloads TextBlock.downloads">
             <Setter Property="IsVisible" Value="False" />
@@ -298,7 +316,7 @@
 
                     <!-- c/inner-nav-bar -->
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
-                        <StackPanel Orientation="Horizontal" Spacing="16">
+                        <StackPanel Classes="content-tabs" Orientation="Horizontal">
                             <Button Classes="tab quiet" Classes.active="{Binding IsDescriptionTab}" Content="{Binding Localization.ContentTabDescription}" Command="{Binding ShowContentDescriptionCommand}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsDependenciesTab}" Content="{Binding ContentDependenciesTabText}" Command="{Binding ShowContentDependenciesCommand}" IsVisible="{Binding HasContentDependenciesTab}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowContentVersionsCommand}" />
@@ -325,13 +343,29 @@
                                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
                                                 </WrapPanel>
                                             </StackPanel>
+                                            <!-- below a medium page the three buttons show only their icons, because the German labels do not fit a card of that width -->
                                             <StackPanel Orientation="Horizontal" Spacing="4" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasScene}">
-                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePicture}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePictureTip}" Command="{Binding SavePictureCommand}" CommandParameter="{Binding #PreviewView}" />
-                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewExpandView}" Command="{Binding ExpandCommand}" />
-                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" />
+                                                <Button Classes="text" Command="{Binding SavePictureCommand}" CommandParameter="{Binding #PreviewView}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePictureTip}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePicture}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Image}" Stroke="{StaticResource Brush.Text}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="hide-compact" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePicture}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Classes="text" Command="{Binding ExpandCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewExpandView}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewExpandView}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowsOut}" Stroke="{StaticResource Brush.Text}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="hide-compact" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewExpandView}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Classes="text" Command="{Binding ResetViewCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowCounterClockwise}" Stroke="{StaticResource Brush.Text}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="hide-compact" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
                                             </StackPanel>
                                             <!-- the camera controls, in a flyout so that they never cover the scene until the player asks for them -->
-                                            <Button Classes="info" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding HasScene}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}">
+                                            <Button Classes="info" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding HasScene}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}">
                                                 <Button.Flyout>
                                                     <Flyout Placement="BottomEdgeAlignedLeft">
                                                         <!-- one column with a fixed largest width, so the chips wrap inside the scroll viewer of the flyout instead of making it scroll sideways -->

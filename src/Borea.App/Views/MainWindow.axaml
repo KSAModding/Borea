@@ -102,8 +102,9 @@
                         <KeyBinding Gesture="Escape" Command="{Binding CollapseCommand}" />
                     </Panel.KeyBindings>
                     <!-- Pose comes after Scene for the same reason as on the panel. ResetCount is only on the panel, which stays in the page and passes a reset on through the pose, because a new view would take an earlier click for a new one -->
-                    <preview:VehiclePreviewView Scene="{Binding Scene}" Pose="{Binding Pose, Mode=TwoWay}" FocusWhenShown="True" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
+                    <preview:VehiclePreviewView x:Name="ExpandedPreviewView" Scene="{Binding Scene}" Pose="{Binding Pose, Mode=TwoWay}" FocusWhenShown="True" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="12" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePicture}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePictureTip}" Command="{Binding SavePictureCommand}" CommandParameter="{Binding #ExpandedPreviewView}" />
                         <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewCollapseView}" Command="{Binding CollapseCommand}" />
                         <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" />
                     </StackPanel>

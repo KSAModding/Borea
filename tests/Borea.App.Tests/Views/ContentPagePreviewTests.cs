@@ -246,7 +246,7 @@ public sealed class ContentPagePreviewTests
         var seen = await HeadlessApp.RunAsync(harness, async () =>
         {
             var (window, page, view) = await ShowAsync(harness, height: 1600);
-            var button = page.GetVisualDescendants().OfType<Button>().Single(candidate => Equals(candidate.Content, harness.Localization.PreviewSavePicture));
+            var button = page.GetVisualDescendants().OfType<Button>().Single(candidate => candidate.Command == viewModel.VehiclePreview!.SavePictureCommand);
             var first = await SaveAsync(viewModel, button);
             view.Focus();
             window.KeyPressQwerty(PhysicalKey.ArrowRight, RawInputModifiers.None);
@@ -261,6 +261,91 @@ public sealed class ContentPagePreviewTests
         Assert.True(seen.Visible);
         Assert.Equal(seen.Panel, seen.Picture);
         Assert.NotEqual(seen.First, seen.Turned);
+    }
+
+    [Fact]
+    public async Task TheExpandedView_HasItsOwnSaveButton_ThatWritesThePictureOfTheExpandedView()
+    {
+        using var harness = await VehicleHarnessAsync();
+        harness.ViewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview();
+        harness.ViewModel.VehiclePreviewEncoder = new AvaloniaPngEncoder();
+        await VehiclePreviewViewModelTests.OpenRoverAsync(harness.ViewModel);
+        harness.ViewModel.VehiclePreview!.Scene = PreviewTestScenes.StackedBoxes();
+        var seen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var (window, _) = await ShowInMainWindowAsync(harness);
+            var preview = harness.ViewModel.VehiclePreview!;
+            preview.ExpandCommand.Execute(null);
+            var expanded = ExpandedView(window);
+            await HeadlessApp.FramesUntilAsync(() => expanded.IsIdle && expanded.FramesShown >= 1);
+
+            var overlay = expanded.GetVisualParent()!;
+            var button = overlay.GetVisualDescendants().OfType<Button>().Single(candidate => candidate.Command == preview.SavePictureCommand);
+            var written = await SaveAsync(harness.ViewModel, button);
+            var area = new PixelSize((int)Math.Ceiling(expanded.Bounds.Width), (int)Math.Ceiling(expanded.Bounds.Height));
+            using var picture = new Bitmap(new MemoryStream(written));
+            var result = (Source: button.CommandParameter, Expanded: expanded, Shown: button.IsEffectivelyVisible, Picture: picture.PixelSize, Area: area);
+            window.DataContext = null;
+            window.Close();
+            return result;
+        });
+
+        Assert.Same(seen.Expanded, seen.Source);
+        Assert.True(seen.Shown);
+        Assert.Equal(seen.Area, seen.Picture);
+    }
+
+    [Theory]
+    [InlineData(1200, true)]
+    [InlineData(860, false)]
+    public async Task ThePanelButtons_ShowTheirLabelsOnlyWhenTheCardIsWideEnoughForThem(double windowWidth, bool showsLabels)
+    {
+        using var harness = await RoverPageAsync();
+        var seen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var window = new MainWindow { Width = windowWidth, Height = 700, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var panel = window.GetVisualDescendants().OfType<VehiclePreviewView>().Single();
+            await HeadlessApp.FramesUntilAsync(() => panel.IsIdle && panel.FramesShown >= 1);
+            var preview = harness.ViewModel.VehiclePreview!;
+            var buttons = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible && (button.Command == preview.SavePictureCommand || button.Command == preview.ExpandCommand || button.Command == preview.ResetViewCommand)).ToList();
+            var labels = buttons.Select(button => button.GetVisualDescendants().OfType<TextBlock>().Single().IsEffectivelyVisible).ToList();
+            var card = BoundsIn(window, panel);
+            var row = buttons.Select(button => BoundsIn(window, button)).ToList();
+            var names = buttons.Select(button => Avalonia.Automation.AutomationProperties.GetName(button)).ToList();
+            window.DataContext = null;
+            window.Close();
+            return (Labels: labels, Card: card, Row: row, Names: names);
+        });
+
+        Assert.Equal(3, seen.Labels.Count);
+        Assert.All(seen.Labels, shown => Assert.Equal(showsLabels, shown));
+        Assert.All(seen.Row, button => Assert.True(seen.Card.Contains(button), $"A button at {button} leaves the card {seen.Card}."));
+        Assert.All(seen.Names, name => Assert.False(string.IsNullOrEmpty(name)));
+    }
+
+    [Fact]
+    public async Task TheTabs_KeepTheirMarginAtTheEdgeOfTheStrip_InGermanOnANarrowWindow()
+    {
+        using var harness = await RoverPageAsync();
+        harness.Localization.TrySetCulture("de");
+        var seen = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var window = new MainWindow { Width = 860, Height = 700, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var tabs = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible && button.Classes.Contains("tab")).ToList();
+            var strip = BoundsIn(window, tabs[0].GetVisualParent()!.GetVisualParent()!);
+            var last = BoundsIn(window, tabs[^1]);
+            window.DataContext = null;
+            window.Close();
+            return Task.FromResult((Count: tabs.Count, Strip: strip, Last: last));
+        });
+        harness.Localization.TrySetCulture("en");
+
+        Assert.Equal(3, seen.Count);
+        Assert.True(seen.Last.Right <= seen.Strip.Right - 6, $"The last tab ends at {seen.Last.Right}, and the strip at {seen.Strip.Right}.");
     }
 
     [Fact]
