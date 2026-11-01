@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
@@ -277,6 +278,48 @@ public partial class MainViewModel
             if (SelectedInstance?.InstanceId == instance.InstanceId)
                 section.Error = exception.Message;
         }
+    }
+
+    /// <summary>How long the row of a new vehicle or save shows its border.</summary>
+    internal static readonly TimeSpan GameSaveMarkDuration = TimeSpan.FromSeconds(2);
+
+    private CancellationTokenSource? _gameSaveMarkTimer;
+    private GameSaveItem? _markedGameSave;
+
+    /// <summary>The row that the instance page scrolls to. Set again for the same row, it scrolls again.</summary>
+    [ObservableProperty]
+    private GameSaveItem? _gameSaveInView;
+
+    /// <summary>Shows the row of a vehicle or save that the player was just told about, on the Content tab where its table is.</summary>
+    private void MarkGameSave(GameSaveItem row)
+    {
+        InstanceTab = InstanceTab.Content;
+        _gameSaveMarkTimer?.Cancel();
+        _gameSaveMarkTimer?.Dispose();
+        if (_markedGameSave is { } previous)
+            previous.IsMarked = false;
+
+        _markedGameSave = row;
+        row.IsMarked = true;
+        GameSaveInView = null;
+        GameSaveInView = row;
+        _gameSaveMarkTimer = new CancellationTokenSource();
+        _ = UnmarkGameSaveAsync(row, _gameSaveMarkTimer.Token);
+    }
+
+    private async Task UnmarkGameSaveAsync(GameSaveItem row, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(GameSaveMarkDuration, Clock, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (!token.IsCancellationRequested)
+            row.IsMarked = false;
     }
 
     internal void OpenGameSaveFolder(string folder) => ShowOpenError(() => PathName(folder), TryOpenWithSystem(folder));
@@ -750,6 +793,10 @@ public sealed partial class GameSaveItem : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected;
+
+    /// <summary>Whether the row shows its border for a moment, because a toast led the player to it.</summary>
+    [ObservableProperty]
+    private bool _isMarked;
 
     partial void OnIsSelectedChanged(bool value) => Section.OnProfileSelectionChanged();
 

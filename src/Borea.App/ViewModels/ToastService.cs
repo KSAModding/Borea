@@ -108,7 +108,7 @@ public sealed partial class ToastService : ObservableObject
     internal Task OpenInstanceAsync(ToastItem toast)
     {
         Close(toast);
-        return toast.TaskItem?.InstanceId is { } instanceId ? _owner.OpenInstanceByIdAsync(instanceId) : Task.CompletedTask;
+        return toast.TaskItem is { InstanceId: { } instanceId, ContentId: var contentId } ? _owner.OpenInstanceByIdAsync(instanceId, contentId) : Task.CompletedTask;
     }
 
     internal void ShowDetails(ToastItem toast)

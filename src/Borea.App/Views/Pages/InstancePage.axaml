@@ -4,6 +4,19 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.InstancePage"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <!-- these are style setters, because a value set on the row itself would win over the marked state. The bottom border of a marked row takes 1 px of its padding, so the rows below stay in place -->
+        <Style Selector="Border.game-save-row">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="BorderThickness" Value="0,1,0,0" />
+            <Setter Property="Padding" Value="16,8" />
+        </Style>
+        <Style Selector="Border.game-save-row.marked">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="BorderThickness" Value="0,1,0,1" />
+            <Setter Property="Padding" Value="16,8,16,7" />
+        </Style>
+    </UserControl.Styles>
     <UserControl.Resources>
         <!-- c/table-versions of one content group -->
         <DataTemplate x:Key="ContentGroupTable" x:DataType="vm:ContentGroup">
@@ -73,7 +86,7 @@
 
         <!-- one vehicle or save. The columns after the name share their widths with the other rows of both tables -->
         <DataTemplate x:Key="GameSaveRow" x:DataType="vm:GameSaveItem">
-            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+            <Border Classes="game-save-row" Classes.marked="{Binding IsMarked}" Tag="{Binding}">
                 <Grid RowDefinitions="Auto,Auto">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="48" />
