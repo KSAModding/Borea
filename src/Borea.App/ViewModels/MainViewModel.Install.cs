@@ -399,7 +399,7 @@ public partial class MainViewModel
     }
 
     /// <summary>What stops a plan whose choices are shown, without the open alternatives that the choices already show.</summary>
-    private static string? BlockedText(InstallPlan plan)
+    private string? BlockedText(InstallPlan plan)
     {
         var messages = plan.Conflicts.Concat(plan.UnresolvedChoices.Where(message => message.Kind != PlanningMessageKind.AlternativeChoice)).ToList();
         return messages.Count > 0 ? Describe(messages) : null;
@@ -647,16 +647,13 @@ public partial class MainViewModel
             or DownloadFailedException or NotSupportedException or TaskCanceledException or ModReplacementRecoveryException;
 
     /// <summary>
-    /// The planner's messages on one line, each named by its mod.
-    /// </summary>
-    /// <summary>
-    /// The messages after the id of their mod. A message about a recorded vehicle or save comes first and names the mod
+    /// The messages after the name of their mod. A message about a recorded vehicle or save comes first and names the mod
     /// itself, so it stays visible where a row shows only the start of the text.
     /// </summary>
-    private static string Describe(IEnumerable<PlanningMessage> messages)
+    private string Describe(IEnumerable<PlanningMessage> messages)
         => string.Join(" ", messages
             .OrderBy(message => !BreaksContent(message))
-            .Select(message => BreaksContent(message) ? PlanningText.Message(message) : $"{message.ModId}: {PlanningText.Message(message)}"));
+            .Select(message => BreaksContent(message) ? PlanningText.Message(message) : $"{ContentName(message.ModId)}: {PlanningText.Message(message)}"));
 
     private static bool BreaksContent(PlanningMessage message) => message.Kind is PlanningMessageKind.BreaksVehicle or PlanningMessageKind.BreaksSave;
 }

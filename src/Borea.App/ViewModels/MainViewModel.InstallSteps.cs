@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -15,6 +18,9 @@ public partial class MainViewModel
 {
     /// <summary>The mods whose install steps a finished install left on the row of a mod, by the id of that mod.</summary>
     private readonly Dictionary<string, IReadOnlyList<string>> _installStepsNotices = new(ModIds.Comparer);
+
+    /// <summary>The instance that got a fresh vehicle or save, by the id of its listing, until the player dismisses the steps.</summary>
+    private readonly Dictionary<string, Guid> _installedWhereNotices = new(ModIds.Comparer);
 
     /// <summary>The mods whose install steps a finished pack install left on the row of a pack, by the id of that pack.</summary>
     private readonly Dictionary<string, IReadOnlyList<string>> _packInstallStepsNotices = new(ModIds.Comparer);
@@ -38,9 +44,65 @@ public partial class MainViewModel
     private ModMetadata? ListingOf(string modId)
         => _listings.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Listing;
 
-    /// <summary>The install steps that a finished install left on the row of <paramref name="modId"/>.</summary>
+    /// <summary>The install steps that a finished install left on the row of <paramref name="modId"/>, and where a new vehicle or save is in the game.</summary>
     internal IReadOnlyList<StepList> InstallStepsNotice(string modId)
-        => _installStepsNotices.TryGetValue(modId, out var installed) ? InstallStepsOf(installed) : [];
+    {
+        var steps = _installStepsNotices.TryGetValue(modId, out var installed) ? InstallStepsOf(installed) : [];
+        return InstalledWhereSteps(modId) is { } where ? [.. steps, where] : steps;
+    }
+
+    /// <summary>
+    /// The instance and the record of a fresh vehicle or save. The record gives the current folder, and when the
+    /// player removes the item or its instance there is no record, so the steps stop naming something that is gone.
+    /// </summary>
+    private (InstanceItem Instance, InstalledContentRecord Record)? InstalledWhere(string modId)
+    {
+        if (!_installedWhereNotices.TryGetValue(modId, out var instanceId)
+            || Instances.FirstOrDefault(item => item.InstanceId == instanceId) is not { } instance)
+        {
+            return null;
+        }
+
+        return instance.Content.FirstOrDefault(record => ModIds.Equals(record.ListingId, modId)) is { } found ? (instance, found) : null;
+    }
+
+    /// <summary>The menu names of the game stay English in every language, because the game shows them so.</summary>
+    private StepList? InstalledWhereSteps(string modId)
+    {
+        if (InstalledWhere(modId) is not { Instance: var instance, Record: var record })
+            return null;
+
+        var name = record.FolderName;
+        string[] steps = record.Metadata.Type == ContentType.Save
+            ? [Localization.FormatInstalledStart(instance.Name), Localization.InstalledSaveMenu, Localization.FormatInstalledSavePick(name)]
+            : [Localization.FormatInstalledStart(instance.Name), Localization.InstalledVehicleMenu, Localization.FormatInstalledVehiclePick(name)];
+        return Steps(Localization.FormatInstalledWhere(name), steps);
+    }
+
+    /// <summary>The text of the Play button of the steps, or null when the row shows no such steps.</summary>
+    internal string? InstalledPlayText(string modId)
+        => InstalledWhere(modId) is { Instance: var instance } ? Localization.FormatInstalledPlay(instance.Name) : null;
+
+    internal bool CanPlayInstalled(string modId)
+        => !IsLaunching && _services is { } services && InstalledWhere(modId) is { Instance: var instance } && !services.Launcher.IsRunning(instance.InstanceId);
+
+    internal Task PlayInstalledAsync(string modId)
+        => InstalledWhere(modId) is { Instance: var instance } ? LaunchAsync(instance.InstanceId) : Task.CompletedTask;
+
+    private void LeaveInstalledWhereNotice(string modId, Guid instanceId)
+    {
+        _installedWhereNotices[modId] = instanceId;
+        RefreshInstallStepsNotice(modId);
+    }
+
+    /// <summary>The steps follow the records and the instances, and Play follows the launches.</summary>
+    private void RefreshInstalledWhereNotices()
+    {
+        foreach (var modId in _installedWhereNotices.Keys)
+            RefreshInstallStepsNotice(modId);
+    }
+
+    partial void OnIsLaunchingChanged(bool value) => RefreshInstalledWhereNotices();
 
     /// <summary>
     /// Keeps the install steps of a finished plan on the Discover row and the page of the
@@ -68,7 +130,9 @@ public partial class MainViewModel
 
     internal void DismissInstallStepsNotice(string modId)
     {
-        if (_installStepsNotices.Remove(modId))
+        var hadSteps = _installStepsNotices.Remove(modId);
+        var hadWhere = _installedWhereNotices.Remove(modId);
+        if (hadSteps || hadWhere)
             RefreshInstallStepsNotice(modId);
     }
 

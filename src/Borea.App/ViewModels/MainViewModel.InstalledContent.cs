@@ -229,7 +229,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
     public string? ChangedFilesText => Changes is { } changes ? MainViewModel.ChangedFilesText(changes) : null;
 
     /// <summary>A recorded folder the player changed names the files before it goes into the backups.</summary>
-    public string DeleteConfirmText => ChangedFilesText is { } files ? _owner.Localization.FormatGameSaveDeleteChanged(Name, files) : _owner.Localization.GameSaveDeleteConfirm;
+    public string DeleteConfirmText => Changes is { } changes ? _owner.Localization.FormatGameSaveDeleteChanged(Name, _owner.ShortChangedFilesText(changes)) : _owner.Localization.GameSaveDeleteConfirm;
 
     public UserContentPlan? PendingContentPlan { get; set; }
 

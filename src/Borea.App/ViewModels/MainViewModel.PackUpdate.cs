@@ -158,7 +158,7 @@ public partial class MainViewModel
             choices.BlockedText = result.CanRun ? null : BlockedText(result);
     }
 
-    private static string BlockedText(ModPackUpdateResult result)
+    private string BlockedText(ModPackUpdateResult result)
         => result.Plan is { } plan ? Describe(plan.Conflicts.Concat(plan.UnresolvedChoices)) : Describe(result.Warnings);
 
     /// <summary>Runs the update the notice holds, unless the plan with its choices asks something new, cannot run, or has a new warning.</summary>

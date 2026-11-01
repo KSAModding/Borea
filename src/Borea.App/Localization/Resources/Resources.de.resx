@@ -2073,6 +2073,9 @@
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
   </data>
+  <data name="ChangedFilesMoreFormat" xml:space="preserve">
+    <value>{0} und {1} weitere</value>
+  </data>
   <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
     <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Trotzdem löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
   </data>
@@ -3770,6 +3773,27 @@
   </data>
   <data name="InstallStepsDismiss" xml:space="preserve">
     <value>Ausblenden</value>
+  </data>
+  <data name="InstalledWhereFormat" xml:space="preserve">
+    <value>So findest du {0}</value>
+  </data>
+  <data name="InstalledStartFormat" xml:space="preserve">
+    <value>Starte das Spiel mit {0}.</value>
+  </data>
+  <data name="InstalledVehicleMenu" xml:space="preserve">
+    <value>Drücke Esc und wähle LAUNCH VEHICLE.</value>
+  </data>
+  <data name="InstalledVehiclePickFormat" xml:space="preserve">
+    <value>Wähle {0} unter Vehicle Save.</value>
+  </data>
+  <data name="InstalledSaveMenu" xml:space="preserve">
+    <value>Drücke Esc und wähle SAVE/LOAD.</value>
+  </data>
+  <data name="InstalledSavePickFormat" xml:space="preserve">
+    <value>Klicke doppelt auf {0}. Das Spiel fragt einmal nach, bevor es den Spielstand lädt.</value>
+  </data>
+  <data name="InstalledPlayFormat" xml:space="preserve">
+    <value>{0} spielen</value>
   </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Version {0} hat den Status {1}, den dein Release-Kanal nicht anbietet.</value>

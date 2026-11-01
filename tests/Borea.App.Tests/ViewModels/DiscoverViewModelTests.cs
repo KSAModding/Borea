@@ -654,13 +654,24 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task Install_Warning_StartsWithTheNameOfTheMod()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var (_, item) = await ActivateMainAndFindTheAfcRowAsync(harness);
+
+        await item.InstallCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Advanced Flight Computer: ", item.InstallWarning, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Install_WarningCancelled_InstallsNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var (instance, item) = await ActivateMainAndFindTheAfcRowAsync(harness);
 
         await item.InstallCommand.ExecuteAsync(null);
-        Assert.Contains("AdvancedFlightComputer", item.InstallWarning);
+        Assert.NotNull(item.InstallWarning);
         Assert.NotNull(item.PendingPlan);
 
         item.CancelInstallCommand.Execute(null);

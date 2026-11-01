@@ -122,6 +122,7 @@ public partial class MainViewModel
         async Task WatchAsync()
         {
             await services.SharedModStore.WaitForGameExitAsync(instanceId);
+            RefreshInstalledWhereNotices();
             StartModStoreCheck(instanceId);
             await _modStoreCheck;
         }

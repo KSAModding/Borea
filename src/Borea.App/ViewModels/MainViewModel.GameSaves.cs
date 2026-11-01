@@ -351,7 +351,12 @@ public partial class MainViewModel
         if (RenamingGameSave == item)
             RenamingGameSave = null;
         ShowSuccessToast(() => Localization.FormatGameSaveRenamed(item.Name, name));
-        await LoadGameSavesAsync(item.Section);
+
+        // the steps of a new vehicle or save read the folder name from the records of the instance row
+        if (item.Record is not null)
+            await ReloadInstancesAsync();
+        else
+            await LoadGameSavesAsync(item.Section);
     }
 
     /// <summary>Null when the item has the new name.</summary>

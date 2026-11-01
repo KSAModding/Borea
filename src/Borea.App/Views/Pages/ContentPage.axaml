@@ -119,7 +119,7 @@
                             <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingInstall}">
                                 <TextBlock Classes="body-sm" Text="{Binding SelectedContent.LinkRequestText}" IsVisible="{Binding SelectedContent.LinkRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.AddedModsText}" ToolTip.Tip="{Binding SelectedContent.AddedModsToolTip}" IsVisible="{Binding SelectedContent.AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.InstallWarning}" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding SelectedContent.InstallWarning}" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <Button Classes="text primary" Content="{Binding SelectedContent.ConfirmInstallText}" Command="{Binding SelectedContent.ConfirmInstallCommand}" IsEnabled="{Binding SelectedContent.Choices.IsComplete, FallbackValue={x:True}}" />
                                 <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelInstallCommand}" />
                             </WrapPanel>
@@ -141,16 +141,26 @@
                                 <TextBlock Classes="label-md" Text="{Binding SelectedContent.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </WrapPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                            <!-- what the author still asks for after an install, until the player dismisses it -->
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
+                            <!-- what the author still asks for after an install and where a new vehicle or save is in the game, until the player dismisses it -->
+                            <StackPanel Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
                                 <ItemsControl ItemsSource="{Binding SelectedContent.InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
-                                <Button Grid.Column="1" Classes="text" VerticalAlignment="Top" Content="{Binding Localization.InstallStepsDismiss}" Command="{Binding SelectedContent.DismissInstallStepsNoticeCommand}" />
-                            </Grid>
+                                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                    <ContentControl Content="{Binding SelectedContent.InstalledPlayRow}" ContentTemplate="{StaticResource InstalledPlayButton}" />
+                                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.InstallStepsDismiss}" Command="{Binding SelectedContent.DismissInstallStepsNoticeCommand}" />
+                                </WrapPanel>
+                            </StackPanel>
                         </StackPanel>
                         <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Top">
                             <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
                             <Panel VerticalAlignment="Center" IsVisible="{Binding CanActOnSelectedContent}">
-                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" IsEnabled="{Binding CanAddToActiveInstance}" ToolTip.Tip="{Binding AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding AddToText}">
+                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsEnabled="{Binding CanAddToActiveInstance}" ToolTip.Tip="{Binding AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding AddToText}">
+                                    <!-- the confirmation holds the action while it is open, so the page does not show Add twice -->
+                                    <Button.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="SelectedContent.CanInstall" />
+                                            <Binding Path="!SelectedContent.IsConfirmingInstall" />
+                                        </MultiBinding>
+                                    </Button.IsVisible>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
                                         <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
@@ -604,7 +614,7 @@
                                                         <ItemsControl ItemsSource="{Binding PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!PlanSteps.Count}" />
                                                         <WrapPanel ItemSpacing="8" LineSpacing="8">
                                                             <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                                            <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                            <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                                             <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                                         </WrapPanel>

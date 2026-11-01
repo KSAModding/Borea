@@ -471,6 +471,7 @@ public partial class MainViewModel
         }
         foreach (var release in _contentReleases)
             release.RefreshInstalled(ActiveInstance);
+        RefreshInstalledWhereNotices();
         elsewhereChanged |= RefreshPackInstalledFlags();
         RefreshContentDependencies();
 
@@ -1048,6 +1049,13 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     public bool HasInstallStepsNotice => InstallStepsNotice.Count > 0;
 
+    public string? InstalledPlayText => _owner.InstalledPlayText(ModId);
+
+    /// <summary>This row while it offers Play, which builds the button, or null.</summary>
+    public DiscoverItem? InstalledPlayRow => InstalledPlayText is null ? null : this;
+
+    public bool CanPlayInstalled => _owner.CanPlayInstalled(ModId);
+
     /// <summary>The install steps of the listing, for the Description tab.</summary>
     public StepList? InstallSteps => MainViewModel.Steps(_owner.Localization.ContentInstallSteps, _listing.Install?.Steps);
 
@@ -1185,6 +1193,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
         OnPropertyChanged(nameof(AddedModsToolTip));
         OnPropertyChanged(nameof(PlanSteps));
         OnPropertyChanged(nameof(InstallStepsNotice));
+        OnPropertyChanged(nameof(InstalledPlayText));
         OnPropertyChanged(nameof(InstallSteps));
         OnPropertyChanged(nameof(UninstallSteps));
         OnPropertyChanged(nameof(RemoveSteps));
@@ -1198,6 +1207,9 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     {
         OnPropertyChanged(nameof(InstallStepsNotice));
         OnPropertyChanged(nameof(HasInstallStepsNotice));
+        OnPropertyChanged(nameof(InstalledPlayText));
+        OnPropertyChanged(nameof(InstalledPlayRow));
+        OnPropertyChanged(nameof(CanPlayInstalled));
     }
 
     internal void ShowLinkRequest(Func<string>? request)
@@ -1238,6 +1250,9 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     [RelayCommand]
     private void DismissInstallStepsNotice() => _owner.DismissInstallStepsNotice(ModId);
+
+    [RelayCommand]
+    private Task PlayInstalledAsync() => _owner.PlayInstalledAsync(ModId);
 
     [RelayCommand(CanExecute = nameof(CanRemove))]
     private void BeginRemove()
