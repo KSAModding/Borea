@@ -105,7 +105,7 @@ public sealed class InstanceTablesTests
     }
 
     [Fact]
-    public async Task RecordedVehicle_TheUpdateLinkStandsInTheListingLine_AndAPlanShowsNoButtonWithoutARun()
+    public async Task RecordedVehicle_TheUpdateButtonStandsInTheListingLine_AndAPlanShowsNoButtonWithoutARun()
     {
         using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
         await UserContentViewModelTests.ActiveInstanceWithRoverAsync(harness);
@@ -115,12 +115,14 @@ public sealed class InstanceTablesTests
 
         var (inListingLine, iconButtons, indeterminate) = await OnInstancePageAsync(harness, 860, page =>
         {
-            var link = page.GetVisualDescendants().OfType<Button>().Single(button => button.Command == row.UpdateCommand);
-            var inLine = link.IsEffectivelyVisible && link.GetVisualAncestors().OfType<WrapPanel>().Any();
+            var button = page.GetVisualDescendants().OfType<Button>().Single(candidate => candidate.Command == row.UpdateCommand);
+            var inLine = button.IsEffectivelyVisible && button.Classes.Contains("icon") && button.GetVisualAncestors().OfType<WrapPanel>().Any();
+            var newer = page.GetVisualDescendants().OfType<TextBlock>().Single(text => text.DataContext == row && text.Text == row.NewerText);
+            var saidNewerBefore = newer.IsEffectivelyVisible;
             row.IsInstalling = true;
             page.UpdateLayout();
-            var icons = page.GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible && button.DataContext == row && button.Classes.Contains("icon"));
-            return (inLine, icons, page.GetVisualDescendants().OfType<ProgressBar>().Single(bar => bar.IsEffectivelyVisible && bar.DataContext == row).IsIndeterminate);
+            var icons = page.GetVisualDescendants().OfType<Button>().Count(candidate => candidate.IsEffectivelyVisible && candidate.DataContext == row && candidate.Classes.Contains("icon"));
+            return (inLine && saidNewerBefore && !newer.IsEffectivelyVisible, icons, page.GetVisualDescendants().OfType<ProgressBar>().Single(bar => bar.IsEffectivelyVisible && bar.DataContext == row).IsIndeterminate);
         });
 
         Assert.True(inListingLine);
