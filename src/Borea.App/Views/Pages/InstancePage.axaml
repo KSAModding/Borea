@@ -114,7 +114,18 @@
                             <Border Classes="chip muted" VerticalAlignment="Center" IsVisible="{Binding SharedOnText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SharedOnText}" AutomationProperties.Name="{Binding SharedOnText}">
                                 <TextBlock Text="{Binding SharedOnText}" />
                             </Border>
-                            <TextBlock Classes="body-sm secondary" Text="{Binding NewerText}" VerticalAlignment="Center" IsVisible="{Binding NewerText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <!-- the link stays in this line, because in the shared actions column its width would come out of the name of every row -->
+                            <Button Classes="link" Margin="-8,0,0,0" VerticalAlignment="Center" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanChangeContent}" ToolTip.Tip="{Binding UpdateText}">
+                                <TextBlock Classes="action-md" Text="{Binding UpdateText}" MaxWidth="240" TextTrimming="CharacterEllipsis" />
+                            </Button>
+                            <TextBlock Classes="body-sm secondary" Text="{Binding NewerText}" VerticalAlignment="Center">
+                                <TextBlock.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="NewerText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                        <Binding Path="!CanUpdate" />
+                                    </MultiBinding>
+                                </TextBlock.IsVisible>
+                            </TextBlock>
                             <Border Classes="chip untested" VerticalAlignment="Center" IsVisible="{Binding IsChanged}" ToolTip.Tip="{Binding ChangedFilesText}">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <Ellipse />
@@ -141,11 +152,24 @@
                     </StackPanel>
                     <TextBlock Grid.Column="5" Classes="label-md" Margin="24,0,0,0" Text="{Binding SizeText}" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                            <!-- a plan has no run yet, so it shows no progress and nothing to pause or stop -->
+                            <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" IsIndeterminate="{Binding Run, Converter={x:Static ObjectConverters.IsNull}}" Foreground="{StaticResource Brush.Accent}" />
+                            <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:False}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
+                                <Panel>
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
+                                    <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
+                                </Panel>
+                            </Button>
+                            <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:False}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            </Button>
+                            <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                        </StackPanel>
                         <Button Classes="text" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShare}" Command="{Binding ShareCommand}" IsVisible="{Binding ShowsShareButton}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShareTip}" />
                         <Button Classes="icon" IsVisible="{Binding IsIdle}" AutomationProperties.Name="{Binding Name}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                    <MenuItem Header="{Binding UpdateText}" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveBackUp}" Command="{Binding BackUpCommand}" />
                                     <!-- only once the index accepts the type, see GameSaveSection.CanShare -->
@@ -172,7 +196,7 @@
                             </ComboBox>
                         </StackPanel>
                         <Panel Grid.Column="1" Margin="0,4,0,0" VerticalAlignment="Bottom">
-                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingInstall}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingInstall}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanChangeContent}">
                                 <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" />
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                             </StackPanel>

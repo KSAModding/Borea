@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Net;
+using System.Text.RegularExpressions;
 using Borea.App.ViewModels;
 using Borea.Core.Index;
 using Borea.Core.Instances;
@@ -743,6 +745,278 @@ public sealed class UserContentViewModelTests
     }
 
     [Fact]
+    public async Task InstancePage_NewerVehicle_CountsInTheHints_UntilItsUpdateEndsWithAToast()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        await ActiveInstanceWithRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        Assert.True(viewModel.HasUpdates);
+        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+
+        await row.UpdateCommand.ExecuteAsync(null);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.False(viewModel.HasUpdates);
+        Assert.Equal(0, viewModel.ActiveInstanceUpdateCount);
+        Assert.Equal(harness.Localization.FormatToastUpdated("Example Rover", "1.1.0", "Main"), Assert.Single(viewModel.Toasts.Items).Message);
+    }
+
+    [Fact]
+    public async Task Home_RecordedVehicleWhoseFolderIsGone_DoesNotCount()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceWithRoverAsync(harness);
+        Directory.Delete(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover"), recursive: true);
+
+        await viewModel.LoadAsync();
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.Equal(0, viewModel.ActiveInstanceUpdateCount);
+    }
+
+    [Fact]
+    public async Task UpdateAll_OnlyVehicles_UpdatesEachWithItsToast()
+    {
+        using var harness = await TwoRoversOnAKnownGameAsync();
+        var viewModel = harness.ViewModel;
+        var instance = viewModel.ActiveInstance!;
+        await instance.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.UpdateAll!.ProgressStatus);
+        Assert.Equal(["1.1.0", "1.1.0"], (await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Select(record => record.Version.ToString()));
+        Assert.Equal(
+            [harness.Localization.FormatToastUpdated("Alpha Rover", "1.1.0", instance.Name), harness.Localization.FormatToastUpdated("Example Rover", "1.1.0", instance.Name)],
+            viewModel.Toasts.Items.Select(toast => toast.Message));
+        Assert.False(viewModel.HasUpdates);
+    }
+
+    [Fact]
+    public async Task UpdateAll_ChangedVehicle_WaitsOnItsRowWhileTheOtherUpdates()
+    {
+        using var harness = await TwoRoversOnAKnownGameAsync();
+        var viewModel = harness.ViewModel;
+        var instance = viewModel.ActiveInstance!;
+        var file = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Alpha Rover", "vehicle.xml");
+        File.WriteAllText(file, "<Vehicle edited=\"yes\" />");
+        await instance.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null);
+
+        var waiting = viewModel.VehiclesSection.Items.Single(row => row.FolderName == "Alpha Rover");
+        Assert.True(waiting.IsConfirmingInstall);
+        Assert.Equal("<Vehicle edited=\"yes\" />", File.ReadAllText(file));
+        Assert.Equal(ModVersion.Parse("1.1.0"), viewModel.VehiclesSection.Items.Single(row => row.FolderName == "Example Rover").Record!.Version);
+
+        await waiting.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Equal("<Vehicle />", File.ReadAllText(file));
+    }
+
+    [Fact]
+    public async Task UpdateAll_RefusedVehicle_KeepsItsErrorWhileTheOtherUpdates()
+    {
+        using var harness = await TwoRoversOnAKnownGameAsync(alphaDependencies: $$"""{ "id": "{{ViewModelHarness.FakeSpaceDock.OwnId}}", "kind": "conflict", "source": "authored" }""");
+        var viewModel = harness.ViewModel;
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null);
+
+        Assert.NotNull(viewModel.VehiclesSection.Items.Single(row => row.FolderName == "Alpha Rover").InstallError);
+        Assert.Equal(ModVersion.Parse("1.1.0"), viewModel.VehiclesSection.Items.Single(row => row.FolderName == "Example Rover").Record!.Version);
+    }
+
+    [Fact]
+    public async Task UpdateAll_ModsAndAVehicle_TheModalNamesBoth_AndTheGoUpdatesTheVehicleAfterTheMods()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: request => ModAndRoverDownload(request), typeFiles: ModAndRoverTypeFiles());
+        var viewModel = harness.ViewModel;
+        var instance = await ModAndRoverAsync(harness);
+        var updateAll = viewModel.UpdateAll!;
+
+        await updateAll.UpdateCommand.ExecuteAsync(null);
+
+        Assert.True(updateAll.IsConfirmingUpdate);
+        var change = Assert.Single(updateAll.RecordedChanges);
+        Assert.Equal("Example Rover 1.0.0 1.1.0", $"{change.Name} {change.FromVersion} {change.ToVersion}");
+        Assert.Equal(harness.Localization.FormatUpdateAllTitleWithRecorded(instance.Name), updateAll.TitleText);
+        Assert.Equal(harness.Localization.UpdateAnyway, updateAll.ConfirmUpdateText);
+        Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+
+        await updateAll.ConfirmUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).Version);
+        await Assert.Single(viewModel.VehiclesSection.Items).ConfirmInstallCommand.ExecuteAsync(null);
+        Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+    }
+
+    [Fact]
+    public async Task UpdateAll_StopDuringTheMods_LeavesTheVehicleAlone()
+    {
+        var reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.Host == "archives.test" ? Stalled(reading) : ModAndRoverDownload(request),
+            typeFiles: ModAndRoverTypeFiles());
+        var viewModel = harness.ViewModel;
+        var instance = await ModAndRoverAsync(harness);
+        var updateAll = viewModel.UpdateAll!;
+        await updateAll.UpdateCommand.ExecuteAsync(null);
+
+        var update = updateAll.ConfirmUpdateCommand.ExecuteAsync(null);
+        await reading.Task.WaitAsync(GateTimeout);
+        updateAll.Run!.StopCommand.Execute(null);
+        await update.WaitAsync(GateTimeout);
+
+        Assert.NotNull(viewModel.UpdateAll!.ProgressStatus);
+        Assert.False(Assert.Single(viewModel.VehiclesSection.Items).IsConfirmingInstall);
+        Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+    }
+
+    [Fact]
+    public async Task UpdateAll_RecordedSave_CountsOnHomeAndUpdates()
+    {
+        var first = SaveArchive("<Universe />");
+        var second = SaveArchive("<Universe version=\"2\" />");
+        var served = first;
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri == SaveUrl ? ArchiveResponse(served) : null,
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Saves, SaveEntry(("1.0.0", first), ("2.0.0", second))));
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceAsync(harness);
+        Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, (await harness.Services.UserContent.GetReleaseAsync("CampaignSave", ModVersion.Parse("1.0.0")))!, name: null)).IsDone);
+        served = second;
+        await viewModel.LoadAsync();
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null);
+        await Assert.Single(viewModel.SavesSection.Items).ConfirmInstallCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.Equal(ModVersion.Parse("2.0.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+        Assert.Equal(0, viewModel.ActiveInstanceUpdateCount);
+    }
+
+    [Fact]
+    public async Task Hints_LeaveOutAReleaseThatAPlanCannotPick_AndOfferTheNewestThatItCan()
+    {
+        const string BetaRelease = "\"id\": \"AlphaRover\", \"type\": \"vehicle\", \"version\": \"1.3.0\", \"version_scheme\": \"semver\", \"release_status\": \"stable\"";
+        using var harness = await TwoRoversOnAKnownGameAsync(
+            alphaVersions: ["1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0"],
+            editEntries: entries => DownloadIsGone(NeedsANewerGame(NeedsANewerGame(entries, "AlphaRover", "1.4.0"), "ExampleRover", "1.1.0"), "AlphaRover", "1.2.0")
+                .Replace(BetaRelease, BetaRelease.Replace("stable", "beta", StringComparison.Ordinal), StringComparison.Ordinal));
+        var viewModel = harness.ViewModel;
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(ModVersion.Parse("1.1.0"), RoverRow(viewModel, "Alpha Rover").NewerRelease!.Version);
+        Assert.Null(RoverRow(viewModel, "Example Rover").NewerRelease);
+    }
+
+    [Fact]
+    public async Task UpdateOfARow_HoldsTheSlot_SoAReopenKeepsTheRowAndUpdateAllStartsNoSecondRun()
+    {
+        var reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stall = false;
+        using var harness = await TwoRoversOnAKnownGameAsync(holdDownload: url => stall && url == AlphaUrl ? Stalled(reading) : null);
+        var viewModel = harness.ViewModel;
+        var instance = viewModel.ActiveInstance!;
+        await instance.OpenCommand.ExecuteAsync(null);
+        var alpha = RoverRow(viewModel, "Alpha Rover");
+        stall = true;
+
+        var update = alpha.UpdateCommand.ExecuteAsync(null);
+        await reading.Task.WaitAsync(GateTimeout);
+        Assert.False(viewModel.CanChangeContent);
+        await viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null).WaitAsync(GateTimeout);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Same(alpha, RoverRow(viewModel, "Alpha Rover"));
+        Assert.False(alpha.CanUpdate);
+        alpha.Run!.StopCommand.Execute(null);
+        await update.WaitAsync(GateTimeout);
+
+        Assert.True(viewModel.CanChangeContent);
+        Assert.True(RoverRow(viewModel, "Alpha Rover").CanUpdate);
+        Assert.Equal(["1.0.0", "1.0.0"], (await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Select(record => record.Version.ToString()));
+    }
+
+    [Fact]
+    public async Task UpdateAll_TheGoOfAWaitingRowWaitsForTheRun_AndAStopAsksNothingMore()
+    {
+        var reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stall = false;
+        using var harness = await TwoRoversOnAKnownGameAsync(holdDownload: url => stall && url == RoverUrl ? Stalled(reading) : null);
+        var viewModel = harness.ViewModel;
+        var instance = viewModel.ActiveInstance!;
+        var file = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Alpha Rover", "vehicle.xml");
+        File.WriteAllText(file, "<Vehicle edited=\"yes\" />");
+        await instance.OpenCommand.ExecuteAsync(null);
+        stall = true;
+
+        var all = viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null);
+        await reading.Task.WaitAsync(GateTimeout);
+        var waiting = RoverRow(viewModel, "Alpha Rover");
+        Assert.True(waiting.IsConfirmingInstall);
+        await waiting.ConfirmInstallCommand.ExecuteAsync(null).WaitAsync(GateTimeout);
+        RoverRow(viewModel, "Example Rover").Run!.StopCommand.Execute(null);
+        await all.WaitAsync(GateTimeout);
+
+        Assert.Equal("<Vehicle edited=\"yes\" />", File.ReadAllText(file));
+        Assert.False(RoverRow(viewModel, "Alpha Rover").IsConfirmingInstall);
+    }
+
+    [Fact]
+    public async Task UpdateAll_StopOnARow_LeavesTheNextRowAlone()
+    {
+        var reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stall = false;
+        using var harness = await TwoRoversOnAKnownGameAsync(holdDownload: url => stall && url == AlphaUrl ? Stalled(reading) : null);
+        var viewModel = harness.ViewModel;
+        var instance = viewModel.ActiveInstance!;
+        await instance.OpenCommand.ExecuteAsync(null);
+        stall = true;
+
+        var all = viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null);
+        await reading.Task.WaitAsync(GateTimeout);
+        var running = RoverRow(viewModel, "Alpha Rover");
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        Assert.Same(running, RoverRow(viewModel, "Alpha Rover"));
+        running.Run!.StopCommand.Execute(null);
+        await all.WaitAsync(GateTimeout);
+
+        Assert.Equal(["1.0.0", "1.0.0"], (await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Select(record => record.Version.ToString()));
+    }
+
+    [Fact]
+    public async Task UpdateAll_WhileARowWaits_AnotherClickAsksAgain()
+    {
+        using var harness = await TwoRoversOnAKnownGameAsync();
+        var viewModel = harness.ViewModel;
+        var instance = viewModel.ActiveInstance!;
+        var file = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Alpha Rover", "vehicle.xml");
+        File.WriteAllText(file, "<Vehicle edited=\"yes\" />");
+        await instance.OpenCommand.ExecuteAsync(null);
+        await viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null);
+        Assert.True(RoverRow(viewModel, "Alpha Rover").IsConfirmingInstall);
+
+        await viewModel.UpdateAll!.UpdateCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.UpdateAll!.ProgressStatus);
+        Assert.True(RoverRow(viewModel, "Alpha Rover").IsConfirmingInstall);
+        Assert.Equal("<Vehicle edited=\"yes\" />", File.ReadAllText(file));
+    }
+
+    [Fact]
     public async Task InstancePage_UpdateOfAChangedVehicle_NamesTheFiles_AndTheGoReplacesIt()
     {
         using var harness = await VehicleHarnessAsync();
@@ -862,6 +1136,74 @@ public sealed class UserContentViewModelTests
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.EnsureDiscoverLoadedAsync();
         return instance;
+    }
+
+    private const string AlphaUrl = "https://example.test/alpha.zip";
+
+    private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(30);
+
+    private static GameSaveItem RoverRow(MainViewModel viewModel, string folder) => viewModel.VehiclesSection.Items.Single(row => row.FolderName == folder);
+
+    /// <summary>A download that sends nothing until its read is canceled, which a stop does.</summary>
+    private static HttpResponseMessage Stalled(TaskCompletionSource reading) =>
+        new(HttpStatusCode.OK) { Content = new StreamContent(new InstallStopTests.StalledBody(reading)) };
+
+    /// <summary>Makes one release of a fixture on a known game need a newer game than the fixture has.</summary>
+    private static string NeedsANewerGame(string entries, string id, string version) =>
+        Regex.Replace(entries, $"(\"id\": \"{id}\", \"type\": \"vehicle\", \"version\": \"{Regex.Escape(version)}\".*?\"game_min\": \")2026\\.8\\.3\\.5117(\", \"game_min_revision\": )5117", "${1}2026.8.19.5261${2}5261", RegexOptions.Singleline);
+
+    private static string DownloadIsGone(string entries, string id, string version) =>
+        Regex.Replace(entries, $"(\"id\": \"{id}\", \"type\": \"vehicle\", \"version\": \"{Regex.Escape(version)}\".*?\"download\": \\{{ )", "$1\"unavailable_since\": \"2026-09-23T10:24:00Z\", ", RegexOptions.Singleline);
+
+    /// <summary>One archive for the hash in the index and for its download, because each new archive has the time it was made.</summary>
+    private static readonly byte[] SharedRover = RoverArchive();
+
+    private static HttpResponseMessage? ModAndRoverDownload(HttpRequestMessage request) =>
+        request.RequestUri?.AbsoluteUri == RoverUrl ? ArchiveResponse(SharedRover) : ContentUpdateTests.ServeArchive(request);
+
+    private static Dictionary<string, string> ModAndRoverTypeFiles() =>
+        TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, SharedRover, "1.0.0", "1.1.0"));
+
+    /// <summary>Opens an active instance with a mod at 1.0.0 that has 1.1.0 on SpaceDock, and the recorded Example Rover 1.0.0.</summary>
+    private static async Task<Instance> ModAndRoverAsync(ViewModelHarness harness)
+    {
+        harness.SpaceDock.Releases.AddRange([ContentUpdateTests.Release("1.0.0"), ContentUpdateTests.Release("1.1.0")]);
+        var instance = await InstalledContent.AddAsync(harness, ViewModelHarness.FakeSpaceDock.OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        var release = (await harness.Services.UserContent.GetReleaseAsync("ExampleRover", ModVersion.Parse("1.0.0")))!;
+        Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, release, name: null)).IsDone);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        return instance;
+    }
+
+    /// <summary>An active instance with a mod from SpaceDock and the recorded Alpha Rover and Example Rover 1.0.0, each with 1.1.0 in the index. The game is known, so an update asks nothing by itself, and the later time of Alpha Rover puts its row first.</summary>
+    /// <param name="holdDownload">Answers the download of an address in place of the archive, when it gives a response.</param>
+    private static async Task<ViewModelHarness> TwoRoversOnAKnownGameAsync(string alphaDependencies = "", IReadOnlyList<string>? alphaVersions = null, Func<string, string>? editEntries = null, Func<string, HttpResponseMessage?>? holdDownload = null)
+    {
+        var alpha = Archive(("Alpha Rover/meta.toml", "name = \"Alpha Rover\"\nupdated = 2099-01-01T00:00:00\n"), ("Alpha Rover/vehicle.xml", "<Vehicle />"));
+        var rover = RoverArchive();
+        var entries = $"{EntryNeeding("AlphaRover", "vehicle", "Alpha Rover", AlphaUrl, alpha, alphaDependencies, alphaVersions ?? ["1.0.0", "1.1.0"])}, {Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0", "1.1.0")}";
+        var harness = await ViewModelHarness.CreateAsync(
+            seed: services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
+            },
+            respond: request => holdDownload?.Invoke(request.RequestUri?.AbsoluteUri ?? string.Empty) ?? request.RequestUri?.AbsoluteUri switch
+            {
+                AlphaUrl => ArchiveResponse(alpha),
+                RoverUrl => ArchiveResponse(rover),
+                _ => null,
+            },
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, (editEntries ?? (text => text))(entries.Replace("\"game_min\": \"2026.8.19.5261\", \"game_min_revision\": 5261", "\"game_min\": \"2026.8.3.5117\", \"game_min_revision\": 5117", StringComparison.Ordinal))));
+        harness.SpaceDock.Releases.Add(ContentUpdateTests.Release("1.0.0"));
+        var instance = await InstalledContent.AddAsync(harness, ViewModelHarness.FakeSpaceDock.OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        foreach (var id in new[] { "AlphaRover", "ExampleRover" })
+            Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, (await harness.Services.UserContent.GetReleaseAsync(id, ModVersion.Parse("1.0.0")))!, name: null)).IsDone);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+        return harness;
     }
 
     /// <summary>The vehicle Example Rover with releases 1.0.0 and 1.1.0, served, with 42 downloads.</summary>

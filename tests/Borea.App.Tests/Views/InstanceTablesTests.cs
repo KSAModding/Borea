@@ -105,6 +105,30 @@ public sealed class InstanceTablesTests
     }
 
     [Fact]
+    public async Task RecordedVehicle_TheUpdateLinkStandsInTheListingLine_AndAPlanShowsNoButtonWithoutARun()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        await UserContentViewModelTests.ActiveInstanceWithRoverAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+
+        var (inListingLine, iconButtons, indeterminate) = await OnInstancePageAsync(harness, 860, page =>
+        {
+            var link = page.GetVisualDescendants().OfType<Button>().Single(button => button.Command == row.UpdateCommand);
+            var inLine = link.IsEffectivelyVisible && link.GetVisualAncestors().OfType<WrapPanel>().Any();
+            row.IsInstalling = true;
+            page.UpdateLayout();
+            var icons = page.GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible && button.DataContext == row && button.Classes.Contains("icon"));
+            return (inLine, icons, page.GetVisualDescendants().OfType<ProgressBar>().Single(bar => bar.IsEffectivelyVisible && bar.DataContext == row).IsIndeterminate);
+        });
+
+        Assert.True(inListingLine);
+        Assert.Equal(0, iconButtons);
+        Assert.True(indeterminate);
+    }
+
+    [Fact]
     public async Task NoContent_OnAnInactiveInstance_OffersNoWayToDiscover()
     {
         using var harness = await TwoEmptyInstancesAsync(open: "Main");
