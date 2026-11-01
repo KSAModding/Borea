@@ -217,6 +217,7 @@
                             </Grid.ColumnDefinitions>
                             <share:ShareDescribeStep IsVisible="{Binding ListingEditor.IsShareDescribe}" />
                             <share:SharePublishStep IsVisible="{Binding ListingEditor.IsSharePublish}" />
+                            <share:ShareDoneStep IsVisible="{Binding ListingEditor.IsShareDone}" />
                         </Grid>
                     </StackPanel>
 

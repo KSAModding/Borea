@@ -3780,6 +3780,30 @@
   <data name="ShareOpenHostFormat" xml:space="preserve">
     <value>Open {0}</value>
   </data>
+  <data name="ShareDoneHeadingFormat" xml:space="preserve">
+    <value>{0} is published</value>
+  </data>
+  <data name="ShareDoneNow" xml:space="preserve">
+    <value>Everyone can download it now.</value>
+  </data>
+  <data name="ShareOpenPage" xml:space="preserve">
+    <value>Open page</value>
+  </data>
+  <data name="ShareDoneNewListing" xml:space="preserve">
+    <value>It shows up in Discover by itself, and this can take some hours. You do not need to do anything.</value>
+  </data>
+  <data name="ShareDoneNewListingLaterFormat" xml:space="preserve">
+    <value>It shows up in Discover later, because {0} could not send it there yet and tries again by itself. You do not need to do anything.</value>
+  </data>
+  <data name="ShareDoneNewVersion" xml:space="preserve">
+    <value>The new version shows up in Discover within some hours. You do not need to do anything.</value>
+  </data>
+  <data name="ShareTechnicalDetails" xml:space="preserve">
+    <value>Technical details</value>
+  </data>
+  <data name="ShareShowRequest" xml:space="preserve">
+    <value>Show the request on GitHub</value>
+  </data>
   <data name="ShareSignedInFormat" xml:space="preserve">
     <value>Signed in on {0}. Not you?</value>
   </data>

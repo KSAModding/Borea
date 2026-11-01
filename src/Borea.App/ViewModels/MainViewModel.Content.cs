@@ -716,7 +716,7 @@ public partial class MainViewModel
             ContentDetailError = error;
     }
 
-    private Task CopyShareLinkAsync(string? url)
+    internal Task CopyShareLinkAsync(string? url)
         => url is null ? Task.CompletedTask : CopyTextAsync(() => Task.FromResult(url), () => url, () => Localization.ContentLinkCopied);
 
     /// <param name="name">What the failure toast says could not be copied.</param>

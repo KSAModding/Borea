@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.Share.ShareDoneStep"
+             x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <Style Selector="Path.opened">
+            <Setter Property="RenderTransform" Value="rotate(180deg)" />
+        </Style>
+    </UserControl.Styles>
+    <Border Classes="card" Padding="24">
+        <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="Auto,8,*">
+                <Path Classes="icon" Data="{StaticResource Icon.CheckCircle}" Stroke="{StaticResource Brush.Positive}" VerticalAlignment="Top" />
+                <TextBlock Grid.Column="2" Classes="heading-md" Text="{Binding ListingEditor.ShareDoneHeadingText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Classes="body-md" Text="{Binding Localization.ShareDoneNow}" TextWrapping="Wrap" />
+            <WrapPanel ItemSpacing="12" LineSpacing="8" Margin="0,8,0,8">
+                <Button Classes="cta" Command="{Binding ListingEditor.OpenShareDonePageCommand}" ToolTip.Tip="{Binding ListingEditor.ShareDoneLink}">
+                    <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareDoneOpenText}" VerticalAlignment="Center" />
+                </Button>
+                <Button Classes="text" Content="{Binding Localization.ContentCopyLink}" Command="{Binding ListingEditor.CopyShareDoneLinkCommand}" VerticalAlignment="Center" />
+            </WrapPanel>
+            <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
+                <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" />
+            </Grid>
+            <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.ShareDoneDiscoverText}" TextWrapping="Wrap" />
+
+            <!-- the request is for those who follow it, and a player does not need it -->
+            <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.SharePullRequest, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.ToggleShareDetailsCommand}" AutomationProperties.Name="{Binding Localization.ShareTechnicalDetails}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareTechnicalDetails}" VerticalAlignment="Center" />
+                        <Path Classes="icon size-16" Classes.opened="{Binding ListingEditor.IsShareDetailsOpen}" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.OpenSharePullRequestCommand}" ToolTip.Tip="{Binding ListingEditor.SharePullRequest}" IsVisible="{Binding ListingEditor.IsShareDetailsOpen}">
+                    <TextBlock Classes="action-md" Text="{Binding Localization.ShareShowRequest}" />
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

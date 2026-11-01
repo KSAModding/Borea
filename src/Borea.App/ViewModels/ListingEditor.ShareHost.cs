@@ -35,6 +35,7 @@ public sealed partial class ListingEditor
     private ShareHost? _checkedHost;
     private IReadOnlyList<ShareCheck> _shareChecks = [];
     private (ShareHost Host, ShareUpload Upload, string? ListingId)? _shareUpload;
+    private (string Name, ShareHost Host, Uri? Page, bool IsNewVersion)? _sharePublished;
     private (string HostName, string Page, string? CompletePage, string Code)? _shareHostCode;
     private CancellationTokenSource? _publishRun;
     private CancellationTokenSource? _signInRun;
@@ -145,9 +146,6 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectedShareStatus))]
     private string _shareHostStatus = "stable";
-
-    [ObservableProperty]
-    private string? _shareHostOutcome;
 
     [ObservableProperty]
     private Uri? _sharePullRequest;
@@ -287,6 +285,10 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(SharePublicNoticeText));
         OnPropertyChanged(nameof(ShareUploadHost));
         OnPropertyChanged(nameof(ShareUploadRulesText));
+        OnPropertyChanged(nameof(ShareDoneHeadingText));
+        OnPropertyChanged(nameof(ShareDoneDiscoverText));
+        OnPropertyChanged(nameof(ShareDoneLink));
+        OnPropertyChanged(nameof(ShareDoneOpenText));
         RefreshShareErrorAction();
         RefreshShareHostCode();
     }
@@ -321,12 +323,12 @@ public sealed partial class ListingEditor
         _shareHostRun?.Cancel();
         _shareHostRun = null;
         _shareUpload = null;
+        _sharePublished = null;
         _shareHostCode = null;
         ShareHostProgress = null;
         ShareHostError = null;
         ShareHostFileDetail = null;
         ShareHostListingText = null;
-        ShareHostOutcome = null;
         SharePullRequest = null;
         IsShareDetailsOpen = false;
         IsEditingShareVersion = false;
@@ -533,15 +535,14 @@ public sealed partial class ListingEditor
                 return;
 
             _shareUpload = null;
-            RefreshShareRun();
+            _sharePublished = (ShareListingName, shared.Host, published.Page, listing is null);
             SharePullRequest = published.PullRequest;
+            IsShareDetailsOpen = false;
+            RefreshShareRun();
+            ShareFlowStep = ShareFlowStep.Done;
 
             // A publish without an id in its answer is a new version, which always has the id of the listing on the host.
             var id = published.Id ?? shared.ListingId!;
-            ShareHostOutcome = published.PullRequest is null
-                ? Localization.FormatListingShareHostReleased(id, published.Version)
-                : Localization.FormatListingShareHostPublished(id, published.Version);
-
             await services.SharedContent.RecordAsync(
                 new SharedContentEntry(share.Entry.Kind.ToContentType(), shared.Host.Key, shared.Host.Name, id, share.Entry.FolderName, published.Version, published.Page),
                 listing is null ? null : new SharedContentAuthor(listing.Authors, listing.License));
@@ -679,13 +680,6 @@ public sealed partial class ListingEditor
 
         ShareHostError = Localization.FormatListingShareHostOpenFailed(error);
         return false;
-    }
-
-    [RelayCommand]
-    private void OpenSharePullRequest()
-    {
-        if (SharePullRequest is { } url && _owner.OpenListingPage(url.AbsoluteUri) is { } error)
-            ShareHostError = Localization.FormatListingOpenFailed(error);
     }
 
     private void ShowShareChecks(IReadOnlyList<ShareCheck> checks)

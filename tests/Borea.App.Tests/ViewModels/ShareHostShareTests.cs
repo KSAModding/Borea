@@ -74,7 +74,8 @@ public sealed class ShareHostShareTests
         Assert.Equal(("ExampleRover", "Example Rover", "A six-wheel rover for the Moon.", "CC-BY-4.0"), (listing.Id, listing.Name, listing.Abstract, listing.License));
         Assert.Equal(["Maxi"], listing.Authors);
         Assert.Equal(new Uri("https://github.com/KSAModding/content-index/pull/250"), editor.SharePullRequest);
-        Assert.Equal(harness.Localization.FormatListingShareHostPublished("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.Equal([ListingStepState.Done, ListingStepState.Done, ListingStepState.Done, ListingStepState.Current], editor.ShareSteps.Select(step => step.State));
         Assert.Null(editor.ShareHostError);
     }
 
@@ -104,6 +105,89 @@ public sealed class ShareHostShareTests
         await row.ShareCommand.ExecuteAsync(null);
 
         Assert.Equal(("Maxi, Cairn", "CC-BY-4.0"), (editor.Authors, editor.License));
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.Null(editor.ShareDoneHeadingText);
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task DoneStep_SaysWhenDiscoverShowsIt(bool isNewVersion, bool hasRequest)
+    {
+        var host = new FakeHost { PullRequest = hasRequest ? new Uri("https://github.com/KSAModding/content-index/pull/250") : null };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: isNewVersion ? ListedRover : null), shareHostClient: host);
+        var editor = await PublishAsync(harness);
+
+        var text = harness.Localization;
+        Assert.Equal(text.FormatShareDoneHeading("Example Rover"), editor.ShareDoneHeadingText);
+        var expected = isNewVersion ? text.ShareDoneNewVersion : hasRequest ? text.ShareDoneNewListing : text.FormatShareDoneNewListingLater("ksamods.gg");
+        Assert.Equal(expected, editor.ShareDoneDiscoverText);
+    }
+
+    [Theory]
+    [InlineData("https://ksamods.gg/vehicles/ExampleRover", "https://ksamods.gg/vehicles/ExampleRover", true)]
+    [InlineData(null, "https://ksamods.gg/", false)]
+    public async Task DoneStep_LinksThePageInTheAnswer_ElseTheSiteOfTheHost(string? page, string link, bool isPage)
+    {
+        var host = new FakeHost { Page = page is null ? null : new Uri(page) };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await PublishAsync(harness);
+        var opened = new List<string>();
+        harness.ViewModel.OpenWithSystem = opened.Add;
+        var window = new UnexpectedErrorTests.FakeWindowServices();
+        harness.ViewModel.WindowServices = window;
+
+        editor.OpenShareDonePageCommand.Execute(null);
+        await editor.CopyShareDoneLinkCommand.ExecuteAsync(null);
+
+        Assert.Equal(isPage ? harness.Localization.ShareOpenPage : harness.Localization.FormatShareOpenHost("ksamods.gg"), editor.ShareDoneOpenText);
+        Assert.Equal(link, Assert.Single(opened));
+        Assert.Equal(link, window.CopiedText);
+    }
+
+    [Fact]
+    public async Task DoneStep_KeepsTheLink_WhenTheIndexComesBackAtTheNextOpen()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost(), indexOffline: true);
+        var editor = await ShareAsync(harness);
+
+        // Only the read of the page fails, so the hosts arrive while the page still has no index.
+        var reads = 0;
+        harness.IndexRequest = () =>
+        {
+            harness.IndexOffline = reads++ == 0;
+            return Task.CompletedTask;
+        };
+        await editor.RetryShareHostsCommand.ExecuteAsync(null);
+        FillRequiredFields(editor);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        await harness.ViewModel.OpenListingAsync();
+
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
+        Assert.Equal(harness.Localization.FormatShareDoneHeading("Example Rover"), editor.ShareDoneHeadingText);
+        Assert.NotNull(editor.ShareDoneLink);
+        Assert.NotNull(editor.SharePullRequest);
+    }
+
+    [Fact]
+    public async Task DoneStep_PageThatDoesNotOpen_SaysWhyUntilTheNextOneOpens()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await PublishAsync(harness);
+
+        harness.ViewModel.OpenWithSystem = _ => throw new Win32Exception("No browser.");
+        editor.OpenShareDonePageCommand.Execute(null);
+        Assert.Equal(harness.Localization.FormatListingShareHostOpenFailed("No browser."), editor.ShareHostError);
+
+        var opened = new List<string>();
+        harness.ViewModel.OpenWithSystem = opened.Add;
+        editor.OpenSharePullRequestCommand.Execute(null);
+        Assert.Null(editor.ShareHostError);
+        Assert.Equal("https://github.com/KSAModding/content-index/pull/250", Assert.Single(opened));
     }
 
     [Fact]
@@ -907,7 +991,7 @@ public sealed class ShareHostShareTests
 
         Assert.Equal((3, 2), (host.SignIns, host.Publishes.Count));
         Assert.All(host.Publishes, publish => Assert.Equal(("1.0.0", "stable"), (publish.Version, publish.Status)));
-        Assert.Equal(harness.Localization.FormatListingShareHostPublished("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
         Assert.Null(editor.ShareHostError);
         Assert.Equal(0, host.SignOuts);
     }
@@ -989,7 +1073,7 @@ public sealed class ShareHostShareTests
 
         Assert.Equal("ExampleRover", Assert.Single(host.Uploads).ListingId);
         Assert.Null(Assert.Single(host.Publishes).Listing);
-        Assert.Equal(harness.Localization.FormatListingShareHostReleased("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
+        Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
         Assert.Null(editor.SharePullRequest);
         Assert.Null(editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
@@ -998,7 +1082,7 @@ public sealed class ShareHostShareTests
     }
 
     [Fact]
-    public async Task NewVersionAnswerWithoutId_ShowsTheIdOfTheListing()
+    public async Task NewVersionAnswerWithoutId_RecordsTheIdOfTheListing()
     {
         var host = new FakeHost { PublishedId = null, PullRequest = null };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
@@ -1007,7 +1091,7 @@ public sealed class ShareHostShareTests
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatListingShareHostReleased("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
+        Assert.Equal("ExampleRover", Assert.Single(await harness.Services.SharedContent.ListAsync()).ListingId);
     }
 
     [Fact]
@@ -1384,6 +1468,22 @@ public sealed class ShareHostShareTests
     /// <summary>A harness whose index lists the rover of the instance on a share host, so a share of it is a new version.</summary>
     internal static Task<ViewModelHarness> ListedRoverHarnessAsync() =>
         ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost());
+
+    /// <summary>A share of a new listing that a host with a request has published.</summary>
+    internal static async Task<ViewModelHarness> PublishedHarnessAsync()
+    {
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        await PublishAsync(harness);
+        return harness;
+    }
+
+    private static async Task<ListingEditor> PublishAsync(ViewModelHarness harness)
+    {
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+        return editor;
+    }
 
     private static async Task<ListingEditor> ShareAsync(ViewModelHarness harness)
     {

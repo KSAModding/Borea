@@ -2141,6 +2141,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareCopyCode => Resources.ShareCopyCode;
 
+    public string ShareDoneNow => Resources.ShareDoneNow;
+
+    public string ShareOpenPage => Resources.ShareOpenPage;
+
+    public string ShareDoneNewListing => Resources.ShareDoneNewListing;
+
+    public string ShareDoneNewVersion => Resources.ShareDoneNewVersion;
+
+    public string ShareTechnicalDetails => Resources.ShareTechnicalDetails;
+
+    public string ShareShowRequest => Resources.ShareShowRequest;
+
     public string ShareVersionHint => Resources.ShareVersionHint;
 
     public string ShareVersionInvalid => Resources.ShareVersionInvalid;
@@ -3899,12 +3911,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingShareCheckFailed(string check, string message)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareCheckFailedFormat, check, message);
 
-    public string FormatListingShareHostPublished(string id, string version)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostPublishedFormat, id, version);
-
-    public string FormatListingShareHostReleased(string id, string version)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostReleasedFormat, id, version);
-
     public string FormatListingShareHostUnexpected(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostUnexpectedFormat, host);
 
@@ -3919,6 +3925,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatShareOpenHost(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareOpenHostFormat, host);
+
+    public string FormatShareDoneHeading(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareDoneHeadingFormat, name);
+
+    public string FormatShareDoneNewListingLater(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareDoneNewListingLaterFormat, host);
 
     public string FormatShareSignedIn(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareSignedInFormat, host);
