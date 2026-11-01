@@ -4803,6 +4803,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingStillMissing(string names)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingStillMissingFormat, names);
 
+    public string FormatShareFieldsToFix(string fields)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFieldsToFixFormat, fields);
+
     public string FormatListingDependencyNumber(int number)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingDependencyNumberFormat, number);
 

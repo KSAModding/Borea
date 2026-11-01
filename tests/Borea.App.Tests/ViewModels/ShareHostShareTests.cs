@@ -284,7 +284,9 @@ public sealed class ShareHostShareTests
         Assert.Null(editor.ShareNextReason);
         Assert.False(editor.CanContinueShare);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
-        Assert.Equal(harness.Localization.ShareOtherFields, editor.ShareHostError);
+        Assert.Equal(harness.Localization.FormatShareFieldsToFix(harness.Localization.LinkHomepage), editor.ShareOtherFieldsText);
+        Assert.True(editor.IsShareMoreOptionsOpen);
+        Assert.Equal(editor.ShareOtherFieldsText, editor.ShareHostError);
         Assert.Equal((0, 0), (host.SignIns, host.Uploads.Count));
 
         editor.EditAllShareFieldsCommand.Execute(null);
@@ -295,6 +297,20 @@ public sealed class ShareHostShareTests
         Assert.True(editor.IsShareStep);
         Assert.Equal(("https://example.test/rover", "Maxi"), (editor.Homepage, editor.Authors));
         Assert.True(editor.CanContinueShare);
+    }
+
+    [Fact]
+    public async Task ErrorWithNoLabel_NamesItsSection_AndNeverItsPath()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+
+        editor.ShowShareOtherFields([new ListingIssue(ListingIssueSeverity.Error, "provides.launch", "Is odd.")]);
+        Assert.Equal(harness.Localization.FormatShareFieldsToFix(harness.Localization.ListingAbout), editor.ShareOtherFieldsText);
+
+        // A share has no status section, so this issue has neither a label nor a section to name.
+        editor.ShowShareOtherFields([new ListingIssue(ListingIssueSeverity.Error, "status.reason", "Is odd.")]);
+        Assert.Equal(harness.Localization.ShareOtherFields, editor.ShareOtherFieldsText);
     }
 
     [Theory]
@@ -316,7 +332,7 @@ public sealed class ShareHostShareTests
         Assert.True(editor.HasShareOtherFields);
         Assert.False(editor.CanContinueShare);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
-        Assert.Equal(harness.Localization.ShareOtherFields, editor.ShareHostError);
+        Assert.Equal(harness.Localization.FormatShareFieldsToFix(harness.Localization.FormatListingDependencyNumber(2)), editor.ShareHostError);
         Assert.Empty(host.Uploads);
     }
 
@@ -334,7 +350,7 @@ public sealed class ShareHostShareTests
         editor.Homepage = "not a link";
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.ShareOtherFields, editor.ShareHostError);
+        Assert.Equal(harness.Localization.FormatShareFieldsToFix(harness.Localization.LinkHomepage), editor.ShareHostError);
         Assert.Empty(host.Publishes);
     }
 

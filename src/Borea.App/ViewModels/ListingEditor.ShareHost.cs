@@ -376,7 +376,7 @@ public sealed partial class ListingEditor
         _checkedHost = host;
         if (Errors.Any(StopsTheUpload))
         {
-            ShareHostError = Localization.ShareOtherFields;
+            ShareHostError = ShareOtherFieldsText ?? Localization.ShareOtherFields;
             return;
         }
 
@@ -534,7 +534,7 @@ public sealed partial class ListingEditor
         var listing = shared.ListingId is null ? Draft : null;
         if (listing is not null && !CanOpenPullRequest)
         {
-            ShareHostError = Localization.ShareOtherFields;
+            ShareHostError = ShareOtherFieldsText ?? Localization.ShareOtherFields;
             return;
         }
 

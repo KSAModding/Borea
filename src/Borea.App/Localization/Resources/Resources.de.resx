@@ -3738,6 +3738,9 @@
   <data name="ShareOtherFields" xml:space="preserve">
     <value>Einige Felder außerhalb dieses Schritts müssen korrigiert werden.</value>
   </data>
+  <data name="ShareFieldsToFixFormat" xml:space="preserve">
+    <value>Korrigiere zuerst: {0}.</value>
+  </data>
   <data name="ShareEditAll" xml:space="preserve">
     <value>Alle Felder bearbeiten</value>
   </data>

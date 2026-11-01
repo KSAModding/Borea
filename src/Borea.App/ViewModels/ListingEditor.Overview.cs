@@ -219,7 +219,7 @@ public sealed partial class ListingEditor
         };
     }
 
-    private string Line(ListingIssue issue) => LabelOf(issue.Location) is { } label ? $"{label}: {issue.Message}" : issue.Message;
+    private string Line(ListingIssue issue) => (LabelOf(issue.Location) ?? issue.Location) is { Length: > 0 } label ? $"{label}: {issue.Message}" : issue.Message;
 
     private string? LabelOf(string location)
     {
@@ -234,7 +234,6 @@ public sealed partial class ListingEditor
 
         return location switch
         {
-            "" => null,
             "id" => Localization.ListingId,
             "name" => Localization.ListingName,
             "authors" => Localization.ListingAuthors,
@@ -267,7 +266,7 @@ public sealed partial class ListingEditor
             "released_at" => Localization.ListingReleasedAt,
             "changelog" => Localization.ListingChangelog,
             "mods" => Localization.ListingMembers,
-            _ => location,
+            _ => null,
         };
     }
 
