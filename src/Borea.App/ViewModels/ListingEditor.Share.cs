@@ -51,7 +51,7 @@ public sealed partial class ListingEditor
     public bool HasShareExtraFiles => ShareExtraFiles.Count > 0;
 
     public string? ShareArchiveText => _savedArchive is { } saved
-        ? Localization.FormatListingShareArchiveSaved(saved.File, saved.Archive.Sha256, saved.Archive.Size)
+        ? Localization.FormatListingShareArchiveSaved(saved.File, saved.Archive.Sha256, MainViewModel.SizeText(saved.Archive.Size))
         : null;
 
     /// <summary>Opens the share steps on a new document of the type, named after meta.toml, with the proposed dependencies. It carries no game_min, which the index takes from the archive.</summary>

@@ -271,6 +271,7 @@
                                 <!-- the archive, which the player attaches to a release of their own -->
                                 <StackPanel Spacing="8" Margin="0,8,0,0">
                                     <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareArchiveHeading}" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingShareArchiveIntro}" TextWrapping="Wrap" />
                                     <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingShareArchiveHint}" TextWrapping="Wrap" />
                                     <Button Classes="text" Content="{Binding Localization.ListingShareSaveArchive}" Command="{Binding ListingEditor.SaveShareArchiveCommand}" HorizontalAlignment="Left" />
                                     <SelectableTextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareArchiveText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareArchiveText, Converter={x:Static ObjectConverters.IsNotNull}}" />

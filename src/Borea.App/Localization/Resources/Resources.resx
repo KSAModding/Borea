@@ -3582,6 +3582,12 @@
   <data name="ShareCheckHintFormat" xml:space="preserve">
     <value>Nothing is published yet. {0} checks the file first.</value>
   </data>
+  <data name="ShareSaveZipInstead" xml:space="preserve">
+    <value>Save a zip file instead</value>
+  </data>
+  <data name="ShareSaveZipInsteadHint" xml:space="preserve">
+    <value>Nothing is published. Nobody can find it in Discover.</value>
+  </data>
   <data name="ShareWaitingForApproval" xml:space="preserve">
     <value>Waiting for you to approve in the browser...</value>
   </data>
@@ -3661,22 +3667,25 @@
     <value>Borea read the file and proposed one required dependency for each mod of this instance that defines a part, substance, character or body that the file names. Check the list: remove what the file does not need, and add a mod that only changes how parts behave as recommends.</value>
   </data>
   <data name="ListingShareArchiveHeading" xml:space="preserve">
-    <value>Save the archive</value>
+    <value>Share without a sharing site</value>
+  </data>
+  <data name="ListingShareArchiveIntro" xml:space="preserve">
+    <value>For authors who host the file themselves. You upload the zip file as a release in your own GitHub repository and list it in the index yourself.</value>
   </data>
   <data name="ListingShareArchiveHint" xml:space="preserve">
-    <value>Attach the saved archive to a release of your own, and name that release under Releases.</value>
+    <value>Attach the zip file to a release in your own repository, and enter that release under Releases.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
     <value>The game does not write these files, so a mod did. Add the mod that writes them:</value>
   </data>
   <data name="ListingShareSaveArchive" xml:space="preserve">
-    <value>Save archive</value>
+    <value>Save zip file</value>
   </data>
   <data name="ListingShareArchiveFileType" xml:space="preserve">
     <value>Zip archive</value>
   </data>
   <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
-    <value>Saved {0}. SHA-256 {1}, {2} bytes.</value>
+    <value>Saved {0} ({2}). Checksum (SHA-256): {1}</value>
   </data>
   <data name="ListingShareHostHint" xml:space="preserve">
     <value>A share host keeps the archive and opens the listing pull request for you. You sign in with the account that the host offers, and the host checks the archive before anything is published.</value>

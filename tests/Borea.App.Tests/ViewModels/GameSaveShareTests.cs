@@ -319,7 +319,7 @@ public sealed class GameSaveShareTests
 
         var bytes = window.Written.ToArray();
         Assert.Equal("Example Rover.zip", window.SuggestedFileName);
-        Assert.Equal(harness.Localization.FormatListingShareArchiveSaved("Example Rover.zip", Convert.ToHexStringLower(SHA256.HashData(bytes)), bytes.Length), harness.ViewModel.ListingEditor.ShareArchiveText);
+        Assert.Equal(harness.Localization.FormatListingShareArchiveSaved("Example Rover.zip", Convert.ToHexStringLower(SHA256.HashData(bytes)), MainViewModel.SizeText(bytes.Length)), harness.ViewModel.ListingEditor.ShareArchiveText);
         using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
         Assert.Equal(["Example Rover/meta.toml", "Example Rover/vehicle.xml"], zip.Entries.Select(entry => entry.FullName).Order(StringComparer.Ordinal));
     }

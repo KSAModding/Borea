@@ -2131,6 +2131,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareNoHostSave => Resources.ShareNoHostSave;
 
+    public string ShareSaveZipInstead => Resources.ShareSaveZipInstead;
+
+    public string ShareSaveZipInsteadHint => Resources.ShareSaveZipInsteadHint;
+
     public string ShareWaitingForApproval => Resources.ShareWaitingForApproval;
 
     public string ShareOpenPageAgain => Resources.ShareOpenPageAgain;
@@ -2168,6 +2172,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingShareHint => Resources.ListingShareHint;
 
     public string ListingShareArchiveHeading => Resources.ListingShareArchiveHeading;
+
+    public string ListingShareArchiveIntro => Resources.ListingShareArchiveIntro;
 
     public string ListingShareArchiveHint => Resources.ListingShareArchiveHint;
 
@@ -3822,8 +3828,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingSaved(string fileName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingSavedFormat, fileName);
 
-    public string FormatListingShareArchiveSaved(string fileName, string sha256, long size)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareArchiveSavedFormat, fileName, sha256, size);
+    public string FormatListingShareArchiveSaved(string fileName, string sha256, string sizeText)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareArchiveSavedFormat, fileName, sha256, sizeText);
 
     public string FormatListingShareHostSigningIn(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSigningInFormat, host);

@@ -3582,6 +3582,12 @@
   <data name="ShareCheckHintFormat" xml:space="preserve">
     <value>Noch wird nichts veröffentlicht. {0} prüft zuerst die Datei.</value>
   </data>
+  <data name="ShareSaveZipInstead" xml:space="preserve">
+    <value>Stattdessen als Zip-Datei speichern</value>
+  </data>
+  <data name="ShareSaveZipInsteadHint" xml:space="preserve">
+    <value>Es wird nichts veröffentlicht. Niemand findet es auf der Seite Entdecken.</value>
+  </data>
   <data name="ShareWaitingForApproval" xml:space="preserve">
     <value>Warte auf deine Bestätigung im Browser...</value>
   </data>
@@ -3661,22 +3667,25 @@
     <value>Borea hat die Datei gelesen und für jede Mod dieser Instanz, die ein Teil, einen Stoff, einen Charakter oder einen Himmelskörper aus der Datei definiert, eine erforderliche Abhängigkeit vorgeschlagen. Prüfe die Liste: Entferne, was die Datei nicht braucht, und füge eine Mod, die nur das Verhalten von Teilen ändert, als recommends hinzu.</value>
   </data>
   <data name="ListingShareArchiveHeading" xml:space="preserve">
-    <value>Archiv speichern</value>
+    <value>Ohne Plattform teilen</value>
+  </data>
+  <data name="ListingShareArchiveIntro" xml:space="preserve">
+    <value>Für Autoren, die die Datei selbst anbieten. Du lädst die Zip-Datei als Release in deinem eigenen GitHub-Repository hoch und trägst sie selbst in den Index ein.</value>
   </data>
   <data name="ListingShareArchiveHint" xml:space="preserve">
-    <value>Hänge das gespeicherte Archiv an ein eigenes Release, und nenne dieses Release unter Releases.</value>
+    <value>Hänge die Zip-Datei an ein Release in deinem eigenen Repository und trage dieses Release unter Releases ein.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
     <value>Diese Dateien schreibt nicht das Spiel, sondern eine Mod. Füge die Mod hinzu, die sie schreibt:</value>
   </data>
   <data name="ListingShareSaveArchive" xml:space="preserve">
-    <value>Archiv speichern</value>
+    <value>Zip-Datei speichern</value>
   </data>
   <data name="ListingShareArchiveFileType" xml:space="preserve">
     <value>Zip-Archiv</value>
   </data>
   <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
-    <value>{0} gespeichert. SHA-256 {1}, {2} Bytes.</value>
+    <value>{0} gespeichert ({2}). Prüfsumme (SHA-256): {1}</value>
   </data>
   <data name="ListingShareHostHint" xml:space="preserve">
     <value>Ein Share-Host speichert das Archiv und öffnet den Pull Request für dich. Du meldest dich mit dem Konto an, das der Host anbietet, und der Host prüft das Archiv, bevor etwas veröffentlicht wird.</value>
