@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -29,8 +30,16 @@ public partial class MainViewModel
 
     internal bool HasInstance(Guid instanceId) => Instances.Any(instance => instance.InstanceId == instanceId);
 
-    internal Task OpenInstanceByIdAsync(Guid instanceId)
-        => Instances.FirstOrDefault(instance => instance.InstanceId == instanceId) is { } instance ? OpenInstanceAsync(instance) : Task.CompletedTask;
+    /// <summary>Opens the instance, and marks the row of the vehicle or save of <paramref name="contentId"/> when the instance holds it.</summary>
+    internal async Task OpenInstanceByIdAsync(Guid instanceId, string? contentId)
+    {
+        if (Instances.FirstOrDefault(instance => instance.InstanceId == instanceId) is not { } instance)
+            return;
+
+        await OpenInstanceAsync(instance);
+        if (VehiclesSection.Items.Concat(SavesSection.Items).FirstOrDefault(row => row.Record is { } record && ModIds.Equals(record.ListingId, contentId)) is { } target)
+            MarkGameSave(target);
+    }
 
     internal void ShowTaskDetails(TaskItem task)
     {

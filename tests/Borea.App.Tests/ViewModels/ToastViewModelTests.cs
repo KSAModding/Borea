@@ -298,6 +298,56 @@ public sealed class ToastViewModelTests
     }
 
     [Fact]
+    public async Task FinishedVehicleInstall_OpenInstanceShowsTheNewRowForTwoSeconds()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.Toasts.Clock = _time;
+        viewModel.Clock = _time;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var listing = viewModel.IndexListing("ExampleRover")!;
+        await listing.InstallCommand.ExecuteAsync(null);
+        await listing.ConfirmInstallCommand.ExecuteAsync(null);
+        viewModel.SetMainWindowHome();
+        viewModel.InstanceTab = InstanceTab.GameData;
+
+        await Assert.Single(viewModel.Toasts.Items).OpenInstanceCommand.ExecuteAsync(null);
+
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+        Assert.True(row.IsMarked);
+        Assert.Same(row, viewModel.GameSaveInView);
+        Assert.Equal(InstanceTab.Content, viewModel.InstanceTab);
+
+        _time.Advance(MainViewModel.GameSaveMarkDuration);
+
+        Assert.False(row.IsMarked);
+    }
+
+    [Fact]
+    public async Task FinishedTaskOfNoContent_OpenInstanceLeavesTheVehicleOfThePlayerAlone()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.Toasts.Clock = _time;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var own = Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Own Rover")).FullName;
+        File.WriteAllText(Path.Combine(own, "vehicle.xml"), "<Vehicle />");
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
+        viewModel.InstanceTab = InstanceTab.GameData;
+        viewModel.Tasks.End(viewModel.Tasks.Start(TaskKind.ManualReplace, "OldHud", instance.InstanceId, "Main", null, null, TaskState.Running), TaskState.Finished, null);
+
+        await Assert.Single(viewModel.Toasts.Items).OpenInstanceCommand.ExecuteAsync(null);
+
+        Assert.False(Assert.Single(viewModel.VehiclesSection.Items).IsMarked);
+        Assert.Null(viewModel.GameSaveInView);
+        Assert.Equal(InstanceTab.GameData, viewModel.InstanceTab);
+    }
+
+    [Fact]
     public async Task FinishedUpdateAll_CountsTheUpdatedModsInOneToast()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
