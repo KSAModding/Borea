@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.Game;
 using Borea.Core.Index;
@@ -49,7 +50,7 @@ public sealed partial class ListingEditor
     private bool _choseOtherLicense;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsShareDescribe), nameof(IsSharePublish))]
+    [NotifyPropertyChangedFor(nameof(IsShareDescribe), nameof(IsSharePublish), nameof(IsShareDone))]
     private ShareFlowStep _shareFlowStep;
 
     [ObservableProperty]
@@ -84,6 +85,23 @@ public sealed partial class ListingEditor
     public bool IsShareDescribe => ShareFlowStep == ShareFlowStep.Describe;
 
     public bool IsSharePublish => ShareFlowStep == ShareFlowStep.Publish;
+
+    public bool IsShareDone => ShareFlowStep == ShareFlowStep.Done;
+
+    public string? ShareDoneHeadingText => _sharePublished is { } done ? Localization.FormatShareDoneHeading(done.Name) : null;
+
+    /// <summary>When Discover shows it. A new listing without a request shows later, because the host still has to send that request.</summary>
+    public string? ShareDoneDiscoverText => _sharePublished is not { } done ? null
+        : done.IsNewVersion ? Localization.ShareDoneNewVersion
+        : SharePullRequest is null ? Localization.FormatShareDoneNewListingLater(done.Host.Name)
+        : Localization.ShareDoneNewListing;
+
+    /// <summary>The page in the answer of the host, else its site, because the address of a page is known only to the host.</summary>
+    public Uri? ShareDoneLink => _sharePublished is { } done ? done.Page ?? done.Host.Page : null;
+
+    public string? ShareDoneOpenText => _sharePublished is not { } done ? null
+        : done.Page is null ? Localization.FormatShareOpenHost(done.Host.Name)
+        : Localization.ShareOpenPage;
 
     /// <summary>A new version sends only the upload and its mods, because the host keeps the listing as it is.</summary>
     public bool IsNewVersionShare => _shareListing is not null;
@@ -320,4 +338,22 @@ public sealed partial class ListingEditor
 
     [RelayCommand]
     private void ToggleShareMoreOptions() => IsShareMoreOptionsOpen = !IsShareMoreOptionsOpen;
+
+    [RelayCommand]
+    private void OpenShareDonePage() => OpenShareDoneLink(ShareDoneLink);
+
+    [RelayCommand]
+    private void OpenSharePullRequest() => OpenShareDoneLink(SharePullRequest);
+
+    private void OpenShareDoneLink(Uri? link)
+    {
+        if (link is null)
+            return;
+
+        ShareHostError = null;
+        OpenShareHostPage(link.AbsoluteUri);
+    }
+
+    [RelayCommand]
+    private Task CopyShareDoneLinkAsync() => _owner.CopyShareLinkAsync(ShareDoneLink?.AbsoluteUri);
 }

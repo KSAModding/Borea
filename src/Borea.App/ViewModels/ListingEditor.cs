@@ -337,8 +337,8 @@ public sealed partial class ListingEditor : ObservableObject
             }
         }
 
-        // A share that started while the index could not be read finds its listing and its hosts once the index is there.
-        if (!hadIndex && _snapshot is not null && _share is not null)
+        // A share that started while the index could not be read finds its listing and its hosts once the index is there, and a published share has nothing left to find.
+        if (!hadIndex && _snapshot is not null && _share is not null && !IsShareDone)
         {
             _shareListing = FindShareListing();
             RefreshShare();

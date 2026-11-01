@@ -200,27 +200,20 @@
                         <TextBlock Classes="action-md" Text="{Binding Localization.ListingShareHostCopyCode}" />
                     </Button>
                 </StackPanel>
-
-                <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostOutcome}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostOutcome, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.OpenSharePullRequestCommand}" HorizontalAlignment="Left" IsVisible="{Binding ListingEditor.SharePullRequest, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingEditor.SharePullRequest}">
-                    <TextBlock Classes="action-md" Text="{Binding Localization.ListingOpenYourPullRequest}" />
-                </Button>
             </StackPanel>
         </Border>
 
         <!-- a file for authors who host it themselves, which publishes nothing -->
-        <Panel IsVisible="{Binding ListingEditor.ShareHostOutcome, Converter={x:Static ObjectConverters.IsNull}}">
-            <StackPanel Spacing="4" IsVisible="{Binding !ListingEditor.IsSharing}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.SaveShareArchiveCommand}">
-                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareSaveZipInstead}" />
-                    </Button>
-                    <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" IsVisible="{Binding ListingEditor.SaveShareArchiveCommand.IsRunning}" />
-                </StackPanel>
-                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareSaveZipInsteadHint}" TextWrapping="Wrap" />
-                <SelectableTextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareArchiveText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareArchiveText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <StackPanel Spacing="4" IsVisible="{Binding !ListingEditor.IsSharing}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.SaveShareArchiveCommand}">
+                    <TextBlock Classes="action-md" Text="{Binding Localization.ShareSaveZipInstead}" />
+                </Button>
+                <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" IsVisible="{Binding ListingEditor.SaveShareArchiveCommand.IsRunning}" />
             </StackPanel>
-        </Panel>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareSaveZipInsteadHint}" TextWrapping="Wrap" />
+            <SelectableTextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareArchiveText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareArchiveText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
         <WrapPanel ItemSpacing="16" LineSpacing="8" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
             <Button Classes="text" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareDescribeCommand}" />
             <Button Classes="link" Margin="-8,0,0,0" VerticalAlignment="Center" Command="{Binding ListingEditor.EditAllShareFieldsCommand}">

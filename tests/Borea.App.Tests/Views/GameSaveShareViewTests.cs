@@ -156,7 +156,7 @@ public sealed class GameSaveShareViewTests
     }
 
     [Fact]
-    public async Task PublishStep_WithNoHost_OffersTheZipFileUntilAPublishHasAnOutcome()
+    public async Task PublishStep_WithNoHost_OffersTheZipFile()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
@@ -166,14 +166,32 @@ public sealed class GameSaveShareViewTests
         await editor.ShareHostsLoad;
         editor.ShareFlowStep = ShareFlowStep.Publish;
 
-        var offered = await PageTextsAsync(harness);
-        editor.ShareHostOutcome = "Published";
-        var afterPublish = await PageTextsAsync(harness);
+        var texts = await PageTextsAsync(harness);
+
+        Assert.Contains(editor.ShareNoHostText, texts);
+        Assert.Contains(harness.Localization.ShareSaveZipInsteadHint, texts);
+    }
+
+    [Fact]
+    public async Task DoneStep_ReplacesThePublishStep_AndKeepsTheRequestInClosedDetails()
+    {
+        using var harness = await ShareHostShareTests.PublishedHarnessAsync();
+        var editor = harness.ViewModel.ListingEditor;
+        editor.ShareHostError = "No browser.";
+
+        var texts = await PageTextsAsync(harness);
 
         var localization = harness.Localization;
-        Assert.Contains(editor.ShareNoHostText, offered);
-        Assert.Contains(localization.ShareSaveZipInsteadHint, offered);
-        Assert.DoesNotContain(localization.ShareSaveZipInsteadHint, afterPublish);
+        Assert.Contains(localization.FormatShareDoneHeading("Example Rover"), texts);
+        Assert.Contains(localization.ShareDoneNow, texts);
+        Assert.Contains(localization.FormatShareOpenHost("ksamods.gg"), texts);
+        Assert.Contains(localization.ContentCopyLink, texts);
+        Assert.Contains(localization.ShareDoneNewListing, texts);
+        Assert.Contains("No browser.", texts);
+        Assert.Contains(localization.ShareTechnicalDetails, texts);
+        Assert.DoesNotContain(localization.ShareShowRequest, texts);
+        Assert.DoesNotContain(editor.ShareCheckOnHostText, texts);
+        Assert.DoesNotContain(localization.ShareSaveZipInsteadHint, texts);
     }
 
     [Fact]
