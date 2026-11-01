@@ -312,7 +312,8 @@
                                 <StackPanel Spacing="8">
                                     <Border Classes="card" Padding="0" views:RoundedClip.IsEnabled="True">
                                         <views:AspectRatioPanel>
-                                            <preview:VehiclePreviewView Scene="{Binding Scene}" ResetCount="{Binding ResetCount}" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
+                                            <!-- Pose comes after Scene, because a new scene frames the vehicle again and would otherwise wipe the pose that was set first. The panel hides while the expanded view shows -->
+                                            <preview:VehiclePreviewView Scene="{Binding Scene}" Pose="{Binding Pose, Mode=TwoWay}" ResetCount="{Binding ResetCount}" IsVisible="{Binding !IsExpanded}" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
                                             <!-- before there is a scene: what the preview needs, and the click that starts it -->
                                             <StackPanel Spacing="12" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasScene}">
                                                 <TextBlock Classes="body-md secondary" Text="{Binding StatusText}" TextWrapping="Wrap" TextAlignment="Center" IsVisible="{Binding StatusText, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -324,7 +325,10 @@
                                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
                                                 </WrapPanel>
                                             </StackPanel>
-                                            <Button Classes="text" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" IsVisible="{Binding HasScene}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasScene}">
+                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewExpandView}" Command="{Binding ExpandCommand}" />
+                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" />
+                                            </StackPanel>
                                             <!-- the camera controls, in a flyout so that they never cover the scene until the player asks for them -->
                                             <Button Classes="info" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding HasScene}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}">
                                                 <Button.Flyout>
@@ -366,19 +370,7 @@
                                                     </Flyout>
                                                 </Button.Flyout>
                                             </Button>
-                                            <!-- over a shown scene: the stage while the textures or the mods load, or why a later step stopped -->
-                                            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="12,4" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Bottom">
-                                                <Border.IsVisible>
-                                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                        <Binding Path="HasScene" />
-                                                        <Binding Path="StatusText" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                                                    </MultiBinding>
-                                                </Border.IsVisible>
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <TextBlock Classes="body-sm secondary" Text="{Binding StatusText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
-                                                </StackPanel>
-                                            </Border>
+                                            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource VehiclePreviewStatus}" />
                                         </views:AspectRatioPanel>
                                     </Border>
                                     <!-- the mods the vehicle needs that are not on this computer, and the click that loads their parts -->

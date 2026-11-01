@@ -6015,6 +6015,12 @@
   <data name="PreviewResetView" xml:space="preserve">
     <value>Ansicht zurücksetzen</value>
   </data>
+  <data name="PreviewExpandView" xml:space="preserve">
+    <value>Ansicht vergrößern</value>
+  </data>
+  <data name="PreviewCollapseView" xml:space="preserve">
+    <value>Ansicht verkleinern</value>
+  </data>
   <data name="PreviewAttribution" xml:space="preserve">
     <value>Die Teile kommen aus deiner eigenen KSA-Installation. Borea liefert keine Spieldateien mit.</value>
   </data>

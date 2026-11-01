@@ -6069,6 +6069,12 @@
   <data name="PreviewResetView" xml:space="preserve">
     <value>Reset view</value>
   </data>
+  <data name="PreviewExpandView" xml:space="preserve">
+    <value>Expand view</value>
+  </data>
+  <data name="PreviewCollapseView" xml:space="preserve">
+    <value>Shrink view</value>
+  </data>
   <data name="PreviewAttribution" xml:space="preserve">
     <value>Parts are drawn from your own KSA install. Borea does not ship game files.</value>
   </data>

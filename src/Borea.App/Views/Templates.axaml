@@ -659,4 +659,19 @@
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedMatch}" IsVisible="{Binding ListingEditor.HasNoDependencyMatch}" />
         </StackPanel>
     </DataTemplate>
+    <!-- over a shown scene of a vehicle: the stage while the textures or the mods load, or why a later step stopped, in the panel of the page and in the expanded view -->
+    <DataTemplate x:Key="VehiclePreviewStatus" x:DataType="vm:VehiclePreviewViewModel">
+        <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="12,4" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+            <Border.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="HasScene" />
+                    <Binding Path="StatusText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                </MultiBinding>
+            </Border.IsVisible>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Classes="body-sm secondary" Text="{Binding StatusText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
 </ResourceDictionary>

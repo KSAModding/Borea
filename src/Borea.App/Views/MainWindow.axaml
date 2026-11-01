@@ -3,6 +3,7 @@
         xmlns:vm="using:Borea.App.ViewModels"
         xmlns:views="using:Borea.App.Views"
         xmlns:pages="using:Borea.App.Views.Pages"
+        xmlns:preview="using:Borea.App.Views.Preview"
         xmlns:settings="using:Borea.App.Views.Settings"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -91,6 +92,26 @@
         <!-- Tasks: a drawer over the current page, which stays open behind it -->
         <views:TasksDrawer Grid.Column="1" IsVisible="{Binding IsTasksOpen}" />
     </Grid>
+
+    <!-- the 3D preview over the whole window, like an image lightbox, under the toasts and the modals. Escape or the button shrinks it, and Tab stays inside it -->
+    <ContentControl Content="{Binding VehiclePreview.Expanded}">
+        <ContentControl.ContentTemplate>
+            <DataTemplate x:DataType="vm:VehiclePreviewViewModel">
+                <Panel Background="{StaticResource Brush.Surface}" KeyboardNavigation.TabNavigation="Cycle">
+                    <Panel.KeyBindings>
+                        <KeyBinding Gesture="Escape" Command="{Binding CollapseCommand}" />
+                    </Panel.KeyBindings>
+                    <!-- Pose comes after Scene for the same reason as on the panel. ResetCount is only on the panel, which stays in the page and passes a reset on through the pose, because a new view would take an earlier click for a new one -->
+                    <preview:VehiclePreviewView Scene="{Binding Scene}" Pose="{Binding Pose, Mode=TwoWay}" FocusWhenShown="True" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="12" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewCollapseView}" Command="{Binding CollapseCommand}" />
+                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" />
+                    </StackPanel>
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource VehiclePreviewStatus}" />
+                </Panel>
+            </DataTemplate>
+        </ContentControl.ContentTemplate>
+    </ContentControl>
 
     <StackPanel VerticalAlignment="Bottom">
     <!-- toasts, above the error bar -->
