@@ -837,6 +837,10 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
         </Style>
+        <!-- every state of a selected row, because the stock theme gives each of them its own blue -->
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
+        </Style>
         <Style Selector="Button.link:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
         </Style>
