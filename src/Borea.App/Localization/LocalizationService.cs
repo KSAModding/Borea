@@ -4900,6 +4900,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ConflictWhy => Resources.ConflictWhy;
 
+    public string ConflictAgain => Resources.ConflictAgain;
+
     public string FormatConflictDeclared(string declarer, string other)
         => string.Format(CultureInfo.CurrentCulture, Resources.ConflictDeclaredFormat, declarer, other);
 

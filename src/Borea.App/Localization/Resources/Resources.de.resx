@@ -2445,6 +2445,9 @@
   <data name="ConflictWhy" xml:space="preserve">
     <value>Borea legt Mods, die nicht zusammen funktionieren, nicht in dieselbe Instanz. Darum hat es angehalten und nichts geändert.</value>
   </data>
+  <data name="ConflictAgain" xml:space="preserve">
+    <value>Nach jedem Schritt prüft Borea erneut, und ein Konflikt, der noch besteht, erscheint hier wieder.</value>
+  </data>
   <data name="ConflictDeclaredFormat" xml:space="preserve">
     <value>{0} gibt an, nicht mit {1} zusammen zu funktionieren.</value>
   </data>

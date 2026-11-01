@@ -57,6 +57,10 @@ public sealed partial class ToastService : ObservableObject
 
     private void Show(TaskItem task)
     {
+        // the dialog already says why a plan stopped, and a toast under it would repeat that
+        if (task.State == TaskState.Failed && _owner.IsConflictOpen)
+            return;
+
         if (HasToast(task))
             Show(new ToastItem(this, task));
     }

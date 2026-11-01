@@ -35,6 +35,13 @@ public sealed partial class ConflictRow
 
     public bool CanRemove => RemoveText is not null;
 
+    /// <summary>The dialog marks the first removal as the main button, so a second one does not compete with it.</summary>
+    public bool IsPrimary { get; internal set; }
+
+    public bool ShowsPrimaryRemove => CanRemove && IsPrimary;
+
+    public bool ShowsSecondaryRemove => CanRemove && !IsPrimary;
+
     public bool CanOpenPage => OpenPageText is not null;
 
     [RelayCommand]

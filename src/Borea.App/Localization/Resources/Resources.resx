@@ -2445,6 +2445,9 @@
   <data name="ConflictWhy" xml:space="preserve">
     <value>Borea does not put mods that do not work together into one instance, so it stopped and changed nothing.</value>
   </data>
+  <data name="ConflictAgain" xml:space="preserve">
+    <value>After each step Borea checks again, and a conflict that is still there comes up here again.</value>
+  </data>
   <data name="ConflictDeclaredFormat" xml:space="preserve">
     <value>{0} says that it does not work together with {1}.</value>
   </data>

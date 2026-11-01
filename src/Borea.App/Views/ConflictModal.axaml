@@ -20,7 +20,10 @@
                 </StackPanel>
                 <ScrollViewer>
                     <StackPanel Margin="36,32,24,16" Spacing="24">
-                        <TextBlock Classes="body-md secondary" Text="{Binding Localization.ConflictWhy}" TextWrapping="Wrap" />
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="body-md secondary" Text="{Binding Localization.ConflictWhy}" TextWrapping="Wrap" />
+                            <TextBlock Classes="body-md secondary" Text="{Binding Localization.ConflictAgain}" TextWrapping="Wrap" IsVisible="{Binding ShowsAgainNote}" />
+                        </StackPanel>
                         <ItemsControl ItemsSource="{Binding Rows}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -32,9 +35,10 @@
                                     <StackPanel Spacing="12">
                                         <TextBlock Classes="body-md" Text="{Binding Text}" TextWrapping="Wrap" />
                                         <TextBlock Classes="body-md secondary" Text="{Binding ReasonText}" TextWrapping="Wrap" IsVisible="{Binding ReasonText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                        <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}">
+                                        <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding RemoveCommand}" IsVisible="{Binding ShowsPrimaryRemove}">
                                             <TextBlock Classes="action-lg" Text="{Binding RemoveText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                         </Button>
+                                        <Button Classes="text tall" HorizontalAlignment="Left" Content="{Binding RemoveText}" Command="{Binding RemoveCommand}" IsVisible="{Binding ShowsSecondaryRemove}" />
                                         <Button Classes="text" HorizontalAlignment="Left" Content="{Binding OpenPageText}" Command="{Binding OpenPageCommand}" IsVisible="{Binding CanOpenPage}" />
                                     </StackPanel>
                                 </DataTemplate>
