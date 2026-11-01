@@ -110,6 +110,8 @@ public sealed class GameSaveShareViewTests
         Assert.Contains(harness.Localization.ShareBackToSteps, texts);
         Assert.Contains(harness.Localization.ListingShareHeading, texts);
         Assert.Contains(harness.ViewModel.ListingEditor.ShareNotes.Single(), texts);
+        Assert.Contains(harness.Localization.ListingShareArchiveHeading, texts);
+        Assert.Contains(harness.Localization.ListingShareArchiveIntro, texts);
         Assert.Contains(harness.Localization.ListingShareSaveArchive, texts);
         Assert.Contains(harness.Localization.DiscoverSearchPlaceholder, texts);
         Assert.Contains(harness.Localization.ListingForumsOptionalHint, texts);
@@ -148,7 +150,30 @@ public sealed class GameSaveShareViewTests
         Assert.Equal(hasSeveralHosts, texts.Contains(localization.FormatShareHostLimitVehicle("20 MB")));
         Assert.Contains(editor.ShareCheckOnHostText, texts);
         Assert.Contains(editor.ShareCheckHintText, texts);
+        Assert.Contains(localization.ShareSaveZipInstead, texts);
+        Assert.Contains(localization.ShareSaveZipInsteadHint, texts);
         Assert.DoesNotContain(localization.ShareRenameAndCheck, texts);
+    }
+
+    [Fact]
+    public async Task PublishStep_WithNoHost_OffersTheZipFileUntilAPublishHasAnOutcome()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+        await editor.ShareHostsLoad;
+        editor.ShareFlowStep = ShareFlowStep.Publish;
+
+        var offered = await PageTextsAsync(harness);
+        editor.ShareHostOutcome = "Published";
+        var afterPublish = await PageTextsAsync(harness);
+
+        var localization = harness.Localization;
+        Assert.Contains(editor.ShareNoHostText, offered);
+        Assert.Contains(localization.ShareSaveZipInsteadHint, offered);
+        Assert.DoesNotContain(localization.ShareSaveZipInsteadHint, afterPublish);
     }
 
     [Fact]
