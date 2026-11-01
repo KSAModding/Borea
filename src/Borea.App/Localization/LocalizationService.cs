@@ -1868,6 +1868,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverFavoritesOnly => Resources.DiscoverFavoritesOnly;
 
+    public string DiscoverStillMissingMods => Resources.DiscoverStillMissingMods;
+
     public string DiscoverFavorite => Resources.DiscoverFavorite;
 
     public string DiscoverInstalledInOtherInstances => Resources.DiscoverInstalledInOtherInstances;

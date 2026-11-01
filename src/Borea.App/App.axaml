@@ -444,6 +444,12 @@
         <Style Selector="Border.thumbnail > views|PreviewStillView > views|ListingImageView">
             <Setter Property="CornerRadius" Value="7.5" />
         </Style>
+        <Style Selector="views|PreviewStillView > TextBlock.still-note">
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
         <Style Selector="Border.chip">
             <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
             <Setter Property="BorderThickness" Value="1" />

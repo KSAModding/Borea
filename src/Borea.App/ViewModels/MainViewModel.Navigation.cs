@@ -43,7 +43,16 @@ public partial class MainViewModel
 
     partial void OnCurrentWindowHomeChanged(bool value) => OnPageShown(value);
 
-    partial void OnCurrentWindowDiscoverChanged(bool value) => OnPageShown(value);
+    partial void OnCurrentWindowDiscoverChanged(bool value)
+    {
+        OnPageShown(value);
+
+        // the page stays in the tree when it hides and its rows hear nothing, so their stills stop and start here
+        if (value)
+            RefreshPreviewStills();
+        else
+            _ = PreviewStills.Stop();
+    }
 
     partial void OnCurrentWindowLibraryChanged(bool value) => OnPageShown(value);
 

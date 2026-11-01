@@ -40,6 +40,10 @@ public partial class MainViewModel
             _loadImagesFromAuthorHosts = value;
             OnPropertyChanged();
             QueuePreferenceSave(preferences => preferences.WithLoadImagesFromAuthorHosts(value));
+
+            // a fetch for a still stops at once, and the rows ask again under the new value
+            _ = PreviewStills.Stop();
+            RefreshPreviewStills();
             if (!value)
                 return;
 

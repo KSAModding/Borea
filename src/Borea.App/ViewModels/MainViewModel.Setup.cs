@@ -703,8 +703,10 @@ public partial class MainViewModel
         _instances = _services.Instances;
         AttachGitHubSession(previous, _services);
 
-        // the preview of an open vehicle page uses the old preview service, which the old graph disposes
+        // the preview of an open vehicle page and a still that Discover draws use the old preview service, which the old graph disposes
         ClearVehiclePreview();
+        _ = PreviewStills.Stop();
+        _stillAttempts.Clear();
         previous.Dispose();
         OnPropertyChanged(nameof(SelectedReleaseChannel));
         OnPropertyChanged(nameof(UseSharedModStore));

@@ -844,6 +844,9 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
     /// <summary>What a fetch from a share host throws, or null when it works and the plan can then build locally.</summary>
     public Exception? ShareFetchFailure { get; init; }
 
+    /// <summary>Gives a task for a fetch from a share host that the test ends itself, or null to answer at once.</summary>
+    public Func<CancellationToken, Task>? HoldShareFetch { get; init; }
+
     /// <summary>The hash and the build that a ready result names.</summary>
     public (string Sha256, string GameBuild) ResultNames { get; set; } = (new string('a', 64), "2026.10.19.5638");
 
@@ -906,6 +909,9 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
     public Task FetchFromShareHostAsync(ModVersionMetadata release, ShareHost host, CancellationToken cancellationToken = default)
     {
         _shareFetches.Enqueue(host.Key);
+        if (HoldShareFetch is { } hold)
+            return hold(cancellationToken);
+
         if (ShareFetchFailure is { } failure)
             return Task.FromException(failure);
 

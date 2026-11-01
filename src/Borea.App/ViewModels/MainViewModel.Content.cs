@@ -231,8 +231,9 @@ public partial class MainViewModel
     /// <summary>
     /// Completes when no preview reads a file, also not one that closed. Windows does not move or delete a folder while
     /// a file below it is open, so anything that moves or deletes the mods, the vehicles or the kept builds waits for it.
+    /// A still that Discover draws reads the same files and can wait, so it stops and its row asks again later.
     /// </summary>
-    internal Task WhenVehiclePreviewReadsEndedAsync() => Chain(_closedVehiclePreviewLoads, WhenVehiclePreviewLoadedAsync());
+    internal Task WhenVehiclePreviewReadsEndedAsync() => Chain(Chain(_closedVehiclePreviewLoads, WhenVehiclePreviewLoadedAsync()), PreviewStills.Stop());
 
     /// <summary>
     /// The instance whose files the preview reads. A page opened from an instance reads that instance, where the
@@ -245,8 +246,8 @@ public partial class MainViewModel
     /// old one, which stops its work and drops a result that arrives later. Any other page gets none. A busy preview
     /// of the same release and target stays, so a page that is read again, such as after an index refresh, does not
     /// send a second download. Every fetch raises the public download count of the host (RFC 0052), so a new preview
-    /// waits for a click after the player cancelled the same release or its fetch failed, and while an install of it
-    /// plans, waits for the player's confirmation or runs, because that install downloads the archive itself. A preview
+    /// waits for a click while the setting holds back the author hosts, after the player cancelled the same release or
+    /// its fetch failed, and while an install of it plans, waits for the player's confirmation or runs, because that install downloads the archive itself. A preview
     /// that still waits out its delay then makes way for one that waits for the click.
     /// </summary>
     private void RefreshVehiclePreview()
@@ -273,7 +274,7 @@ public partial class MainViewModel
                 encoder: VehiclePreviewEncoder,
                 stillStored: ShowPreviewStill,
                 autoFetchDelay: VehiclePreviewAutoFetchDelay,
-                autoFetch: !installing && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, latest.Release)));
+                autoFetch: LoadImagesFromAuthorHosts && !installing && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, latest.Release)));
         }
 
         VehiclePreview = next;

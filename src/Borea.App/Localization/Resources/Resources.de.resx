@@ -118,7 +118,7 @@
     <value>Bilder von den Servern der Autoren laden</value>
   </data>
   <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
-    <value>Jede Bildanfrage teilt dem Server des Autors deine IP-Adresse mit.</value>
+    <value>Jede Bildanfrage teilt dem Server des Autors deine IP-Adresse mit. Ausgeschaltet lädt Borea auch keine Fahrzeugdatei von selbst für ein Bild oder eine 3D-Vorschau.</value>
   </data>
   <data name="SettingsLibraryFolderLabel" xml:space="preserve">
     <value>Bibliotheksordner</value>
@@ -2546,6 +2546,9 @@
   </data>
   <data name="DiscoverFavoritesOnly" xml:space="preserve">
     <value>Nur Favoriten</value>
+  </data>
+  <data name="DiscoverStillMissingMods" xml:space="preserve">
+    <value>Mods fehlen</value>
   </data>
   <data name="DiscoverFavorite" xml:space="preserve">
     <value>In deinen Favoriten</value>
