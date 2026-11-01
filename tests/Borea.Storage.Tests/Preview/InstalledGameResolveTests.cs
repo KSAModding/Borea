@@ -75,6 +75,22 @@ public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixt
     }
 
     [InstalledGameFact]
+    public void TheHoseMeshAndMaterial_ResolveInTheCore_AndAStockFuelPortHasItsConnector()
+    {
+        var catalog = core.Value.Catalog;
+
+        Assert.True(core.Value.Meshes.TryFind(KsaPartSchema.HoseMesh, out _));
+        Assert.True(catalog.TryGetMaterial(KsaPartSchema.HoseMaterial, out var material));
+        Assert.NotNull(material.Diffuse);
+        var ports = core.Value.Xml.PartIds
+            .Select(id => catalog.TryGetTemplate(id, out var template) ? template : null)
+            .Where(template => template is { FuelPorts.Count: > 0 })
+            .ToList();
+        Assert.NotEmpty(ports);
+        Assert.All(ports, template => Assert.Contains(template!.SubParts, instance => instance.Id == template.FuelPorts[0].ConnectorSubPartId));
+    }
+
+    [InstalledGameFact]
     public void TheCatalog_HasNoDuplicateId_AndEveryGameDataIsMergedIntoItsTemplate()
     {
         var catalog = core.Value.Catalog;

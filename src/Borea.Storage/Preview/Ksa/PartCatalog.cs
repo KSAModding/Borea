@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Text;
 using System.Xml;
 using Borea.Core.Preview;
@@ -292,6 +293,8 @@ internal sealed class PartCatalog
             var subParts = new List<SubPartInstanceData>();
             var models = new List<RenderModelData>();
             var connectors = new List<ConnectorData>();
+            var fuelPorts = new List<FuelPortData>();
+            var hasTank = false;
 
             ForEachChild(element, child =>
             {
@@ -312,10 +315,66 @@ internal sealed class PartCatalog
                     case KsaPartSchema.PartModelGlass:
                         models.Add(ReadRenderModel(child, PreviewModelKind.Glass));
                         break;
+                    case KsaPartSchema.FuelPort:
+                        if (TryReadFuelPort(child) is { } port)
+                            fuelPorts.Add(port);
+                        break;
+                    case KsaPartSchema.Tank:
+                        hasTank = true;
+                        break;
                 }
             });
 
-            return new PartTemplateData(id, isSubPart, subParts, models, connectors);
+            return new PartTemplateData(id, isSubPart, subParts, models, connectors, fuelPorts, hasTank);
+        }
+
+        /// <summary>
+        /// Reads a FuelPort element, or gives null when a value is not a number. The port only places the ends of fuel
+        /// lines, so a bad value must not cost the parts of the file, also for a vehicle without fuel lines. A link to such a
+        /// part then ends at the origin of the part.
+        /// </summary>
+        private static FuelPortData? TryReadFuelPort(XmlReader element)
+        {
+            try
+            {
+                return ReadFuelPort(element);
+            }
+            catch (Exception exception) when (exception is FormatException or OverflowException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Reads a FuelPort element. A missing attribute has its default, and the largest angle in the file is in degrees.</summary>
+        private static FuelPortData ReadFuelPort(XmlReader element)
+        {
+            const float DefaultMaxAngleDegrees = 10f;
+            const float DefaultLeadOut = 0.15f;
+
+            var connector = NonEmpty(element.GetAttribute(KsaPartSchema.Connector));
+            var maxAngle = element.GetAttribute(KsaPartSchema.ConnectorMaxAngle) is { } angle ? XmlConvert.ToSingle(angle) : DefaultMaxAngleDegrees;
+            var leadOut = element.GetAttribute(KsaPartSchema.ConnectorLeadOut) is { } lead ? XmlConvert.ToSingle(lead) : DefaultLeadOut;
+            Vector3? anchor = null;
+            Vector3? pivot = null;
+            Vector3? tip = null;
+
+            ForEachChild(element, child =>
+            {
+                switch (child.LocalName)
+                {
+                    case KsaPartSchema.AnchorAsmb:
+                        anchor ??= KsaTransform.ReadVector(child);
+                        break;
+                    case KsaPartSchema.ConnectorPivot:
+                        pivot ??= KsaTransform.ReadVector(child);
+                        break;
+                    case KsaPartSchema.ConnectorTip:
+                        tip ??= KsaTransform.ReadVector(child);
+                        break;
+                }
+            });
+
+            return new FuelPortData(connector, anchor ?? default, float.DegreesToRadians(maxAngle), pivot ?? default, tip ?? default, leadOut);
         }
 
         private static SubPartInstanceData ReadSubPartInstance(XmlReader element)

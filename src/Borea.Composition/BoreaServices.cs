@@ -264,6 +264,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IContentIndexSnapshotProvider IndexSnapshots { get; init; }
 
+    /// <summary>The same snapshot as <see cref="IndexSnapshots"/>, which it never fetches, also when the snapshot in memory is due for a check.</summary>
+    public required IContentIndexSnapshotProvider CachedIndexSnapshots { get; init; }
+
     public required IContentIndexRefresh IndexRefresh { get; init; }
 
     public required IContentIndexRepository ContentIndex { get; init; }
@@ -678,6 +681,7 @@ public sealed class BoreaServices : IDisposable
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,
             IndexSnapshots = indexSnapshots,
+            CachedIndexSnapshots = indexSnapshots.CachedOnly,
             IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
             UserContent = contentIndex,

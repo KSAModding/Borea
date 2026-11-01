@@ -5,27 +5,32 @@ namespace Borea.Storage.Preview.Ksa;
 
 /// <summary>
 /// What the preview keeps of one Part, SubPart, PartGameData or SubPartGameData element: its subpart instances, its
-/// render models and its connectors. A GameData uses the same type, as PartGameDataReference derives from
-/// PartTemplate in the game.
+/// render models, its connectors, its fuel ports and whether it has a tank. A GameData uses the same type, because it
+/// holds the same kind of content.
 /// </summary>
 internal sealed class PartTemplateData
 {
     private readonly List<SubPartInstanceData> _subParts;
     private readonly List<RenderModelData> _renderModels;
     private readonly List<ConnectorData> _connectors;
+    private readonly List<FuelPortData> _fuelPorts;
 
     public PartTemplateData(
         string id,
         bool isSubPart,
         IEnumerable<SubPartInstanceData> subParts,
         IEnumerable<RenderModelData> renderModels,
-        IEnumerable<ConnectorData> connectors)
+        IEnumerable<ConnectorData> connectors,
+        IEnumerable<FuelPortData> fuelPorts,
+        bool hasTank)
     {
         Id = id;
         IsSubPart = isSubPart;
         _subParts = [.. subParts];
         _renderModels = [.. renderModels];
         _connectors = [.. connectors];
+        _fuelPorts = [.. fuelPorts];
+        HasTank = hasTank;
     }
 
     public string Id { get; }
@@ -37,6 +42,10 @@ internal sealed class PartTemplateData
     public IReadOnlyList<RenderModelData> RenderModels => _renderModels;
 
     public IReadOnlyList<ConnectorData> Connectors => _connectors;
+
+    public IReadOnlyList<FuelPortData> FuelPorts => _fuelPorts;
+
+    public bool HasTank { get; private set; }
 
     /// <summary>The box around the connector positions in the frame of the part, or null when it has no connector.</summary>
     public PartExtents? ConnectorExtents
@@ -59,11 +68,10 @@ internal sealed class PartTemplateData
     }
 
     /// <summary>
-    /// Merges a GameData into this item the way PartTemplate.ApplyGameData does for the parts the preview draws.
+    /// Merges a GameData into this item for the parts the preview draws.
     /// A subpart instance replaces the present Transform components of the first instance with the same Id, and is
-    /// appended otherwise (PartTemplate.ApplyOrAddSubPartInstance). The render models are appended
-    /// (Components.AddRange). A connector is appended only when no connector has its Id, because the game then only
-    /// merges its Flags and Capabilities, which the preview does not need.
+    /// appended otherwise. The render models and the fuel ports are appended. A connector is appended only when no
+    /// connector has its Id, because the game then only merges its Flags and Capabilities, which the preview does not need.
     /// </summary>
     public void ApplyGameData(PartTemplateData gameData)
     {
@@ -76,6 +84,8 @@ internal sealed class PartTemplateData
         _connectors.AddRange(added);
 
         _renderModels.AddRange(gameData.RenderModels);
+        _fuelPorts.AddRange(gameData.FuelPorts);
+        HasTank |= gameData.HasTank;
     }
 
     private void ApplyOrAddSubPartInstance(SubPartInstanceData instance)
@@ -116,6 +126,16 @@ internal sealed record RenderModelData(
 
 /// <summary>A Connector element. Only its position counts for the preview, because it sizes a placeholder.</summary>
 internal sealed record ConnectorData(string Id, Vector3 Position);
+
+/// <summary>
+/// A FuelPort element. <paramref name="Anchor"/> is in the frame of the full part, and
+/// <paramref name="Pivot"/> and <paramref name="Tip"/> are in the frame of the connector subpart. A missing vector is
+/// zero.
+/// </summary>
+/// <param name="ConnectorSubPartId">The Id of the connector subpart, or null when the port has none.</param>
+/// <param name="MaxAngleRadians">How far the connector can turn from its rest pose toward the hose.</param>
+/// <param name="LeadOut">How far the hose runs straight out of the tip, in meters.</param>
+internal sealed record FuelPortData(string? ConnectorSubPartId, Vector3 Anchor, float MaxAngleRadians, Vector3 Pivot, Vector3 Tip, float LeadOut);
 
 /// <summary>An axis-aligned box in the frame of a part, in meters.</summary>
 internal readonly record struct PartExtents(Vector3 Min, Vector3 Max);

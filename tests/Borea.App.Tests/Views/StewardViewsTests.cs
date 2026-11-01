@@ -138,6 +138,35 @@ public sealed class StewardViewsTests
     }
 
     [Fact]
+    public async Task StatisticsTab_ShowsEachCard_AndNoAuthor()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.OpenStewardPageCommand.Execute(null);
+        await viewModel.StewardPage.Queue.WhenLoadedAsync();
+        await viewModel.StewardPage.ShowStatisticsCommand.ExecuteAsync(null);
+        await viewModel.StewardPage.Statistics.WhenLoadedAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        var (texts, buttons) = await RenderPageAsync(harness);
+
+        Assert.Contains(harness.Localization.StewardTabStatistics, buttons);
+        Assert.Contains(harness.Localization.StewardStatisticsHint, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsCurrentBuild, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsDependencies, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsUpkeep, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsOverview, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsMostDownloaded, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsTotalListings, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsRequired, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsNoImage, texts);
+        Assert.Contains(viewModel.DiscoverItems.First(item => item.ModId == "AdvancedFlightComputer").Name, texts);
+        Assert.Contains("MIT", texts);
+        Assert.DoesNotContain("Maxi", texts);
+        Assert.DoesNotContain(harness.Localization.StewardQueueHint, texts);
+    }
+
+    [Fact]
     public async Task WatcherTab_ShowsAGoneListingWithoutAContentPage_ByItsIdWithoutALink()
     {
         using var harness = await CreateAsync(ViewModelHarness.WithoutAuthored("MeasureTools", ViewModelHarness.MarkGone("MeasureTools", "1.1.9")));

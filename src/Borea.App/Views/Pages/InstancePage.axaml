@@ -431,8 +431,8 @@
                                 <TextBlock Classes="action-md" Text="{Binding Localization.InstanceUpdateAll}" />
                             </Button>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0" IsVisible="{Binding UpdateAll.IsInstalling}">
-                                <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Value="{Binding UpdateAll.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
-                                <Button Classes="text" Content="{Binding UpdateAll.Run.PauseText}" Command="{Binding UpdateAll.Run.TogglePauseCommand}" />
+                                <ProgressBar Width="96" MinWidth="0" Height="6" VerticalAlignment="Center" Value="{Binding UpdateAll.Progress}" Maximum="100" IsIndeterminate="{Binding UpdateAll.Run.IsPlanning, FallbackValue={x:False}}" Foreground="{StaticResource Brush.Accent}" />
+                                <Button Classes="text" Content="{Binding UpdateAll.Run.PauseText}" Command="{Binding UpdateAll.Run.TogglePauseCommand}" IsVisible="{Binding !UpdateAll.Run.IsPlanning, FallbackValue={x:True}}" />
                                 <Button Classes="text" Content="{Binding UpdateAll.Run.StopText}" Command="{Binding UpdateAll.Run.StopCommand}" />
                             </StackPanel>
                             <!-- c/button-cta -->
@@ -496,24 +496,10 @@
                 <StackPanel>
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
                     <TextBlock Classes="body-md secondary" Text="{Binding SharedProfileImportNotice}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding SharedProfileImportNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.ProgressStatus}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.IsConfirmingUpdate}">
-                        <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
-                            <Panel IsEnabled="{Binding CanChangeContent}">
-                                <Button Classes="text primary" Content="{Binding UpdateAll.ConfirmUpdateText}" Command="{Binding UpdateAll.ConfirmUpdateCommand}" IsEnabled="{Binding UpdateAll.Choices.IsComplete, FallbackValue={x:True}}" />
-                            </Panel>
-                            <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding UpdateAll.CancelUpdateCommand}" />
-                        </StackPanel>
-                    </Grid>
-                    <ContentControl Margin="0,12,0,0" Content="{Binding UpdateAll.Choices}" IsVisible="{Binding UpdateAll.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding UpdateAll.Changelogs}" ItemTemplate="{StaticResource ChangelogEntry}" IsVisible="{Binding UpdateAll.HasChangelogs}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Spacing="12" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
+                    <WrapPanel ItemSpacing="8" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.ProgressStatus}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Classes="label-md" Text="{Binding UpdateAll.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding UpdateAll.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </WrapPanel>
                     <TextBlock Classes="body-md danger" Text="{Binding UpdateAll.InstallError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-md secondary" Text="{Binding PackDifferenceText}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding PackDifferenceText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <!-- a newer version of the pack the instance was created from -->

@@ -892,6 +892,79 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatStewardWatcherGoneFailed(string reason)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardWatcherGoneFailedFormat, reason);
 
+    public string StewardTabStatistics => Resources.StewardTabStatistics;
+
+    public string StewardStatisticsHint => Resources.StewardStatisticsHint;
+
+    public string StewardStatisticsLoading => Resources.StewardStatisticsLoading;
+
+    public string StewardStatisticsTotalListings => Resources.StewardStatisticsTotalListings;
+
+    public string StewardStatisticsModsNotBlocked => Resources.StewardStatisticsModsNotBlocked;
+
+    public string StewardStatisticsUpkeepListings => Resources.StewardStatisticsUpkeepListings;
+
+    public string StewardStatisticsTotalDownloads => Resources.StewardStatisticsTotalDownloads;
+
+    public string StewardStatisticsCurrentBuild => Resources.StewardStatisticsCurrentBuild;
+
+    public string StewardStatisticsNoBuild => Resources.StewardStatisticsNoBuild;
+
+    public string StewardStatisticsNoMods => Resources.StewardStatisticsNoMods;
+
+    public string StewardStatisticsNothing => Resources.StewardStatisticsNothing;
+
+    public string FormatStewardStatisticsNotBlocked(string notBlocked, string total, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNotBlockedFormat, notBlocked, total, build);
+
+    public string StewardStatisticsNotBlocked => Resources.StewardStatisticsNotBlocked;
+
+    public string StewardStatisticsBlocked => Resources.StewardStatisticsBlocked;
+
+    public string StewardStatisticsBlockedMods => Resources.StewardStatisticsBlockedMods;
+
+    public string StewardStatisticsDependencies => Resources.StewardStatisticsDependencies;
+
+    public string StewardStatisticsMostDependencies => Resources.StewardStatisticsMostDependencies;
+
+    public string StewardStatisticsMostDependedOn => Resources.StewardStatisticsMostDependedOn;
+
+    public string StewardStatisticsRequired => Resources.StewardStatisticsRequired;
+
+    public string StewardStatisticsOptional => Resources.StewardStatisticsOptional;
+
+    public string StewardStatisticsUpkeep => Resources.StewardStatisticsUpkeep;
+
+    public string StewardStatisticsListing => Resources.StewardStatisticsListing;
+
+    public string StewardStatisticsUpkeepEmpty => Resources.StewardStatisticsUpkeepEmpty;
+
+    public string StewardStatisticsNoCurrentRelease => Resources.StewardStatisticsNoCurrentRelease;
+
+    public string FormatStewardStatisticsNoUpdate(string days)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoUpdateFormat, days);
+
+    public string StewardStatisticsNoImage => Resources.StewardStatisticsNoImage;
+
+    public string StewardStatisticsNoForumsThread => Resources.StewardStatisticsNoForumsThread;
+
+    public string FormatStewardStatisticsShowAll(string count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsShowAllFormat, count);
+
+    public string StewardStatisticsShowFewer => Resources.StewardStatisticsShowFewer;
+
+    public string StewardStatisticsOverview => Resources.StewardStatisticsOverview;
+
+    public string StewardStatisticsTypes => Resources.StewardStatisticsTypes;
+
+    public string StewardStatisticsTags => Resources.StewardStatisticsTags;
+
+    public string StewardStatisticsLicenses => Resources.StewardStatisticsLicenses;
+
+    public string StewardStatisticsReleaseHosts => Resources.StewardStatisticsReleaseHosts;
+
+    public string StewardStatisticsMostDownloaded => Resources.StewardStatisticsMostDownloaded;
+
     public string StewardTabStatus => Resources.StewardTabStatus;
 
     public string StewardStatusHint => Resources.StewardStatusHint;
@@ -2607,7 +2680,58 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallChoicesSuggested => Resources.InstallChoicesSuggested;
 
+    public string InstallChoicesRecommendedHint => Resources.InstallChoicesRecommendedHint;
+
+    public string InstallChoicesSuggestedHint => Resources.InstallChoicesSuggestedHint;
+
     public string UpdateAnyway => Resources.UpdateAnyway;
+
+    public string FormatUpdateAllTitle(int count, string instanceName)
+        => count == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleOneFormat, instanceName)
+            : string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleFormat, count, instanceName);
+
+    public string FormatUpdateAllTitleNoCount(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleNoCountFormat, instanceName);
+
+    public string FormatUpdateAllConfirm(int count)
+        => count == 1
+            ? Resources.UpdateAllConfirmOne
+            : string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllConfirmFormat, count);
+
+    public string FormatUpdateAllConfirmAnyway(int count)
+        => count == 1
+            ? Resources.UpdateAllConfirmAnywayOne
+            : string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllConfirmAnywayFormat, count);
+
+    public string UpdateAllListHeading => Resources.UpdateAllListHeading;
+
+    public string UpdateAllListHint => Resources.UpdateAllListHint;
+
+    public string UpdateAllNew => Resources.UpdateAllNew;
+
+    public string UpdateAllOlder => Resources.UpdateAllOlder;
+
+    public string FormatUpdateAllVersionChange(string from, string to)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllVersionChangeFormat, from, to);
+
+    public string FormatUpdateAllShowChanges(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllShowChangesFormat, name);
+
+    public string FormatUpdateAllHideChanges(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllHideChangesFormat, name);
+
+    public string UpdateAllMoreMods => Resources.UpdateAllMoreMods;
+
+    public string UpdateAllChooseMod => Resources.UpdateAllChooseMod;
+
+    public string UpdateAllNoNotes => Resources.UpdateAllNoNotes;
+
+    public string UpdateAllChooseFirst => Resources.UpdateAllChooseFirst;
+
+    public string UpdateChecking => Resources.UpdateChecking;
+
+    public string UpdateNothingFound => Resources.UpdateNothingFound;
 
     public string ContentUpdate => Resources.ContentUpdate;
 
