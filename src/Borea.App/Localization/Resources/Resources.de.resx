@@ -6087,6 +6087,9 @@
   <data name="UpdateAllTitleNoCountFormat" xml:space="preserve">
     <value>Die Mods in {0} aktualisieren</value>
   </data>
+  <data name="UpdateAllTitleWithRecordedFormat" xml:space="preserve">
+    <value>Die Mods, Fahrzeuge und Spielstände in {0} aktualisieren</value>
+  </data>
   <data name="UpdateAllConfirmFormat" xml:space="preserve">
     <value>{0} Mods aktualisieren</value>
   </data>
@@ -6104,6 +6107,9 @@
   </data>
   <data name="UpdateAllListHint" xml:space="preserve">
     <value>Wähle eine Mod aus, um die Änderungen zu lesen.</value>
+  </data>
+  <data name="UpdateAllRecordedHeading" xml:space="preserve">
+    <value>Fahrzeuge und Spielstände werden nach den Mods aktualisiert. Wo Borea deine Antwort braucht, wartet die Zeile darauf.</value>
   </data>
   <data name="UpdateAllNew" xml:space="preserve">
     <value>Neu</value>

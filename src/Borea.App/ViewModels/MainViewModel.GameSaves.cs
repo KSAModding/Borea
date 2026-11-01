@@ -384,9 +384,12 @@ public partial class MainViewModel
                 return;
 
             var installed = GameVersionOf(services, instance.Instance);
-            section.SetItems(entries.Select(entry => new GameSaveItem(this, section, instance.InstanceId, entry, installed)));
+            var running = RunningRecordedRow(instance.InstanceId);
+            section.SetItems(entries.Select(entry => running is not null && running.Entry.Kind == entry.Kind && string.Equals(running.FolderName, entry.FolderName, StringComparison.OrdinalIgnoreCase)
+                ? running
+                : new GameSaveItem(this, section, instance.InstanceId, entry, installed)));
             await ShowSharedContentAsync(section.Kind);
-            await ShowRecordedContentAsync(section, instance.InstanceId);
+            await ShowRecordedContentAsync(section, instance.Instance);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

@@ -2696,6 +2696,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatUpdateAllTitleNoCount(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleNoCountFormat, instanceName);
 
+    public string FormatUpdateAllTitleWithRecorded(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleWithRecordedFormat, instanceName);
+
     public string FormatUpdateAllConfirm(int count)
         => count == 1
             ? Resources.UpdateAllConfirmOne
@@ -2709,6 +2712,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string UpdateAllListHeading => Resources.UpdateAllListHeading;
 
     public string UpdateAllListHint => Resources.UpdateAllListHint;
+
+    public string UpdateAllRecordedHeading => Resources.UpdateAllRecordedHeading;
 
     public string UpdateAllNew => Resources.UpdateAllNew;
 
