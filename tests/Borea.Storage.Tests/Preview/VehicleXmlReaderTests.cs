@@ -52,6 +52,70 @@ public sealed class VehicleXmlReaderTests
         Assert.Contains(vehicle.Problems, problem => problem is { Kind: PreviewNoticeKind.AssetFailed, Subject: VehicleXmlReader.FileName });
     }
 
+    [Fact]
+    public void TheFuelLinks_AreReadWithTheirNodes_AndAPartKnowsItsTreeParent()
+    {
+        const string body = """
+            <RootPartRef InstanceOf="Capsule" LocalInstanceId="4">
+              <PartRef InstanceOf="Tank" LocalInstanceId="9">
+                <FuelLink PartA="70" PartB="71" />
+                <PartRef InstanceOf="Port" LocalInstanceId="11" />
+              </PartRef>
+            </RootPartRef>
+            <FuelLink PartA="4" PartB="9" Flow="AToB"><Node X="1" Y="2" Z="3" /><Node Y="-1" /><Other X="9" /></FuelLink>
+            <FuelLink PartA="9" PartB="11" />
+            <LaunchGameTime />
+            """;
+
+        var vehicle = VehicleXmlReader.Read(Vehicle(body));
+
+        Assert.Empty(vehicle.Problems);
+        Assert.Equal([(uint?)null, 4u, 9u], vehicle.Parts.Select(part => part.ParentLocalId));
+        Assert.Equal(2, vehicle.FuelLinks.Count);
+        Assert.Equal((4u, 9u), (vehicle.FuelLinks[0].PartA, vehicle.FuelLinks[0].PartB));
+        Assert.Equal([new Vector3(1, 2, 3), new Vector3(0, -1, 0)], vehicle.FuelLinks[0].Nodes);
+        Assert.Equal((9u, 11u), (vehicle.FuelLinks[1].PartA, vehicle.FuelLinks[1].PartB));
+        Assert.Empty(vehicle.FuelLinks[1].Nodes);
+    }
+
+    [Theory]
+    [InlineData("PartA=\"x\" PartB=\"2\"", "")]
+    [InlineData("PartA=\"-1\" PartB=\"2\"", "")]
+    [InlineData("PartA=\"1\" PartB=\"99999999999\"", "")]
+    [InlineData("PartA=\"1\" PartB=\"2\"", "<Node X=\"abc\" />")]
+    [InlineData("PartA=\"1\" PartB=\"2\"", "<Node X=\"NaN\" />")]
+    [InlineData("PartA=\"1\" PartB=\"2\"", "<Node Y=\"INF\" />")]
+    [InlineData("PartA=\"1\" PartB=\"2\"", "<Node Z=\"1E+300\" />")]
+    [InlineData("PartA=\"1\" PartB=\"2\"", "<Node X=\"1001\" />")]
+    public void AFuelLinkWithANumberThatCannotBeUsed_IsLeftOutAlone(string attributes, string nodes)
+    {
+        var body = $"""
+            <RootPartRef InstanceOf="Capsule" LocalInstanceId="1" />
+            <FuelLink {attributes}>{nodes}</FuelLink>
+            <FuelLink PartA="5" PartB="6" />
+            """;
+
+        var vehicle = VehicleXmlReader.Read(Vehicle(body));
+
+        Assert.Single(vehicle.Parts);
+        Assert.Equal(5u, Assert.Single(vehicle.FuelLinks).PartA);
+        Assert.Single(vehicle.Problems, problem => problem is { Kind: PreviewNoticeKind.AssetFailed, Subject: VehicleXmlReader.FileName });
+    }
+
+    [Fact]
+    public void TheFuelLinksAndTheirNodes_StopAtTheirCaps()
+    {
+        var nodes = string.Concat(Enumerable.Repeat("<Node X=\"1\" />", VehicleXmlReader.MaxFuelLinkNodes + 1));
+        var links = string.Concat(Enumerable.Repeat("<FuelLink PartA=\"1\" PartB=\"2\" />", VehicleXmlReader.MaxFuelLinks));
+        var body = $"<RootPartRef InstanceOf=\"Capsule\" LocalInstanceId=\"1\" /><FuelLink PartA=\"1\" PartB=\"2\">{nodes}</FuelLink>{links}";
+
+        var vehicle = VehicleXmlReader.Read(Vehicle(body));
+
+        Assert.Equal(VehicleXmlReader.MaxFuelLinks, vehicle.FuelLinks.Count);
+        Assert.Equal(VehicleXmlReader.MaxFuelLinkNodes, vehicle.FuelLinks[0].Nodes.Count);
+        Assert.Single(vehicle.Problems, problem => problem.Kind == PreviewNoticeKind.Budget);
+    }
+
     internal static MemoryStream Vehicle(string body) =>
         Text($"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<VehicleSaveData Id=\"Test\">\n{body}\n</VehicleSaveData>\n");
 

@@ -41,7 +41,7 @@ namespace Borea.Storage.Preview;
 public sealed class VehiclePreview : IVehiclePreview
 {
     /// <summary>Goes into the scene key, so a change of the scene rules makes every stored still image old.</summary>
-    internal const int FormatVersion = 1;
+    internal const int FormatVersion = 2;
 
     private const int CachedCatalogs = 2;
 
@@ -227,9 +227,9 @@ public sealed class VehiclePreview : IVehiclePreview
 
             var sourceKeys = SourceKeys(mods);
             var (catalog, meshIndex) = Catalog(gameBuild, sourceKeys, mods.Mods, cancellationToken);
-            var scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, null);
+            var scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, null, vehicleXml.FuelLinks);
             if (MissingHint(scene, mods.Missing) is { } hint)
-                scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, hint);
+                scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, hint, vehicleXml.FuelLinks);
 
             List<PreviewNotice> notices = [.. vehicleXml.Problems, .. mods.Notices, .. fetchNotices, .. catalog.Notices, .. meshIndex.Notices, .. scene.Notices];
             scene = scene with { Notices = notices };
