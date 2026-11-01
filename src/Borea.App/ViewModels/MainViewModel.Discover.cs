@@ -183,7 +183,7 @@ public partial class MainViewModel
 
     public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenses.Count > 0 || (ShowsCategories && SelectedCategories.Count > 0) || HasGameVersionRange;
 
-    /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
+    /// <summary>The Sort by choice of every tab except Loaders, the saved one until the menu or a link on Home changes it.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
 
     public string DiscoverSortText => DiscoverSort switch
@@ -678,6 +678,13 @@ public partial class MainViewModel
         SetMainWindowDiscover();
     }
 
+    /// <summary>Shows a tab in the order of a Home group. The saved Sort by choice stays, because only the menu on Discover changes it.</summary>
+    internal void OpenDiscoverTab(ContentType type, DiscoverSortOrder order)
+    {
+        ShowDiscoverSort(order);
+        OpenDiscoverTab(type);
+    }
+
     [RelayCommand]
     private void ClearSelectedAuthor() => SelectedAuthor = null;
 
@@ -725,13 +732,18 @@ public partial class MainViewModel
     [RelayCommand]
     private void SelectDiscoverSort(DiscoverSortOrder order)
     {
-        if (order == DiscoverSort)
+        if (order == DiscoverSort && order == _appPreferences.DiscoverSortOrder)
             return;
 
+        ShowDiscoverSort(order);
+        QueuePreferenceSave(preferences => preferences.WithDiscoverSortOrder(order));
+    }
+
+    private void ShowDiscoverSort(DiscoverSortOrder order)
+    {
         _discoverSort = order;
         OnPropertyChanged(nameof(DiscoverSort));
         OnPropertyChanged(nameof(DiscoverSortText));
-        QueuePreferenceSave(preferences => preferences.WithDiscoverSortOrder(order));
         ApplyDiscoverFilters();
     }
 
