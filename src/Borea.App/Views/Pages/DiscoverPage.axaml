@@ -176,7 +176,9 @@
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ActiveKeptBuildUnavailable}" Margin="8,24,0,0" IsVisible="{Binding !CanAddToActiveInstance}" />
                     <StackPanel Spacing="4" Margin="8,24,0,0" IsVisible="{Binding ShowsNothingSharedYet}">
                         <TextBlock Classes="heading-md" Text="{Binding DiscoverNothingSharedText}" TextWrapping="Wrap" />
-                        <TextBlock Classes="body-md secondary" Text="{Binding DiscoverNothingSharedHint}" TextWrapping="Wrap" />
+                        <!-- the hint names the action of the button, so a type that the index refuses keeps only the heading -->
+                        <TextBlock Classes="body-md secondary" Text="{Binding DiscoverNothingSharedHint}" TextWrapping="Wrap" IsVisible="{Binding ShowsDiscoverShare}" />
+                        <Button Classes="text primary" HorizontalAlignment="Left" Margin="0,8,0,0" Content="{Binding DiscoverShareAction}" Command="{Binding ShareFromDiscoverCommand}" IsVisible="{Binding ShowsDiscoverShare}" />
                     </StackPanel>
                     <StackPanel Spacing="4" Margin="8,24,0,0">
                         <StackPanel.IsVisible>
@@ -377,8 +379,16 @@
                             <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverForModAuthors}" />
                             <TextBlock Classes="body-sm secondary" TextWrapping="Wrap" Text="{Binding Localization.DiscoverForModAuthorsText}" />
                             <!-- the padding keeps the text inside the hover background, and the margin lines the text up with the one above -->
-                            <Button Classes="link" HorizontalAlignment="Left" Margin="-8,0,0,0" Command="{Binding OpenListingCommand}">
+                            <Button Classes="link" HorizontalAlignment="Left" Margin="-8,0,0,0" Command="{Binding ListYourModCommand}">
                                 <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverListYourMod}" />
+                            </Button>
+                        </StackPanel>
+                        <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding ShowsDiscoverShare}" />
+                        <StackPanel Spacing="10" IsVisible="{Binding ShowsDiscoverShare}">
+                            <TextBlock Classes="heading-md" Text="{Binding DiscoverShareHeading}" />
+                            <TextBlock Classes="body-sm secondary" TextWrapping="Wrap" Text="{Binding DiscoverShareText}" />
+                            <Button Classes="link" HorizontalAlignment="Left" Margin="-8,0,0,0" Command="{Binding ShareFromDiscoverCommand}">
+                                <TextBlock Classes="action-md" Text="{Binding DiscoverShareAction}" />
                             </Button>
                         </StackPanel>
                     </StackPanel>

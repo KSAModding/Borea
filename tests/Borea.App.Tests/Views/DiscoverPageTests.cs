@@ -204,7 +204,7 @@ public sealed class DiscoverPageTests
 
         var (left, right, offset) = await RenderAsync(harness, 1280, page =>
         {
-            var link = SidePanelButton(page, viewModel.OpenListingCommand);
+            var link = SidePanelButton(page, viewModel.ListYourModCommand);
             var text = link.GetVisualDescendants().OfType<TextBlock>().Single();
             var heading = SidePanel(page).GetVisualDescendants().OfType<TextBlock>().Single(block => block.Text == viewModel.Localization.DiscoverForModAuthors);
             var start = Corner(text, link).X;
@@ -214,6 +214,33 @@ public sealed class DiscoverPageTests
         Assert.True(left >= 8, $"The text starts {left} px inside the link.");
         Assert.True(right >= 8, $"The text ends {right} px inside the link.");
         Assert.Equal(0, offset, 0.5);
+    }
+
+    /// <summary>An index with no vehicle shows the empty state, whose hint and button go away with a schema that refuses the type, and so does the block of the panel.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ShareEntries_ShowOnlyWhileTheIndexAcceptsTheType(bool isGated)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: isGated ? GameSaveShareTests.Gated : null);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        await viewModel.ShareSchemaLoad!;
+
+        var (buttons, panelLinks, texts) = await RenderAsync(harness, 860, page =>
+        (
+            page.GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible && button.Command == viewModel.ShareFromDiscoverCommand),
+            SidePanel(page).GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible && button.Command == viewModel.ShareFromDiscoverCommand),
+            page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList()));
+
+        var localization = harness.Localization;
+        Assert.Equal(isGated ? 0 : 2, buttons);
+        Assert.Equal(isGated ? 0 : 1, panelLinks);
+        Assert.Contains(localization.DiscoverNoVehicles, texts);
+        Assert.Equal(!isGated, texts.Contains(localization.DiscoverNoVehiclesHint));
+        Assert.Equal(!isGated, texts.Contains(localization.DiscoverShareVehicleHeading));
+        Assert.Equal(!isGated, texts.Contains(localization.DiscoverShareVehicleText));
     }
 
     [Theory]

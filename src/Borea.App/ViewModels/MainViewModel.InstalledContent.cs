@@ -238,6 +238,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     [NotifyPropertyChangedFor(nameof(CanUpdate))]
     private bool _isInstalling;
 
@@ -263,6 +264,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     [NotifyPropertyChangedFor(nameof(CanUpdate))]
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     [NotifyPropertyChangedFor(nameof(AddedModsText))]
@@ -271,6 +273,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     [NotifyPropertyChangedFor(nameof(CanUpdate))]
     [NotifyPropertyChangedFor(nameof(AddedModsText))]
     private InstallChoices? _choices;
@@ -287,6 +290,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
         Listing = listing;
         NewerRelease = newer;
         OnPropertyChanged(nameof(HasRecord));
+        OnPropertyChanged(nameof(ShowsShareButton));
         OnPropertyChanged(nameof(ShowsListingLine));
         OnPropertyChanged(nameof(ListingName));
         OnPropertyChanged(nameof(ListingLinkText));

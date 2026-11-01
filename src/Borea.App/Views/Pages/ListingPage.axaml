@@ -116,7 +116,8 @@
     <!-- List or change your mod: the form, with the checks along the right edge -->
     <Grid>
         <ScrollViewer x:Name="PageScroller">
-            <views:PageBodyPanel HasSidePanel="True">
+            <!-- the start step has no side panel, so its cards take that room -->
+            <views:PageBodyPanel HasSidePanel="{Binding !ListingEditor.IsStartStep}">
                 <StackPanel Container.Name="page-body" Container.Sizing="Width">
                     <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
                         <Button Classes="plain back" Command="{Binding GoBackCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding Localization.NavigationBack}" AutomationProperties.Name="{Binding Localization.NavigationBack}">
@@ -132,8 +133,21 @@
                     </StackPanel>
                     <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.IntroText}" TextWrapping="Wrap" Margin="0,24,0,0" IsVisible="{Binding !ListingEditor.IsShareStep}" />
 
-                    <!-- start: a new listing from its release host, or a listed one to change -->
+                    <!-- start: a share while the index accepts a type, a new listing from its release host, a new pack, or a listed one to change -->
                     <StackPanel Spacing="16" Margin="0,24,0,0" IsVisible="{Binding ListingEditor.IsStartStep}">
+                        <Border Classes="card" Padding="24">
+                            <Border.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                    <Binding Path="VehiclesSection.CanShare" />
+                                    <Binding Path="SavesSection.CanShare" />
+                                </MultiBinding>
+                            </Border.IsVisible>
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingShareCardTitle}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingShareCardText}" TextWrapping="Wrap" />
+                                <Button Classes="text primary" HorizontalAlignment="Left" Margin="0,4,0,0" Content="{Binding Localization.ListingShareCardAction}" Command="{Binding ShareFromListingStartCommand}" IsEnabled="{Binding !ListingEditor.IsBusy}" />
+                            </StackPanel>
+                        </Border>
                         <Border Classes="card" Padding="24">
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingNewTitle}" />

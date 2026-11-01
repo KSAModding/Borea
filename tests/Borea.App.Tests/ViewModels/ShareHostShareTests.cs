@@ -457,6 +457,10 @@ public sealed class ShareHostShareTests
 
         Assert.True(viewModel.CurrentWindowListing);
         Assert.True(editor.IsSharing);
+        viewModel.OpenDiscoverTab(ContentType.Save);
+        await viewModel.ShareFromDiscoverCommand.ExecuteAsync(null);
+        Assert.True(viewModel.CurrentWindowListing);
+        Assert.True(editor.IsSharing);
         answer.SetResult();
         await upload;
         Assert.True(editor.HasShareUpload);

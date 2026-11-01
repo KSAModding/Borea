@@ -75,7 +75,7 @@ public sealed class ListingPageTests
             Press(window, PhysicalKey.Enter);
             await (editor.LoadListedCommand.ExecutionTask ?? Task.CompletedTask);
             return 0;
-        });
+        }, windowHeight: 1080);
 
         Assert.True(editor.IsFormStep);
         Assert.Equal("StarMap", editor.Id);
@@ -100,7 +100,7 @@ public sealed class ListingPageTests
 
             await (editor.LoadListedCommand.ExecutionTask ?? Task.CompletedTask);
             return 0;
-        });
+        }, windowHeight: 1080);
 
         Assert.True(editor.IsFormStep);
         Assert.Equal("StarMap", editor.Id);
@@ -586,11 +586,11 @@ public sealed class ListingPageTests
     private sealed record SearchLayout(int Rows, int OwnChips, List<string> Outside, bool Trimmed);
 
     /// <summary>Shows the listing page of the harness in a window and runs <paramref name="body"/> while the window is open.</summary>
-    private static Task<T> OnPageAsync<T>(ViewModelHarness harness, Func<Window, ListingPage, Task<T>> body) =>
+    private static Task<T> OnPageAsync<T>(ViewModelHarness harness, Func<Window, ListingPage, Task<T>> body, double windowHeight = 832) =>
         HeadlessApp.RunAsync(harness, async () =>
         {
             var page = new ListingPage { DataContext = harness.ViewModel };
-            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = windowHeight, Content = page, DataContext = harness.ViewModel };
             window.Show();
             try
             {

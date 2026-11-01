@@ -2046,6 +2046,9 @@
   <data name="GameSaveShare" xml:space="preserve">
     <value>Teilen</value>
   </data>
+  <data name="GameSaveShareTip" xml:space="preserve">
+    <value>Stelle es online, damit andere Spieler es herunterladen können.</value>
+  </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
     <value>Das Spiel nimmt den Namen „{0}“ nicht mehr an, und ein Name, den das Spiel nicht annimmt, lässt sich nicht teilen. Wähle einen Namen nach den Regeln unten.</value>
   </data>
@@ -2701,10 +2704,37 @@
     <value>Für Mod-Autoren</value>
   </data>
   <data name="DiscoverForModAuthorsText" xml:space="preserve">
-    <value>Borea schreibt und prüft die Datei, die deine Mod im Inhaltsindex einträgt, für einen neuen Eintrag oder eine Änderung an einer eingetragenen Mod.</value>
+    <value>Borea schreibt und prüft die Datei, die deine Mod auf die Seite Entdecken bringt, für eine neue Mod oder eine Änderung an einer eingetragenen Mod.</value>
+  </data>
+  <data name="DiscoverShareVehicleHeading" xml:space="preserve">
+    <value>Selbst eins gebaut?</value>
+  </data>
+  <data name="DiscoverShareVehicleText" xml:space="preserve">
+    <value>Wähle ein Fahrzeug aus deinen Instanzen, schreibe ein paar Worte und veröffentliche es. Andere Spieler können es dann von hier hinzufügen.</value>
+  </data>
+  <data name="DiscoverShareVehicle" xml:space="preserve">
+    <value>Dein Fahrzeug teilen</value>
+  </data>
+  <data name="DiscoverShareSaveHeading" xml:space="preserve">
+    <value>Ein Spielstand zum Teilen?</value>
+  </data>
+  <data name="DiscoverShareSaveText" xml:space="preserve">
+    <value>Stelle einen Spielstand aus einer deiner Instanzen online, damit andere Spieler ihn hier finden.</value>
+  </data>
+  <data name="DiscoverShareSave" xml:space="preserve">
+    <value>Deinen Spielstand teilen</value>
   </data>
   <data name="ListingIntro" xml:space="preserve">
     <value>Borea schreibt die Datei, die deine Mod im Inhaltsindex einträgt, und prüft sie, bevor du den Pull Request öffnest.</value>
+  </data>
+  <data name="ListingShareCardTitle" xml:space="preserve">
+    <value>Fahrzeug oder Spielstand teilen</value>
+  </data>
+  <data name="ListingShareCardText" xml:space="preserve">
+    <value>Stelle ein Fahrzeug oder einen Spielstand, den du gemacht hast, auf eine Plattform, damit jeder Spieler es auf der Seite Entdecken findet.</value>
+  </data>
+  <data name="ListingShareCardAction" xml:space="preserve">
+    <value>Auswählen, was du teilst</value>
   </data>
   <data name="ListingNewTitle" xml:space="preserve">
     <value>Neuer Eintrag</value>

@@ -49,12 +49,17 @@ public partial class MainViewModel
         await LoadGameSavesAsync(VehiclesSection);
         await LoadGameSavesAsync(SavesSection);
         await RefreshInstanceStartsEmptyAsync();
+        StartShareSchemaLoad();
+    }
+
+    /// <summary>The one load of the newest schema in a session, whose types decide whether Share shows. Null until an instance page, the tab of vehicles or saves, or a share opens.</summary>
+    internal Task? ShareSchemaLoad { get; private set; }
+
+    private void StartShareSchemaLoad()
+    {
         if (ShareSchemaLoad is null && _services is { } services && services.ListingValidator.SchemaOrigin != ListingSchemaOrigin.Downloaded)
             ShareSchemaLoad = LoadShareSchemaAsync(services);
     }
-
-    /// <summary>The one load of the newest schema in a session, whose types decide whether Share shows. Null until an instance page opens.</summary>
-    internal Task? ShareSchemaLoad { get; private set; }
 
     /// <summary>
     /// Share shows only for a type that the index accepts, so it appears once the index lifts the rollout gate of the type,
@@ -70,8 +75,15 @@ public partial class MainViewModel
         {
         }
 
+        RefreshShareGate();
+    }
+
+    /// <summary>Tells every entry of a share that the schema in use may have changed.</summary>
+    internal void RefreshShareGate()
+    {
         VehiclesSection.RefreshShare();
         SavesSection.RefreshShare();
+        OnPropertyChanged(nameof(ShowsDiscoverShare));
     }
 
     /// <summary>
@@ -117,10 +129,19 @@ public partial class MainViewModel
     /// <summary>The way into a share with no item at hand. A share on the way only shows again, and "Start over" is there for a new one.</summary>
     internal async Task OpenShareFlowAsync(GameSaveKind kind)
     {
+        StartShareSchemaLoad();
+
+        // The step shows first, because the page can wait a long time for the index and the schema, and it reads the rows again when they answer.
+        var choose = ListingEditor.HasShareOnTheWay ? Task.CompletedTask : ListingEditor.OpenShareChooseAsync(kind);
         await OpenListingAsync();
-        if (!ListingEditor.HasShareOnTheWay)
-            await ListingEditor.OpenShareChooseAsync(kind);
+        await choose;
     }
+
+    [RelayCommand]
+    private Task ShareFromDiscoverAsync() => OpenShareFlowAsync(IsSavesTab ? GameSaveKind.Save : GameSaveKind.Vehicle);
+
+    [RelayCommand]
+    private Task ShareFromListingStartAsync() => OpenShareFlowAsync(VehiclesSection.CanShare ? GameSaveKind.Vehicle : GameSaveKind.Save);
 
     private async Task OpenShareChooseOnAsync(GameSaveItem item, string? problem = null)
     {
@@ -973,14 +994,17 @@ public sealed partial class GameSaveItem : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     private bool _isConfirmingDelete;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     private bool _isChoosingTarget;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     private bool _isConfirmingReplace;
 
     [ObservableProperty]
@@ -997,9 +1021,13 @@ public sealed partial class GameSaveItem : ObservableObject
     /// <summary>An item of an instance, of a type that the index accepts.</summary>
     public bool CanShare => InstanceId != Guid.Empty && Section.CanShare;
 
+    /// <summary>A row with a record has no button, because a share of the file of someone else ends in a refusal, and its menu entry leads to the note that says so.</summary>
+    public bool ShowsShareButton => CanShare && !HasRecord && IsIdle;
+
     internal void RefreshShare()
     {
         OnPropertyChanged(nameof(CanShare));
+        OnPropertyChanged(nameof(ShowsShareButton));
         ShareCommand.NotifyCanExecuteChanged();
     }
 
