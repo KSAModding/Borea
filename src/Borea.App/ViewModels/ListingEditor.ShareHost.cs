@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Borea.Core.GitHub;
+using Borea.Core.Instances;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Sharing;
@@ -334,7 +335,7 @@ public sealed partial class ListingEditor
     [RelayCommand]
     private async Task PublishToShareHostAsync()
     {
-        if (_shareUpload is not { } shared || _owner.Services is not { } services || !CanPublishToShareHost)
+        if (_shareUpload is not { } shared || _share is not { } share || _owner.Services is not { } services || !CanPublishToShareHost)
             return;
 
         var listing = shared.ListingId is null ? Draft : null;
@@ -366,6 +367,11 @@ public sealed partial class ListingEditor
             ShareHostOutcome = published.PullRequest is null
                 ? Localization.FormatListingShareHostReleased(id, published.Version)
                 : Localization.FormatListingShareHostPublished(id, published.Version);
+
+            await services.SharedContent.RecordAsync(
+                new SharedContentEntry(share.Entry.Kind.ToContentType(), shared.Host.Key, shared.Host.Name, id, share.Entry.FolderName, published.Version, published.Page),
+                listing is null ? null : new SharedContentAuthor(listing.Authors, listing.License));
+            await _owner.ShowSharedContentAsync(share.Entry.Kind);
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {

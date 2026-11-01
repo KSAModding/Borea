@@ -96,7 +96,8 @@ public partial class MainViewModel
 
             var providers = await services.ContentProviders.ReadAsync(item.InstanceId);
             var installed = (await services.Instances.GetByIdAsync(item.InstanceId))?.Mods ?? [];
-            var share = new GameSaveShareStart(item.InstanceId, item.Entry, content, ContentShareProposal.Of(content.Ids, providers, installed));
+            var lastAuthor = await services.SharedContent.GetAuthorAsync();
+            var share = new GameSaveShareStart(item.InstanceId, item.Entry, content, ContentShareProposal.Of(content.Ids, providers, installed), lastAuthor);
             await OpenListingAsync();
             ListingEditor.StartShare(share);
         }
@@ -271,6 +272,7 @@ public partial class MainViewModel
 
             var installed = GameVersionOf(services, instance.Instance);
             section.SetItems(entries.Select(entry => new GameSaveItem(this, section, instance.InstanceId, entry, installed)));
+            await ShowSharedContentAsync(section.Kind);
             await ShowRecordedContentAsync(section, instance.InstanceId);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -278,6 +280,19 @@ public partial class MainViewModel
             if (SelectedInstance?.InstanceId == instance.InstanceId)
                 section.Error = exception.Message;
         }
+    }
+
+    /// <summary>Shows on each row the host of the last share of its folder. The record is for the whole computer, so it holds for the rows of every instance.</summary>
+    internal async Task ShowSharedContentAsync(GameSaveKind kind)
+    {
+        if (_services is not { } services)
+            return;
+
+        var section = kind == GameSaveKind.Vehicle ? VehiclesSection : SavesSection;
+        var type = kind.ToContentType();
+        var entries = await services.SharedContent.ListAsync();
+        foreach (var item in section.Items)
+            item.SharedHostName = entries.LastOrDefault(entry => entry.Type == type && string.Equals(entry.FolderName, item.FolderName, StringComparison.OrdinalIgnoreCase))?.HostName;
     }
 
     /// <summary>How long the row of a new vehicle or save shows its border.</summary>
@@ -719,7 +734,7 @@ public sealed partial class GameSaveSection : ObservableObject
     private void OpenFolder() => _owner.OpenGameSaveSectionFolder(this);
 
     [RelayCommand]
-    private void FindOnDiscover() => _owner.OpenDiscoverTab(Kind == GameSaveKind.Vehicle ? ContentType.Vehicle : ContentType.Save);
+    private void FindOnDiscover() => _owner.OpenDiscoverTab(Kind.ToContentType());
 
     [RelayCommand]
     private Task BeginCopyFromProfileAsync() => _owner.BeginCopyFromProfileAsync(this);
@@ -792,6 +807,15 @@ public sealed partial class GameSaveItem : ObservableObject
     public bool ExistsInInstance { get; init; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SharedOnText))]
+    [NotifyPropertyChangedFor(nameof(ShowsListingLine))]
+    private string? _sharedHostName;
+
+    public string? SharedOnText => SharedHostName is { } host ? _owner.Localization.FormatContentSharedOn(host) : null;
+
+    public bool ShowsListingLine => HasRecord || SharedHostName is not null;
+
+    [ObservableProperty]
     private bool _isSelected;
 
     /// <summary>Whether the row shows its border for a moment, because a toast led the player to it.</summary>
@@ -847,6 +871,7 @@ public sealed partial class GameSaveItem : ObservableObject
         OnPropertyChanged(nameof(SizeText));
         OnPropertyChanged(nameof(CopyNoteText));
         OnPropertyChanged(nameof(ReplaceText));
+        OnPropertyChanged(nameof(SharedOnText));
         RefreshRecordText();
     }
 

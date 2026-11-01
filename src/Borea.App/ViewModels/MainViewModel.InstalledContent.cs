@@ -85,7 +85,7 @@ public partial class MainViewModel
         if (_services is not { } services)
             return;
 
-        var type = section.Kind == GameSaveKind.Vehicle ? ContentType.Vehicle : ContentType.Save;
+        var type = section.Kind.ToContentType();
         var records = await InstalledContentOfAsync(instanceId);
         var recorded = new List<GameSaveItem>();
         foreach (var item in section.Items)
@@ -284,6 +284,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
         Listing = listing;
         NewerRelease = newer;
         OnPropertyChanged(nameof(HasRecord));
+        OnPropertyChanged(nameof(ShowsListingLine));
         OnPropertyChanged(nameof(ListingName));
         OnPropertyChanged(nameof(InstalledVersionText));
         OnPropertyChanged(nameof(NewerText));
