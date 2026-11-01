@@ -49,7 +49,7 @@ public sealed partial class ToastService : ObservableObject
     private static bool HasToast(TaskItem task) => task switch
     {
         { State: TaskState.Finished, Kind: TaskKind.IndexRefresh } => false,
-        { State: TaskState.Finished, Kind: TaskKind.Update or TaskKind.UpdateAll, ModCount: 0 } => false,
+        { State: TaskState.Finished, Kind: TaskKind.Update or TaskKind.UpdateAll, ModCount: 0, NewVersion: null } => false,
         { State: TaskState.Stopped, Kind: TaskKind.ModListImport or TaskKind.ManualReplace } => false,
         { State: not TaskState.Failed, Kind: TaskKind.BoreaUpdate } => false,
         _ => true,

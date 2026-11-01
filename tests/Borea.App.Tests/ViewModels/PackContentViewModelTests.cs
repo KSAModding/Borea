@@ -152,7 +152,7 @@ public sealed class PackContentViewModelTests
     }
 
     [Fact]
-    public async Task UpdateCount_LeavesARecordedVehicleWithANewerReleaseOut()
+    public async Task UpdateCount_CountsARecordedVehicleWithANewerReleaseAndLeavesItAlone()
     {
         var rover = Archive(("Example Rover/meta.toml", "name = \"Example Rover\"\n"), ("Example Rover/vehicle.xml", "<Vehicle />"));
         using var harness = await ViewModelHarness.CreateAsync(
@@ -166,7 +166,7 @@ public sealed class PackContentViewModelTests
         await viewModel.LoadAsync();
         await viewModel.WhenContentUpdatesCheckedAsync();
 
-        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+        Assert.Equal(2, viewModel.ActiveInstanceUpdateCount);
         Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
     }
 

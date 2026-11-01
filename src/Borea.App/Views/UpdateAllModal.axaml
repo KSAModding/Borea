@@ -119,6 +119,15 @@
                             </StackPanel>
                         </Border>
 
+                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="12" views:RoundedClip.IsEnabled="True" Grid.IsSharedSizeScope="True" IsVisible="{Binding !!UpdateAll.RecordedChanges.Count, FallbackValue={x:False}}">
+                            <StackPanel>
+                                <Border Background="{StaticResource Brush.SurfaceRaised}" Padding="16,10">
+                                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.UpdateAllRecordedHeading}" TextWrapping="Wrap" />
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding UpdateAll.RecordedChanges}" ItemTemplate="{StaticResource UpdateChangeRow}" />
+                            </StackPanel>
+                        </Border>
+
                         <ContentControl Content="{Binding UpdateAll.ChoicesLast}" ContentTemplate="{StaticResource UpdateChoicesBox}" IsVisible="{Binding UpdateAll.ChoicesLast, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue={x:False}}" />
                     </StackPanel>
                 </ScrollViewer>

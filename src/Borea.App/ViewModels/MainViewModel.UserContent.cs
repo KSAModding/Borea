@@ -158,6 +158,7 @@ public partial class MainViewModel
         try
         {
             run.TaskItem.MarkRunning(plan.Mods);
+            run.TaskItem.NewVersion = plan.Release.Version.ToString();
 
             // the player saw the mods it misses before the go, so the install goes on without them
             var result = await services.UserContentInstallation.ExecuteAsync(plan, allowMissing: true, ProgressOf(row), run.InstallStop);
