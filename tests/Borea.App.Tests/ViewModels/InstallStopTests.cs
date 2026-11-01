@@ -99,6 +99,24 @@ public sealed class InstallStopTests
     }
 
     [Fact]
+    public async Task Stop_DuringThePlan_EndsTheRunWithoutAnError()
+    {
+        var planning = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var harness = await ViewModelHarness.CreateAsync(wrapInstallPlanner: _ => new PlannerThatWaitsForTheStop(planning));
+        var (_, item) = await DiscoverRowAsync(harness);
+
+        var install = item.InstallCommand.ExecuteAsync(null);
+        await planning.Task.WaitAsync(Timeout);
+        item.Run!.StopCommand.Execute(null);
+        await install.WaitAsync(Timeout);
+
+        Assert.False(item.IsInstalling);
+        Assert.Null(item.InstallError);
+        Assert.Equal(harness.Localization.InstallStopped, item.ProgressStatus);
+        Assert.Equal(TaskState.Stopped, harness.ViewModel.Tasks.History[0].State);
+    }
+
+    [Fact]
     public async Task PlanStoppedAtTheSearchLimit_ShowsTheMessageWithoutAModId()
     {
         var message = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = 100_000, Value = "AdvancedFlightComputer" };
@@ -471,6 +489,16 @@ public sealed class InstallStopTests
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
         return (instance, viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer"));
+    }
+
+    private sealed class PlannerThatWaitsForTheStop(TaskCompletionSource planning) : IInstallPlanner
+    {
+        public async Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
+        {
+            planning.TrySetResult();
+            await Task.Delay(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("A plan that waits for the stop never ends by itself.");
+        }
     }
 
     private sealed class FixedPlanner(PlanningMessage conflict) : IInstallPlanner

@@ -27,10 +27,11 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         var channel = request.Channel ?? _channel;
         var roots = BuildRoots(request, out var initialConflicts);
         var domains = await BuildDomainsAsync(request, roots, channel, initialConflicts, cancellationToken).ConfigureAwait(false);
-        return Plan(request, channel, roots, domains, initialConflicts);
+        // a cached index answers at once, so without this the search of a large plan runs on the thread of the caller, which can be the UI thread
+        return await Task.Run(() => Plan(request, channel, roots, domains, initialConflicts, cancellationToken), cancellationToken).ConfigureAwait(false);
     }
 
-    private InstallPlan Plan(InstallPlanningRequest request, ReleaseChannel channel, Dictionary<string, RequestedMod> roots, Dictionary<string, IReadOnlyList<RequestedMod?>> domains, IReadOnlyList<PlanningMessage> initialConflicts)
+    private InstallPlan Plan(InstallPlanningRequest request, ReleaseChannel channel, Dictionary<string, RequestedMod> roots, Dictionary<string, IReadOnlyList<RequestedMod?>> domains, IReadOnlyList<PlanningMessage> initialConflicts, CancellationToken cancellationToken)
     {
         var chosen = new Dictionary<string, RequestedMod?>(ModIds.Comparer);
         var states = 0;
@@ -55,6 +56,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
 
             void Search(int index, int age)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (++states > SearchLimit) return;
                 if (index == ids.Count)
                 {

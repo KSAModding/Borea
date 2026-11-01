@@ -473,6 +473,29 @@ public sealed class RepositoryInstallPlannerTests
     }
 
     [Fact]
+    public async Task PlanAsync_SearchDoesNotHoldTheCallingThread()
+    {
+        var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Recommends)]);
+        using var returned = new ManualResetEventSlim();
+        var callerHadReturned = false;
+        var recommended = new FirstReadSet(() => callerHadReturned = returned.Wait(TimeSpan.FromSeconds(5)));
+        var planning = PlanAsync(new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B")]), Recommended: recommended));
+        returned.Set();
+        await planning;
+        Assert.True(callerHadReturned);
+    }
+
+    [Fact]
+    public async Task PlanAsync_CancelledDuringTheSearch_Throws()
+    {
+        var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Recommends)]);
+        using var cancellation = new CancellationTokenSource();
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B")]), Recommended: new FirstReadSet(cancellation.Cancel));
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request, cancellation.Token));
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+    }
+
+    [Fact]
     public async Task PlanAsync_RetainedInstalledAlternativeConstrainsReplacement()
     {
         var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B", maxVersion: ModVersion.Parse("1.0.0")), new ModDependencyAlternative("C")]);
@@ -1318,6 +1341,33 @@ public sealed class RepositoryInstallPlannerTests
     private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, bool yanked = false, int gameMinRevision = 2131, IReadOnlyList<string>? os = null, ReleaseStatus status = ReleaseStatus.Stable, DateTimeOffset? unavailableSince = null, int? gameMaxRevision = null) => new(1, id, ModVersion.Parse(version), status, DateTimeOffset.UnixEpoch, gameMinRevision == 2131 ? "2026.7.4.2131" : $"2026.7.4.{gameMinRevision}", gameMinRevision, new DownloadInfo("https://example.com/mod.zip", new string('A', 64), 1, "application/zip", unavailableSince: unavailableSince), 1, dependencies ?? [], gameMax: gameMaxRevision is { } max ? $"2026.8.0.{max}" : null, gameMaxRevision: gameMaxRevision, os: os, yanked: yanked);
 
     private static ModVersionMetadata Content(string id, ContentType type, IReadOnlyList<ModDependency> dependencies, int gameMinRevision = 2131) => new(1, id, ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, $"2026.7.4.{gameMinRevision}", gameMinRevision, new DownloadInfo("https://example.com/rover.zip", new string('A', 64), 1, "application/zip"), 1, dependencies, type, install: new InstallInfo(null, derived: false, folder: "Rover"));
+
+    // The search reads this set, so the first read marks a point inside the search.
+    private sealed class FirstReadSet(Action firstRead) : IReadOnlySet<string>
+    {
+        private readonly HashSet<string> _empty = [];
+        private bool _wasRead;
+        public int Count => 0;
+        public bool Contains(string item)
+        {
+            if (!_wasRead)
+            {
+                _wasRead = true;
+                firstRead();
+            }
+
+            return false;
+        }
+
+        public IEnumerator<string> GetEnumerator() => _empty.GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => _empty.GetEnumerator();
+        public bool IsProperSubsetOf(IEnumerable<string> other) => _empty.IsProperSubsetOf(other);
+        public bool IsProperSupersetOf(IEnumerable<string> other) => _empty.IsProperSupersetOf(other);
+        public bool IsSubsetOf(IEnumerable<string> other) => _empty.IsSubsetOf(other);
+        public bool IsSupersetOf(IEnumerable<string> other) => _empty.IsSupersetOf(other);
+        public bool Overlaps(IEnumerable<string> other) => _empty.Overlaps(other);
+        public bool SetEquals(IEnumerable<string> other) => _empty.SetEquals(other);
+    }
 
     private sealed class FakeRepository(IReadOnlyList<ModVersionMetadata> releases) : IModRepository
     {

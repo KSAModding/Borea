@@ -190,7 +190,7 @@ public partial class MainViewModel
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
             var requested = await requestMods(instance);
-            var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, requested), null);
+            var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, requested), null, run.InstallStop.Token);
             var choices = InstallChoices.AreNeeded(plan) ? NewChoices(instanceId, requested, plan) : null;
             var wait = (plan.IsReady || choices is not null) && waitForConfirmation is not null && await waitForConfirmation(instance, plan);
 
@@ -228,6 +228,13 @@ public partial class MainViewModel
         {
             run.TaskItem.StoppedAfter = (exception.Completed, exception.Total);
             stopped = StoppedText(row, exception.Completed, exception.Total);
+        }
+        catch (OperationCanceledException) when (!executed && run.InstallStop.IsRequested)
+        {
+            // the plan writes nothing, so a stop during it ends the run the way a stop before the first mod does
+            if (row is IUpdateRow update)
+                update.Changelogs = [];
+            stopped = StoppedText(row);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
