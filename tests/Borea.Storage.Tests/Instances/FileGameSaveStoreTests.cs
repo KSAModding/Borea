@@ -1,7 +1,9 @@
 using System.IO.Compression;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Sharing;
 using Borea.Storage.Instances;
+using Borea.Storage.Sharing;
 using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Paths;
 
@@ -335,6 +337,19 @@ public sealed class FileGameSaveStoreTests : IDisposable
         Assert.Equal(GameSaveRenameOutcome.Renamed, await _store.RenameAsync(_instanceId, entry, "Orbit test"));
 
         Assert.Equal("Orbit test", Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Save)).FolderName);
+    }
+
+    [Fact]
+    public async Task RenameAsync_MovesTheShareRecordOfTheFolder()
+    {
+        WriteItem(_paths.GetInstanceSavesFolder(_instanceId), "Orbit", "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 100);
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Save));
+        var shared = new FileSharedContentRecords(_paths);
+        await shared.RecordAsync(new SharedContentEntry(ContentType.Save, "ksamods", "ksamods.gg", "Orbit", "Orbit", "1.0.0", null), author: null);
+
+        await _store.RenameAsync(_instanceId, entry, "Mun");
+
+        Assert.Equal("Mun", Assert.Single(await shared.ListAsync()).FolderName);
     }
 
     [Fact]

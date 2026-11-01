@@ -60,6 +60,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetActiveInstancePointerPath() => Path.Combine(_root, "active-instance.toml");
     public string GetModFavoritesPath() => Path.Combine(_root, "mod-favorites.toml");
     public string GetModPackFavoritesPath() => Path.Combine(_root, "modpack-favorites.toml");
+    public string GetSharedContentPath() => Path.Combine(_root, "shared-content.toml");
     public string GetBoreaSettingsPath() => Path.Combine(_root, "borea-settings.toml");
     public string GetAppPreferencesPath() => Path.Combine(_root, "app-preferences.json");
     public string GetTaskHistoryPath() => Path.Combine(_root, "task-history.json");

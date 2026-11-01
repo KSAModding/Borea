@@ -90,6 +90,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetActiveInstancePointerPath() => Path.Combine(_boreaRoot, "active-instance.toml");
     public string GetModFavoritesPath() => Path.Combine(_boreaRoot, "mod-favorites.toml");
     public string GetModPackFavoritesPath() => Path.Combine(_boreaRoot, "modpack-favorites.toml");
+    public string GetSharedContentPath() => Path.Combine(_boreaRoot, "shared-content.toml");
     public string GetBoreaSettingsPath() => Path.Combine(_boreaRoot, "borea-settings.toml");
     public string GetAppPreferencesPath() => Path.Combine(_boreaRoot, "app-preferences.json");
     public string GetTaskHistoryPath() => Path.Combine(_boreaRoot, "task-history.json");

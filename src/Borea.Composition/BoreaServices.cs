@@ -52,6 +52,7 @@ using Borea.Storage.Preferences;
 using Borea.Storage.Preview;
 using Borea.Storage.Secrets;
 using Borea.Storage.Settings;
+using Borea.Storage.Sharing;
 using Borea.Storage.State;
 using Borea.Storage.Updates;
 
@@ -151,6 +152,8 @@ public sealed class BoreaServices : IDisposable
     public required IModFavoritesRepository ModFavorites { get; init; }
 
     public required IModPackFavoritesRepository ModPackFavorites { get; init; }
+
+    public required ISharedContentRecords SharedContent { get; init; }
 
     public required IModUninstaller Uninstaller { get; init; }
 
@@ -522,6 +525,7 @@ public sealed class BoreaServices : IDisposable
         var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
         var installedContent = new FileInstalledContentRecords(paths);
+        var sharedContent = new FileSharedContentRecords(paths, log);
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
         var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader, ContentIndexTypeFiles.All, log), log);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
@@ -613,7 +617,7 @@ public sealed class BoreaServices : IDisposable
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
             GameData = new FileGameDataReader(paths),
-            GameSaves = new FileGameSaveStore(paths, records: installedContent),
+            GameSaves = new FileGameSaveStore(paths, records: installedContent, sharedContent: sharedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
             InstalledContent = installedContent,
             UserContentInstaller = userContentInstaller,
@@ -629,6 +633,7 @@ public sealed class BoreaServices : IDisposable
             GameSettingsPresets = gameSettingsPresets,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
+            SharedContent = sharedContent,
             Uninstaller = new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log),
             Installer = modInstaller,
             Replacer = modReplacer,
