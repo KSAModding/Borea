@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Core.Dependencies;
 using Borea.Core.Mods;
 using Borea.Core.Preview;
 using Borea.Preview.Loading;
@@ -85,6 +88,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     private readonly IPreviewThumbnails? _thumbnails;
     private readonly IPngEncoder? _encoder;
     private readonly Action<string>? _stillStored;
+    private readonly Func<string, Func<Stream, Task>, Task>? _savePicture;
     private readonly TimeSpan _autoFetchDelay;
     private readonly bool _autoFetch;
     private readonly CancellationTokenSource _lifetime = new();
@@ -93,6 +97,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     private VehiclePreviewResult? _result;
     private IReadOnlyList<VehiclePreviewMissingMod> _missingMods = [];
     private IReadOnlyList<PreviewNotice> _notices = [];
+    private int _partCount;
+    private int _stageCount;
+    private bool _hasUnknownParts;
     private PreviewStep? _step;
     private string? _message;
     private bool _gameFolderInvalid;
@@ -106,6 +113,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     /// <param name="stillStored">Gets the vehicle hash after a new still was stored, on the thread that started the load.</param>
     /// <param name="autoFetchDelay">The wait before a small vehicle file downloads on its own, or null for <see cref="DefaultAutoFetchDelay"/>.</param>
     /// <param name="autoFetch">False when a small vehicle file must also wait for the click, such as after the player cancelled this release.</param>
+    /// <param name="savePicture">Asks the player for a file with the given suggested name and lets the given write fill it, or null to save no picture.</param>
     public VehiclePreviewViewModel(
         IVehiclePreview service,
         ModVersionMetadata release,
@@ -117,7 +125,8 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         IPngEncoder? encoder = null,
         Action<string>? stillStored = null,
         TimeSpan? autoFetchDelay = null,
-        bool autoFetch = true)
+        bool autoFetch = true,
+        Func<string, Func<Stream, Task>, Task>? savePicture = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _release = release ?? throw new ArgumentNullException(nameof(release));
@@ -131,6 +140,8 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _stillStored = stillStored;
         _autoFetchDelay = autoFetchDelay ?? DefaultAutoFetchDelay;
         _autoFetch = autoFetch;
+        _savePicture = savePicture;
+        ShowFacts();
     }
 
     internal ModVersionMetadata Release => _release;
@@ -156,6 +167,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasScene))]
     [NotifyCanExecuteChangedFor(nameof(ResetViewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SavePictureCommand))]
     private PreviewScene? _scene;
 
     /// <summary>Goes up by one for each Reset view click. The view frames the vehicle again when it changes.</summary>
@@ -222,6 +234,14 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     public string NoticesText => _localization.FormatPreviewNotices(Notices.Count);
 
     /// <summary>
+    /// The facts of the vehicle page. The mods come from the release, so they show at once. The parts and the stages come
+    /// from vehicle.xml, so they show after a load, and a stage count of 0 shows nothing. Mass and delta-v do not show,
+    /// because vehicle.xml holds only the propellant mass of a tank. A release that names no mod says that it needs none,
+    /// unless a load found a part that nothing here has, because the vehicle then needs something the release does not name.
+    /// </summary>
+    public ObservableCollection<string> Facts { get; } = [];
+
+    /// <summary>
     /// Every preparation and load that still runs, also one that a newer run cancelled, because that one can still
     /// hold a file open. It never fails.
     /// </summary>
@@ -254,6 +274,20 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     [RelayCommand(CanExecute = nameof(HasScene))]
     private void ResetView() => ResetCount++;
 
+    /// <summary>Saves the view of the click as a PNG in a file that the player picks. The picture draws only after the pick, and it goes nowhere else.</summary>
+    [RelayCommand(CanExecute = nameof(HasScene))]
+    private async Task SavePictureAsync(IVehiclePictureSource? view)
+    {
+        if (_encoder is not { } encoder || _savePicture is not { } save || view?.CurrentPicture() is not { } picture)
+            return;
+
+        await save(_release.ModId + ".png", async stream =>
+        {
+            var png = await Task.Run(() => encoder.Encode(RenderPicture(picture)));
+            await stream.WriteAsync(png);
+        });
+    }
+
     [RelayCommand]
     private void OpenSettings() => _openSettings();
 
@@ -281,6 +315,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         OnPropertyChanged(nameof(ShowText));
         ShowMissingMods(_missingMods);
         ShowNotices();
+        ShowFacts();
     }
 
     private Task TrackRun(Func<CancellationToken, Task> body)
@@ -418,6 +453,10 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _result = result;
         previous?.Dispose();
         _notices = result.Notices;
+        _partCount = result.Vehicle.PartCount;
+        _stageCount = result.Vehicle.StageCount;
+        _hasUnknownParts = result.Vehicle.Placeholders.Any(placeholder => placeholder.Reason is PlaceholderReason.UnknownPart or PlaceholderReason.UnknownSubPart);
+        ShowFacts();
 
         Step(PreviewStep.BuildingModel);
         var (geometry, geometryNotices) = await _builder.BuildGeometryAsync(result.Vehicle, result.Assets, _options, token);
@@ -513,6 +552,14 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         return frame;
     }
 
+    /// <summary>Renders one picture at High quality, the quality of a view at rest, on a renderer of its own, so the view can keep rendering.</summary>
+    private static FrameBuffer RenderPicture(VehiclePicture picture)
+    {
+        var frame = new FrameBuffer(picture.Width, picture.Height);
+        new SoftwareRenderer().Render(picture.Scene, picture.Camera, frame, new RenderOptions { Quality = RenderQuality.High, WorldCacheBytes = 0, WorkBufferBytes = 0 }, CancellationToken.None);
+        return frame;
+    }
+
     private void ThrowWhenStale(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -566,6 +613,22 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
         OnPropertyChanged(nameof(HasNotices));
         OnPropertyChanged(nameof(NoticesText));
+    }
+
+    private void ShowFacts()
+    {
+        Facts.Clear();
+        if (_partCount > 0)
+            Facts.Add(_localization.FormatPreviewFactParts(_partCount));
+
+        if (_stageCount > 0)
+            Facts.Add(_localization.FormatPreviewFactStages(_stageCount));
+
+        var mods = _release.Dependencies.Count(dependency => dependency.Kind == ModDependencyKind.Required);
+        if (mods > 0)
+            Facts.Add(_localization.FormatShareSummaryMods(mods.ToString(CultureInfo.CurrentCulture)));
+        else if (!_hasUnknownParts)
+            Facts.Add(_localization.ShareSummaryNoMods);
     }
 
     private string NoticeKindText(PreviewNoticeKind kind) => kind switch

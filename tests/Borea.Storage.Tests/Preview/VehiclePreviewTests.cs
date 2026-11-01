@@ -31,7 +31,7 @@ public sealed class VehiclePreviewTests : IDisposable
 
     private const string Rover = """
         <VehicleSaveData Id="Rover">
-          <RootPartRef InstanceOf="Body" LocalInstanceId="1">
+          <RootPartRef InstanceOf="Body" LocalInstanceId="1" Sequence="1">
             <Transform><Position X="2" /></Transform>
             <PartRef InstanceOf="Wing" LocalInstanceId="2"><Transform><Position Y="3" /></Transform></PartRef>
           </RootPartRef>
@@ -102,6 +102,7 @@ public sealed class VehiclePreviewTests : IDisposable
         var first = await preview.LoadAsync(plan, fetchVehicle: false, fetchMods: false, new Recorder(stages));
         Assert.True(first.IsReady);
         Assert.Equal([VehiclePreviewStage.ReadingParts, VehiclePreviewStage.Done], stages);
+        Assert.Equal((2, 1), (first.Vehicle.PartCount, first.Vehicle.StageCount));
         var body = Assert.Single(first.Vehicle.Draws);
         Assert.Equal(("BodyMesh", new Vector3(2, 0, 0)), (first.Vehicle.Meshes[body.Mesh].Name, body.Transform.Translation));
         Assert.Equal((PlaceholderReason.UnknownPart, "Wing"), (Assert.Single(first.Vehicle.Placeholders).Reason, first.Vehicle.Placeholders[0].MissingId));

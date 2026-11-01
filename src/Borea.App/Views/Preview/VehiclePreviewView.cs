@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Borea.App.ViewModels;
 using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
 using PreviewRenderOptions = Borea.Preview.Rendering.RenderOptions;
@@ -31,7 +32,7 @@ namespace Borea.App.Views.Preview;
 /// and no input follows for <see cref="RefineDelay"/>, the view renders the same camera once more at
 /// <see cref="RenderQuality.High"/>, and any input cancels that frame at once.
 /// </summary>
-public sealed class VehiclePreviewView : Control
+public sealed class VehiclePreviewView : Control, IVehiclePictureSource
 {
     /// <summary>How far one arrow key press turns the camera, 10 degrees.</summary>
     internal const float KeyStepPixels = 10f * MathF.PI / 180f / OrbitCamera.RadiansPerPixel;
@@ -162,6 +163,15 @@ public sealed class VehiclePreviewView : Control
         _zoomSteps = 0;
         _axisOffset = 0;
         RequestRender(full: true);
+    }
+
+    public VehiclePicture? CurrentPicture()
+    {
+        if (Scene is not { } scene || VisualRoot is null || Bounds.Width <= 0 || Bounds.Height <= 0)
+            return null;
+
+        var (width, height) = FrameSize(1);
+        return new VehiclePicture(scene, _camera, width, height);
     }
 
     public override void Render(DrawingContext context)
@@ -453,14 +463,21 @@ public sealed class VehiclePreviewView : Control
             return;
 
         var frameScale = full ? 1 : _dragScales.Scale;
-        var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * frameScale;
-        var width = Math.Clamp((int)Math.Ceiling(size.Width * scale), 1, FrameBuffer.MaxSize);
-        var height = Math.Clamp((int)Math.Ceiling(size.Height * scale), 1, FrameBuffer.MaxSize);
+        var (width, height) = FrameSize(frameScale);
         var request = new RenderRequest(scene, camera, width, height, full ? null : frameScale, _generation, _cancellation);
         if (high && full)
             QueueRefine(request);
         else
             Queue(request);
+    }
+
+    /// <summary>The pixels of a frame at <paramref name="frameScale"/> of the full resolution of the bounds on this screen.</summary>
+    private (int Width, int Height) FrameSize(double frameScale)
+    {
+        var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * frameScale;
+        return (
+            Math.Clamp((int)Math.Ceiling(Bounds.Width * scale), 1, FrameBuffer.MaxSize),
+            Math.Clamp((int)Math.Ceiling(Bounds.Height * scale), 1, FrameBuffer.MaxSize));
     }
 
     private void Queue(RenderRequest request)

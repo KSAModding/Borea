@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json.Nodes;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
+using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preview;
@@ -643,6 +644,178 @@ public sealed class VehiclePreviewViewModelTests
         Assert.Equal(["scene" + VehiclePreviewViewModel.PartialKeySuffix, "scene"], thumbnails.Stores.Select(still => still.SceneKey));
     }
 
+    [Fact]
+    public async Task TheFacts_ShowTheRequiredModsAtOnce_AndThePartsAndStagesAfterTheLoad()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile, Vehicle = TriangleVehicle() with { PartCount = 3, StageCount = 2 }, Files = TriangleFiles };
+        ModDependency[] dependencies = [new("Wings", ModDependencyKind.Required), new("Decals", ModDependencyKind.Optional)];
+        using var preview = Start(service, release: RoverOfSize(VehiclePreviewViewModel.AutoFetchVehicleBytes + 1, dependencies));
+        await preview.Loading;
+
+        var mods = Localization.FormatShareSummaryMods("1");
+        Assert.Equal([mods], preview.Facts);
+
+        await preview.ShowCommand.ExecuteAsync(null);
+
+        Assert.Equal([Localization.FormatPreviewFactParts(3), Localization.FormatPreviewFactStages(2), mods], preview.Facts);
+    }
+
+    [Fact]
+    public async Task TheFacts_OfAVehicleWithoutStagesOrMods_ShowNoStageCountAndSayThatItNeedsNoMods()
+    {
+        using var preview = Start(new FakeVehiclePreview { Vehicle = TriangleVehicle(), Files = TriangleFiles });
+        await preview.Loading;
+
+        Assert.Equal([Localization.FormatPreviewFactParts(1), Localization.ShareSummaryNoMods], preview.Facts);
+    }
+
+    [Theory]
+    [InlineData(PlaceholderReason.UnknownPart, false)]
+    [InlineData(PlaceholderReason.UnknownSubPart, false)]
+    [InlineData(PlaceholderReason.UnknownMesh, true)]
+    public async Task TheFacts_SayThatAVehicleNeedsNoMods_OnlyWhenNoPartIsUnknown(PlaceholderReason reason, bool saysNoMods)
+    {
+        var box = new ResolvedPlaceholder(Matrix4x4.Identity, Vector3.One, "Wing", reason, null);
+        using var preview = Start(new FakeVehiclePreview { Vehicle = TriangleVehicle(box), Files = TriangleFiles });
+        await preview.Loading;
+
+        Assert.Equal(saysNoMods, preview.Facts.Contains(Localization.ShareSummaryNoMods));
+    }
+
+    [Fact]
+    public async Task TheFacts_KeepTheCountOfRequiredMods_WhenAPartIsUnknown()
+    {
+        var box = new ResolvedPlaceholder(Matrix4x4.Identity, Vector3.One, "Wing", PlaceholderReason.UnknownPart, null);
+        using var preview = Start(new FakeVehiclePreview { Vehicle = TriangleVehicle(box), Files = TriangleFiles }, release: RoverOfSize(2_500_000, [new("Wings", ModDependencyKind.Required)]));
+        await preview.Loading;
+
+        Assert.Contains(Localization.FormatShareSummaryMods("1"), preview.Facts);
+    }
+
+    [Fact]
+    public async Task SavePicture_WritesThePngOfTheViewToThePickedFile()
+    {
+        var picks = new List<string>();
+        var encoder = new RecordingEncoder();
+        using var written = new MemoryStream();
+        using var preview = Start(new FakeVehiclePreview(), encoder: encoder, savePicture: async (name, write) =>
+        {
+            picks.Add(name);
+            await write(written);
+        });
+        await preview.Loading;
+        var scene = PreviewTestScenes.StackedBoxes();
+        preview.Scene = scene;
+        var camera = new OrbitCamera();
+        camera.Frame(scene.Bounds, 64f / 36f);
+
+        await preview.SavePictureCommand.ExecuteAsync(new FixedPicture(new VehiclePicture(scene, camera, 64, 36)));
+
+        Assert.Equal(["ExampleRover.png"], picks);
+        Assert.Equal(RecordingEncoder.Png, written.ToArray());
+        var frame = Assert.Single(encoder.Frames);
+        Assert.Equal((64, 36), (frame.Width, frame.Height));
+
+        // The vehicle shows, and the pixels around it stay transparent.
+        Assert.InRange(frame.Covered, 1, 64 * 36 - 1);
+    }
+
+    [Fact]
+    public async Task SavePicture_DrawsNothing_WhenThePlayerCancelsThePick_AndAsksNothing_WithoutAPicture()
+    {
+        var picks = 0;
+        var encoder = new RecordingEncoder();
+        using var preview = Start(new FakeVehiclePreview(), encoder: encoder, savePicture: (_, _) =>
+        {
+            picks++;
+            return Task.CompletedTask;
+        });
+        await preview.Loading;
+        var scene = PreviewTestScenes.StackedBoxes();
+        preview.Scene = scene;
+
+        await preview.SavePictureCommand.ExecuteAsync(new FixedPicture(null));
+        Assert.Equal(0, picks);
+
+        await preview.SavePictureCommand.ExecuteAsync(new FixedPicture(new VehiclePicture(scene, new OrbitCamera(), 8, 8)));
+        Assert.Equal(1, picks);
+        Assert.Empty(encoder.Frames);
+    }
+
+    [Fact]
+    public async Task SavePicture_IsOffWithoutAScene()
+    {
+        using var preview = Start(new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NoGameFolder });
+        await preview.Loading;
+        Assert.False(preview.SavePictureCommand.CanExecute(null));
+
+        preview.Scene = PreviewTestScenes.StackedBoxes();
+        Assert.True(preview.SavePictureCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SavePicture_OnTheOpenPage_ShowsTheSavedFile_OrAnErrorWhenTheFileCannotBeWritten()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview();
+        viewModel.VehiclePreviewEncoder = new RecordingEncoder();
+        var window = new GameSaveShareTests.ArchiveWindow();
+        viewModel.WindowServices = window;
+        await OpenRoverAsync(viewModel);
+        var preview = viewModel.VehiclePreview!;
+        var scene = PreviewTestScenes.StackedBoxes();
+        preview.Scene = scene;
+        var picture = new FixedPicture(new VehiclePicture(scene, new OrbitCamera(), 8, 8));
+
+        await preview.SavePictureCommand.ExecuteAsync(picture);
+        Assert.Equal(harness.Localization.FormatListingSaved("ExampleRover.png"), viewModel.Toasts.Items[^1].Message);
+        Assert.Equal(RecordingEncoder.Png, window.Written.ToArray());
+
+        viewModel.WindowServices = new FailingWindow();
+        await preview.SavePictureCommand.ExecuteAsync(picture);
+        Assert.Equal(harness.Localization.PreviewPictureFailed, viewModel.Toasts.Items[^1].Message);
+        Assert.Equal("Disk full.", viewModel.Toasts.Items[^1].Detail);
+    }
+
+    private sealed class FixedPicture(VehiclePicture? picture) : IVehiclePictureSource
+    {
+        public VehiclePicture? CurrentPicture() => picture;
+    }
+
+    private sealed class RecordingEncoder : IPngEncoder
+    {
+        public static readonly byte[] Png = [1, 2, 3];
+
+        public List<(int Width, int Height, int Covered)> Frames { get; } = [];
+
+        public byte[] Encode(FrameBuffer frame)
+        {
+            var covered = 0;
+            for (var i = 3; i < frame.Rgba.Length; i += 4)
+            {
+                if (frame.Rgba[i] != 0)
+                    covered++;
+            }
+
+            Frames.Add((frame.Width, frame.Height, covered));
+            return Png;
+        }
+    }
+
+    private sealed class FailingWindow : IWindowServices
+    {
+        public Task<string?> SaveTextFileAsync(string title, string suggestedFileName, string fileTypeName, string text) => Task.FromResult<string?>(null);
+
+        public Task<string?> SaveFileAsync(string title, string suggestedFileName, string extension, string fileTypeName, Func<Stream, Task> write) => Task.FromException<string?>(new IOException("Disk full."));
+
+        public Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName) => Task.FromResult<PickedTextFile?>(null);
+
+        public Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes) => Task.FromResult<PickedBinaryFile?>(null);
+
+        public Task CopyTextAsync(string text) => Task.CompletedTask;
+    }
+
     internal static async Task OpenRoverAsync(MainViewModel viewModel)
     {
         await OpenRoverPageAsync(viewModel);
@@ -679,7 +852,9 @@ public sealed class VehiclePreviewViewModelTests
         Action<string>? stillStored = null,
         IRgbaImageDecoder? decoder = null,
         ModVersionMetadata? release = null,
-        TimeSpan? autoFetchDelay = null)
+        TimeSpan? autoFetchDelay = null,
+        IPngEncoder? encoder = null,
+        Func<string, Func<Stream, Task>, Task>? savePicture = null)
     {
         var preview = new VehiclePreviewViewModel(
             service,
@@ -689,15 +864,16 @@ public sealed class VehiclePreviewViewModelTests
             openSettings ?? (() => { }),
             new PreviewSceneBuilder(new PreviewTextureLoader(decoder)),
             thumbnails: thumbnails,
-            encoder: thumbnails,
+            encoder: encoder ?? thumbnails,
             stillStored: stillStored,
-            autoFetchDelay: autoFetchDelay);
+            autoFetchDelay: autoFetchDelay,
+            savePicture: savePicture);
         preview.Start();
         return preview;
     }
 
     /// <summary>The Rover release with another stated size of its download, or with none.</summary>
-    private static ModVersionMetadata RoverOfSize(long? size) => new(
+    private static ModVersionMetadata RoverOfSize(long? size, ModDependency[]? dependencies = null) => new(
         specVersion: 1,
         modId: Rover.ModId,
         version: Rover.Version,
@@ -707,7 +883,7 @@ public sealed class VehiclePreviewViewModelTests
         gameMinRevision: Rover.GameMinRevision,
         download: new DownloadInfo(Rover.Download.Url, Rover.Download.Sha256, size, Rover.Download.ContentType),
         installSizeBytes: null,
-        dependencies: []);
+        dependencies: dependencies ?? []);
 
     private static readonly PreviewAssetRef TriangleFile = new("Core", "Triangle.glb");
 
