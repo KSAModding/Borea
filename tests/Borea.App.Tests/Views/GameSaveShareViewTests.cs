@@ -342,6 +342,52 @@ public sealed class GameSaveShareViewTests
     }
 
     [Fact]
+    public async Task PublishStep_NamesThePictures_AndTheDoneStepShowsHowTheyEnded()
+    {
+        using var waiting = await ShareHostShareTests.PictureHarnessAsync(publish: false);
+        using var published = await ShareHostShareTests.PictureHarnessAsync(publish: true);
+
+        Assert.Contains(waiting.Localization.FormatShareSummaryPictures(2), await PageTextsAsync(waiting));
+
+        var texts = await PageTextsAsync(published);
+        Assert.Contains("shot1.png", texts);
+        Assert.Contains("shot2.png", texts);
+        Assert.Contains(published.Localization.SharePicturesSent, texts);
+        Assert.DoesNotContain(published.Localization.DiscoverIndexRetry, texts);
+    }
+
+    [Fact]
+    public async Task DoneStep_HidesWhatWouldDropThePictures_WhileTheyGoUp()
+    {
+        var (harness, publish) = await ShareHostShareTests.HeldPictureHarnessAsync();
+        using (harness)
+        {
+            var texts = await PageTextsAsync(harness);
+
+            Assert.Contains(harness.Localization.LibraryCancel, texts);
+            Assert.DoesNotContain(harness.Localization.ListingStartOver, texts);
+            Assert.DoesNotContain(harness.Localization.ShareAnother, texts);
+
+            harness.ViewModel.ListingEditor.CancelShareHostCommand.Execute(null);
+            await publish;
+        }
+    }
+
+    [Fact]
+    public async Task DescribeStep_ShowsThePicturesWithTheCover()
+    {
+        using var harness = await ShareHostShareTests.PictureHarnessAsync(publish: false);
+        harness.ViewModel.ListingEditor.BackToShareDescribeCommand.Execute(null);
+
+        var texts = await PageTextsAsync(harness);
+
+        Assert.Contains(harness.Localization.FormatSharePicturesHint(6, "10 MB"), texts);
+        Assert.Contains("shot1.png", texts);
+        Assert.Contains(harness.Localization.SharePictureCover, texts);
+        Assert.Contains(harness.Localization.SharePictureAdd, texts);
+    }
+
+    [Fact]
     public async Task DoneStep_ReplacesThePublishStep_AndKeepsTheRequestInClosedDetails()
     {
         using var harness = await ShareHostShareTests.PublishedHarnessAsync();

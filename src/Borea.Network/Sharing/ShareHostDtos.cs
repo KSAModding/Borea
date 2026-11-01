@@ -18,6 +18,10 @@ internal static class ShareHostApi
 
     public const string PublishPath = "publish";
 
+    public const string ListingsPath = "listings";
+
+    public const string ImagesPath = "images";
+
     /// <summary>The kept secret says which kind of token it holds, because a host may give no refresh token.</summary>
     public const string RefreshPrefix = "refresh:";
 
@@ -28,6 +32,8 @@ internal static class ShareHostApi
 internal static class ShareHostJson
 {
     public const string Archive = "archive";
+
+    public const string Image = "image";
 
     public const string Dependencies = "dependencies";
 

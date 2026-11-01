@@ -30,6 +30,16 @@ public interface IShareHostClient
     /// <param name="listing">The new listing, or null for a new version of a listing on the host.</param>
     /// <exception cref="ShareHostException">The host refused it, or it could not be reached.</exception>
     Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds a picture after the pictures that a listing has, so the first picture of a listing is its cover. Only the owner of the listing
+    /// may do this. RFC 0094 does not ask for this request, so a host can have none, and it then answers with <see cref="ShareHostException.IsNotFound"/>.
+    /// </summary>
+    /// <param name="listingType">vehicle or save.</param>
+    /// <param name="listingId">The id of the listing on the host.</param>
+    /// <param name="image">A PNG, JPEG or WebP image, within <see cref="ShareImageLimits"/>.</param>
+    /// <exception cref="ShareHostException">The host refused the picture, or it could not be reached.</exception>
+    Task UploadImageAsync(ShareHost host, string listingType, string listingId, ReadOnlyMemory<byte> image, CancellationToken cancellationToken = default);
 }
 
 /// <param name="Id">The upload id, which the publish names.</param>
@@ -95,4 +105,7 @@ public sealed class ShareHostException : Exception
 
     /// <summary>The host answered with a 5xx and a message, so the request can have taken effect although it reads as refused.</summary>
     public bool IsServerError { get; init; }
+
+    /// <summary>The host answered with a 404, which for an optional request can mean that the host does not have that request.</summary>
+    public bool IsNotFound { get; init; }
 }
