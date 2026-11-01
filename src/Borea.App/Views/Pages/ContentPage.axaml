@@ -726,6 +726,31 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                    <!-- only for a listing that the record of a share says the player owns -->
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding CanManageContent}" />
+                    <StackPanel Spacing="10" IsVisible="{Binding CanManageContent}">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ShareManageHeading}" />
+                        <StackPanel Spacing="6">
+                            <Button Classes="filter" Command="{Binding ChangeContentOnHostCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Pencil}" />
+                                    <TextBlock Text="{Binding Localization.ShareManageChange}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="filter" Command="{Binding TakeDownContentVersionCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
+                                    <TextBlock Text="{Binding Localization.ShareManageTakeDown}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="filter" Command="{Binding OpenContentManagePageCommand}" IsVisible="{Binding ContentManageOnHostText, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.ControlTypeOverride="Hyperlink">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.LinkSimple}" />
+                                    <TextBlock Text="{Binding ContentManageOnHostText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasContentTags}" />
                     <StackPanel Spacing="10" IsVisible="{Binding HasContentTags}">
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ContentTags}" />

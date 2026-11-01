@@ -763,7 +763,7 @@ public sealed partial class ListingEditor : ObservableObject
         Refresh();
     }
 
-    private static string[] FreeTagEntries(string text) => text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    internal static string[] FreeTagEntries(string text) => text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     /// <summary>Builds the draft from the fields, writes the file and runs the checks.</summary>
     internal void Refresh()

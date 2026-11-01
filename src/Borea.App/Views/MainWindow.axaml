@@ -152,6 +152,9 @@
     <!-- modal: one announcement of the KSAModding team -->
     <views:AnnouncementModal IsVisible="{Binding IsAnnouncementOpen}" />
 
+    <!-- modal: the owner of a listing on a share host changes it there -->
+    <views:ShareManageModal IsVisible="{Binding IsShareManageOpen}" />
+
     <!-- modal: a steward change of index-status.toml -->
     <views:IndexStatusModal IsVisible="{Binding IsStewardChangeOpen}" />
 

@@ -400,6 +400,127 @@ public sealed class ShareHostClientTests
         Assert.Equal(new SharePublished(null, "1.1.0", null), published);
     }
 
+    [Fact]
+    public async Task ChangeListingAsync_SendsOnlyTheChangedFields_AndReadsThePullRequestAndThePage()
+    {
+        HttpMethod? method = null;
+        _apiAnswer = request =>
+        {
+            method = request.Method;
+            return Json("""{"id":"ExampleRover","type":"vehicle","pull_request":"https://github.com/KSAModding/content-index/pull/130","page":"https://ksamods.gg/vehicles/ExampleRover"}""");
+        };
+        var client = await SignedInAsync();
+
+        var changed = await client.ChangeListingAsync(Host, "vehicle", "ExampleRover", new ShareListingChange(Abstract: "A sturdier rover.", Description: string.Empty, Tags: ["rover", "moon"]));
+
+        Assert.Equal(HttpMethod.Patch, method);
+        var sent = _sent.Last();
+        Assert.Equal(Api + "listings/vehicle/ExampleRover", sent.Url);
+        Assert.Equal("Bearer at1", sent.Authorization);
+        Assert.Equal("""{"abstract":"A sturdier rover.","description":"","tags":["rover","moon"]}""", JsonNode.Parse(sent.Body!)!.ToJsonString());
+        Assert.Equal(new ShareListingChanged(new Uri("https://github.com/KSAModding/content-index/pull/130"), new Uri("https://ksamods.gg/vehicles/ExampleRover")), changed);
+    }
+
+    [Fact]
+    public async Task ChangeListingAsync_NameAndLicense_GoOutUnderTheirOwnNames()
+    {
+        _apiAnswer = _ => Json("""{"id":"ExampleRover"}""");
+        var client = await SignedInAsync();
+
+        await client.ChangeListingAsync(Host, "vehicle", "ExampleRover", new ShareListingChange(Name: "Example Rover", License: "CC0-1.0"));
+
+        Assert.Equal("""{"name":"Example Rover","license":"CC0-1.0"}""", JsonNode.Parse(_sent.Last().Body!)!.ToJsonString());
+    }
+
+    [Theory]
+    [InlineData("""{"id":"ExampleRover","pull_request":null,"page":"https://evil.example/vehicles/ExampleRover"}""")]
+    [InlineData("""{"pull_request":"https://evil.example/pull/1","page":5}""")]
+    [InlineData("<html>OK</html>")]
+    public async Task ChangeListingAsync_AnswerWithoutATrustedLink_GivesNoLink(string answer)
+    {
+        _apiAnswer = _ => Json(answer);
+        var client = await SignedInAsync();
+
+        var changed = await client.ChangeListingAsync(Host, "save", "Orbit", new ShareListingChange(Name: "Orbit"));
+
+        Assert.Equal(new ShareListingChanged(null, null), changed);
+    }
+
+    [Fact]
+    public async Task TakeDownReleaseAsync_PostsToTheVersionWithoutABody()
+    {
+        HttpMethod? method = null;
+        _apiAnswer = request =>
+        {
+            method = request.Method;
+            return Json("""{"id":"ExampleRover","type":"vehicle","version":"1.1.0-beta.1","taken_down":true}""");
+        };
+        var client = await SignedInAsync();
+
+        await client.TakeDownReleaseAsync(Host, "vehicle", "ExampleRover", "1.1.0-beta.1");
+
+        Assert.Equal(HttpMethod.Post, method);
+        var sent = _sent.Last();
+        Assert.Equal(Api + "listings/vehicle/ExampleRover/releases/1.1.0-beta.1/take-down", sent.Url);
+        Assert.True(string.IsNullOrEmpty(sent.Body));
+    }
+
+    [Theory]
+    [InlineData("""{"id":"ExampleRover","taken_down":false}""")]
+    [InlineData("""{"id":"ExampleRover"}""")]
+    [InlineData("<html>OK</html>")]
+    public async Task TakeDownReleaseAsync_AnswerThatDoesNotSayTakenDown_IsNoSuccess(string answer)
+    {
+        _apiAnswer = _ => Json(answer);
+        var client = await SignedInAsync();
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.TakeDownReleaseAsync(Host, "vehicle", "ExampleRover", "1.0.0"));
+
+        Assert.Equal(ShareHostFailure.UnexpectedResponse, exception.Failure);
+    }
+
+    /// <summary>A 404 with a code of the request comes from the request, and any other 404 is a host without it, which the link on its page replaces.</summary>
+    [Theory]
+    [InlineData("""{"error":"not_owner","message":"There is no vehicle TheGuy on this host."}""", ShareHostFailure.Host, "not_owner")]
+    [InlineData("""{"error":"invalid_request","message":"TheGuy has no version 9.9.9."}""", ShareHostFailure.Host, "invalid_request")]
+    [InlineData("""{"message":"Not Found"}""", ShareHostFailure.NotOffered, null)]
+    [InlineData("""{"error":"not_found","message":"No such route."}""", ShareHostFailure.NotOffered, null)]
+    [InlineData("<html>Not Found</html>", ShareHostFailure.NotOffered, null)]
+    public async Task OptionalRequests_NotFound_TellAHostWithoutTheRequestFromARefusal(string body, ShareHostFailure failure, string? code)
+    {
+        _apiAnswer = _ => Json(body, HttpStatusCode.NotFound);
+        var client = await SignedInAsync();
+
+        var changing = await Assert.ThrowsAsync<ShareHostException>(() => client.ChangeListingAsync(Host, "vehicle", "TheGuy", new ShareListingChange(Name: "The Guy")));
+        var takingDown = await Assert.ThrowsAsync<ShareHostException>(() => client.TakeDownReleaseAsync(Host, "vehicle", "TheGuy", "9.9.9"));
+
+        Assert.Equal((failure, code), (changing.Failure, changing.Error));
+        Assert.Equal((failure, code), (takingDown.Failure, takingDown.Error));
+    }
+
+    [Fact]
+    public async Task OptionalRequests_Forbidden_ShowTheMessageOfTheHost()
+    {
+        _apiAnswer = _ => Json("""{"error":"not_owner","message":"Your account does not own TheGuy."}""", HttpStatusCode.Forbidden);
+        var client = await SignedInAsync();
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.TakeDownReleaseAsync(Host, "vehicle", "TheGuy", "1.0.0"));
+
+        Assert.Equal((ShareHostFailure.Host, "not_owner", "Your account does not own TheGuy."), (exception.Failure, exception.Error, exception.Message));
+    }
+
+    [Fact]
+    public async Task OptionalRequests_TokenRefused_DropTheToken()
+    {
+        _apiAnswer = _ => Json(ShareHostReplies.Unauthorized, HttpStatusCode.Unauthorized);
+        var client = await SignedInAsync();
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.TakeDownReleaseAsync(Host, "vehicle", "TheGuy", "1.0.0"));
+
+        Assert.Equal(ShareHostFailure.SignedOut, exception.Failure);
+        Assert.False(client.IsSignedIn(Host));
+    }
+
     [Theory]
     [InlineData(Api, "https://ksamods.gg/vehicles/TheGuy", true)]
     [InlineData(Api, "https://www.ksamods.gg/vehicles/TheGuy", true)]
@@ -414,7 +535,7 @@ public sealed class ShareHostClientTests
     [InlineData(Api, null, false)]
     public void PageOnHost_IsAcceptedOnlyAsHttpsOnTheHostOfTheApi(string api, string? address, bool accepted)
     {
-        var page = ShareHostClient.PageOnHost(Host with { Api = new Uri(api) }, address);
+        var page = (Host with { Api = new Uri(api) }).PageOnHost(address);
 
         Assert.Equal(accepted ? new Uri(address!) : null, page);
     }
