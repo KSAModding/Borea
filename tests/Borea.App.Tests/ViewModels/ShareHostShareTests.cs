@@ -346,6 +346,28 @@ public sealed class ShareHostShareTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task GameStartedOutsideBorea_StopsTheFileBeforeItIsWritten(bool saveToZip)
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        var window = new GameSaveShareTests.ArchiveWindow();
+        harness.ViewModel.WindowServices = window;
+        harness.IsGameProcessRunning = () => true;
+
+        if (saveToZip)
+            await editor.SaveShareArchiveCommand.ExecuteAsync(null);
+        else
+            await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal(harness.Localization.GameSaveCloseGame, harness.ViewModel.Toasts.Items[^1].Detail);
+        Assert.Empty(host.Uploads);
+        Assert.Null(window.SuggestedFileName);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task LeavingThePublishStep_DropsTheUpload(bool toAllFields)
     {
         var host = new FakeHost();

@@ -429,7 +429,7 @@ public sealed class GameSaveShareTests
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(schema.ToJsonString()) };
     }
 
-    private sealed class ArchiveWindow : IWindowServices
+    internal sealed class ArchiveWindow : IWindowServices
     {
         public MemoryStream Written { get; } = new();
 

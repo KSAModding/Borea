@@ -162,7 +162,7 @@ public partial class MainViewModel
             return null;
         }
 
-        if (services.Launcher.IsRunning(share.InstanceId))
+        if (IsGameRunning(services))
         {
             ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.GameSaveCloseGame);
             return null;
@@ -200,7 +200,7 @@ public partial class MainViewModel
             return null;
         }
 
-        if (services.Launcher.IsRunning(share.InstanceId))
+        if (IsGameRunning(services))
         {
             ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.GameSaveCloseGame);
             return null;
