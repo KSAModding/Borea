@@ -48,27 +48,95 @@
                         <TextBox Classes="field" Text="{Binding ListingEditor.License}" AutomationProperties.Name="{Binding Localization.ListingLicense}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareLicenseError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareLicenseError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
 
-                    <Button Classes="link" Margin="-8,10,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.ToggleShareMoreOptionsCommand}" AutomationProperties.Name="{Binding Localization.ShareMoreOptions}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="action-md" Text="{Binding Localization.ShareMoreOptions}" VerticalAlignment="Center" />
-                            <Path Classes="icon size-16" Classes.opened="{Binding ListingEditor.IsShareMoreOptionsOpen}" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <StackPanel Spacing="6" IsVisible="{Binding ListingEditor.IsShareMoreOptionsOpen}">
-                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ShareShortName}" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareShortNameHint}" TextWrapping="Wrap" />
-                        <TextBox Classes="field" Text="{Binding ListingEditor.Id}" AutomationProperties.Name="{Binding Localization.ShareShortName}" />
-                        <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareIdError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareIdError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-
-                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingDescription}" Margin="0,10,0,0" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareDescriptionHint}" TextWrapping="Wrap" />
-                        <TextBox Classes="field" Text="{Binding ListingEditor.Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" MaxHeight="320" AutomationProperties.Name="{Binding Localization.ListingDescription}" />
-
-                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingTags}" Margin="0,10,0,0" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingMoreTagsHint}" TextWrapping="Wrap" />
-                        <TextBox Classes="field" Text="{Binding ListingEditor.FreeTags}" AutomationProperties.Name="{Binding Localization.ListingTags}" />
+        <Border Classes="card" Padding="24">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="heading-md" Text="{Binding Localization.ShareModsHeading}" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareModsHint}" TextWrapping="Wrap" IsVisible="{Binding !!ListingEditor.Dependencies.Count}" />
+                <TextBlock Classes="body-md secondary" Text="{Binding Localization.ShareModsNone}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasNoShareMods}" />
+                <ItemsControl ItemsSource="{Binding ListingEditor.Dependencies}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ListingDependencyRow">
+                            <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="12">
+                                <Grid ColumnDefinitions="*,8,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="heading-sm" Text="{Binding ModName}" TextWrapping="Wrap" IsVisible="{Binding HasModName}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding PreservedText}" TextWrapping="Wrap" IsVisible="{Binding IsPreserved}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding ShareVersionText}" TextWrapping="Wrap" IsVisible="{Binding ShareVersionText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding ShareKindText}" TextWrapping="Wrap" IsVisible="{Binding ShareKindText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding NoteText}" TextWrapping="Wrap" IsVisible="{Binding HasNotes}" />
+                                        <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ShareModProblem}" TextWrapping="Wrap" IsVisible="{Binding HasShareProblem}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Classes="link" Command="{Binding RemoveCommand}" VerticalAlignment="Top">
+                                        <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" />
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding ListingEditor.ShareNotes}" IsVisible="{Binding !!ListingEditor.ShareNotes.Count}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Grid ColumnDefinitions="Auto,8,*">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Question}" VerticalAlignment="Top" />
+                                <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding}" TextWrapping="Wrap" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.HasShareExtraFiles}">
+                    <Path Classes="icon size-16" Data="{StaticResource Icon.Question}" VerticalAlignment="Top" />
+                    <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingShareExtraFiles}" TextWrapping="Wrap" />
+                        <ItemsControl ItemsSource="{Binding ListingEditor.ShareExtraFiles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
+                </Grid>
+                <TextBlock Classes="heading-sm" Text="{Binding Localization.ShareAddMod}" Margin="0,8,0,0" />
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ListingDependencySearch}" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" Padding="24" IsVisible="{Binding !ListingEditor.IsNewVersionShare}">
+            <StackPanel Spacing="6">
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.ToggleShareMoreOptionsCommand}" AutomationProperties.Name="{Binding Localization.ShareMoreOptions}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareMoreOptions}" VerticalAlignment="Center" />
+                        <Path Classes="icon size-16" Classes.opened="{Binding ListingEditor.IsShareMoreOptionsOpen}" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <StackPanel Spacing="6" IsVisible="{Binding ListingEditor.IsShareMoreOptionsOpen}">
+                    <TextBlock Classes="heading-sm" Text="{Binding Localization.ShareShortName}" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareShortNameHint}" TextWrapping="Wrap" />
+                    <TextBox Classes="field" Text="{Binding ListingEditor.Id}" AutomationProperties.Name="{Binding Localization.ShareShortName}" />
+                    <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareIdError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareIdError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                    <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingDescription}" Margin="0,10,0,0" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareDescriptionHint}" TextWrapping="Wrap" />
+                    <TextBox Classes="field" Text="{Binding ListingEditor.Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" MaxHeight="320" AutomationProperties.Name="{Binding Localization.ListingDescription}" />
+
+                    <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingTags}" Margin="0,10,0,0" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingMoreTagsHint}" TextWrapping="Wrap" />
+                    <TextBox Classes="field" Text="{Binding ListingEditor.FreeTags}" AutomationProperties.Name="{Binding Localization.ListingTags}" />
                 </StackPanel>
             </StackPanel>
         </Border>

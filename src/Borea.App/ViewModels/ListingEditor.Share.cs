@@ -103,6 +103,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(IsNewVersionShare));
         OnPropertyChanged(nameof(ShareDescribeHeading));
         OnPropertyChanged(nameof(ShareSentenceExample));
+        OnPropertyChanged(nameof(ShareModsHint));
         OnPropertyChanged(nameof(ShareItemText));
         OnPropertyChanged(nameof(ShareNewVersionText));
         OnPropertyChanged(nameof(ShareLicenseChoices));

@@ -2743,7 +2743,7 @@
     <value>Deine Mod</value>
   </data>
   <data name="ListingNoListedMatch" xml:space="preserve">
-    <value>Keine eingetragene Mod passt.</value>
+    <value>Keine Mod auf der Seite Entdecken passt.</value>
   </data>
   <data name="ListingNoListedVehicleMatch" xml:space="preserve">
     <value>Kein eingetragenes Fahrzeug passt.</value>
@@ -3127,7 +3127,7 @@
     <value>Setzt die älteste Version auf das neueste stabile Release der Mod.</value>
   </data>
   <data name="ListingDependencyNotListedFormat" xml:space="preserve">
-    <value>{0} ist nicht im Index eingetragen, deshalb können Spieler sie nicht installieren.</value>
+    <value>{0} ist nicht auf der Seite Entdecken, deshalb können Spieler sie nicht installieren.</value>
   </data>
   <data name="ListingSearchDependencies" xml:space="preserve">
     <value>Nach Name, ID oder Autor suchen</value>
@@ -3501,6 +3501,30 @@
   <data name="ShareMissingId" xml:space="preserve">
     <value>ein Kurzname</value>
   </data>
+  <data name="ShareModsHeading" xml:space="preserve">
+    <value>Benötigte Mods</value>
+  </data>
+  <data name="ShareModsVehicleHint" xml:space="preserve">
+    <value>Spieler, die dein Fahrzeug hinzufügen, bekommen diese Mods automatisch dazu.</value>
+  </data>
+  <data name="ShareModsSaveHint" xml:space="preserve">
+    <value>Spieler, die deinen Spielstand hinzufügen, bekommen diese Mods automatisch dazu. Ohne sie lässt das Spiel die Fahrzeuge weg, die sie brauchen.</value>
+  </data>
+  <data name="ShareModVersionFormat" xml:space="preserve">
+    <value>Version {0} oder neuer</value>
+  </data>
+  <data name="ShareModChangedKind" xml:space="preserve">
+    <value>Du hast diese Mod unter allen Feldern geändert, darum bekommen Spieler sie vielleicht nicht.</value>
+  </data>
+  <data name="ShareModProblem" xml:space="preserve">
+    <value>Korrigiere diese Mod unter allen Feldern, oder entferne sie.</value>
+  </data>
+  <data name="ShareModsNone" xml:space="preserve">
+    <value>Es nutzt nur Teile aus dem Spiel.</value>
+  </data>
+  <data name="ShareAddMod" xml:space="preserve">
+    <value>Mod hinzufügen</value>
+  </data>
   <data name="ShareOtherFields" xml:space="preserve">
     <value>Einige Felder außerhalb dieses Schritts müssen korrigiert werden.</value>
   </data>
@@ -3544,7 +3568,7 @@
     <value>Hänge das gespeicherte Archiv an ein eigenes Release, und nenne dieses Release unter Releases.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
-    <value>Diese Dateien schreibt nicht das Spiel, sondern eine Mod. Füge die Mod, die sie schreibt, als Abhängigkeit hinzu:</value>
+    <value>Diese Dateien schreibt nicht das Spiel, sondern eine Mod. Füge die Mod hinzu, die sie schreibt:</value>
   </data>
   <data name="ListingShareSaveArchive" xml:space="preserve">
     <value>Archiv speichern</value>
@@ -3646,7 +3670,7 @@
     <value>Sternsystem</value>
   </data>
   <data name="ListingShareNotProvidedFormat" xml:space="preserve">
-    <value>Keine Mod dieser Instanz definiert {0}.</value>
+    <value>Borea hat keine Mod gefunden, die {0} liefert. Spieler ohne diese Mod können es vielleicht nicht laden. Füge die Mod hinzu, wenn du sie kennst.</value>
   </data>
   <data name="ListingShareDisabledProviderFormat" xml:space="preserve">
     <value>{0} definiert {1}, aber diese Instanz lädt die Mod nicht, darum hat Borea keinen Eintrag hinzugefügt.</value>

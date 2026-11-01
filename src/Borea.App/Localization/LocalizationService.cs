@@ -2095,6 +2095,20 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareMissingId => Resources.ShareMissingId;
 
+    public string ShareModsHeading => Resources.ShareModsHeading;
+
+    public string ShareModsVehicleHint => Resources.ShareModsVehicleHint;
+
+    public string ShareModsSaveHint => Resources.ShareModsSaveHint;
+
+    public string ShareModChangedKind => Resources.ShareModChangedKind;
+
+    public string ShareModProblem => Resources.ShareModProblem;
+
+    public string ShareModsNone => Resources.ShareModsNone;
+
+    public string ShareAddMod => Resources.ShareAddMod;
+
     public string ShareOtherFields => Resources.ShareOtherFields;
 
     public string ShareEditAll => Resources.ShareEditAll;
@@ -4426,6 +4440,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatShareItemIn(string item, string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareItemInFormat, item, instance);
+
+    public string FormatShareModVersion(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareModVersionFormat, version);
 
     public string FormatShareNewVersionLine(string listing, string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareNewVersionLineFormat, listing, host);

@@ -2743,7 +2743,7 @@
     <value>Your mod</value>
   </data>
   <data name="ListingNoListedMatch" xml:space="preserve">
-    <value>No listed mod matches.</value>
+    <value>No mod in Discover matches.</value>
   </data>
   <data name="ListingNoListedVehicleMatch" xml:space="preserve">
     <value>No listed vehicle matches.</value>
@@ -3127,7 +3127,7 @@
     <value>Sets the oldest version to the newest stable release of the mod.</value>
   </data>
   <data name="ListingDependencyNotListedFormat" xml:space="preserve">
-    <value>{0} is not listed in the index, so players cannot install it.</value>
+    <value>{0} is not in Discover, so players cannot install it.</value>
   </data>
   <data name="ListingSearchDependencies" xml:space="preserve">
     <value>Search by name, id or author</value>
@@ -3501,6 +3501,30 @@
   <data name="ShareMissingId" xml:space="preserve">
     <value>a short name</value>
   </data>
+  <data name="ShareModsHeading" xml:space="preserve">
+    <value>Mods it needs</value>
+  </data>
+  <data name="ShareModsVehicleHint" xml:space="preserve">
+    <value>Players who add your vehicle get these mods too.</value>
+  </data>
+  <data name="ShareModsSaveHint" xml:space="preserve">
+    <value>Players who add your save get these mods too. Without them the game drops the vehicles that need them.</value>
+  </data>
+  <data name="ShareModVersionFormat" xml:space="preserve">
+    <value>Version {0} or newer</value>
+  </data>
+  <data name="ShareModChangedKind" xml:space="preserve">
+    <value>You changed this mod under all fields, so players may not get it.</value>
+  </data>
+  <data name="ShareModProblem" xml:space="preserve">
+    <value>Fix this mod under all fields, or remove it.</value>
+  </data>
+  <data name="ShareModsNone" xml:space="preserve">
+    <value>It uses only parts of the game.</value>
+  </data>
+  <data name="ShareAddMod" xml:space="preserve">
+    <value>Add a mod</value>
+  </data>
   <data name="ShareOtherFields" xml:space="preserve">
     <value>Some fields outside this step need a fix.</value>
   </data>
@@ -3544,7 +3568,7 @@
     <value>Attach the saved archive to a release of your own, and name that release under Releases.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
-    <value>The game does not write these files, so a mod did. Add the mod that writes them as a dependency:</value>
+    <value>The game does not write these files, so a mod did. Add the mod that writes them:</value>
   </data>
   <data name="ListingShareSaveArchive" xml:space="preserve">
     <value>Save archive</value>
@@ -3646,7 +3670,7 @@
     <value>star system</value>
   </data>
   <data name="ListingShareNotProvidedFormat" xml:space="preserve">
-    <value>No mod of this instance defines {0}.</value>
+    <value>Borea could not find a mod that gives {0}. Players without that mod may not be able to load it. Add the mod if you know it.</value>
   </data>
   <data name="ListingShareDisabledProviderFormat" xml:space="preserve">
     <value>{0} defines {1}, but this instance does not load it, so Borea added no entry.</value>
