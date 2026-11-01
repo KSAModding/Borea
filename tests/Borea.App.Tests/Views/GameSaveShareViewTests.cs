@@ -357,6 +357,19 @@ public sealed class GameSaveShareViewTests
     }
 
     [Fact]
+    public async Task PublishStep_ShowsTheCoverThatBoreaDrew_AndSaysThatItBecomesPublic()
+    {
+        using var harness = await ShareHostShareTests.CoverHarnessAsync();
+
+        var texts = await PageTextsAsync(harness);
+
+        Assert.Contains(harness.Localization.ShareCoverHint, texts);
+        Assert.Contains(harness.Localization.ShareCoverOwn, texts);
+        Assert.Contains(harness.Localization.ShareCoverLeaveOut, texts);
+        Assert.DoesNotContain(harness.Localization.ShareCoverLeftOut, texts);
+    }
+
+    [Fact]
     public async Task DoneStep_HidesWhatWouldDropThePictures_WhileTheyGoUp()
     {
         var (harness, publish) = await ShareHostShareTests.HeldPictureHarnessAsync();

@@ -433,6 +433,13 @@ public sealed partial class ListingEditor
     {
         RefreshShareSteps();
         RefreshShareSummary();
+
+        // An error names a file that the player chose on the step before, and the card of the cover would read it as a problem with the cover.
+        SharePictureError = null;
+        if (value == ShareFlowStep.Publish)
+            StartShareCover();
+        else
+            StopShareCover();
     }
 
     /// <summary>Only the steps before can change the summary, so it follows the step and the language.</summary>

@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
              xmlns:share="using:Borea.App.Views.Share"
+             xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Share.SharePublishStep"
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
@@ -39,6 +40,47 @@
                 </Button>
             </StackPanel>
         </Border>
+
+        <!-- the picture that Borea drew, which the player sees here before anything goes up -->
+        <Border Classes="card" Padding="24" IsVisible="{Binding ListingEditor.ShowsShareCoverCard}">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="heading-sm" Text="{Binding Localization.SharePictureCover}" />
+                <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShowsShareCoverDrawing}">
+                    <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                    <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding Localization.ShareCoverDrawing}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </Grid>
+                <Grid ColumnDefinitions="Auto,16,*" IsVisible="{Binding ListingEditor.ShowsShareCoverPicture}">
+                    <Border Width="144" Height="144" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Brush.Surface}">
+                        <views:SharePictureView Bytes="{Binding ListingEditor.ShareCoverBytes}" Stretch="Uniform" />
+                    </Border>
+                    <StackPanel Grid.Column="2" Spacing="8">
+                        <TextBlock Classes="body-md" Text="{Binding Localization.ShareCoverHint}" TextWrapping="Wrap" />
+                        <WrapPanel ItemSpacing="12" LineSpacing="4" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
+                            <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.AddSharePictureCommand}">
+                                <TextBlock Classes="action-md" Text="{Binding Localization.ShareCoverOwn}" />
+                            </Button>
+                            <Button Classes="link" Command="{Binding ListingEditor.LeaveOutShareCoverCommand}">
+                                <TextBlock Classes="action-md" Text="{Binding Localization.ShareCoverLeaveOut}" />
+                            </Button>
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.ShowsShareCoverLeftOut}">
+                    <TextBlock Classes="body-md" Text="{Binding Localization.ShareCoverLeftOut}" TextWrapping="Wrap" />
+                    <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.UseShareCoverCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareCoverUseDrawn}" />
+                    </Button>
+                </StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.ShowsShareCoverMissing}">
+                    <TextBlock Classes="body-md" Text="{Binding Localization.ShareCoverMissing}" TextWrapping="Wrap" />
+                    <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.AddSharePictureCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareCoverOwn}" />
+                    </Button>
+                </StackPanel>
+                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.SharePictureError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.SharePictureError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
+        </Border>
+
         <Border Classes="card" Padding="24">
             <StackPanel Spacing="8">
                 <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.ShareNoHostText, Converter={x:Static ObjectConverters.IsNotNull}}">

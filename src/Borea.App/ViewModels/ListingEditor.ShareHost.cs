@@ -199,7 +199,7 @@ public sealed partial class ListingEditor
 
     public string? ShareSignOutText => SignedInShareHost is { } host ? Localization.FormatShareSignOut(host.Name) : null;
 
-    public bool CanPublishToShareHost => _shareUpload is not null && _refusedShareVersion is null && IsShareVersionValid && !IsSharing;
+    public bool CanPublishToShareHost => _shareUpload is not null && _refusedShareVersion is null && IsShareVersionValid && !IsSharing && !ShowsShareCoverDrawing;
 
     private bool IsShareVersionValid => ModVersion.TryParse(ShareHostVersion.Trim(), out _);
 
@@ -263,6 +263,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareNoHostText));
         OnPropertyChanged(nameof(ShareHostHeadingText));
         OnPropertyChanged(nameof(ShowsSharePictures));
+        RefreshShareCover();
         RefreshShareRun();
     }
 
@@ -393,6 +394,7 @@ public sealed partial class ListingEditor
             return;
         }
 
+        RedrawShareCoverIfVehicleChanged();
         using var cancel = new CancellationTokenSource();
         _shareHostRun = cancel;
         ShareHostProgress = Localization.ListingShareHostWriting;
@@ -573,6 +575,7 @@ public sealed partial class ListingEditor
             SharePullRequest = published.PullRequest;
             IsShareDetailsOpen = false;
             RefreshShareRun();
+            AddShareCoverRow();
             HoldSharePictures(shared.Host, id, cancel);
             ShareFlowStep = ShareFlowStep.Done;
             await services.SharedContent.RecordAsync(
