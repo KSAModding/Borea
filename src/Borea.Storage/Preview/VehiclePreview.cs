@@ -202,16 +202,9 @@ public sealed class VehiclePreview : IVehiclePreview
                 return Result(VehiclePreviewLoadState.Failed, vehicle.Location == PreviewVehicleLocation.Unavailable ? NoHashMessage(release) : "The fetched vehicle file is no longer in the preview cache.");
 
             progress?.Report(VehiclePreviewStage.ReadingParts);
-            VehicleXml vehicleXml;
-            using (var stream = vehicle.Files.TryOpen(VehicleXmlReader.FileName))
-            {
-                if (stream is null)
-                    return Result(VehiclePreviewLoadState.VehicleDamaged, $"The vehicle has no {VehicleXmlReader.FileName} that Borea can read.");
-                vehicleXml = VehicleXmlReader.Read(stream);
-            }
-
-            if (vehicleXml.Parts.Count == 0 && vehicleXml.Problems.FirstOrDefault(problem => problem.Kind == PreviewNoticeKind.AssetFailed) is { } broken)
-                return Result(VehiclePreviewLoadState.VehicleDamaged, broken.Detail ?? $"The {VehicleXmlReader.FileName} of the vehicle cannot be read.");
+            var (vehicleXml, unreadable) = ReadVehicleXml(vehicle.Files);
+            if (vehicleXml is null)
+                return Result(VehiclePreviewLoadState.VehicleDamaged, unreadable);
 
             mods = await _sources.PlanModsAsync(release, target, cancellationToken).ConfigureAwait(false);
             var fetchNotices = new List<PreviewNotice>();
@@ -225,31 +218,9 @@ public sealed class VehiclePreview : IVehiclePreview
                 mods = await _sources.PlanModsAsync(release, target, cancellationToken).ConfigureAwait(false);
             }
 
-            var sourceKeys = SourceKeys(mods);
-            var (catalog, meshIndex) = Catalog(gameBuild, sourceKeys, mods.Mods, cancellationToken);
-            var scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, null, vehicleXml.FuelLinks);
-            if (MissingHint(scene, mods.Missing) is { } hint)
-                scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, hint, vehicleXml.FuelLinks);
-
-            List<PreviewNotice> notices = [.. vehicleXml.Problems, .. mods.Notices, .. fetchNotices, .. catalog.Notices, .. meshIndex.Notices, .. scene.Notices];
-            scene = scene with { Notices = notices };
-
-            var assets = new OwnedAssets(this, new PreviewAssetSet(mods.Cache, mods.Mods.Select(mod => new KeyValuePair<string, IPreviewFiles>(mod.ModId, mod.Files))), mods, vehicle);
-            var missing = Missing(mods.Missing, scene);
-            (mods, vehicle) = (null, null);
-            lock (_gate)
-            {
-                if (_disposed)
-                {
-                    assets.Dispose();
-                    throw new ObjectDisposedException(nameof(VehiclePreview));
-                }
-
-                _open.Add(assets);
-            }
-
+            var ready = Resolve(vehicleXml, ref mods, ref vehicle, fetchNotices, sha256, gameBuild, cancellationToken);
             progress?.Report(VehiclePreviewStage.Done);
-            return new VehiclePreviewResult(VehiclePreviewLoadState.Ready, scene, assets, missing, notices, SceneKey(gameBuild, sourceKeys), sha256, gameBuild);
+            return ready;
         }
         catch (Exception exception) when (exception is not (OperationCanceledException or ObjectDisposedException))
         {
@@ -261,6 +232,104 @@ public sealed class VehiclePreview : IVehiclePreview
             mods?.Dispose();
             vehicle?.Dispose();
         }
+    }
+
+    public async Task<VehiclePreviewResult> LoadFolderAsync(string vehicleFolder, Guid instanceId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(vehicleFolder);
+        ThrowIfDisposed();
+
+        // The same yield as in PrepareAsync, because a folder is read with no await that waits.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+
+        string? gameBuild = null;
+        VehiclePreviewResult Result(VehiclePreviewLoadState state, string? message = null) =>
+            new(state, null, null, [], [], null, null, gameBuild, message);
+
+        PreviewVehicleSource? vehicle = null;
+        PreviewModSources? mods = null;
+        try
+        {
+            if (await TargetAsync(instanceId).ConfigureAwait(false) is not { } target)
+                return Result(VehiclePreviewLoadState.Failed, "The instance of the vehicle no longer exists.");
+
+            var game = _sources.GameOf(target);
+            gameBuild = PreviewGameBuild.Of(game.Version);
+            if (game.Problem != KeptBuildProblem.None)
+                return Result(VehiclePreviewLoadState.Failed, KeptBuildMessage(game));
+
+            switch (GameCoreFiles.Open(game.GameDirectory).Status)
+            {
+                case GameCoreStatus.NoGame:
+                    return Result(VehiclePreviewLoadState.NoGameFolder);
+                case GameCoreStatus.GameInvalid:
+                    return Result(VehiclePreviewLoadState.GameFolderInvalid, "The game folder holds no Content/Core.");
+            }
+
+            vehicle = new PreviewVehicleSource(PreviewVehicleLocation.Installed, new FolderPreviewFiles(vehicleFolder), vehicleFolder, null);
+            var (vehicleXml, unreadable) = ReadVehicleXml(vehicle.Files!);
+            if (vehicleXml is null)
+                return Result(VehiclePreviewLoadState.VehicleDamaged, unreadable);
+
+            mods = await _sources.OpenInstanceModsAsync(target, cancellationToken).ConfigureAwait(false);
+            return Resolve(vehicleXml, ref mods, ref vehicle, [], null, gameBuild, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not (OperationCanceledException or ObjectDisposedException))
+        {
+            _log.Write($"Could not load the preview of the vehicle folder {vehicleFolder}.", exception);
+            return Result(VehiclePreviewLoadState.Failed, exception.Message);
+        }
+        finally
+        {
+            mods?.Dispose();
+            vehicle?.Dispose();
+        }
+    }
+
+    /// <summary>The vehicle file, or null with the reason when it is missing or holds nothing that can be read.</summary>
+    private static (VehicleXml? Vehicle, string? Unreadable) ReadVehicleXml(IPreviewFiles files)
+    {
+        VehicleXml vehicleXml;
+        using (var stream = files.TryOpen(VehicleXmlReader.FileName))
+        {
+            if (stream is null)
+                return (null, $"The vehicle has no {VehicleXmlReader.FileName} that Borea can read.");
+            vehicleXml = VehicleXmlReader.Read(stream);
+        }
+
+        return vehicleXml.Parts.Count == 0 && vehicleXml.Problems.FirstOrDefault(problem => problem.Kind == PreviewNoticeKind.AssetFailed) is { } broken
+            ? (null, broken.Detail ?? $"The {VehicleXmlReader.FileName} of the vehicle cannot be read.")
+            : (vehicleXml, null);
+    }
+
+    /// <summary>Places the parts and gives the ready result, which from here on owns the mod sources and the vehicle source, so the caller no longer holds them.</summary>
+    private VehiclePreviewResult Resolve(VehicleXml vehicleXml, ref PreviewModSources? modSources, ref PreviewVehicleSource? vehicleSource, IReadOnlyList<PreviewNotice> fetchNotices, string? sha256, string? gameBuild, CancellationToken cancellationToken)
+    {
+        var (mods, vehicle) = (modSources!, vehicleSource!);
+        var sourceKeys = SourceKeys(mods);
+        var (catalog, meshIndex) = Catalog(gameBuild, sourceKeys, mods.Mods, cancellationToken);
+        var scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, null, vehicleXml.FuelLinks);
+        if (MissingHint(scene, mods.Missing) is { } hint)
+            scene = VehicleSceneResolver.Resolve(vehicleXml.Parts, catalog, meshIndex, hint, vehicleXml.FuelLinks);
+
+        List<PreviewNotice> notices = [.. vehicleXml.Problems, .. mods.Notices, .. fetchNotices, .. catalog.Notices, .. meshIndex.Notices, .. scene.Notices];
+        scene = scene with { Notices = notices };
+
+        var assets = new OwnedAssets(this, new PreviewAssetSet(mods.Cache, mods.Mods.Select(mod => new KeyValuePair<string, IPreviewFiles>(mod.ModId, mod.Files))), mods, vehicle);
+        var missing = Missing(mods.Missing, scene);
+        (modSources, vehicleSource) = (null, null);
+        lock (_gate)
+        {
+            if (_disposed)
+            {
+                assets.Dispose();
+                throw new ObjectDisposedException(nameof(VehiclePreview));
+            }
+
+            _open.Add(assets);
+        }
+
+        return new VehiclePreviewResult(VehiclePreviewLoadState.Ready, scene, assets, missing, notices, SceneKey(gameBuild, sourceKeys), sha256, gameBuild);
     }
 
     public Task StartMaintenance()

@@ -710,10 +710,10 @@ public sealed class VehiclePreviewViewModelTests
 
     private static readonly PreviewAssetRef TriangleFile = new("Core", "Triangle.glb");
 
-    private static readonly IReadOnlyDictionary<string, byte[]> TriangleFiles = new Dictionary<string, byte[]> { [TriangleFile.Path] = TriangleGlb() };
+    internal static readonly IReadOnlyDictionary<string, byte[]> TriangleFiles = new Dictionary<string, byte[]> { [TriangleFile.Path] = TriangleGlb() };
 
     /// <summary>A vehicle of one triangle part, and the given boxes where parts did not resolve.</summary>
-    private static ResolvedVehicle TriangleVehicle(params ResolvedPlaceholder[] boxes) => new(
+    internal static ResolvedVehicle TriangleVehicle(params ResolvedPlaceholder[] boxes) => new(
         [new PreviewMeshRef(TriangleFile, 0, "Triangle")],
         [],
         [new ResolvedDraw(0, -1, Matrix4x4.Identity, "Body", PreviewModelKind.Model)],
@@ -833,6 +833,7 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
     private readonly ConcurrentQueue<Guid?> _targets = new();
     private readonly ConcurrentQueue<(bool FetchVehicle, bool FetchMods)> _loads = new();
     private readonly ConcurrentQueue<(ModVersion Release, CancellationToken Token)> _loadTokens = new();
+    private readonly ConcurrentQueue<string> _folderLoads = new();
 
     public VehiclePreviewPlanState PlanState { get; init; } = VehiclePreviewPlanState.CanBuildLocally;
 
@@ -857,6 +858,11 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
 
     public IReadOnlyList<(ModVersion Release, CancellationToken Token)> LoadTokens => [.. _loadTokens];
 
+    public IReadOnlyList<string> FolderLoads => [.. _folderLoads];
+
+    /// <summary>Holds a load of a vehicle folder until the test completes the task, or null to answer at once.</summary>
+    public Task? FolderGate { get; init; }
+
     /// <summary>The progress of the last load, so a test can report a stage after the load ended.</summary>
     public IProgress<VehiclePreviewStage>? LastProgress { get; private set; }
 
@@ -876,6 +882,15 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
         LastProgress = progress;
         progress?.Report(VehiclePreviewStage.ReadingParts);
         return HoldLoad?.Invoke(plan.Release) ?? Task.FromResult(Ready(new FakeAssets(Files), fetchMods ? [] : Missing));
+    }
+
+    public async Task<VehiclePreviewResult> LoadFolderAsync(string vehicleFolder, Guid instanceId, CancellationToken cancellationToken = default)
+    {
+        _folderLoads.Enqueue(vehicleFolder);
+        if (FolderGate is { } gate)
+            await gate.WaitAsync(cancellationToken);
+
+        return Ready(new FakeAssets(Files), []);
     }
 
     public VehiclePreviewResult Ready(IPreviewAssetSource assets, IReadOnlyList<VehiclePreviewMissingMod>? missing = null) => new(

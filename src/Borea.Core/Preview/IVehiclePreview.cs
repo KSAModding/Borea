@@ -37,6 +37,15 @@ public interface IVehiclePreview : IDisposable
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reads a vehicle folder of an instance, which no release names, with the game of the instance and the mods that the game loads there.
+    /// A part that none of them gives becomes a placeholder. It uses no network and writes nothing, and it returns to the caller at once.
+    /// </summary>
+    /// <param name="vehicleFolder">The folder that holds the vehicle file.</param>
+    /// <param name="instanceId">The instance that holds the folder.</param>
+    /// <returns>A result that the caller disposes, as with <see cref="LoadAsync"/>.</returns>
+    Task<VehiclePreviewResult> LoadFolderAsync(string vehicleFolder, Guid instanceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Cleans up the preview cache once on a background task: old archives and stills over the size limits and files of fetches
     /// that stopped. Only the App calls it, after its main window opens. A second call gives the same task.
     /// </summary>

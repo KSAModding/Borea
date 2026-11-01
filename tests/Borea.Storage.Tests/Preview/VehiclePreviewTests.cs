@@ -347,6 +347,38 @@ public sealed class VehiclePreviewTests : IDisposable
         Assert.Empty(_downloader.ArchivePaths);
     }
 
+    [Fact]
+    public async Task AVehicleFolder_UsesTheModsThatTheGameLoadsInTheInstance_AndNoNetwork()
+    {
+        var folder = Path.Combine(_root, "Vehicles", "Rover");
+        Write(Path.Combine(folder, "vehicle.xml"), Rover);
+        var wings = Path.Combine(_paths.GetInstanceModsFolder(_targetId), "Wings");
+        Write(Path.Combine(wings, "mod.toml"), "name = \"Wings\"\nassets = [\"Wings.xml\"]\n");
+        Write(Path.Combine(wings, "Wings.xml"), Assets("""<Part Id="Wing"><PartModel Id="m"><Mesh Id="BodyMesh" /></PartModel></Part>"""));
+        using var preview = Preview(instances: new MemoryInstanceRepository(Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, [], false)));
+
+        Write(_paths.GetInstanceManifestPath(_targetId), "[[mods]]\nid = \"Wings\"\nenabled = false\n");
+        using (var disabled = await preview.LoadFolderAsync(folder, _targetId))
+        {
+            Assert.True(disabled.IsReady);
+            Assert.Equal("Wing", Assert.Single(disabled.Vehicle.Placeholders).MissingId);
+        }
+
+        Write(_paths.GetInstanceManifestPath(_targetId), "[[mods]]\nid = \"Wings\"\nenabled = true\n");
+        using (var enabled = await preview.LoadFolderAsync(folder, _targetId))
+        {
+            Assert.True(enabled.IsReady);
+            Assert.Empty(enabled.Vehicle.Placeholders);
+            Assert.Equal(2, enabled.Vehicle.Draws.Count);
+        }
+
+        Assert.Empty(_downloader.ArchivePaths);
+        using var unknown = await preview.LoadFolderAsync(folder, Guid.NewGuid());
+        Assert.Equal(VehiclePreviewLoadState.Failed, unknown.State);
+        using var noVehicle = await preview.LoadFolderAsync(Path.Combine(_root, "Vehicles", "Gone"), _targetId);
+        Assert.Equal(VehiclePreviewLoadState.VehicleDamaged, noVehicle.State);
+    }
+
     private Instance Keeping(GameVersion build)
     {
         var instance = Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, [], false);

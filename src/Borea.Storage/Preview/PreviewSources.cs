@@ -220,6 +220,34 @@ internal sealed class PreviewSources
     }
 
     /// <summary>
+    /// Opens the content mods of the game and the mods that the game loads in <paramref name="target"/>, in the order of its manifest.
+    /// A vehicle that the player built in the instance has its parts from these, whatever a listing says that it needs, so nothing counts as missing here.
+    /// </summary>
+    public async Task<PreviewModSources> OpenInstanceModsAsync(Instance target, CancellationToken cancellationToken = default)
+    {
+        var core = GameCoreFiles.Open(_games.Resolve(target).GameDirectory);
+        var mods = new List<CatalogMod>();
+        var sources = new List<PreviewModSource>();
+        foreach (var (id, files) in core.Mods)
+        {
+            mods.Add(new CatalogMod(id, files));
+            sources.Add(new PreviewModSource(id, null, PreviewModLocation.Game, files.Root));
+        }
+
+        var modsFolder = _paths.GetInstanceModsFolder(target.InstanceId);
+        foreach (var entry in await ManifestAsync(target.InstanceId, cancellationToken).ConfigureAwait(false))
+        {
+            if (entry.Enabled && entry.ModId.Length > 0 && !core.Mods.Any(mod => ModIds.Equals(mod.Key, entry.ModId)) && TryFind(() => ModFolders.Find(modsFolder, entry.ModId)) is { } folder)
+            {
+                mods.Add(new CatalogMod(entry.ModId, new FolderPreviewFiles(folder)));
+                sources.Add(new PreviewModSource(entry.ModId, null, PreviewModLocation.InstanceFolder, folder));
+            }
+        }
+
+        return new PreviewModSources(core.Status, mods, sources, [], [], new PreviewEntryCache(), []);
+    }
+
+    /// <summary>
     /// Plans once, and once more when an any_of is left open, with the alternative that an instance already holds, or
     /// else the first one, so that the preview reads a mod that is on disk where it can.
     /// </summary>
