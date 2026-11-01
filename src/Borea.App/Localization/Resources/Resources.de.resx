@@ -2469,9 +2469,6 @@
   <data name="InstanceModsMissingFormat" xml:space="preserve">
     <value>{0} Mods dieser Instanz fehlen auf der Festplatte.</value>
   </data>
-  <data name="ContentEnabled" xml:space="preserve">
-    <value>Aktiviert</value>
-  </data>
   <data name="ContentOpenPage" xml:space="preserve">
     <value>Seite öffnen</value>
   </data>
@@ -2627,9 +2624,6 @@
   </data>
   <data name="DiscoverSortName" xml:space="preserve">
     <value>Name</value>
-  </data>
-  <data name="DiscoverAll" xml:space="preserve">
-    <value>Alle</value>
   </data>
   <data name="DiscoverEmpty" xml:space="preserve">
     <value>Keine passenden Inhalte.</value>
@@ -3903,15 +3897,6 @@
   <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
     <value>{0} gespeichert ({2}). Prüfsumme (SHA-256): {1}</value>
   </data>
-  <data name="ListingShareHostHint" xml:space="preserve">
-    <value>Ein Share-Host speichert das Archiv und öffnet den Pull Request für dich. Du meldest dich mit dem Konto an, das der Host anbietet, und der Host prüft das Archiv, bevor etwas veröffentlicht wird.</value>
-  </data>
-  <data name="ListingShareHostHeading" xml:space="preserve">
-    <value>Auf einem Share-Host teilen</value>
-  </data>
-  <data name="ListingShareOnHostFormat" xml:space="preserve">
-    <value>Auf {0} teilen</value>
-  </data>
   <data name="ListingShareHostWriting" xml:space="preserve">
     <value>Deine Datei wird vorbereitet...</value>
   </data>
@@ -3926,9 +3911,6 @@
   </data>
   <data name="ListingShareHostOpenFailedFormat" xml:space="preserve">
     <value>Die Seite konnte nicht geöffnet werden: {0}</value>
-  </data>
-  <data name="ListingShareHostUploading" xml:space="preserve">
-    <value>Wird hochgeladen, und der Host prüft das Archiv...</value>
   </data>
   <data name="ListingShareHostUploadingFormat" xml:space="preserve">
     <value>Die Datei wird hochgeladen, und {0} prüft sie...</value>
@@ -3945,44 +3927,20 @@
   <data name="ListingShareCheckFailedFormat" xml:space="preserve">
     <value>{0}: nicht bestanden. {1}</value>
   </data>
-  <data name="ListingShareHostChecksFailed" xml:space="preserve">
-    <value>Behebe, was der Host gefunden hat, und teile dann erneut.</value>
-  </data>
   <data name="ListingShareHostChecksFailedFormat" xml:space="preserve">
     <value>{0} hat ein Problem mit deiner Datei gefunden. Es wurde nichts veröffentlicht.</value>
-  </data>
-  <data name="ListingShareHostListing" xml:space="preserve">
-    <value>Der Eintragstext, den der Host zeigt</value>
   </data>
   <data name="ListingShareHostVersion" xml:space="preserve">
     <value>Version</value>
   </data>
-  <data name="ListingShareHostStatus" xml:space="preserve">
-    <value>Release-Status</value>
-  </data>
   <data name="ListingShareHostPublish" xml:space="preserve">
     <value>Veröffentlichen</value>
-  </data>
-  <data name="ListingShareHostPublishedFormat" xml:space="preserve">
-    <value>{0} {1} ist veröffentlicht. Der Host hat den Pull Request geöffnet.</value>
-  </data>
-  <data name="ListingShareHostReleasedFormat" xml:space="preserve">
-    <value>{0} {1} ist auf dem Host veröffentlicht.</value>
-  </data>
-  <data name="ListingShareHostSignedOut" xml:space="preserve">
-    <value>Der Share-Host nimmt die Anmeldung nicht mehr an. Teile erneut, um dich anzumelden.</value>
   </data>
   <data name="ListingShareHostSignedOutFormat" xml:space="preserve">
     <value>Deine Anmeldung bei {0} ist abgelaufen. Melde dich erneut an, um weiterzumachen.</value>
   </data>
-  <data name="ListingShareHostSignInRefused" xml:space="preserve">
-    <value>Die Anmeldung wurde abgelehnt, oder ihr Code ist abgelaufen.</value>
-  </data>
   <data name="ListingShareHostSignInRefusedFormat" xml:space="preserve">
     <value>Du hast Borea auf {0} nicht bestätigt, oder der Code ist abgelaufen. Versuche es erneut.</value>
-  </data>
-  <data name="ListingShareHostNetwork" xml:space="preserve">
-    <value>Der Share-Host war nicht erreichbar.</value>
   </data>
   <data name="ListingShareHostNetworkFormat" xml:space="preserve">
     <value>{0} war nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.</value>
@@ -4862,9 +4820,6 @@
   </data>
   <data name="ContentUpdatedOnFormat" xml:space="preserve">
     <value>Aktualisiert am {0}</value>
-  </data>
-  <data name="ContentDownloads" xml:space="preserve">
-    <value>Downloads</value>
   </data>
   <data name="ContentDownloadsExactFormat" xml:space="preserve">
     <value>{0} Downloads</value>
