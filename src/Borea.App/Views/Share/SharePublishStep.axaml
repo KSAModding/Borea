@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:share="using:Borea.App.Views.Share"
              x:Class="Borea.App.Views.Share.SharePublishStep"
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
@@ -190,22 +191,7 @@
                     </Grid>
                 </Grid>
 
-                <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.ShareHostUserCode, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostCodeText}" TextWrapping="Wrap" />
-                    <SelectableTextBlock Text="{Binding ListingEditor.ShareHostUserCode}" FontFamily="{StaticResource Font.Mono}" FontSize="36" HorizontalAlignment="Left" />
-                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareCodeWarningText}" TextWrapping="Wrap" />
-                    <WrapPanel ItemSpacing="8" LineSpacing="4" Margin="-8,0,0,0" IsVisible="{Binding ListingEditor.HasShareCodePage}">
-                        <Button Classes="link" Command="{Binding ListingEditor.OpenShareHostCodePageCommand}">
-                            <TextBlock Classes="action-md" Text="{Binding Localization.ShareOpenPageAgain}" />
-                        </Button>
-                        <Button Classes="link" Command="{Binding ListingEditor.CopyShareHostCodeCommand}">
-                            <TextBlock Classes="action-md" Text="{Binding Localization.ShareCopyCode}" />
-                        </Button>
-                    </WrapPanel>
-                    <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.CopyShareHostCodeAndOpenCommand}" HorizontalAlignment="Left" IsVisible="{Binding !ListingEditor.HasShareCodePage}">
-                        <TextBlock Classes="action-md" Text="{Binding Localization.ListingShareHostCopyCode}" />
-                    </Button>
-                </StackPanel>
+                <share:ShareSignInCode />
             </StackPanel>
         </Border>
 
