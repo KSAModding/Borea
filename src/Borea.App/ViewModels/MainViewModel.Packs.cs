@@ -1012,7 +1012,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public bool CanChooseContentName => ReopenContentName is not null;
 
-    private bool _isOpening;
+    private readonly OpeningGate _opening = new();
 
     /// <summary>
     /// The warnings while <see cref="PendingInstall"/> waits for a confirmation.
@@ -1170,24 +1170,10 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     /// <summary>
     /// The whole row is this command, so it stays executable while the page
     /// loads, because a command that cannot execute greys out every control on
-    /// the row. The flag takes over the job of dropping a second click.
+    /// the row. The gate takes over the job of dropping a second click.
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task OpenAsync()
-    {
-        if (_isOpening)
-            return;
-
-        _isOpening = true;
-        try
-        {
-            await _owner.OpenPackAsync(this);
-        }
-        finally
-        {
-            _isOpening = false;
-        }
-    }
+    private Task OpenAsync() => _opening.RunAsync(() => _owner.OpenPackAsync(this));
 
     [RelayCommand]
     private Task InstallAsync() => _owner.InstallPackAsync(this);

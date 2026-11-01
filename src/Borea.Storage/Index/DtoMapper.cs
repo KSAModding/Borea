@@ -71,8 +71,6 @@ public static class DtoMapper
             loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader, ModVersion.Parse),
             changelog: dto.Changelog,
             changelogText: changelogText,
-            // Absent "listing" key entirely -> no snapshot to merge, leave null.
-            // Present but incomplete -> merge with the live authored data.
             listing: dto.Listing is { } listingElement ? MapListingSnapshot(listingElement, authored, type) : null,
             yanked: dto.Yanked ?? false,
             yankedReason: dto.YankedReason,

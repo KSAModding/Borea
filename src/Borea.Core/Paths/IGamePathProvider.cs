@@ -40,9 +40,6 @@ public interface IGamePathProvider
     /// </summary>
     string GetPreviewCacheFolder();
 
-    /// <summary>
-    /// Root of all Borea instance storage
-    /// </summary>
     string GetInstancesRoot();
 
     /// <summary>

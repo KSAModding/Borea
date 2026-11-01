@@ -1286,7 +1286,7 @@ public sealed partial class InstanceItem : ObservableObject
             _owner.RefreshInstanceHint();
     }
 
-    private bool _isOpening;
+    private readonly OpeningGate _opening = new();
 
     public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null, IReadOnlyList<InstalledContentRecord>? content = null, IReadOnlyList<string>? inactive = null)
     {
@@ -1339,24 +1339,10 @@ public sealed partial class InstanceItem : ObservableObject
     /// <summary>
     /// The whole card is this command, so it stays executable while the page loads,
     /// because a command that cannot execute greys out every control on the card.
-    /// The flag takes over the job of dropping a second click on the same row.
+    /// The gate takes over the job of dropping a second click on the same row.
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task OpenAsync()
-    {
-        if (_isOpening)
-            return;
-
-        _isOpening = true;
-        try
-        {
-            await _owner.OpenInstanceAsync(this);
-        }
-        finally
-        {
-            _isOpening = false;
-        }
-    }
+    private Task OpenAsync() => _opening.RunAsync(() => _owner.OpenInstanceAsync(this));
 
     /// <summary>Play on the active row of the Library, which starts the same watched launch as Home.</summary>
     [RelayCommand]

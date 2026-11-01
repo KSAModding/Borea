@@ -925,7 +925,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     /// ">= min" or "min - max", as the compatibility chip shows it. A vehicle or save states no range of
     /// its own, so it shows the game build its file was saved in.
     /// </summary>
-    public string GameVersionText => _listing.GameMax is null ? $">= {GameMin}" : $"{GameMin} - {_listing.GameMax}";
+    public string GameVersionText => MainViewModel.GameBoundsText(GameMin, _listing.GameMax);
 
     // A vehicle or save may author only game_max, and then its release gives the lower bound.
     private string? GameMin => _listing.GameMin ?? LatestInChannel?.GameMin;
