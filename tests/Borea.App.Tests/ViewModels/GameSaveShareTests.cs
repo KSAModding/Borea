@@ -201,6 +201,34 @@ public sealed class GameSaveShareTests
     }
 
     [Fact]
+    public async Task ListYourMod_LeavesAListWithNothingPicked_AndAShareThatHasBegunStays()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        await harness.ViewModel.LoadAsync();
+        var viewModel = harness.ViewModel;
+        var editor = viewModel.ListingEditor;
+
+        await viewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        await viewModel.ListYourModCommand.ExecuteAsync(null);
+        Assert.True(editor.IsStartStep);
+
+        editor.StartEmptyCommand.Execute(null);
+        await viewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        await viewModel.ListYourModCommand.ExecuteAsync(null);
+        Assert.True(editor.IsFormStep);
+        Assert.False(editor.HasFormBehindShareChoose);
+
+        await viewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+        editor.BackToShareChooseCommand.Execute(null);
+        await editor.ShareChooseLoad;
+        await viewModel.ListYourModCommand.ExecuteAsync(null);
+        Assert.True(editor.IsShareStep);
+        Assert.True(editor.IsShareChoose);
+    }
+
+    [Fact]
     public async Task Choose_WithAnErrorAndNoRows_ShowsOnlyTheError()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -736,14 +764,36 @@ public sealed class GameSaveShareTests
     }
 
     /// <summary>Serves the schema of content-index with a rollout gate that holds vehicles and saves.</summary>
-    internal static HttpResponseMessage? Gated(HttpRequestMessage request)
+    internal static HttpResponseMessage? Gated(HttpRequestMessage request) => GatedOn(request, "vehicle", "save");
+
+    /// <summary>Serves the schema of content-index with a rollout gate that holds the named types.</summary>
+    internal static HttpResponseMessage? GatedOn(HttpRequestMessage request, params string[] types)
     {
         if (request.RequestUri?.AbsoluteUri != SchemaUrl)
             return null;
 
         var schema = JsonNode.Parse(ListingSchemaStore.EmbeddedText)!;
-        schema["properties"]!["type"]!["not"] = new JsonObject { ["title"] = "a type that the index does not accept yet", ["enum"] = new JsonArray("vehicle", "save") };
+        schema["properties"]!["type"]!["not"] = new JsonObject { ["title"] = "a type that the index does not accept yet", ["enum"] = new JsonArray(types.Select(type => (JsonNode?)JsonValue.Create(type)).ToArray()) };
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(schema.ToJsonString()) };
+    }
+
+    /// <summary>Serves the schema of content-index only when <paramref name="held"/> ends, so that a test sees what shows during the wait.</summary>
+    internal static HttpResponseMessage? HeldSchema(HttpRequestMessage request, Task held) =>
+        request.RequestUri?.AbsoluteUri == SchemaUrl ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new HeldContent(held) } : null;
+
+    private sealed class HeldContent(Task held) : HttpContent
+    {
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+        {
+            await held;
+            await stream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(ListingSchemaStore.EmbeddedText));
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
     }
 
     internal sealed class ArchiveWindow : IWindowServices

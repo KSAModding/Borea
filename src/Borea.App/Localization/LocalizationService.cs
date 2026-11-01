@@ -1577,6 +1577,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveShare => Resources.GameSaveShare;
 
+    public string GameSaveShareTip => Resources.GameSaveShareTip;
+
     public string GameSaveCopyToInstance => Resources.GameSaveCopyToInstance;
 
     public string GameSaveCopy => Resources.GameSaveCopy;
@@ -1907,7 +1909,25 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverForModAuthorsText => Resources.DiscoverForModAuthorsText;
 
+    public string DiscoverShareVehicleHeading => Resources.DiscoverShareVehicleHeading;
+
+    public string DiscoverShareVehicleText => Resources.DiscoverShareVehicleText;
+
+    public string DiscoverShareVehicle => Resources.DiscoverShareVehicle;
+
+    public string DiscoverShareSaveHeading => Resources.DiscoverShareSaveHeading;
+
+    public string DiscoverShareSaveText => Resources.DiscoverShareSaveText;
+
+    public string DiscoverShareSave => Resources.DiscoverShareSave;
+
     public string ListingIntro => Resources.ListingIntro;
+
+    public string ListingShareCardTitle => Resources.ListingShareCardTitle;
+
+    public string ListingShareCardText => Resources.ListingShareCardText;
+
+    public string ListingShareCardAction => Resources.ListingShareCardAction;
 
     public string ListingNewTitle => Resources.ListingNewTitle;
 

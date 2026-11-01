@@ -97,6 +97,20 @@ public partial class MainViewModel
     /// <summary>The panel for mod authors asks for a mod, so the vehicle and save tabs leave it out.</summary>
     public bool ShowsModAuthors => !DiscoverType.IsVehicleOrSave();
 
+    /// <summary>The tab of vehicles or saves offers a share only while the schema in use accepts its type.</summary>
+    public bool ShowsDiscoverShare => DiscoverType switch
+    {
+        ContentType.Vehicle => VehiclesSection.CanShare,
+        ContentType.Save => SavesSection.CanShare,
+        _ => false,
+    };
+
+    public string DiscoverShareHeading => IsSavesTab ? Localization.DiscoverShareSaveHeading : Localization.DiscoverShareVehicleHeading;
+
+    public string DiscoverShareText => IsSavesTab ? Localization.DiscoverShareSaveText : Localization.DiscoverShareVehicleText;
+
+    public string DiscoverShareAction => IsSavesTab ? Localization.DiscoverShareSave : Localization.DiscoverShareVehicle;
+
     /// <summary>Whether the tab of vehicles or saves has no listing in an index that the last refresh reached, because an older copy cannot say that nothing is shared.</summary>
     public bool ShowsNothingSharedYet => DiscoverType.IsVehicleOrSave() && DiscoverTotal == 0 && !IsDiscoverLoading && DiscoverError is null && !IsIndexUnreachable && !IsIndexStale;
 
@@ -352,6 +366,10 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(DiscoverNothingSharedText));
         OnPropertyChanged(nameof(DiscoverNothingSharedHint));
         OnPropertyChanged(nameof(ShowsClearSearchAndFilters));
+        OnPropertyChanged(nameof(ShowsDiscoverShare));
+        OnPropertyChanged(nameof(DiscoverShareHeading));
+        OnPropertyChanged(nameof(DiscoverShareText));
+        OnPropertyChanged(nameof(DiscoverShareAction));
     }
 
     /// <summary>The state whose chip a row of the list leaves out, or null when every row shows its chip.</summary>
@@ -481,7 +499,12 @@ public partial class MainViewModel
             ApplyDiscoverFilters();
     }
 
-    partial void OnDiscoverTypeChanged(ContentType value) => ApplyDiscoverFilters();
+    partial void OnDiscoverTypeChanged(ContentType value)
+    {
+        ApplyDiscoverFilters();
+        if (value.IsVehicleOrSave())
+            StartShareSchemaLoad();
+    }
 
     partial void OnSearchTextChanged(string value) => ApplyDiscoverFilters();
 

@@ -2046,6 +2046,9 @@
   <data name="GameSaveShare" xml:space="preserve">
     <value>Share</value>
   </data>
+  <data name="GameSaveShareTip" xml:space="preserve">
+    <value>Put it online so other players can download it.</value>
+  </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
     <value>The game does not accept the name "{0}" any more, and a name that the game does not accept cannot be shared. Choose a name that follows the rules below.</value>
   </data>
@@ -2701,10 +2704,37 @@
     <value>For mod authors</value>
   </data>
   <data name="DiscoverForModAuthorsText" xml:space="preserve">
-    <value>Borea writes and checks the file that lists your mod in the content index, for a new listing or a change to a listed mod.</value>
+    <value>Borea writes and checks the file that lists your mod in Discover, for a new mod or a change to a listed mod.</value>
+  </data>
+  <data name="DiscoverShareVehicleHeading" xml:space="preserve">
+    <value>Made one yourself?</value>
+  </data>
+  <data name="DiscoverShareVehicleText" xml:space="preserve">
+    <value>Pick a vehicle from your instances, add a few words and publish it. Other players can then add it from here.</value>
+  </data>
+  <data name="DiscoverShareVehicle" xml:space="preserve">
+    <value>Share your vehicle</value>
+  </data>
+  <data name="DiscoverShareSaveHeading" xml:space="preserve">
+    <value>A save worth sharing?</value>
+  </data>
+  <data name="DiscoverShareSaveText" xml:space="preserve">
+    <value>Put a save from one of your instances online, so other players find it here.</value>
+  </data>
+  <data name="DiscoverShareSave" xml:space="preserve">
+    <value>Share your save</value>
   </data>
   <data name="ListingIntro" xml:space="preserve">
     <value>Borea writes the file that lists your mod in the content index, and checks it before you open the pull request.</value>
+  </data>
+  <data name="ListingShareCardTitle" xml:space="preserve">
+    <value>Share a vehicle or save</value>
+  </data>
+  <data name="ListingShareCardText" xml:space="preserve">
+    <value>Put a vehicle or save that you made on a sharing site, so every player can find it in Discover.</value>
+  </data>
+  <data name="ListingShareCardAction" xml:space="preserve">
+    <value>Choose what to share</value>
   </data>
   <data name="ListingNewTitle" xml:space="preserve">
     <value>New listing</value>

@@ -335,6 +335,8 @@ public sealed partial class ListingEditor : ObservableObject
             catch (Exception exception) when (exception is IOException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException)
             {
             }
+
+            _owner.RefreshShareGate();
         }
 
         // A share that started while the index could not be read finds its listing and its hosts once the index is there, and a published share has nothing left to find.
@@ -347,6 +349,8 @@ public sealed partial class ListingEditor : ObservableObject
             StartShareHosts();
         }
 
+        // An entry may still be reading the rows, and two readings at once would fill one list.
+        await ShareChooseLoad;
         if (IsShareStep && IsShareChoose)
             await ReloadShareChooseAsync();
 

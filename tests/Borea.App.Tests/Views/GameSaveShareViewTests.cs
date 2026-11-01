@@ -3,12 +3,14 @@ using Avalonia.Controls;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
+using Borea.App.Views;
 using Borea.App.Views.Pages;
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 
 namespace Borea.App.Tests.Views;
 
-/// <summary>Share in the menu of a vehicle, the steps it opens on the listing page, and the card of the full form.</summary>
+/// <summary>Share on the row and in the menu of a vehicle, the steps it opens on the listing page, the card that starts them, and the card of the full form.</summary>
 [Collection(HeadlessCollection.Name)]
 public sealed class GameSaveShareViewTests
 {
@@ -25,6 +27,77 @@ public sealed class GameSaveShareViewTests
 
         Assert.DoesNotContain(gated.Localization.GameSaveShare, await VehicleMenuAsync(gated));
         Assert.Contains(ungated.Localization.GameSaveShare, await VehicleMenuAsync(ungated));
+    }
+
+    [Fact]
+    public async Task RowButton_ShowsOnlyForAnOwnIdleItemThatTheIndexAccepts()
+    {
+        using var gated = await ViewModelHarness.CreateAsync(respond: GameSaveShareTests.Gated);
+        using var ungated = await ViewModelHarness.CreateAsync();
+        foreach (var harness in new[] { gated, ungated })
+        {
+            await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+            await GameSaveShareTests.OpenAsync(harness);
+        }
+
+        var whenGated = await RowButtonShowsAsync(gated, _ => { });
+        var whenAccepted = await RowButtonShowsAsync(ungated, _ => { });
+        var whileConfirming = await RowButtonShowsAsync(ungated, row => row.IsConfirmingDelete = true);
+        var afterConfirming = await RowButtonShowsAsync(ungated, row => row.IsConfirmingDelete = false);
+        var withRecord = await RowButtonShowsAsync(ungated, row => row.ShowRecord(new InstalledContentRecord(Release, row.FolderName, DateTimeOffset.UnixEpoch, new Dictionary<string, string>()), listing: null, newer: null));
+
+        Assert.False(whenGated);
+        Assert.True(whenAccepted);
+        Assert.False(whileConfirming);
+        Assert.True(afterConfirming);
+        Assert.False(withRecord);
+    }
+
+    [Fact]
+    public async Task ListingStart_ItsFirstCardOpensTheFirstStepOnVehicles_AndTheCardsTakeTheRoomOfTheSidePanel()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await harness.ViewModel.OpenListingAsync();
+        harness.ViewModel.ShowDiscoverSavesCommand.Execute(null);
+
+        var (firstHeading, hadSidePanel, hasSidePanel) = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var body = page.GetVisualDescendants().OfType<PageBodyPanel>().First();
+            var hadPanel = body.HasSidePanel;
+            var heading = page.GetVisualDescendants().OfType<TextBlock>().First(text => text.IsEffectivelyVisible && text.Classes.Contains("heading-md")).Text;
+            Assert.Single(page.GetVisualDescendants().OfType<Button>(), button => button.IsEffectivelyVisible && button.Command == harness.ViewModel.ShareFromListingStartCommand);
+            await harness.ViewModel.ShareFromListingStartCommand.ExecuteAsync(null);
+            window.UpdateLayout();
+            var hasPanel = body.HasSidePanel;
+            window.Close();
+            return (heading, hadPanel, hasPanel);
+        });
+
+        Assert.Equal(harness.Localization.ListingShareCardTitle, firstHeading);
+        Assert.False(hadSidePanel);
+        Assert.True(hasSidePanel);
+        var editor = harness.ViewModel.ListingEditor;
+        Assert.True(editor.IsShareChoose);
+        Assert.True(editor.IsShareChooseVehicle);
+    }
+
+    [Fact]
+    public async Task ListingStart_TheCardFollowsTheGate_AndOpensOnTheTypeThatTheIndexAccepts()
+    {
+        using var noVehicles = await ViewModelHarness.CreateAsync(respond: request => GameSaveShareTests.GatedOn(request, "vehicle"));
+        using var noTypes = await ViewModelHarness.CreateAsync(respond: GameSaveShareTests.Gated);
+        await noVehicles.ViewModel.OpenListingAsync();
+        await noTypes.ViewModel.OpenListingAsync();
+
+        Assert.True(await StartCardShowsAsync(noVehicles));
+        Assert.False(await StartCardShowsAsync(noTypes));
+
+        await noVehicles.ViewModel.ShareFromListingStartCommand.ExecuteAsync(null);
+        Assert.True(noVehicles.ViewModel.ListingEditor.IsShareChooseSave);
     }
 
     [Fact]
@@ -318,6 +391,37 @@ public sealed class GameSaveShareViewTests
         Assert.Equal(100, before);
         Assert.Equal(0, after);
     }
+
+    private static readonly ModVersionMetadata Release = new(1, "ExampleRover", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.9.7.5402", 5402,
+        new DownloadInfo("https://example.invalid/rover.zip", new string('A', 64), null, "application/zip"), null, [], type: ContentType.Vehicle, install: new InstallInfo("Example Rover", derived: true, folder: "Example Rover"));
+
+    /// <summary>Changes the row while the page shows, so the answer also proves that the button hears of the change.</summary>
+    private static Task<bool> RowButtonShowsAsync(ViewModelHarness harness, Action<GameSaveItem> change) =>
+        HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new InstancePage();
+            var window = new Window { Width = 1280, Height = 900, DataContext = harness.ViewModel, Content = page };
+            window.Show();
+            page.UpdateLayout();
+            var row = Assert.Single(harness.ViewModel.VehiclesSection.Items);
+            change(row);
+            page.UpdateLayout();
+            var shows = page.GetVisualDescendants().OfType<Button>().Any(button => button.IsEffectivelyVisible && button.Command == row.ShareCommand);
+            window.Close();
+            return Task.FromResult(shows);
+        });
+
+    private static Task<bool> StartCardShowsAsync(ViewModelHarness harness) =>
+        HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var shows = page.GetVisualDescendants().OfType<Button>().Any(button => button.IsEffectivelyVisible && button.Command == harness.ViewModel.ShareFromListingStartCommand);
+            window.Close();
+            return Task.FromResult(shows);
+        });
 
     private static Task<List<string?>> PageTextsAsync(ViewModelHarness harness, Func<Task>? afterShow = null) =>
         HeadlessApp.RunAsync(harness, async () =>

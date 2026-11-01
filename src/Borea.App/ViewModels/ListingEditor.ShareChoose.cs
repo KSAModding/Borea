@@ -96,6 +96,18 @@ public sealed partial class ListingEditor
         return LoadShareChooseAsync(kind, select, problem);
     }
 
+    /// <summary>The link for mod authors leads to the start or to the draft behind the list, because a list with nothing picked holds no work. A share that has begun stays, and "Start over" is there for it.</summary>
+    internal void LeaveShareStepWithNoShare()
+    {
+        if (!IsShareStep || _share is not null)
+            return;
+
+        if (HasFormBehindShareChoose)
+            BackToShareForm();
+        else
+            Step = ListingStep.Start;
+    }
+
     /// <summary>The player can come back to the step after playing or after making an instance, so the page reads the rows again.</summary>
     private Task ReloadShareChooseAsync() =>
         LoadShareChooseAsync(_shareChooseKind, SelectedShareRow is { Item: var item } ? (item.InstanceId, item.FolderName) : null, problem: null);

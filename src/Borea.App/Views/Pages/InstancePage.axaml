@@ -140,7 +140,8 @@
                         <TextBlock Classes="label-md" Text="{Binding BuildText}" MaxWidth="160" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     </StackPanel>
                     <TextBlock Grid.Column="5" Classes="label-md" Margin="24,0,0,0" Text="{Binding SizeText}" VerticalAlignment="Center" />
-                    <Panel Grid.Column="6" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Classes="text" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShare}" Command="{Binding ShareCommand}" IsVisible="{Binding ShowsShareButton}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShareTip}" />
                         <Button Classes="icon" IsVisible="{Binding IsIdle}" AutomationProperties.Name="{Binding Name}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
@@ -156,7 +157,7 @@
                             </Button.Flyout>
                             <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
                         </Button>
-                    </Panel>
+                    </StackPanel>
                     <!-- the copy target and the confirmations open below the row, so they do not make the shared columns of every row wider -->
                     <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="5" ColumnDefinitions="*,Auto" ColumnSpacing="16">
                         <ContentControl Margin="0,4,0,0" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
