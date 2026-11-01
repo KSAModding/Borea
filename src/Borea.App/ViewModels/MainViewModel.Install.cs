@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Composition;
 using Borea.Core.Game;
-using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
