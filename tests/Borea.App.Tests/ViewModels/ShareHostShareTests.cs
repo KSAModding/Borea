@@ -118,7 +118,14 @@ public sealed class ShareHostShareTests
     {
         var host = new FakeHost { PullRequest = hasRequest ? new Uri("https://github.com/KSAModding/content-index/pull/250") : null };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: isNewVersion ? ListedRover : null), shareHostClient: host);
-        var editor = await PublishAsync(harness);
+        var editor = await ShareAsync(harness);
+
+        if (isNewVersion)
+            editor.ShareAsNewVersionCommand.Execute(null);
+
+        FillRequiredFields(editor);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
         var text = harness.Localization;
         Assert.Equal(text.FormatShareDoneHeading("Example Rover"), editor.ShareDoneHeadingText);
@@ -243,7 +250,7 @@ public sealed class ShareHostShareTests
     [InlineData("TakenRover")]
     public async Task IdError_ShowsItsOwnTextAndOpensMoreOptions(string id)
     {
-        var taken = ListedRover.Replace("ExampleRover", "TakenRover", StringComparison.Ordinal).Replace("\"ksamods\": \"TakenRover\"", "\"github\": \"someone/rover\"", StringComparison.Ordinal);
+        var taken = Listed("TakenRover", "Taken Rover", "Taken Rover", "\"github\": \"someone/rover\"");
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: taken), shareHostClient: new FakeHost());
         var editor = await ShareAsync(harness);
         editor.Authors = "Maxi";
@@ -298,6 +305,7 @@ public sealed class ShareHostShareTests
         var host = new FakeHost();
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: isNewVersion ? ListedRover : null), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
         editor.Authors = "Maxi";
         editor.License = "CC-BY-4.0";
         editor.Abstract = "A six-wheel rover for the Moon.";
@@ -516,6 +524,18 @@ public sealed class ShareHostShareTests
 
         var editor = await ShareAsync(harness);
 
+        Assert.True(editor.IsAskingShareListing);
+        Assert.Equal(harness.Localization.FormatShareLooksLike("Example Rover", "ksamods.gg"), editor.ShareLooksLikeText);
+        Assert.Equal(harness.Localization.FormatShareVersionOnline("1.0.0"), editor.ShareVersionOnlineText);
+        Assert.Equal(harness.Localization.FormatShareAsNewVersion("Example Rover"), editor.ShareAsNewVersionText);
+        Assert.Null(editor.ShareIdError);
+        Assert.False(editor.CanContinueShare);
+        Assert.False(editor.ShowsPreviewCard);
+        Assert.Contains(editor.Errors, issue => issue.Location == "id");
+
+        editor.ShareAsNewVersionCommand.Execute(null);
+
+        Assert.False(editor.IsAskingShareListing);
         Assert.True(editor.IsNewVersionShare);
         Assert.Equal(harness.Localization.FormatShareNewVersionLine("Example Rover", "ksamods.gg"), editor.ShareNewVersionText);
         Assert.DoesNotContain(editor.Errors, issue => issue.Location == "id");
@@ -546,6 +566,7 @@ public sealed class ShareHostShareTests
         var host = new FakeHost();
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
 
         editor.EditAllShareFieldsCommand.Execute(null);
         editor.Id = id;
@@ -560,14 +581,18 @@ public sealed class ShareHostShareTests
     public async Task ShareStartedWithoutTheIndex_FindsItsListingAndHostOnceTheIndexIsBack()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost(), indexOffline: true);
-        var editor = await ShareAsync(harness);
-        Assert.False(editor.IsNewVersionShare);
+        var editor = await ShareWithFieldsAsync(harness);
+        Assert.Equal(ShareFlowStep.Publish, editor.ShareFlowStep);
+        Assert.False(editor.IsAskingShareListing);
         Assert.Empty(editor.ShareHostRows);
 
         harness.IndexOffline = false;
         await harness.ViewModel.OpenListingAsync();
         await editor.ShareHostsLoad;
 
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.True(editor.IsAskingShareListing);
+        editor.ShareAsNewVersionCommand.Execute(null);
         Assert.True(editor.IsNewVersionShare);
         Assert.Null(editor.ShareIdError);
         Assert.Single(editor.ShareHostRows);
@@ -585,6 +610,7 @@ public sealed class ShareHostShareTests
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(twoHosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost());
 
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
 
         Assert.Equal("ksamods", Assert.Single(editor.ShareHostRows).Host.Key);
     }
@@ -684,6 +710,7 @@ public sealed class ShareHostShareTests
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var text = harness.Localization;
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
@@ -818,6 +845,7 @@ public sealed class ShareHostShareTests
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var viewModel = harness.ViewModel;
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
         editor.ContinueShareCommand.Execute(null);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
@@ -843,6 +871,7 @@ public sealed class ShareHostShareTests
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var viewModel = harness.ViewModel;
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
         editor.ContinueShareCommand.Execute(null);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
@@ -872,6 +901,7 @@ public sealed class ShareHostShareTests
         var editor = await ShareAsync(harness);
         var row = Assert.Single(viewModel.VehiclesSection.Items);
         var other = new GameSaveShareStart(row.InstanceId, row.Entry, new GameFolderContent("Other Rover", null, new ContentIds(), [], []), new ContentShare([], []), null);
+        editor.ShareAsNewVersionCommand.Execute(null);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
         editor.RenameForShareCommand.Execute(null);
@@ -903,6 +933,7 @@ public sealed class ShareHostShareTests
         var host = new FakeHost { PullRequest = null };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
         Assert.False(editor.IsEditingShareVersion);
         editor.SelectedShareStatus = editor.ShareStatusChoices[1];
@@ -915,6 +946,7 @@ public sealed class ShareHostShareTests
 
         await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
         await editor.ShareHostsLoad;
+        editor.ShareAsNewVersionCommand.Execute(null);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
         Assert.False(editor.IsEditingShareVersion);
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
@@ -955,7 +987,7 @@ public sealed class ShareHostShareTests
     [Fact]
     public async Task RenameToATakenShortName_GoesBackToTheStepThatSaysIt()
     {
-        var taken = ListedRover.Replace("ExampleRover", "TakenRover", StringComparison.Ordinal).Replace("\"ksamods\": \"TakenRover\"", "\"github\": \"someone/rover\"", StringComparison.Ordinal);
+        var taken = Listed("TakenRover", "Taken Rover", "Taken Rover", "\"github\": \"someone/rover\"");
         var host = new FakeHost { Upload = new ShareUpload("u42", [new ShareCheck("name", false, "Not this name.")], "1.0.0", null) };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: taken), shareHostClient: host);
         var viewModel = harness.ViewModel;
@@ -1059,6 +1091,7 @@ public sealed class ShareHostShareTests
         var host = new FakeHost { TokenRefusals = 1 };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
@@ -1087,6 +1120,7 @@ public sealed class ShareHostShareTests
         var host = new FakeHost();
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
         var codeShown = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1152,6 +1186,7 @@ public sealed class ShareHostShareTests
         var host = new FakeHost { PullRequest = null };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
@@ -1172,11 +1207,220 @@ public sealed class ShareHostShareTests
         var host = new FakeHost { PublishedId = null, PullRequest = null };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
         var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
         Assert.Equal("ExampleRover", Assert.Single(await harness.Services.SharedContent.ListAsync()).ListingId);
+    }
+
+    [Fact]
+    public async Task EntryOfAShare_FindsTheListingBeforeTheIndexHoldsIt()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "RoverOfMaxi", "Example Rover", "1.2.0", null), null);
+
+        var editor = await ShareAsync(harness);
+
+        Assert.Equal(harness.Localization.FormatShareLooksLike("Example Rover", "ksamods.gg"), editor.ShareLooksLikeText);
+        Assert.Equal(harness.Localization.FormatShareVersionOnline("1.2.0"), editor.ShareVersionOnlineText);
+
+        editor.ShareAsNewVersionCommand.Execute(null);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal("RoverOfMaxi", editor.Id);
+        Assert.Equal("RoverOfMaxi", Assert.Single(host.Uploads).ListingId);
+    }
+
+    [Theory]
+    [InlineData("1.2.0", false, "1.2.0")]
+    [InlineData("0.9.0", false, "1.0.0")]
+    [InlineData("1.0.0", true, null)]
+    public async Task EntryOfAListingInTheIndex_ShowsTheVersionThatIsOnline(string recorded, bool yanked, string? online)
+    {
+        var vehicles = yanked ? ListedRover.Replace("\"release_status\"", "\"yanked\": true, \"release_status\"", StringComparison.Ordinal) : ListedRover;
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: vehicles), shareHostClient: new FakeHost());
+        await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "ExampleRover", "Example Rover", recorded, null), null);
+
+        var editor = await ShareAsync(harness);
+
+        Assert.Equal(online is null ? null : harness.Localization.FormatShareVersionOnline(online), editor.ShareVersionOnlineText);
+    }
+
+    /// <summary>A listing that the index does not hold says nothing about the folder, and the check of the host decides. A rename has moved the record, which then goes too.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EntryOfADifferentItem_IsRemoved_AndAsksNoMore(bool indexHoldsTheFolder)
+    {
+        var vehicles = indexHoldsTheFolder ? Listed("RoverOfMaxi", "Rover of Maxi", "Example Rover", "\"ksamods\": \"RoverOfMaxi\"") : null;
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: vehicles), shareHostClient: new FakeHost());
+        var viewModel = harness.ViewModel;
+        await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "RoverOfMaxi", "Example Rover", "1.2.0", null), null);
+        var editor = await ShareAsync(harness);
+
+        await editor.ShareIsDifferentCommand.ExecuteAsync(null);
+
+        Assert.Equal(indexHoldsTheFolder, viewModel.RenamingGameSave is not null);
+        if (indexHoldsTheFolder)
+        {
+            viewModel.ModalInstanceName = "Example Rover 2";
+            await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        }
+
+        Assert.False(editor.IsAskingShareListing);
+        Assert.False(editor.IsNewVersionShare);
+        Assert.Empty(await harness.Services.SharedContent.ListAsync());
+    }
+
+    [Fact]
+    public async Task InstallRecord_FindsTheListingOfAnItemWithAnotherName()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
+        var instance = await GameSaveShareTests.CreateInstanceAsync(harness, "Rover B");
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Rover B");
+        await GameSaveShareTests.RecordAsync(harness, instance, folder);
+        File.WriteAllText(Path.Combine(folder, "vehicle.xml"), "<VehicleSaveData Id=\"Rover B\" />");
+        await GameSaveShareTests.OpenAsync(harness);
+        var editor = harness.ViewModel.ListingEditor;
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        await editor.ShareRowCompare;
+
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+        await editor.ShareHostsLoad;
+
+        Assert.Equal(harness.Localization.FormatShareLooksLike("Example Rover", "ksamods.gg"), editor.ShareLooksLikeText);
+        editor.ShareAsNewVersionCommand.Execute(null);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.Equal("ExampleRover", Assert.Single(host.Uploads).ListingId);
+    }
+
+    [Fact]
+    public async Task FolderOfAListingOnAHost_OffersTheNewVersion_AndTheEnglishNoteStaysOnTheFullForm()
+    {
+        var host = new FakeHost();
+        var listed = Listed("RoverOfMaxi", "Rover of Maxi", "Example Rover", "\"ksamods\": \"RoverOfMaxi\"");
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: listed), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+
+        Assert.Equal(harness.Localization.FormatShareLooksLike("Rover of Maxi", "ksamods.gg"), editor.ShareLooksLikeText);
+        Assert.DoesNotContain(editor.Notes, issue => issue.Location == "name");
+        editor.EditAllShareFieldsCommand.Execute(null);
+        Assert.Contains(editor.Notes, issue => issue.Location == "name");
+        editor.BackToShareStepsCommand.Execute(null);
+
+        editor.ShareAsNewVersionCommand.Execute(null);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal("RoverOfMaxi", Assert.Single(host.Uploads).ListingId);
+        Assert.DoesNotContain(editor.Errors, issue => issue.Location == "id");
+    }
+
+    [Fact]
+    public async Task DifferentItemWithTheFolderOfAListing_OpensTheRename()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: Listed("RoverOfMaxi", "Rover of Maxi", "Example Rover", "\"ksamods\": \"RoverOfMaxi\"")), shareHostClient: new FakeHost());
+        var viewModel = harness.ViewModel;
+        var editor = await ShareAsync(harness);
+
+        await editor.ShareIsDifferentCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatShareFolderTakenVehicle("Example Rover"), viewModel.GameSaveRenameReason);
+        viewModel.CancelNameModalCommand.Execute(null);
+        Assert.True(editor.IsAskingShareListing);
+
+        await editor.ShareIsDifferentCommand.ExecuteAsync(null);
+        viewModel.ModalInstanceName = "Example Rover 2";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.False(editor.IsAskingShareListing);
+        Assert.False(editor.IsNewVersionShare);
+        Assert.Equal(("Example Rover 2", "ExampleRover2"), (editor.Name, editor.Id));
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+    }
+
+    [Theory]
+    [InlineData("\"ksamods\": \"RoverOfMaxi\"")]
+    [InlineData("\"github\": \"maxi/rover\"")]
+    public async Task ListingWithTheSameNameAndAnotherFolder_LeavesTheShareANewListing(string releases)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: Listed("RoverOfMaxi", "Example Rover", "Another Folder", releases)), shareHostClient: new FakeHost());
+
+        var editor = await ShareAsync(harness);
+
+        Assert.Null(harness.ViewModel.RenamingGameSave);
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.False(editor.IsAskingShareListing);
+        Assert.False(editor.IsNewVersionShare);
+        Assert.Equal("ExampleRover", editor.Id);
+    }
+
+    [Fact]
+    public async Task FolderOfAListingOffAHost_OpensTheRenameWhenTheItemIsChosen_AndTheShareStartsAfterIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: Listed("RoverOfMaxi", "Rover of Maxi", "Example Rover", "\"github\": \"maxi/rover\"")), shareHostClient: new FakeHost());
+        var viewModel = harness.ViewModel;
+        var editor = viewModel.ListingEditor;
+        var taken = harness.Localization.FormatShareFolderTakenVehicle("Example Rover");
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.OpenAsync(harness);
+
+        await Assert.Single(viewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        await editor.ShareChooseLoad;
+
+        Assert.Equal(taken, viewModel.GameSaveRenameReason);
+        Assert.False(editor.HasShare);
+        Assert.Equal(ShareFlowStep.Choose, editor.ShareFlowStep);
+        Assert.Equal(taken, editor.ShareChooseError);
+
+        viewModel.CancelNameModalCommand.Execute(null);
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+        viewModel.ModalInstanceName = "Example Rover 2";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.True(editor.HasShare);
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.False(editor.IsAskingShareListing);
+        Assert.Equal("Example Rover 2", editor.Name);
+    }
+
+    [Fact]
+    public async Task NewVersion_AsksAgainAfterBackAndNext_SoThePlayerCanChangeTheAnswer()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: Listed("ExampleRover", "Rover of Maxi", "Another Folder", "\"ksamods\": \"ExampleRover\"")), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+        editor.ShareAsNewVersionCommand.Execute(null);
+
+        editor.BackToShareChooseCommand.Execute(null);
+        await editor.ShareChooseLoad;
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+        await editor.ShareHostsLoad;
+
+        Assert.True(editor.IsAskingShareListing);
+        Assert.False(editor.IsNewVersionShare);
+
+        await editor.ShareIsDifferentCommand.ExecuteAsync(null);
+
+        Assert.False(editor.IsAskingShareListing);
+        Assert.False(editor.IsNewVersionShare);
+    }
+
+    [Fact]
+    public async Task ListingWithOnlyTheId_DifferentOpensMoreOptionsWithTheError_AndAsksNoMore()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: Listed("ExampleRover", "Rover of Maxi", "Another Folder", "\"ksamods\": \"ExampleRover\"")), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+
+        await editor.ShareIsDifferentCommand.ExecuteAsync(null);
+
+        Assert.Null(harness.ViewModel.RenamingGameSave);
+        Assert.False(editor.IsAskingShareListing);
+        Assert.False(editor.IsNewVersionShare);
+        Assert.True(editor.IsShareMoreOptionsOpen);
+        Assert.Equal(harness.Localization.FormatShareIdHeld("ExampleRover"), editor.ShareIdError);
     }
 
     [Fact]
@@ -1409,6 +1653,7 @@ public sealed class ShareHostShareTests
         var editor = await ShareWithFieldsAsync(harness);
         var row = Assert.Single(harness.ViewModel.VehiclesSection.Items);
         Assert.NotNull(row.SharedOnText);
+        editor.ShareAsNewVersionCommand.Execute(null);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
@@ -1619,16 +1864,19 @@ public sealed class ShareHostShareTests
         _ => null,
     };
 
-    private static readonly string ListedRover = $$"""
+    private static readonly string ListedRover = Listed("ExampleRover", "Example Rover", "Example Rover", "\"ksamods\": \"ExampleRover\"");
+
+    /// <summary>The vehicles of an index with one listing of that name, whose one release installs into the folder.</summary>
+    private static string Listed(string id, string name, string folder, string releases) => $$"""
         { "snapshot_version": 1, "{{ContentIndexTypeFiles.Vehicles.ArrayKey}}": [{
-            "id": "ExampleRover",
-            "authored": { "spec_version": 1, "id": "ExampleRover", "type": "vehicle", "name": "Example Rover", "authors": ["Maxi"], "abstract": "A small rover.", "license": "CC0-1.0", "releases": { "ksamods": "ExampleRover" } },
+            "id": "{{id}}",
+            "authored": { "spec_version": 1, "id": "{{id}}", "type": "vehicle", "name": "{{name}}", "authors": ["Maxi"], "abstract": "A small rover.", "license": "CC0-1.0", "releases": { {{releases}} } },
             "releases": [{
-                "spec_version": 1, "id": "ExampleRover", "type": "vehicle", "version": "1.0.0", "version_scheme": "semver", "release_status": "stable",
+                "spec_version": 1, "id": "{{id}}", "type": "vehicle", "version": "1.0.0", "version_scheme": "semver", "release_status": "stable",
                 "release_date": "2026-10-20T12:00:00Z", "game_min": "2026.10.19.5638", "game_min_revision": 5638,
                 "download": { "url": "https://example.test/rover.zip", "sha256": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "size": 1024, "content_type": "application/zip" },
-                "install": { "derived": true, "folder": "Example Rover" }, "install_size": 2048, "dependencies": [],
-                "listing": { "name": "Example Rover", "authors": ["Maxi"], "abstract": "A small rover.", "license": "CC0-1.0", "tags": [], "links": {} }
+                "install": { "derived": true, "folder": "{{folder}}" }, "install_size": 2048, "dependencies": [],
+                "listing": { "name": "{{name}}", "authors": ["Maxi"], "abstract": "A small rover.", "license": "CC0-1.0", "tags": [], "links": {} }
             }]
         }] }
         """;

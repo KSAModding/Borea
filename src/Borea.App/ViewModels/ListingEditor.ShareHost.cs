@@ -225,6 +225,7 @@ public sealed partial class ListingEditor
         RefreshShareHostRows();
         OnPropertyChanged(nameof(ShareHostText));
         OnPropertyChanged(nameof(ShareNewVersionText));
+        OnPropertyChanged(nameof(ShareLooksLikeText));
     }
 
     /// <summary>Reads the index and the hosts again. A share that started without the index also finds its listing that way.</summary>
@@ -243,7 +244,7 @@ public sealed partial class ListingEditor
 
         // A new version belongs on the host of its listing, because another host has no listing that it could add to.
         var rows = _share is null ? [] : _shareHosts
-            .Where(host => host.Accepts(Type) && (_shareListing is not { } listed || listed.Entry.Host == host.Key))
+            .Where(host => host.Accepts(Type) && (_shareListing is not { } listed || listed.HostKey == host.Key))
             .Select(host => new ShareHostRow(host, ShareHostLimitText(host), host.Policy is null ? null : Localization.FormatShareHostRules(host.Name)))
             .ToList();
         MainViewModel.Arrange(ShareHostRows, rows);
@@ -385,7 +386,7 @@ public sealed partial class ListingEditor
             if (!client.IsSignedIn(host))
                 await SignInToShareHostAsync(host, client, cancel);
 
-            var listingId = _shareListing?.Entry.Reference;
+            var listingId = _shareListing?.Reference;
             var upload = await SendSignedInAsync(host, client, cancel, Localization.FormatListingShareHostUploading(host.Name), async () =>
             {
                 await using var archive = File.OpenRead(file);
@@ -608,13 +609,7 @@ public sealed partial class ListingEditor
         if (_share != share)
             return;
 
-        _share = share with { Entry = renamed, Content = share.Content with { Name = renamed.Name } };
-        var followsTheName = !IsNewVersionShare && Id == ListingShareId.From(share.Content.Name);
-        Name = renamed.Name;
-        if (followsTheName)
-            Id = ListingShareId.From(renamed.Name);
-        RefreshShare();
-
+        TakeShareRename(share, renamed);
         if (!IsShareStep || ShareFlowStep != ShareFlowStep.Publish)
             return;
 
@@ -630,6 +625,18 @@ public sealed partial class ListingEditor
             SelectedShareHostRow = same;
             ShareCheckAfterRename = UploadToShareHostCommand.ExecuteAsync(same);
         }
+    }
+
+    private GameSaveShareStart TakeShareRename(GameSaveShareStart share, GameSaveEntry renamed)
+    {
+        var current = share with { Entry = renamed, Content = share.Content with { Name = renamed.Name } };
+        _share = current;
+        var followsTheName = !IsNewVersionShare && Id == ListingShareId.From(share.Content.Name);
+        Name = renamed.Name;
+        if (followsTheName)
+            Id = ListingShareId.From(renamed.Name);
+        RefreshShare();
+        return current;
     }
 
     [RelayCommand]

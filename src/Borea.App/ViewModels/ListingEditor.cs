@@ -338,9 +338,11 @@ public sealed partial class ListingEditor : ObservableObject
         }
 
         // A share that started while the index could not be read finds its listing and its hosts once the index is there, and a published share has nothing left to find.
-        if (!hadIndex && _snapshot is not null && _share is not null && !IsShareDone)
+        if (!hadIndex && _snapshot is not null && _share is { } share && !IsShareDone)
         {
-            _shareListing = FindShareListing();
+            if (_shareListing is null)
+                LookUpShareListing(share);
+
             RefreshShare();
             StartShareHosts();
         }
@@ -775,8 +777,11 @@ public sealed partial class ListingEditor : ObservableObject
         DocumentText = services.ListingFormat.Write(document, _listedText);
 
         // A new version sends no document from the steps, while the full form can open a pull request for a new file, so only the steps count the listing as its own id.
-        var listedId = (IsShareStep ? _shareListing?.Listing.Id : null) ?? (HasFixedId ? _base.Id : null);
-        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, listedId, CheckedArchive, _share?.Content.Name));
+        var listedId = (IsShareStep ? _shareListing?.Id : null) ?? (HasFixedId ? _base.Id : null);
+
+        // The steps say this in the language of the player when the item is chosen, so only the full form gets the note in English.
+        var installFolder = IsShareStep ? null : _share?.Content.Name;
+        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, listedId, CheckedArchive, installFolder));
         if (UncheckedArchiveIssue() is { } archiveIssue)
             pageIssues.Add(archiveIssue);
         var issues = InPinOrder(pageIssues.Concat(result.Issues).Distinct());

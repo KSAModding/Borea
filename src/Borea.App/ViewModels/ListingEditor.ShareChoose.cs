@@ -222,7 +222,7 @@ public sealed partial class ListingEditor
     [RelayCommand]
     private Task OpenShareProfileInstanceAsync() => ShareProfileInstance is { } instance ? _owner.OpenInstanceAsync(instance) : Task.CompletedTask;
 
-    /// <summary>The same item keeps its draft. Another item starts a new share, or says why it cannot.</summary>
+    /// <summary>The same item keeps the draft of a new listing. A new version starts again, so the question comes back and the player can change the answer. Another item starts a new share, or says why it cannot.</summary>
     [RelayCommand]
     private async Task ContinueShareChooseAsync()
     {
@@ -230,7 +230,7 @@ public sealed partial class ListingEditor
         if (!CanContinueShareChoose || SelectedShareRow is not { Item: var item })
             return;
 
-        if (_share is { } share && share.InstanceId == item.InstanceId && share.Entry.Kind == item.Entry.Kind && string.Equals(share.Entry.FolderName, item.FolderName, StringComparison.OrdinalIgnoreCase))
+        if (!IsNewVersionShare && _share is { } share && share.InstanceId == item.InstanceId && share.Entry.Kind == item.Entry.Kind && string.Equals(share.Entry.FolderName, item.FolderName, StringComparison.OrdinalIgnoreCase))
         {
             ShareFlowStep = ShareFlowStep.Describe;
             return;

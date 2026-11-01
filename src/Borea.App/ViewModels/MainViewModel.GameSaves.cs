@@ -28,8 +28,8 @@ public partial class MainViewModel
     /// <summary>What a share does after the rename it asked for. A cancelled rename drops it, and a refused one keeps the modal open.</summary>
     private Func<GameSaveEntry, Task>? _afterShareRename;
 
-    /// <summary>The name that a failed check of a host refused, so keeping it would upload the same files to the same refusal. A rename from the row has none, because the name of the list can still repair meta.toml there.</summary>
-    private string? _nameTheHostRefused;
+    /// <summary>The name that a share cannot keep, because a host refused it or a listing in the index installs under it. A rename from the row has none, because the name of the list can still repair meta.toml there.</summary>
+    private string? _nameTheShareCannotKeep;
 
     public GameSaveSection VehiclesSection => _vehiclesSection ??= new GameSaveSection(this, GameSaveKind.Vehicle);
 
@@ -82,8 +82,8 @@ public partial class MainViewModel
     {
         item.CloseEdits();
         var type = item.Entry.Kind.ToContentType();
-        var hasRecord = (await InstalledContentOfAsync(item.InstanceId)).Any(record => record.Type == type && string.Equals(record.FolderName, item.FolderName, StringComparison.OrdinalIgnoreCase));
-        if (hasRecord && !ListingEditor.IsSharing)
+        var record = RecordOfFolder(await InstalledContentOfAsync(item.InstanceId), type, item.FolderName);
+        if (record is not null && !ListingEditor.IsSharing)
             await OpenShareChooseOnAsync(item);
         else
             await GoOnWithShareAsync(item);
@@ -142,11 +142,17 @@ public partial class MainViewModel
         return entries.Select(entry =>
         {
             var item = new GameSaveItem(this, section, instance.InstanceId, entry, installed: null) { SharedHostName = SharedHostName(shared, type, entry.FolderName) };
-            if (records.FirstOrDefault(record => record.Type == type && string.Equals(record.FolderName, entry.FolderName, StringComparison.OrdinalIgnoreCase)) is { } record)
+            if (RecordOfFolder(records, type, entry.FolderName) is { } record)
                 item.ShowRecord(record, listing: null, newer: null);
             return item;
         }).ToList();
     }
+
+    private static InstalledContentRecord? RecordOfFolder(IReadOnlyList<InstalledContentRecord> records, ContentType type, string folderName) =>
+        records.FirstOrDefault(record => record.Type == type && string.Equals(record.FolderName, folderName, StringComparison.OrdinalIgnoreCase));
+
+    private static SharedContentEntry? SharedEntryOfFolder(IReadOnlyList<SharedContentEntry> entries, ContentType type, string folderName) =>
+        entries.LastOrDefault(entry => entry.Type == type && string.Equals(entry.FolderName, folderName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Starts the share of the item, or opens the rename it needs first. Returns what stops it in plain words, or null.</summary>
     internal async Task<string?> TryStartShareAsync(GameSaveItem item)
@@ -174,10 +180,20 @@ public partial class MainViewModel
             var providers = await services.ContentProviders.ReadAsync(item.InstanceId);
             var installed = (await services.Instances.GetByIdAsync(item.InstanceId))?.Mods ?? [];
             var lastAuthor = await services.SharedContent.GetAuthorAsync();
-            var share = new GameSaveShareStart(item.InstanceId, item.Entry, content, ContentShareProposal.Of(content.Ids, providers, installed), lastAuthor);
+            var type = item.Entry.Kind.ToContentType();
+            var sharedEntry = SharedEntryOfFolder(await services.SharedContent.ListAsync(), type, item.FolderName);
+            var record = RecordOfFolder(await InstalledContentOfAsync(item.InstanceId), type, item.FolderName);
+            var share = new GameSaveShareStart(item.InstanceId, item.Entry, content, ContentShareProposal.Of(content.Ids, providers, installed), lastAuthor, sharedEntry, record?.ListingId);
             // Next on the list stands on the page already, and opening it again would read every row again.
             if (!CurrentWindowListing)
                 await OpenListingAsync();
+
+            // The page reads the index, so the compare comes after it opens. The text stays under the list when the player cancels the rename.
+            if (ListingEditor.ShareNameTakenText(share) is { } taken)
+            {
+                BeginShareRename(share, taken, renamed => GoOnWithShareAsync(new GameSaveItem(this, item.Section, item.InstanceId, renamed, installed: null)));
+                return taken;
+            }
 
             ListingEditor.StartShare(share);
             return null;
@@ -378,7 +394,7 @@ public partial class MainViewModel
     }
 
     private static string? SharedHostName(IReadOnlyList<SharedContentEntry> entries, ContentType type, string folderName) =>
-        entries.LastOrDefault(entry => entry.Type == type && string.Equals(entry.FolderName, folderName, StringComparison.OrdinalIgnoreCase))?.HostName;
+        SharedEntryOfFolder(entries, type, folderName)?.HostName;
 
     /// <summary>How long the row of a new vehicle or save shows its border.</summary>
     internal static readonly TimeSpan GameSaveMarkDuration = TimeSpan.FromSeconds(2);
@@ -476,7 +492,7 @@ public partial class MainViewModel
         var section = share.Entry.Kind == GameSaveKind.Vehicle ? VehiclesSection : SavesSection;
         var row = section.Items.FirstOrDefault(item => item.InstanceId == share.InstanceId && item.FolderName == share.Entry.FolderName);
         BeginShareRename(row ?? new GameSaveItem(this, section, share.InstanceId, share.Entry, installed: null), reason, next);
-        _nameTheHostRefused = share.Content.Name;
+        _nameTheShareCannotKeep = share.Content.Name;
     }
 
     private void BeginShareRename(GameSaveItem item, string reason, Func<GameSaveEntry, Task> next)
@@ -516,7 +532,7 @@ public partial class MainViewModel
             return;
         }
 
-        if (name == _nameTheHostRefused && name == item.FolderName)
+        if (name == _nameTheShareCannotKeep && name == item.FolderName)
         {
             InstanceError = Localization.GameSaveRenameChooseAnother;
             return;
