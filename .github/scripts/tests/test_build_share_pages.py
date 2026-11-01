@@ -34,6 +34,11 @@ def snapshot() -> dict:
     return json.loads((FIXTURES / "snapshot.json").read_text(encoding="utf-8"))
 
 
+def typed_snapshot() -> dict:
+    """The fixture with its vehicle and save files."""
+    return share.load_document(str(FIXTURES / "snapshot.json"))
+
+
 def edge_snapshot() -> dict:
     """The fixture with the cases it does not have by itself."""
     document = snapshot()
@@ -187,6 +192,62 @@ class Build(unittest.TestCase):
         self.assertTrue((self.out / "index.html").is_file())
         self.assertTrue((self.out / "404.html").is_file())
         self.assertTrue((self.out / "styles.css").is_file())
+
+    def test_a_vehicle_and_a_save_get_a_page_of_their_kind(self):
+        self.assertEqual(9, self.build(typed_snapshot()))
+
+        self.assertIn("<title>Example Rover - Borea</title>", self.page("vehicle", "ExampleRover"))
+        self.assertIn('<p class="meta kind">Vehicle</p>', self.page("vehicle", "ExampleRover"))
+        self.assertIn("https://ksamodding.github.io/Borea/vehicle/ExampleRover/", self.page("vehicle", "ExampleRover"))
+        self.assertIn("<strong>Moon</strong>", self.prose("vehicle", "ExampleRover"))
+        self.assertIn('<p class="meta kind">Save</p>', self.page("save", "CampaignSave"))
+
+    def test_a_type_file_gives_no_page_to_a_tombstone_or_another_type(self):
+        self.build(typed_snapshot())
+
+        self.assertFalse((self.out / "vehicle" / "GoneRover").exists())
+        self.assertFalse((self.out / "vehicle" / "MisplacedMod").exists())
+
+    def test_a_vehicle_page_names_and_links_its_host_as_the_source(self):
+        self.build(typed_snapshot())
+
+        self.assertIn('<dt>Source</dt><dd><a href="https://share.example.org/vehicles/ExampleRover" rel="nofollow noopener">share.example.org</a></dd>',
+                      self.page("vehicle", "ExampleRover"))
+        self.assertNotIn("<dt>Source</dt>", self.page("save", "CampaignSave"))
+
+    def test_a_mod_page_names_no_source(self):
+        document = snapshot()
+        document["listings"][1]["authored"]["links"]["homepage"] = "https://example.org/afc"
+        self.build(document)
+
+        self.assertIn("https://example.org/afc", self.page("mod", "AdvancedFlightComputer"))
+        self.assertNotIn("<dt>Source</dt>", self.page("mod", "AdvancedFlightComputer"))
+
+    def test_the_buttons_of_a_vehicle_page_open_and_install_it(self):
+        self.build(typed_snapshot())
+        hrefs = {attrs.get("href") for tag, attrs in parse(self.page("vehicle", "ExampleRover")).tags if tag == "a"}
+
+        self.assertIn("borea://mod/ExampleRover", hrefs)
+        self.assertIn("borea://install/ExampleRover", hrefs)
+
+    def test_of_a_vehicle_only_its_icon_reaches_the_site(self):
+        self.build(typed_snapshot())
+
+        self.assertIn(f"img/icons/{ICON_NAME}", self.page("vehicle", "ExampleRover"))
+        self.assertTrue((self.out / "img" / "icons" / ICON_NAME).is_file())
+        self.assertNotIn("https://share.example.org/files/rover.zip", self.fetch.requests)
+        self.assertNotIn("rover.zip", self.page("vehicle", "ExampleRover"))
+
+    def test_a_vehicle_page_has_no_curated_tags(self):
+        self.build(typed_snapshot())
+
+        page = self.page("vehicle", "ExampleRover")
+        self.assertLess(page.index('<li class="chip">Rover</li>'), page.index('<li class="chip">Gameplay</li>'))
+
+    def test_a_deprecated_vehicle_links_its_successor_among_the_vehicles(self):
+        self.build(typed_snapshot())
+
+        self.assertIn('Its successor is <a href="../ExampleRover/">Example Rover</a>.', self.page("vehicle", "OldRover"))
 
     def test_tombstones_invalid_ids_and_repeated_casings_get_no_page(self):
         self.build()
@@ -765,8 +826,10 @@ NODE_ACTIONS = NODE_DOM + """
 const snapshot = JSON.parse(require("fs").readFileSync(process.argv[2], "utf8"));
 const views = snapshot.listings.filter((entry) => entry && entry.authored && typeof entry.authored === "object")
   .map((entry) => share.listingView(entry, snapshot))
-  .concat(snapshot.packs.map((entry) => share.packView(entry, snapshot)).filter(Boolean));
-const nodes = { mod: {}, pack: {} };
+  .concat(snapshot.packs.map((entry) => share.packView(entry, snapshot)).filter(Boolean))
+  .concat(snapshot.vehicles.filter((entry) => entry.authored).map((entry) => share.listingView(entry, snapshot, "vehicle")))
+  .concat(snapshot.saves.map((entry) => share.listingView(entry, snapshot, "save")));
+const nodes = { mod: {}, vehicle: {}, save: {}, pack: {} };
 views.forEach(function (view) {
   nodes[view.kind][view.id] = plain(share.actionNodes(view, process.argv[3])).children;
 });
@@ -926,10 +989,17 @@ const fs = require("fs");
 const path = require("path");
 const share = require(path.resolve(process.argv[1]));
 const snapshot = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-const views = { mod: {}, pack: {} };
+const views = { mod: {}, vehicle: {}, save: {}, pack: {} };
 for (const entry of snapshot.listings) {
   if (entry && entry.authored && typeof entry.authored === "object") {
     views.mod[entry.id] = share.listingView(entry, snapshot);
+  }
+}
+for (const [kind, key] of [["vehicle", "vehicles"], ["save", "saves"]]) {
+  for (const entry of snapshot[key] || []) {
+    if (entry.authored) {
+      views[kind][entry.id] = share.listingView(entry, snapshot, kind);
+    }
   }
 }
 for (const entry of snapshot.packs) {
@@ -938,8 +1008,9 @@ for (const entry of snapshot.packs) {
     views.pack[entry.id] = view;
   }
 }
-for (const kind of ["mod", "pack"]) {
+for (const kind of Object.keys(views)) {
   for (const view of Object.values(views[kind])) {
+    view.source = view.source ? view.source.hostname : null;
     view.links = view.links.map((link) => [link.label, link.url.hostname]);
     view.notices = view.notices.map((notice) => [notice.text, notice.link ? notice.link.label : null]);
   }
@@ -983,7 +1054,7 @@ class FallbackParity(unittest.TestCase):
 
     def test_the_fallback_offers_the_buttons_and_the_line_for_a_phone_the_way_the_generator_does(self):
         root = "/Borea/"
-        document = snapshot()
+        document = typed_snapshot()
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "snapshot.json"
             path.write_text(json.dumps(document), encoding="utf-8")
@@ -992,17 +1063,18 @@ class FallbackParity(unittest.TestCase):
         nodes = json.loads(result.stdout)
         with contextlib.redirect_stderr(io.StringIO()):
             pages = share.pages_of(share.Snapshot(document))
-        self.assertEqual({"mod", "pack"}, {page.kind for page, _ in pages})
+        self.assertEqual({"mod", "vehicle", "save", "pack"}, {page.kind for page, _ in pages})
         for page, _ in pages:
             with self.subTest(page=f"{page.kind}/{page.id}"):
                 self.assertEqual(html_nodes(share.actions_html(page, root)), nodes[page.kind][page.id])
 
     def test_the_fallback_shows_what_the_generator_shows(self):
-        for name, document in (("fixture", snapshot()), ("edge cases", edge_snapshot()), ("pack members", member_snapshot())):
+        for name, document, count in (("fixture", snapshot(), 6), ("edge cases", edge_snapshot(), 6), ("pack members", member_snapshot(), 6),
+                                      ("type files", typed_snapshot(), 9)):
             views = self.views(document)
             with contextlib.redirect_stderr(io.StringIO()):
                 pages = share.pages_of(share.Snapshot(document))
-            self.assertEqual(6, len(pages))
+            self.assertEqual(count, len(pages))
             for page, _ in pages:
                 with self.subTest(snapshot=name, page=f"{page.kind}/{page.id}"):
                     expected = {
@@ -1011,12 +1083,168 @@ class FallbackParity(unittest.TestCase):
                         "date": share.date_text(page.date) if page.date else None, "game": page.game,
                         "downloads": page.downloads, "modCount": page.mod_count, "tags": page.tags,
                         "description": page.description, "images": page.images,
+                        "source": page.source[0] if page.source else None,
                         "forumList": page.forum_list, "newer": page.newer,
                         "links": [[label, share.urllib.parse.urlsplit(url).hostname] for label, url in page.links],
                         "notices": [[notice.text, notice.link[0] if notice.link else None] for notice in page.notices],
                     }
                     view = views[page.kind][page.id]
                     self.assertEqual(expected, {key: view[key] for key in expected})
+
+
+NODE_ROUTE = """
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+const [, shareScript, fixtures, pathname, answerText] = process.argv;
+const answers = JSON.parse(answerText);
+
+function Node(tag) {
+  this.tag = tag;
+  this.children = [];
+  this.classList = { add: function () {} };
+  this.style = {};
+}
+Node.prototype.appendChild = function (child) { this.children.push(child); return child; };
+Node.prototype.setAttribute = function () {};
+Node.prototype.querySelector = function () { return null; };
+Object.defineProperty(Node.prototype, "textContent", {
+  set: function (value) { this.children = value === "" ? [] : [{ text: String(value) }]; },
+  get: function () { return textOf(this); }
+});
+Object.defineProperty(Node.prototype, "childNodes", { get: function () { return this.children; } });
+
+function textOf(node) {
+  return node.text !== undefined ? node.text : node.children.map(textOf).join("");
+}
+
+function linksOf(node, links) {
+  (node.children || []).forEach(function (child) { linksOf(child, links); });
+  if (node.tag === "a") {
+    links.push([textOf(node), node.href, node.rel]);
+  }
+  return links;
+}
+
+// The state of site/404.html before the script runs.
+const parts = { "not-found": new Node("div"), "not-found-text": new Node("p"), loading: new Node("div"), page: new Node("div") };
+parts["not-found-text"].textContent = "There is no page at this address.";
+parts.loading.hidden = true;
+parts.page.hidden = true;
+
+const requests = [];
+let redirect = null;
+const document = {
+  baseURI: "https://ksamodding.github.io/Borea/",
+  title: "",
+  body: new Node("body"),
+  createElement: function (tag) { return new Node(tag); },
+  createDocumentFragment: function () { return new Node("fragment"); },
+  createTextNode: function (value) { return { text: value }; },
+  getElementById: function (id) { return parts[id]; }
+};
+
+function fetchStub(address) {
+  const name = path.basename(address);
+  requests.push(name);
+  const answer = answers[name];
+  if (answer) {
+    return Promise.resolve({ ok: answer.status === 200, status: answer.status, json: function () { return Promise.resolve(answer.body); } });
+  }
+  const file = path.join(fixtures, name === "index.json" ? "snapshot.json" : name);
+  return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(JSON.parse(fs.readFileSync(file, "utf8"))); } });
+}
+
+const location = { pathname: pathname, replace: function (address) { redirect = address; } };
+vm.runInNewContext(fs.readFileSync(shareScript, "utf8"), { document: document, fetch: fetchStub, location: location, URL: URL, window: {} });
+
+// The stub answers at once, so the page is final when Node has no work left.
+let written = false;
+process.on("beforeExit", function () {
+  if (written) {
+    return;
+  }
+  written = true;
+  process.stdout.write(JSON.stringify({
+    requests: requests,
+    redirect: redirect,
+    title: document.title,
+    loading: !parts.loading.hidden,
+    notFound: !parts["not-found"].hidden,
+    notFoundText: textOf(parts["not-found-text"]),
+    page: !parts.page.hidden,
+    links: linksOf(parts.page, [])
+  }));
+});
+"""
+
+NOT_LISTED = " is not listed yet. A new one can take some hours to show up here."
+NO_PAGE = "There is no page at this address."
+NOT_LOADED = "The content index could not be loaded. Try again later."
+
+
+@unittest.skipUnless(shutil.which("node"), "Node is not installed")
+class FallbackRoute(unittest.TestCase):
+    """site/share.js runs as the 404 page, with a stub document and a stub fetch that serves the fixtures."""
+
+    def route(self, address, answers=None) -> dict:
+        result = subprocess.run(["node", "-e", NODE_ROUTE, str(SITE / "share.js"), str(FIXTURES), "/Borea/" + address,
+                                 json.dumps(answers or {})],
+                                capture_output=True, text=True, encoding="utf-8", check=True)
+        return json.loads(result.stdout)
+
+    def assert_not_found(self, result, text):
+        self.assertEqual((True, False, False, None), (result["notFound"], result["page"], result["loading"], result["redirect"]))
+        self.assertEqual(text, result["notFoundText"])
+
+    def test_a_vehicle_or_a_save_newer_than_the_site_gets_its_page_from_its_own_file(self):
+        for address, title, file in (("vehicle/ExampleRover/", "Example Rover", "snapshot-vehicles.json"),
+                                     ("save/CampaignSave/", "Moon Campaign", "snapshot-saves.json")):
+            with self.subTest(address=address):
+                result = self.route(address)
+                self.assertEqual((True, False, False), (result["page"], result["notFound"], result["loading"]))
+                self.assertEqual(title + " - Borea", result["title"])
+                self.assertEqual(["index.json", file], result["requests"])
+
+    def test_the_page_of_a_vehicle_links_its_host_as_the_source(self):
+        self.assertIn(["share.example.org", "https://share.example.org/vehicles/ExampleRover", "nofollow noopener"],
+                      self.route("vehicle/ExampleRover/")["links"])
+
+    def test_another_casing_moves_to_the_address_of_the_listing(self):
+        self.assertEqual("/Borea/vehicle/ExampleRover/", self.route("vehicle/examplerover/")["redirect"])
+
+    def test_an_id_that_the_type_file_does_not_have_says_it_is_not_listed_yet(self):
+        self.assert_not_found(self.route("vehicle/NewRover/"), "This vehicle" + NOT_LISTED)
+        self.assert_not_found(self.route("save/NewSave/"), "This save" + NOT_LISTED)
+
+    def test_a_type_file_that_answers_404_is_empty(self):
+        self.assert_not_found(self.route("save/CampaignSave/", {"snapshot-saves.json": {"status": 404}}), "This save" + NOT_LISTED)
+
+    def test_an_index_that_answers_404_cannot_be_loaded(self):
+        self.assert_not_found(self.route("vehicle/ExampleRover/", {"index.json": {"status": 404}}), NOT_LOADED)
+
+    def test_a_type_file_that_fails_or_has_another_shape_cannot_be_loaded(self):
+        for answer in ({"status": 500}, {"status": 200, "body": {"snapshot_version": 2}}):
+            with self.subTest(answer=answer):
+                self.assert_not_found(self.route("vehicle/ExampleRover/", {"snapshot-vehicles.json": answer}), NOT_LOADED)
+
+    def test_an_entry_of_another_type_gets_no_page(self):
+        self.assert_not_found(self.route("vehicle/MisplacedMod/"), NO_PAGE)
+
+    def test_a_delisted_vehicle_says_it_was_removed(self):
+        self.assert_not_found(self.route("vehicle/GoneRover/"), "This content was removed from the content index.")
+
+    def test_a_mod_or_a_pack_reads_no_type_file_and_keeps_its_own_text(self):
+        for kind in ("mod", "pack"):
+            with self.subTest(kind=kind):
+                result = self.route(f"{kind}/NoSuchId/")
+                self.assert_not_found(result, f"The content index has no {kind} with this id.")
+                self.assertEqual(["index.json"], result["requests"])
+
+    def test_an_address_of_another_kind_reads_nothing(self):
+        result = self.route("thing/ExampleRover/")
+        self.assert_not_found(result, NO_PAGE)
+        self.assertEqual([], result["requests"])
 
 
 class Values(unittest.TestCase):
@@ -1077,6 +1305,60 @@ class LoadSnapshot(unittest.TestCase):
             self.assertEqual({"snapshot_version": 1}, share.load_snapshot("https://example.org/index.json", wait=0))
 
 
+class LoadDocument(unittest.TestCase):
+    def test_the_type_files_next_to_a_local_snapshot_are_read(self):
+        document = share.load_document(str(FIXTURES / "snapshot.json"))
+
+        self.assertEqual("ExampleRover", document["vehicles"][0]["id"])
+        self.assertEqual("CampaignSave", document["saves"][0]["id"])
+
+    def test_a_type_file_that_is_not_there_is_empty(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "index.json"
+            shutil.copy(FIXTURES / "snapshot.json", path)
+
+            document = share.load_document(str(path))
+
+        self.assertNotIn("vehicles", document)
+        self.assertNotIn("saves", document)
+
+    def test_a_type_file_with_another_version_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "index.json"
+            shutil.copy(FIXTURES / "snapshot.json", path)
+            (Path(temp) / "snapshot-saves.json").write_text('{"snapshot_version": 2, "saves": []}', encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                share.load_document(str(path))
+
+    @staticmethod
+    def answers(type_file_error):
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = b'{"snapshot_version": 1, "listings": [], "packs": []}'
+
+        def answer(request, timeout):
+            if request.full_url == "https://example.org/v1/index.json":
+                return response
+            raise type_file_error
+
+        return answer
+
+    def test_a_type_file_that_answers_404_is_empty_and_is_read_next_to_the_snapshot(self):
+        missing = urllib.error.HTTPError("https://example.org", 404, "Not Found", None, None)
+        with mock.patch.object(share.urllib.request, "urlopen", side_effect=self.answers(missing)) as urlopen:
+            document = share.load_document("https://example.org/v1/index.json", wait=0)
+
+        self.assertNotIn("vehicles", document)
+        self.assertEqual(
+            ["https://example.org/v1/index.json", "https://example.org/v1/snapshot-vehicles.json", "https://example.org/v1/snapshot-saves.json"],
+            [call.args[0].full_url for call in urlopen.call_args_list])
+
+    def test_a_type_file_that_cannot_be_read_fails_so_the_last_deployment_stays(self):
+        with mock.patch.object(share.urllib.request, "urlopen", side_effect=self.answers(urllib.error.URLError("down"))):
+            with self.assertRaises(RuntimeError):
+                share.load_document("https://example.org/v1/index.json", attempts=1, wait=0)
+
+
 class Main(unittest.TestCase):
     def test_the_command_line_builds_from_a_local_snapshot(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -1086,8 +1368,9 @@ class Main(unittest.TestCase):
                 code = share.main(["--site", str(SITE), "--out", str(out), "--snapshot", str(FIXTURES / "snapshot.json")])
 
             self.assertEqual(0, code)
-            self.assertIn("wrote 6 pages", output.getvalue())
+            self.assertIn("wrote 9 pages", output.getvalue())
             self.assertTrue((out / "pack" / "NavigationStarterPack" / "index.html").is_file())
+            self.assertTrue((out / "vehicle" / "ExampleRover" / "index.html").is_file())
 
 
 if __name__ == "__main__":
