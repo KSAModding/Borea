@@ -10,28 +10,84 @@ namespace Borea.App.Tests.ViewModels;
 public sealed class UserContentViewModelTests
 {
     [Fact]
-    public async Task Discover_SnapshotWithoutVehicles_KeepsTheTabsDisabledAndTheModsUnchanged()
+    public async Task Discover_SnapshotWithoutVehicles_TheTabsSayThatNothingIsSharedAndTheModsStayUnchanged()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
 
         await viewModel.EnsureDiscoverLoadedAsync();
 
-        Assert.False(viewModel.HasDiscoverVehicles);
-        Assert.False(viewModel.HasDiscoverSaves);
+        Assert.False(viewModel.ShowsNothingSharedYet);
         Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
         Assert.Equal(harness.Localization.FormatDiscoverModCount(3), viewModel.DiscoverCountText);
+
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        Assert.Contains(nameof(MainViewModel.ShowsNothingSharedYet), changed);
+        Assert.True(viewModel.ShowsNothingSharedYet);
+        Assert.False(viewModel.ShowsClearSearchAndFilters);
+        Assert.Equal(harness.Localization.DiscoverNoVehicles, viewModel.DiscoverNothingSharedText);
+        Assert.Equal(harness.Localization.DiscoverNoVehiclesHint, viewModel.DiscoverNothingSharedHint);
+        Assert.Equal(harness.Localization.DiscoverSearchVehicles, viewModel.DiscoverSearchPlaceholderText);
+
+        viewModel.ShowDiscoverSavesCommand.Execute(null);
+        Assert.True(viewModel.ShowsNothingSharedYet);
+        Assert.Equal(harness.Localization.DiscoverNoSaves, viewModel.DiscoverNothingSharedText);
+        Assert.Equal(harness.Localization.DiscoverNoSavesHint, viewModel.DiscoverNothingSharedHint);
+        Assert.Equal(harness.Localization.DiscoverSearchSaves, viewModel.DiscoverSearchPlaceholderText);
     }
 
     [Fact]
-    public async Task Discover_SnapshotWithAVehicle_EnablesItsTabAndListsIt()
+    public async Task Discover_WhileTheListingsAreNotKnown_TheTabDoesNotSayThatNothingIsShared()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        void AssertHiddenWithANotice(Action change)
+        {
+            changed.Clear();
+            change();
+            Assert.Contains(nameof(MainViewModel.ShowsNothingSharedYet), changed);
+            Assert.False(viewModel.ShowsNothingSharedYet);
+        }
+
+        AssertHiddenWithANotice(() => viewModel.IsDiscoverLoading = true);
+        viewModel.IsDiscoverLoading = false;
+
+        AssertHiddenWithANotice(() => viewModel.DiscoverError = "offline");
+        viewModel.DiscoverError = null;
+
+        AssertHiddenWithANotice(() => viewModel.IndexRefreshStatus = new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.Failed, CachedAt: DateTimeOffset.UnixEpoch, "offline"));
+
+        AssertHiddenWithANotice(() => viewModel.IndexRefreshStatus = new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.Failed, CachedAt: null, "offline"));
+    }
+
+    [Theory]
+    [InlineData(GameSaveKind.Vehicle, ContentType.Vehicle)]
+    [InlineData(GameSaveKind.Save, ContentType.Save)]
+    public async Task EmptyTable_FindOpensTheDiscoverTabOfItsType(GameSaveKind kind, ContentType tab)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var section = kind == GameSaveKind.Vehicle ? viewModel.VehiclesSection : viewModel.SavesSection;
+
+        section.FindOnDiscoverCommand.Execute(null);
+
+        Assert.True(viewModel.CurrentWindowDiscover);
+        Assert.Equal(tab, viewModel.DiscoverType);
+    }
+
+    [Fact]
+    public async Task Discover_SnapshotWithAVehicle_ListsItOnItsTab()
     {
         using var harness = await VehicleHarnessAsync();
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
 
-        Assert.True(viewModel.HasDiscoverVehicles);
-        Assert.False(viewModel.HasDiscoverSaves);
         Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
         Assert.Equal(harness.Localization.FormatDiscoverModCount(3), viewModel.DiscoverCountText);
 
@@ -39,6 +95,7 @@ public sealed class UserContentViewModelTests
 
         Assert.True(viewModel.IsVehiclesTab);
         Assert.False(viewModel.ShowsCategories);
+        Assert.False(viewModel.ShowsNothingSharedYet);
         var row = Assert.Single(viewModel.DiscoverItems);
         Assert.Equal(("ExampleRover", "Example Rover", "A vehicle.", "Kitten"), (row.ModId, row.Name, row.Abstract, Assert.Single(row.AuthorLinks).Name));
         Assert.Equal(harness.Localization.ContentTypeVehicle, row.TypeText);

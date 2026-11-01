@@ -2016,6 +2016,12 @@
   <data name="GameSaveNoSaves" xml:space="preserve">
     <value>Noch keine Spielstände in dieser Instanz</value>
   </data>
+  <data name="GameSaveFindVehicles" xml:space="preserve">
+    <value>Fahrzeuge finden</value>
+  </data>
+  <data name="GameSaveFindSaves" xml:space="preserve">
+    <value>Spielstände finden</value>
+  </data>
   <data name="GameSaveUpdatedFormat" xml:space="preserve">
     <value>Aktualisiert {0}</value>
   </data>
@@ -2406,6 +2412,12 @@
   <data name="DiscoverSearchPlaceholder" xml:space="preserve">
     <value>Mods suchen...</value>
   </data>
+  <data name="DiscoverSearchVehicles" xml:space="preserve">
+    <value>Fahrzeuge suchen...</value>
+  </data>
+  <data name="DiscoverSearchSaves" xml:space="preserve">
+    <value>Spielstände suchen...</value>
+  </data>
   <data name="DiscoverSearchCountFormat" xml:space="preserve">
     <value>{0} durchsuchen</value>
   </data>
@@ -2501,6 +2513,21 @@
   </data>
   <data name="DiscoverEmpty" xml:space="preserve">
     <value>Keine passenden Inhalte.</value>
+  </data>
+  <data name="DiscoverClearSearchAndFilters" xml:space="preserve">
+    <value>Suche und Filter zurücksetzen</value>
+  </data>
+  <data name="DiscoverNoVehicles" xml:space="preserve">
+    <value>Noch hat niemand ein Fahrzeug geteilt.</value>
+  </data>
+  <data name="DiscoverNoVehiclesHint" xml:space="preserve">
+    <value>Sei der Erste. Teile ein Fahrzeug, das du gebaut hast, dann erscheint es nach einigen Stunden hier.</value>
+  </data>
+  <data name="DiscoverNoSaves" xml:space="preserve">
+    <value>Noch hat niemand einen Spielstand geteilt.</value>
+  </data>
+  <data name="DiscoverNoSavesHint" xml:space="preserve">
+    <value>Sei der Erste. Teile einen Spielstand, den andere spielen sollen, dann erscheint er nach einigen Stunden hier.</value>
   </data>
   <data name="DiscoverCountModOne" xml:space="preserve">
     <value>1 Mod</value>
@@ -2611,7 +2638,7 @@
     <value>Zu {0} hinzufügen</value>
   </data>
   <data name="DiscoverAddingToFormat" xml:space="preserve">
-    <value>Hinzufügen zu {0}</value>
+    <value>Ziel: {0}</value>
   </data>
   <data name="DiscoverKeptBuildUnavailableFormat" xml:space="preserve">
     <value>{0} behält KSA {1}, aber dieser Build fehlt in der Bibliothek, darum kann Borea keine Mods dafür bewerten oder installieren.</value>

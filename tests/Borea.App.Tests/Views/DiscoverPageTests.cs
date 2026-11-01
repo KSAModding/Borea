@@ -43,6 +43,43 @@ public sealed class DiscoverPageTests
     }
 
     [Fact]
+    public async Task EmptyTab_CanBeSelectedAndSaysSo_AndASearchWithNoMatchLeadsBackThroughTheLink()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var localization = harness.Localization;
+
+        var (tabActive, emptyTab, noMatch, cleared) = await RenderAsync(harness, 1000, page =>
+        {
+            List<string?> Messages()
+            {
+                page.UpdateLayout();
+                return page.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible).Select(block => block.Text)
+                    .Where(text => text == localization.DiscoverNoSaves || text == localization.DiscoverNoSavesHint || text == localization.DiscoverEmpty)
+                    .ToList();
+            }
+
+            var tab = page.GetVisualDescendants().OfType<Button>().Single(button => button.Command == viewModel.ShowDiscoverSavesCommand);
+            Click(tab);
+            var tabActive = tab.Classes.Contains("active");
+            var emptyTab = Messages();
+
+            viewModel.ShowDiscoverModsCommand.Execute(null);
+            viewModel.SearchText = "no listing has this name";
+            var noMatch = Messages();
+            Click(page.GetVisualDescendants().OfType<Button>().Single(button => button.Command == viewModel.ClearDiscoverSearchAndFiltersCommand));
+            return (tabActive, emptyTab, noMatch, Messages());
+        });
+
+        Assert.True(tabActive);
+        Assert.Equal([localization.DiscoverNoSaves, localization.DiscoverNoSavesHint], emptyTab);
+        Assert.Equal([localization.DiscoverEmpty], noMatch);
+        Assert.Empty(cleared);
+        Assert.Equal(string.Empty, viewModel.SearchText);
+    }
+
+    [Fact]
     public async Task InstalledInOtherInstances_IsOfferedOnlyWithAnotherInstance()
     {
         using var harness = await ViewModelHarness.CreateAsync();

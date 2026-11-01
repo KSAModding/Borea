@@ -64,15 +64,14 @@ public partial class MainViewModel
     public ObservableCollection<DiscoverCategory> SelectedCategories { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsNothingSharedYet))]
     private bool _isDiscoverLoading;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsNothingSharedYet))]
     private string? _discoverError;
 
-    /// <summary>
-    /// Which tab of the inner nav bar is selected. The vehicle and save tabs
-    /// stay disabled until those content types have listings.
-    /// </summary>
+    /// <summary>Which tab of the inner nav bar is selected.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsModsTab))]
     [NotifyPropertyChangedFor(nameof(IsLoadersTab))]
@@ -98,10 +97,15 @@ public partial class MainViewModel
     /// <summary>The panel for mod authors asks for a mod, so the vehicle and save tabs leave it out.</summary>
     public bool ShowsModAuthors => !DiscoverType.IsVehicleOrSave();
 
-    /// <summary>Whether the snapshot lists a vehicle, which enables the Vehicles tab.</summary>
-    public bool HasDiscoverVehicles => _listings.Any(item => item.Type == ContentType.Vehicle);
+    /// <summary>Whether the tab of vehicles or saves has no listing in an index that the last refresh reached, because an older copy cannot say that nothing is shared.</summary>
+    public bool ShowsNothingSharedYet => DiscoverType.IsVehicleOrSave() && DiscoverTotal == 0 && !IsDiscoverLoading && DiscoverError is null && !IsIndexUnreachable && !IsIndexStale;
 
-    public bool HasDiscoverSaves => _listings.Any(item => item.Type == ContentType.Save);
+    public string DiscoverNothingSharedText => IsSavesTab ? Localization.DiscoverNoSaves : Localization.DiscoverNoVehicles;
+
+    public string DiscoverNothingSharedHint => IsSavesTab ? Localization.DiscoverNoSavesHint : Localization.DiscoverNoVehiclesHint;
+
+    /// <summary>The tab has listings and shows none, which only a search or a filter can cause.</summary>
+    public bool ShowsClearSearchAndFilters => !HasDiscoverItems && DiscoverTotal > 0;
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -191,15 +195,23 @@ public partial class MainViewModel
     }
 
     /// <summary>The placeholder of the search field, which names what the tab holds once the listings are loaded.</summary>
-    public string DiscoverSearchPlaceholderText
-        => DiscoverTotalText is { } totalText ? Localization.FormatDiscoverSearchCount(totalText) : Localization.DiscoverSearchPlaceholder;
+    public string DiscoverSearchPlaceholderText => DiscoverTotalText is { } totalText
+        ? Localization.FormatDiscoverSearchCount(totalText)
+        : DiscoverType switch
+        {
+            ContentType.Vehicle => Localization.DiscoverSearchVehicles,
+            ContentType.Save => Localization.DiscoverSearchSaves,
+            _ => Localization.DiscoverSearchPlaceholder,
+        };
+
+    private int DiscoverTotal => IsModpacksTab ? _packs.Count : _listings.Count(item => item.Type == DiscoverType);
 
     /// <summary>How many entries the tab holds, such as "3 mods", or null when it holds none.</summary>
     private string? DiscoverTotalText
     {
         get
         {
-            var total = IsModpacksTab ? _packs.Count : _listings.Count(item => item.Type == DiscoverType);
+            var total = DiscoverTotal;
             if (total == 0)
                 return null;
 
@@ -289,8 +301,6 @@ public partial class MainViewModel
         UpdateIndexRefreshStatus();
         RefreshInstalledFlags();
         ApplyDiscoverFilters();
-        OnPropertyChanged(nameof(HasDiscoverVehicles));
-        OnPropertyChanged(nameof(HasDiscoverSaves));
     }
 
     private void ApplyDiscoverFilters()
@@ -338,6 +348,10 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasDiscoverItems));
         OnPropertyChanged(nameof(DiscoverCountText));
         OnPropertyChanged(nameof(DiscoverSearchPlaceholderText));
+        OnPropertyChanged(nameof(ShowsNothingSharedYet));
+        OnPropertyChanged(nameof(DiscoverNothingSharedText));
+        OnPropertyChanged(nameof(DiscoverNothingSharedHint));
+        OnPropertyChanged(nameof(ShowsClearSearchAndFilters));
     }
 
     /// <summary>The state whose chip a row of the list leaves out, or null when every row shows its chip.</summary>
@@ -629,7 +643,12 @@ public partial class MainViewModel
             return;
 
         SelectedAuthor = link.Name;
-        DiscoverType = link.Type;
+        OpenDiscoverTab(link.Type);
+    }
+
+    internal void OpenDiscoverTab(ContentType type)
+    {
+        DiscoverType = type;
         SetMainWindowDiscover();
     }
 
@@ -724,6 +743,13 @@ public partial class MainViewModel
         SelectedCategories.Clear();
         OnPropertyChanged(nameof(HasDiscoverFilters));
         ApplyDiscoverFilters();
+    }
+
+    [RelayCommand]
+    private void ClearDiscoverSearchAndFilters()
+    {
+        SearchText = string.Empty;
+        ClearDiscoverFilters();
     }
 
     /// <summary>
@@ -826,6 +852,12 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     public string License => _listing.License;
 
     public ContentType Type => _listing.Type;
+
+    public bool IsVehicle => Type == ContentType.Vehicle;
+
+    public bool IsSave => Type == ContentType.Save;
+
+    public bool IsVehicleOrSave => Type.IsVehicleOrSave();
 
     /// <summary>The curated tags in the words and order of the vocabulary, then the free-form tags.</summary>
     public IReadOnlyList<string> AllTags { get; private set; }

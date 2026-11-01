@@ -2016,6 +2016,12 @@
   <data name="GameSaveNoSaves" xml:space="preserve">
     <value>No saves in this instance yet</value>
   </data>
+  <data name="GameSaveFindVehicles" xml:space="preserve">
+    <value>Find vehicles</value>
+  </data>
+  <data name="GameSaveFindSaves" xml:space="preserve">
+    <value>Find saves</value>
+  </data>
   <data name="GameSaveUpdatedFormat" xml:space="preserve">
     <value>Updated {0}</value>
   </data>
@@ -2406,6 +2412,12 @@
   <data name="DiscoverSearchPlaceholder" xml:space="preserve">
     <value>Search mods...</value>
   </data>
+  <data name="DiscoverSearchVehicles" xml:space="preserve">
+    <value>Search vehicles...</value>
+  </data>
+  <data name="DiscoverSearchSaves" xml:space="preserve">
+    <value>Search saves...</value>
+  </data>
   <data name="DiscoverSearchCountFormat" xml:space="preserve">
     <value>Search {0}</value>
   </data>
@@ -2501,6 +2513,21 @@
   </data>
   <data name="DiscoverEmpty" xml:space="preserve">
     <value>No content matches.</value>
+  </data>
+  <data name="DiscoverClearSearchAndFilters" xml:space="preserve">
+    <value>Clear search and filters</value>
+  </data>
+  <data name="DiscoverNoVehicles" xml:space="preserve">
+    <value>No vehicles are shared yet.</value>
+  </data>
+  <data name="DiscoverNoVehiclesHint" xml:space="preserve">
+    <value>Be the first. Share a vehicle that you built, and it shows up here after some hours.</value>
+  </data>
+  <data name="DiscoverNoSaves" xml:space="preserve">
+    <value>No saves are shared yet.</value>
+  </data>
+  <data name="DiscoverNoSavesHint" xml:space="preserve">
+    <value>Be the first. Share a save that you want others to play, and it shows up here after some hours.</value>
   </data>
   <data name="DiscoverCountModOne" xml:space="preserve">
     <value>1 mod</value>

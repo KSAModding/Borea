@@ -1563,6 +1563,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveNoSaves => Resources.GameSaveNoSaves;
 
+    public string GameSaveFindVehicles => Resources.GameSaveFindVehicles;
+
+    public string GameSaveFindSaves => Resources.GameSaveFindSaves;
+
     public string GameSaveOlderBuild => Resources.GameSaveOlderBuild;
 
     public string GameSaveChangedSinceInstall => Resources.GameSaveChangedSinceInstall;
@@ -1767,6 +1771,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverSearchPlaceholder => Resources.DiscoverSearchPlaceholder;
 
+    public string DiscoverSearchVehicles => Resources.DiscoverSearchVehicles;
+
+    public string DiscoverSearchSaves => Resources.DiscoverSearchSaves;
+
     public string FormatDiscoverSearchCount(string count)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverSearchCountFormat, count);
 
@@ -1831,6 +1839,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverSortName => Resources.DiscoverSortName;
 
     public string DiscoverEmpty => Resources.DiscoverEmpty;
+
+    public string DiscoverClearSearchAndFilters => Resources.DiscoverClearSearchAndFilters;
+
+    public string DiscoverNoVehicles => Resources.DiscoverNoVehicles;
+
+    public string DiscoverNoVehiclesHint => Resources.DiscoverNoVehiclesHint;
+
+    public string DiscoverNoSaves => Resources.DiscoverNoSaves;
+
+    public string DiscoverNoSavesHint => Resources.DiscoverNoSavesHint;
 
     public string DiscoverLoading => Resources.DiscoverLoading;
 

@@ -18,6 +18,7 @@ public partial class MainViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIndexStale))]
     [NotifyPropertyChangedFor(nameof(IsIndexUnreachable))]
+    [NotifyPropertyChangedFor(nameof(ShowsNothingSharedYet))]
     private ContentIndexRefreshStatus? _indexRefreshStatus;
 
     public bool IsIndexStale => IndexRefreshStatus is { Outcome: ContentIndexRefreshOutcome.Failed, CachedAt: not null };

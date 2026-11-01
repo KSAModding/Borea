@@ -351,7 +351,11 @@
                         <!-- a vehicle shows the still of its last complete preview, and every other row shows its icon -->
                         <views:PreviewStillView StillPath="{Binding PreviewStillPath}" Background="{StaticResource Brush.Surface}">
                             <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
-                                <Path Classes="icon size-32" Data="{StaticResource Icon.PuzzlePiece}" />
+                                <Panel>
+                                    <Path Classes="icon size-32" Data="{StaticResource Icon.PuzzlePiece}" IsVisible="{Binding !IsVehicleOrSave}" />
+                                    <Path Classes="icon size-32" Data="{StaticResource Icon.Cylinder}" IsVisible="{Binding IsVehicle}" />
+                                    <Path Classes="icon size-32" Data="{StaticResource Icon.Planet}" IsVisible="{Binding IsSave}" />
+                                </Panel>
                             </views:ListingImageView>
                         </views:PreviewStillView>
                     </Border>

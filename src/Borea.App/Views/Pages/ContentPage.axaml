@@ -104,7 +104,11 @@
                     <views:ContentHeaderPanel Margin="0,24,0,0">
                         <Border Classes="thumbnail" Width="170" Height="170">
                             <views:ListingImageView Image="{Binding SelectedContent.Icon}" Background="{StaticResource Brush.Surface}">
-                                <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
+                                <Panel>
+                                    <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" IsVisible="{Binding !SelectedContent.IsVehicleOrSave, FallbackValue={x:False}}" />
+                                    <Path Classes="icon" Data="{StaticResource Icon.Cylinder}" RenderTransform="scale(2.5)" StrokeThickness="0.8" IsVisible="{Binding SelectedContent.IsVehicle, FallbackValue={x:False}}" />
+                                    <Path Classes="icon" Data="{StaticResource Icon.Planet}" RenderTransform="scale(2.5)" StrokeThickness="0.8" IsVisible="{Binding SelectedContent.IsSave, FallbackValue={x:False}}" />
+                                </Panel>
                             </views:ListingImageView>
                         </Border>
                         <StackPanel Spacing="4">
