@@ -149,16 +149,16 @@ public sealed class DiscoverViewModelTests
         card.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
         var rowAge = afc.UpdatedText;
         var published = afc.PublishedText;
-        var cardAge = card.UpdatedText;
+        var cardAge = card.FactText;
 
         harness.Localization.TrySetCulture("de");
 
         Assert.Contains(nameof(DiscoverItem.UpdatedText), changed);
         Assert.Contains(nameof(DiscoverItem.PublishedText), changed);
-        Assert.Contains(nameof(RecentItem.UpdatedText), changed);
+        Assert.Contains(nameof(RecentItem.FactText), changed);
         Assert.NotEqual(rowAge, afc.UpdatedText);
         Assert.NotEqual(published, afc.PublishedText);
-        Assert.NotEqual(cardAge, card.UpdatedText);
+        Assert.NotEqual(cardAge, card.FactText);
     }
 
     private static readonly DateTimeOffset SnapshotUpdatedAt = new(2026, 9, 14, 0, 0, 0, TimeSpan.Zero);

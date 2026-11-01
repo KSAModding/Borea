@@ -1611,6 +1611,21 @@
   <data name="HomeDiscoverMods" xml:space="preserve">
     <value>Discover mods</value>
   </data>
+  <data name="HomeDiscoverVehicles" xml:space="preserve">
+    <value>Discover vehicles</value>
+  </data>
+  <data name="HomeNewMods" xml:space="preserve">
+    <value>New mods</value>
+  </data>
+  <data name="HomeNewVehicles" xml:space="preserve">
+    <value>New vehicles</value>
+  </data>
+  <data name="HomeMostDownloaded" xml:space="preserve">
+    <value>Most downloaded</value>
+  </data>
+  <data name="HomeListedOnFormat" xml:space="preserve">
+    <value>On Discover since {0}</value>
+  </data>
   <data name="HomeNoGameVersion" xml:space="preserve">
     <value>Game not set up</value>
   </data>
