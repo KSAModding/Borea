@@ -75,7 +75,7 @@ public sealed class ShareHostShareTests
         Assert.Equal(["Maxi"], listing.Authors);
         Assert.Equal(new Uri("https://github.com/KSAModding/content-index/pull/250"), editor.SharePullRequest);
         Assert.Equal(ShareFlowStep.Done, editor.ShareFlowStep);
-        Assert.Equal([ListingStepState.Done, ListingStepState.Done, ListingStepState.Done, ListingStepState.Current], editor.ShareSteps.Select(step => step.State));
+        Assert.All(editor.ShareSteps, step => Assert.Equal(ListingStepState.Done, step.State));
         Assert.Null(editor.ShareHostError);
     }
 

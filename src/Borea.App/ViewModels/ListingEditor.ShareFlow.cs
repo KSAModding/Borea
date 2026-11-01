@@ -429,7 +429,7 @@ public sealed partial class ListingEditor
 
         ListingStepItem Row(string key, string name, ShareFlowStep step)
         {
-            var state = step < ShareFlowStep ? ListingStepState.Done : step == ShareFlowStep ? ListingStepState.Current : ListingStepState.ToDo;
+            var state = step < ShareFlowStep || IsShareDone ? ListingStepState.Done : step == ShareFlowStep ? ListingStepState.Current : ListingStepState.ToDo;
             return new ListingStepItem(key, name, state, string.Empty);
         }
     }
