@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:share="using:Borea.App.Views.Share"
              x:Class="Borea.App.Views.Share.ShareDoneStep"
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
@@ -20,13 +21,45 @@
                     <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareDoneOpenText}" VerticalAlignment="Center" />
                 </Button>
                 <Button Classes="text" Content="{Binding Localization.ContentCopyLink}" Command="{Binding ListingEditor.CopyShareDoneLinkCommand}" VerticalAlignment="Center" />
-                <Button Classes="text" Content="{Binding Localization.ShareAnother}" Command="{Binding ListingEditor.ShareAnotherCommand}" VerticalAlignment="Center" />
+                <Button Classes="text" Content="{Binding Localization.ShareAnother}" Command="{Binding ListingEditor.ShareAnotherCommand}" VerticalAlignment="Center" IsVisible="{Binding !ListingEditor.IsSendingSharePictures}" />
             </WrapPanel>
             <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
                 <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" />
             </Grid>
             <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.ShareDoneDiscoverText}" TextWrapping="Wrap" />
+
+            <!-- the pictures go up after the publish, and what is published stays when one of them fails -->
+            <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding !!ListingEditor.SharePictures.Count}">
+                <TextBlock Classes="heading-sm" Text="{Binding Localization.SharePicturesHeading}" />
+                <ItemsControl ItemsSource="{Binding ListingEditor.SharePictures}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SharePictureRow">
+                            <Grid ColumnDefinitions="16,8,*">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.CheckCircle}" Stroke="{StaticResource Brush.Positive}" VerticalAlignment="Top" IsVisible="{Binding IsSent}" />
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" IsVisible="{Binding HasError}" />
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock Classes="body-sm" Text="{Binding Name}" TextWrapping="Wrap" />
+                                    <TextBlock Classes="body-sm danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,8,*,8,Auto" IsVisible="{Binding ListingEditor.IsSendingSharePictures}">
+                <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostProgressText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="4" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" VerticalAlignment="Center" IsVisible="{Binding ListingEditor.CanCancelShareHost}" />
+            </Grid>
+            <share:ShareSignInCode />
+            <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.SharePicturesResultText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.SharePicturesResultText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <Button Classes="text" HorizontalAlignment="Left" Content="{Binding Localization.DiscoverIndexRetry}" Command="{Binding ListingEditor.RetrySharePicturesCommand}" IsVisible="{Binding ListingEditor.CanRetrySharePictures}" />
 
             <!-- the request is for those who follow it, and a player does not need it -->
             <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.SharePullRequest, Converter={x:Static ObjectConverters.IsNotNull}}">

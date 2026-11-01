@@ -74,8 +74,8 @@ public sealed partial class ListingEditor
         IsLoadingShareChoose || !_hasShareProfileItems ? null
         : _owner.ActiveInstance ?? (_owner.Instances.Count == 1 ? _owner.Instances[0] : null);
 
-    /// <summary>Whether an entry with no item at hand would lose the work of a share that stands on Describe or Publish.</summary>
-    internal bool HasShareOnTheWay => _share is not null && ShareFlowStep is ShareFlowStep.Describe or ShareFlowStep.Publish;
+    /// <summary>Whether an entry with no item at hand would lose the work of a share that stands on Describe or Publish, or the pictures that it still sends or can try again.</summary>
+    internal bool HasShareOnTheWay => _share is not null && (ShareFlowStep is ShareFlowStep.Describe or ShareFlowStep.Publish || IsSendingSharePictures || CanRetrySharePictures);
 
     /// <summary>Opens the step. A share on Publish loses its upload here, and a share on Describe keeps its draft until another item is picked.</summary>
     /// <param name="select">The row to select, which goes before the one candidate that is selected by itself.</param>

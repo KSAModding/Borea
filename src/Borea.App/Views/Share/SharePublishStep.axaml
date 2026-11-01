@@ -32,6 +32,7 @@
                     <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareLicenseText}" TextWrapping="Wrap" />
                 </StackPanel>
                 <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareSummaryModsText}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareSummaryPicturesText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareSummaryPicturesText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareNeedsBuildText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareNeedsBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.BackToShareDescribeCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
                     <TextBlock Classes="action-md" Text="{Binding Localization.ShareEdit}" />

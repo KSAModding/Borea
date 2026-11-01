@@ -97,6 +97,7 @@ public sealed partial class ListingEditor
         ShareIdError = null;
         IsShareMoreOptionsOpen = false;
         ForgetShareHostRun();
+        ForgetSharePictures();
         RefreshShare();
     }
 
@@ -127,6 +128,7 @@ public sealed partial class ListingEditor
         RefreshShareSteps();
         RefreshShareSummary();
         RefreshShareHostRows();
+        RefreshSharePictures();
     }
 
     [RelayCommand]

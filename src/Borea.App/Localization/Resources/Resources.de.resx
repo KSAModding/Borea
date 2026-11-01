@@ -3732,6 +3732,57 @@
   <data name="ShareAddMod" xml:space="preserve">
     <value>Mod hinzufügen</value>
   </data>
+  <data name="SharePicturesHeading" xml:space="preserve">
+    <value>Bilder</value>
+  </data>
+  <data name="SharePicturesHintFormat" xml:space="preserve">
+    <value>Optional. Füge bis zu {0} Bilder hinzu, als PNG-, JPEG- oder WebP-Dateien mit je höchstens {1}. Das erste ist das Titelbild. Sie werden öffentlich, wenn du veröffentlichst.</value>
+  </data>
+  <data name="SharePicturesNewVersionHintFormat" xml:space="preserve">
+    <value>Optional. Diese kommen zu den Bildern dazu, die die Seite schon hat, und eine Seite zeigt höchstens {0}. Nimm PNG-, JPEG- oder WebP-Dateien mit je höchstens {1}. Sie werden öffentlich, wenn du veröffentlichst.</value>
+  </data>
+  <data name="SharePictureAdd" xml:space="preserve">
+    <value>Bild hinzufügen</value>
+  </data>
+  <data name="SharePictureCover" xml:space="preserve">
+    <value>Titelbild</value>
+  </data>
+  <data name="SharePictureTooLargeFormat" xml:space="preserve">
+    <value>{0} ist größer als {1}.</value>
+  </data>
+  <data name="SharePictureNotImageFormat" xml:space="preserve">
+    <value>{0} ist kein PNG-, JPEG- oder WebP-Bild, das Borea lesen kann.</value>
+  </data>
+  <data name="SharePictureAnimatedFormat" xml:space="preserve">
+    <value>{0} ist animiert, und eine Seite zeigt nur unbewegte Bilder.</value>
+  </data>
+  <data name="SharePictureUnreadable" xml:space="preserve">
+    <value>Borea konnte diese Datei nicht lesen.</value>
+  </data>
+  <data name="ShareSummaryPicturesFormat" xml:space="preserve">
+    <value>Bilder: {0}. Sie werden direkt nach dem Veröffentlichen hochgeladen.</value>
+  </data>
+  <data name="SharePicturesSendingFormat" xml:space="preserve">
+    <value>Bild {0} von {1} wird hinzugefügt...</value>
+  </data>
+  <data name="SharePicturesSent" xml:space="preserve">
+    <value>Deine Bilder sind auf der Seite. Die Seite Entdecken zeigt sie innerhalb einiger Stunden.</value>
+  </data>
+  <data name="SharePicturesMissingFormat" xml:space="preserve">
+    <value>Noch offen: {0} von {1} Bildern. Was du veröffentlicht hast, bleibt online, und du kannst es erneut versuchen.</value>
+  </data>
+  <data name="SharePictureLostAnswerFormat" xml:space="preserve">
+    <value>Borea hat keine Antwort von {0} bekommen, darum ist dieses Bild vielleicht schon auf der Seite. Sieh auf der Seite nach, bevor du es erneut versuchst.</value>
+  </data>
+  <data name="SharePictureNotOwnerFormat" xml:space="preserve">
+    <value>{0} lässt dieses Konto keine Bilder zu {1} hinzufügen. Sieh auf der Seite bei {0} nach.</value>
+  </data>
+  <data name="SharePicturesNotOfferedFormat" xml:space="preserve">
+    <value>{0} nimmt keine Bilder an, darum hat Borea sie nicht hinzugefügt. Alles andere ist veröffentlicht.</value>
+  </data>
+  <data name="SharePictureTooLargeOnHostFormat" xml:space="preserve">
+    <value>{0} meldet, dass dieses Bild zu groß ist.</value>
+  </data>
   <data name="ShareOtherFields" xml:space="preserve">
     <value>Einige Felder außerhalb dieses Schritts müssen korrigiert werden.</value>
   </data>
