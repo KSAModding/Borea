@@ -311,10 +311,11 @@ public sealed class ContentIndexReaderTests : IDisposable
         Assert.Empty(result.Diagnostics);
     }
 
-    [Fact]
-    public async Task ReadAsync_InvalidGameVersions_KeepsUsableListingAndAddsDiagnostic()
+    [Theory]
+    [InlineData("""{ "spec_version": 1, "source": "master-server", "versions": ["invalid"] }""")]
+    [InlineData("""{ "spec_version": 1, "source": "master-server", "versions": ["2026.9.7.5402", "2026.8.19.5261"] }""")]
+    public async Task ReadAsync_InvalidOrUnorderedGameVersions_KeepsUsableListingAndAddsDiagnostic(string gameVersions)
     {
-        var gameVersions = """{ "spec_version": 1, "source": "master-server", "versions": ["invalid"] }""";
         await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), gameVersions));
 
         var result = await _reader.ReadAsync();
@@ -324,19 +325,6 @@ public sealed class ContentIndexReaderTests : IDisposable
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ContentIndexDiagnosticScope.GameVersions, diagnostic.Scope);
         Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
-    }
-
-    [Fact]
-    public async Task ReadAsync_UnorderedGameVersions_KeepsUsableListingAndAddsDiagnostic()
-    {
-        var gameVersions = """{ "spec_version": 1, "source": "master-server", "versions": ["2026.9.7.5402", "2026.8.19.5261"] }""";
-        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), gameVersions));
-
-        var result = await _reader.ReadAsync();
-
-        Assert.Single(result.Listings);
-        Assert.Null(result.GameVersions);
-        Assert.Equal(ContentIndexDiagnosticScope.GameVersions, Assert.Single(result.Diagnostics).Scope);
     }
 
     [Theory]
