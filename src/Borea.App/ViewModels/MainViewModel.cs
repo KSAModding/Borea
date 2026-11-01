@@ -508,7 +508,7 @@ public partial class MainViewModel : ViewModelBase
 
                 var release = await _services.UserContent.GetLatestReleaseAsync(listing.ModId, _services.Settings.ReleaseChannel);
                 if (release is not null)
-                    vehicles.Add(new HomeListing(listing, entries.GetValueOrDefault(listing.ModId), release.ReleaseDate));
+                    vehicles.Add(new HomeListing(listing, entries.GetValueOrDefault(listing.ModId), release.ReleaseDate, release.Download.Sha256));
             }
         }
         catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
@@ -534,7 +534,13 @@ public partial class MainViewModel : ViewModelBase
         .Where(listing => listing.ListedAt is not null)
         .OrderByDescending(listing => listing.ListedAt)
         .ThenBy(listing => listing.Listing.Name, StringComparer.CurrentCultureIgnoreCase)
-        .Select(listing => RecentItem.Listed(this, listing.Listing, listing.ListedAt!.Value, IconFor(listing.Icon)));
+        .Select(listing => RecentItem.Listed(this, listing.Listing, listing.ListedAt!.Value, IconFor(listing.Icon), StoredStillPath(listing), listing.VehicleSha256));
+
+    /// <summary>The still that Discover stored for a vehicle without an icon, so its Home tile shows the same picture as its Discover row.</summary>
+    private string? StoredStillPath(HomeListing listing) =>
+        _services is { } services && listing is { Icon: null, VehicleSha256: not null } && listing.Listing.Type == ContentType.Vehicle
+            ? services.PreviewThumbnails.TryGetPath(listing.VehicleSha256, PreviewStillBuild(services))
+            : null;
 
     private static void Fill(HomeGroup group, IEnumerable<RecentItem> items)
     {
@@ -543,7 +549,7 @@ public partial class MainViewModel : ViewModelBase
             group.Items.Add(item);
     }
 
-    private readonly record struct HomeListing(ModMetadata Listing, ContentIndexListing? Entry, DateTimeOffset Released)
+    private readonly record struct HomeListing(ModMetadata Listing, ContentIndexListing? Entry, DateTimeOffset Released, string? VehicleSha256 = null)
     {
         public IconImage? Icon => Entry?.Images?.Icon;
 
@@ -1153,6 +1159,16 @@ public sealed partial class RecentItem : ObservableObject
 
     public ListingImage? Icon { get; }
 
+    /// <summary>The picture of a vehicle without an icon that Discover stored, or null for any other tile.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStill))]
+    private string? _stillPath;
+
+    public bool HasStill => StillPath is not null;
+
+    /// <summary>The archive of the latest vehicle release, which names the still that Discover stores for it.</summary>
+    internal string? VehicleSha256 { get; private init; }
+
     public bool IsVehicle => Listing.Type == ContentType.Vehicle;
 
     public string TypeText => IsVehicle ? _owner.Localization.ContentTypeVehicle : _owner.Localization.ContentTypeMod;
@@ -1180,8 +1196,8 @@ public sealed partial class RecentItem : ObservableObject
     }
 
     /// <summary>A tile that shows how long ago the listing came into the index.</summary>
-    internal static RecentItem Listed(MainViewModel owner, ModMetadata listing, DateTimeOffset listedAt, ListingImage? icon) =>
-        new(owner, listing, icon, () => owner.ShortAgeText(listedAt), () => owner.Localization.FormatHomeListedOn(MainViewModel.DateText(listedAt)));
+    internal static RecentItem Listed(MainViewModel owner, ModMetadata listing, DateTimeOffset listedAt, ListingImage? icon, string? stillPath = null, string? vehicleSha256 = null) =>
+        new(owner, listing, icon, () => owner.ShortAgeText(listedAt), () => owner.Localization.FormatHomeListedOn(MainViewModel.DateText(listedAt))) { StillPath = stillPath, VehicleSha256 = vehicleSha256 };
 
     internal static RecentItem Downloaded(MainViewModel owner, ModMetadata listing, long downloads, ListingImage? icon) =>
         new(owner, listing, icon, () => MainViewModel.CompactCount(downloads), () => owner.Localization.FormatContentDownloadsExact(downloads.ToString("N0", CultureInfo.CurrentCulture))) { ShowsDownloads = true };

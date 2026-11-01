@@ -108,6 +108,8 @@
                                         <Button Classes="plain" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
                                             <Border Classes="card" Background="{StaticResource Brush.Thumbnail}">
                                                 <Panel>
+                                                    <!-- a vehicle without an icon shows the still that Discover stored for it -->
+                                                    <views:PreviewStillView StillPath="{Binding StillPath}" Background="{StaticResource Brush.Surface}">
                                                     <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                                                         <Grid RowDefinitions="*,Auto">
                                                             <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !IsVehicle}" />
@@ -115,7 +117,15 @@
                                                             <Panel Grid.Row="1" Height="{Binding #TileText.Bounds.Height}" Margin="0,0,0,16" />
                                                         </Grid>
                                                     </views:ListingImageView>
-                                                    <Border Background="{StaticResource Brush.Scrim}" IsVisible="{Binding Icon.IsLoaded, FallbackValue=False}" />
+                                                    </views:PreviewStillView>
+                                                    <Border Background="{StaticResource Brush.Scrim}">
+                                                        <Border.IsVisible>
+                                                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                                                <Binding Path="Icon.IsLoaded" FallbackValue="False" />
+                                                                <Binding Path="HasStill" />
+                                                            </MultiBinding>
+                                                        </Border.IsVisible>
+                                                    </Border>
                                                     <StackPanel x:Name="TileText" VerticalAlignment="Bottom" Spacing="10" Margin="16">
                                                         <TextBlock Classes="heading-md" Text="{Binding Name}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
                                                         <Grid ColumnDefinitions="*,Auto">

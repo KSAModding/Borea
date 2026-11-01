@@ -598,6 +598,12 @@ public partial class MainViewModel
             item.PreviewStillPath = null;
             ShowStoredStill(item, services.PreviewThumbnails, build);
         }
+
+        foreach (var tile in _newVehicles.Items.Where(tile => string.Equals(tile.VehicleSha256, vehicleSha256, StringComparison.OrdinalIgnoreCase) && tile.Icon is null))
+        {
+            tile.StillPath = null;
+            tile.StillPath = services.PreviewThumbnails.TryGetPath(vehicleSha256, build);
+        }
     }
 
     internal string CompatibilityText(GameCompatibility compatibility) => compatibility switch

@@ -1,9 +1,12 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using Borea.App.ViewModels;
+using Borea.Composition;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
+using Borea.Core.Preview;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -85,6 +88,32 @@ public sealed class HomeViewModelTests
         Assert.Equal(MainViewModel.CompactCount(1234), mostDownloaded.FactText);
         Assert.Equal(harness.Localization.FormatContentDownloadsExact(1234.ToString("N0", CultureInfo.CurrentCulture)), mostDownloaded.FactToolTip);
         Assert.True(mostDownloaded.ShowsDownloads);
+    }
+
+    [Fact]
+    public async Task Load_GivesAVehicleWithoutAnIconTheStillThatDiscoverStored_AndAModNone()
+    {
+        var sha256 = Convert.ToHexString(SHA256.HashData(UserContentFixtures.RoverArchive()));
+        using var harness = await ViewModelHarness.CreateAsync(WithGameAsync, editSnapshot: ModDates, typeFiles: Vehicles());
+        var viewModel = harness.ViewModel;
+        Assert.All(viewModel.HomeGroups[2].Items, tile => Assert.Null(tile.StillPath));
+
+        var build = PreviewGameBuild.Of(harness.Services.InstalledVersion.GetInstalledVersion());
+        Assert.NotNull(build);
+        harness.Services.PreviewThumbnails.Store(sha256, build, "scene", [1, 2, 3]);
+        await viewModel.LoadAsync();
+
+        var stored = harness.Services.PreviewThumbnails.TryGetPath(sha256, build);
+        Assert.NotNull(stored);
+        Assert.All(viewModel.HomeGroups[2].Items, tile => Assert.Equal((stored, true), (tile.StillPath, tile.HasStill)));
+        Assert.All(viewModel.HomeGroups[1].Items.Concat(viewModel.HomeGroups[3].Items), tile => Assert.False(tile.HasStill));
+    }
+
+    private static async Task WithGameAsync(BoreaServices services)
+    {
+        var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+        await services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
     }
 
     [Fact]
