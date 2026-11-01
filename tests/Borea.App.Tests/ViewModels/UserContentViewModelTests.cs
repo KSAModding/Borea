@@ -4,6 +4,7 @@ using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
+using Borea.Core.Sharing;
 using static Borea.App.Tests.ViewModels.UserContentFixtures;
 
 namespace Borea.App.Tests.ViewModels;
@@ -645,6 +646,22 @@ public sealed class UserContentViewModelTests
     }
 
     [Fact]
+    public async Task InstancePage_RecordedRow_LinkReadsViewPageOnlyWhileTheNamesMatch()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        await ActiveInstanceWithRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        Assert.Equal(harness.Localization.GameSaveViewPage, Assert.Single(viewModel.VehiclesSection.Items).ListingLinkText);
+
+        Assert.Single(viewModel.VehiclesSection.Items).BeginRenameCommand.Execute(null);
+        viewModel.ModalInstanceName = "Rover 2";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.Equal("Example Rover", Assert.Single(viewModel.VehiclesSection.Items).ListingLinkText);
+    }
+
+    [Fact]
     public async Task InstancePage_OwnFolder_HasNoRecordAndKeepsTheDeleteText()
     {
         using var harness = await VehicleHarnessAsync();
@@ -659,6 +676,29 @@ public sealed class UserContentViewModelTests
         Assert.False(row.HasRecord);
         Assert.False(row.CanUpdate);
         Assert.Equal(harness.Localization.GameSaveDeleteConfirm, row.DeleteConfirmText);
+    }
+
+    [Fact]
+    public async Task InstancePage_Open_ShowsTheNewestHostOfTheFolderOnlyOnARowOfItsType()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var instance = await ActiveInstanceAsync(harness);
+        foreach (var name in new[] { "Shared", "Mine" })
+        {
+            var folder = Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), name)).FullName;
+            File.WriteAllText(Path.Combine(folder, "meta.toml"), $"name = \"{name}\"\n");
+        }
+
+        var older = new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "Shared", "SHARED", "1.0.0", null);
+        await harness.Services.SharedContent.RecordAsync(older, author: null);
+        await harness.Services.SharedContent.RecordAsync(older with { HostKey = "ownhost", HostName = "own.example" }, author: null);
+        await harness.Services.SharedContent.RecordAsync(older with { Type = ContentType.Save, FolderName = "Mine" }, author: null);
+
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        var rows = harness.ViewModel.VehiclesSection.Items;
+        Assert.Equal(harness.Localization.FormatContentSharedOn("own.example"), rows.Single(row => row.FolderName == "Shared").SharedOnText);
+        Assert.Null(rows.Single(row => row.FolderName == "Mine").SharedOnText);
     }
 
     [Theory]

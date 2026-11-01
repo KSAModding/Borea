@@ -4,6 +4,7 @@ using Borea.App.ViewModels;
 using Borea.Core.GitHub;
 using Borea.Core.Index;
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 using Borea.Core.Sharing;
 
 namespace Borea.App.Tests.ViewModels;
@@ -66,6 +67,34 @@ public sealed class ShareHostShareTests
         Assert.Equal(new Uri("https://github.com/KSAModding/content-index/pull/250"), editor.SharePullRequest);
         Assert.Equal(harness.Localization.FormatListingShareHostPublished("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
         Assert.Null(editor.ShareHostError);
+    }
+
+    [Fact]
+    public async Task Publish_RemembersTheListing_AndTheNextShareStartsWithItsAuthorAndLicense()
+    {
+        var page = new Uri("https://ksamods.gg/vehicles/ExampleRover");
+        var host = new FakeHost { Page = page };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+        Assert.Equal((string.Empty, string.Empty), (editor.Authors, editor.License));
+        var row = Assert.Single(harness.ViewModel.VehiclesSection.Items);
+        Assert.False(row.ShowsListingLine);
+
+        editor.Authors = "Maxi, Cairn";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "ExampleRover", "Example Rover", "1.0.0", page),
+            Assert.Single(await harness.Services.SharedContent.ListAsync()));
+        Assert.Equal(harness.Localization.FormatContentSharedOn("ksamods.gg"), row.SharedOnText);
+        Assert.True(row.ShowsListingLine);
+
+        await row.ShareCommand.ExecuteAsync(null);
+
+        Assert.Equal(("Maxi, Cairn", "CC-BY-4.0"), (editor.Authors, editor.License));
     }
 
     [Fact]
@@ -300,6 +329,8 @@ public sealed class ShareHostShareTests
         Assert.Null(editor.SharePullRequest);
         Assert.Null(editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
+        Assert.Equal("ExampleRover", Assert.Single(await harness.Services.SharedContent.ListAsync()).ListingId);
+        Assert.Null(await harness.Services.SharedContent.GetAuthorAsync());
     }
 
     [Fact]
@@ -389,6 +420,8 @@ public sealed class ShareHostShareTests
 
         public string? PublishedId { get; init; } = "ExampleRover";
 
+        public Uri? Page { get; init; }
+
         /// <summary>How many of the next requests the host answers with a refused token.</summary>
         public int TokenRefusals { get; set; }
 
@@ -430,7 +463,7 @@ public sealed class ShareHostShareTests
         public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
         {
             Publishes.Enqueue(new Publish(uploadId, version, status, listing));
-            return RefuseToken() is { } refused ? Task.FromException<SharePublished>(refused) : Task.FromResult(new SharePublished(PublishedId, version, PullRequest));
+            return RefuseToken() is { } refused ? Task.FromException<SharePublished>(refused) : Task.FromResult(new SharePublished(PublishedId, version, PullRequest, Page));
         }
 
         private ShareHostException? RefuseToken()

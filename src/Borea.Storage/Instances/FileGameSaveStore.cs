@@ -3,7 +3,9 @@ using System.Text.RegularExpressions;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Core.Sharing;
 using Borea.Storage.Files;
+using Borea.Storage.Sharing;
 using Tomlyn;
 using Tomlyn.Model;
 
@@ -11,7 +13,7 @@ namespace Borea.Storage.Instances;
 
 /// <summary>
 /// Reads each folder the way SaveMetaData.FromDirectory does. Keeps the install records of
-/// <see cref="IInstalledContentRecords"/> true: a renamed folder keeps its record, and a folder
+/// <see cref="IInstalledContentRecords"/> true: a renamed folder keeps its record and its share record, and a folder
 /// that is copied over or deleted loses it, because a folder without a record is the player's own.
 /// </summary>
 public sealed partial class FileGameSaveStore : IGameSaveStore
@@ -37,13 +39,16 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
     private readonly IGamePathProvider _paths;
     private readonly GameSaveBackupFolder _backups;
     private readonly IInstalledContentRecords _records;
+    private readonly ISharedContentRecords _sharedContent;
 
     /// <param name="records">Pass the one store of the app, so two stores never write one file.</param>
-    public FileGameSaveStore(IGamePathProvider paths, TimeProvider? time = null, IInstalledContentRecords? records = null)
+    /// <param name="sharedContent">Pass the one store of the app, for the same reason.</param>
+    public FileGameSaveStore(IGamePathProvider paths, TimeProvider? time = null, IInstalledContentRecords? records = null, ISharedContentRecords? sharedContent = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _backups = new GameSaveBackupFolder(paths, time ?? TimeProvider.System);
         _records = records ?? new FileInstalledContentRecords(paths);
+        _sharedContent = sharedContent ?? new FileSharedContentRecords(paths);
     }
 
     public string GetFolder(Guid instanceId, GameSaveKind kind)
@@ -96,7 +101,7 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
         => Task.Run(async () =>
         {
             RequireInInstance(instanceId, entry);
-            await _records.RemoveAsync(instanceId, ContentTypeOf(entry.Kind), entry.FolderName, cancellationToken).ConfigureAwait(false);
+            await _records.RemoveAsync(instanceId, entry.Kind.ToContentType(), entry.FolderName, cancellationToken).ConfigureAwait(false);
             return await _backups.MoveInAsync(instanceId, entry.Kind, entry.Path, GameSaveBackupReason.Deleted).ConfigureAwait(false);
         }, cancellationToken);
 
@@ -142,8 +147,6 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
 
         return new GameSaveArchive(hashing.Sha256(), hashing.Length);
     }
-
-    private static ContentType ContentTypeOf(GameSaveKind kind) => kind == GameSaveKind.Save ? ContentType.Save : ContentType.Vehicle;
 
     private string GetSharedProfileFolder(GameSaveKind kind) => FindFolder(Path.Combine(_paths.GetSharedProfileRoot(), FolderName(kind)));
 
@@ -320,7 +323,7 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
             CopyFolder(source, staging, cancellationToken);
 
             // The record goes first: a folder that loses it only makes Borea more careful, and the copy is the player's own.
-            await _records.RemoveAsync(targetInstanceId, ContentTypeOf(entry.Kind), source.Name, cancellationToken).ConfigureAwait(false);
+            await _records.RemoveAsync(targetInstanceId, entry.Kind.ToContentType(), source.Name, cancellationToken).ConfigureAwait(false);
             Directory.CreateDirectory(folder);
             var replaced = exists ? await _backups.MoveInAsync(targetInstanceId, entry.Kind, target, GameSaveBackupReason.Replaced).ConfigureAwait(false) : null;
             try
@@ -362,7 +365,7 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
 
         // No folder has the new name, so a record of it belongs to a folder the player deleted in the game.
         if (!string.Equals(source.Name, newName, StringComparison.OrdinalIgnoreCase))
-            await _records.RemoveAsync(instanceId, ContentTypeOf(entry.Kind), newName, cancellationToken).ConfigureAwait(false);
+            await _records.RemoveAsync(instanceId, entry.Kind.ToContentType(), newName, cancellationToken).ConfigureAwait(false);
 
         var metadataPath = Path.Combine(source.FullName, MetadataFileName);
         byte[] original;
@@ -395,7 +398,7 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
             }
 
             // The hashes stay, so the renamed item counts as changed since the install.
-            await _records.RenameFolderAsync(instanceId, ContentTypeOf(entry.Kind), source.Name, newName, cancellationToken).ConfigureAwait(false);
+            await _records.RenameFolderAsync(instanceId, entry.Kind.ToContentType(), source.Name, newName, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -406,6 +409,8 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
             throw;
         }
 
+        // The item has its new name by now, so a cancel must not read as a failed rename.
+        await _sharedContent.RenameFolderAsync(entry.Kind.ToContentType(), source.Name, newName, CancellationToken.None).ConfigureAwait(false);
         return GameSaveRenameOutcome.Renamed;
     }
 

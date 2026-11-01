@@ -92,6 +92,11 @@ public interface IGamePathProvider
     string GetModPackFavoritesPath();
 
     /// <summary>
+    /// Path to the record of what the player shared on a share host, one file for the whole computer.
+    /// </summary>
+    string GetSharedContentPath();
+
+    /// <summary>
     /// Path to Borea's own settings.toml (game/StarMap install locations).
     /// </summary>
     string GetBoreaSettingsPath();

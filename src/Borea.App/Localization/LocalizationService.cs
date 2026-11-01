@@ -1571,6 +1571,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveChangedSinceInstall => Resources.GameSaveChangedSinceInstall;
 
+    public string GameSaveViewPage => Resources.GameSaveViewPage;
+
     public string GameSaveBackUp => Resources.GameSaveBackUp;
 
     public string GameSaveShare => Resources.GameSaveShare;

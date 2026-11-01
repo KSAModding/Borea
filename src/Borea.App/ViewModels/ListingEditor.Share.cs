@@ -11,7 +11,8 @@ using CommunityToolkit.Mvvm.Input;
 namespace Borea.App.ViewModels;
 
 /// <summary>A vehicle or a save that the player shares from the instance page, with what Borea read from it.</summary>
-internal sealed record GameSaveShareStart(Guid InstanceId, GameSaveEntry Entry, GameFolderContent Content, ContentShare Proposal);
+/// <param name="LastAuthor">The authors and license of the player's last new listing, which a share starts with, or null.</param>
+internal sealed record GameSaveShareStart(Guid InstanceId, GameSaveEntry Entry, GameFolderContent Content, ContentShare Proposal, SharedContentAuthor? LastAuthor);
 
 /// <summary>
 /// A new vehicle or save listing (RFC 0085): the editor starts with the dependencies Borea proposes, shows what it could not map,
@@ -65,6 +66,8 @@ public sealed partial class ListingEditor
             Type = share.Entry.Kind == GameSaveKind.Vehicle ? ListingFolders.VehicleType : ListingFolders.SaveType,
             Id = ListingShareId.From(share.Content.Name),
             Name = share.Content.Name,
+            Authors = share.LastAuthor?.Authors ?? [],
+            License = share.LastAuthor?.License ?? string.Empty,
             Dependencies = share.Proposal.Dependencies,
         });
         _share = share;

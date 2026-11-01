@@ -246,6 +246,7 @@ public sealed class GamePathProviderTests
             provider.GetActiveInstancePointerPath(),
             provider.GetModFavoritesPath(),
             provider.GetModPackFavoritesPath(),
+            provider.GetSharedContentPath(),
             provider.GetBoreaSettingsPath(),
             provider.GetAppPreferencesPath(),
             provider.GetTaskHistoryPath(),
