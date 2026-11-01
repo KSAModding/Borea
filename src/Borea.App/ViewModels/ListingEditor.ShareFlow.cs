@@ -151,7 +151,12 @@ public sealed partial class ListingEditor
 
     private string ShareHostNameOf(ShareListing listing) => _shareHosts.FirstOrDefault(host => host.Key == listing.HostKey)?.Name ?? listing.HostName ?? listing.HostKey;
 
-    public bool ShowsPreviewCard => !IsShareStep || (!IsShareChoose && ShowsShareFields);
+    public bool ShowsPreviewCard => !IsShareStep || !IsShareChoose;
+
+    /// <summary>What the index holds for the listing of a new version on the steps, or null when it does not hold it yet. The full form previews what the player types, because that draft goes out.</summary>
+    private ModMetadata? ListedShareAuthored => IsShareStep && _share is { } share && _shareListing is { } listed
+        ? ShareListingsOf(share).FirstOrDefault(listing => ModIds.Equals(listing.Id, listed.Id))?.Authored
+        : null;
 
     public string PreviewHeading => !IsShareStep ? Localization.ListingPreview : IsSave ? Localization.SharePreviewSave : Localization.SharePreviewVehicle;
 

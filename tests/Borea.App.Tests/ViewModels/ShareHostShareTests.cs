@@ -534,7 +534,10 @@ public sealed class ShareHostShareTests
         Assert.Equal(harness.Localization.FormatShareAsNewVersion("Example Rover"), editor.ShareAsNewVersionText);
         Assert.Null(editor.ShareIdError);
         Assert.False(editor.CanContinueShare);
-        Assert.False(editor.ShowsPreviewCard);
+        Assert.True(editor.ShowsPreviewCard);
+        Assert.Equal("Example Rover", editor.PreviewName);
+        Assert.Equal(harness.Localization.FormatContentByAuthor("Maxi"), editor.PreviewAuthors);
+        Assert.Equal("A small rover.", editor.PreviewAbstract);
         Assert.Contains(editor.Errors, issue => issue.Location == "id");
 
         editor.ShareAsNewVersionCommand.Execute(null);
@@ -546,7 +549,7 @@ public sealed class ShareHostShareTests
         Assert.Null(editor.ShareIdError);
         Assert.Null(editor.ShareNextReason);
         Assert.False(editor.HasShareOtherFields);
-        Assert.False(editor.ShowsPreviewCard);
+        Assert.True(editor.ShowsPreviewCard);
         Assert.True(editor.CanContinueShare);
 
         // The full form can open a pull request for a new file, so there the id counts as held.
@@ -554,12 +557,21 @@ public sealed class ShareHostShareTests
         editor.Authors = "Maxi";
         editor.License = "CC-BY-4.0";
         editor.Abstract = "A six-wheel rover for the Moon.";
+        editor.Name = "Typed Rover";
         Assert.Contains(editor.Errors, issue => issue.Location == "id");
         Assert.False(editor.CanOpenPullRequest);
+        Assert.Equal("Typed Rover", editor.PreviewName);
+        Assert.Equal("A six-wheel rover for the Moon.", editor.PreviewAbstract);
+
+        editor.Authors = "Someone Else";
+        Assert.Equal(harness.Localization.FormatContentByAuthor("Someone Else"), editor.PreviewAuthors);
 
         editor.BackToShareStepsCommand.Execute(null);
         Assert.DoesNotContain(editor.Errors, issue => issue.Location == "id");
         Assert.True(editor.CanContinueShare);
+        Assert.Equal("Example Rover", editor.PreviewName);
+        Assert.Equal(harness.Localization.FormatContentByAuthor("Maxi"), editor.PreviewAuthors);
+        Assert.Equal("A small rover.", editor.PreviewAbstract);
     }
 
     [Theory]
