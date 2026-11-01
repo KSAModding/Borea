@@ -76,10 +76,12 @@ public partial class MainViewModel
             row.Choices = NewChoices(instanceId, [new RequestedMod(release, InstallReason.Manual)], plan.Mods);
             HoldContentPlan(row, plan);
             whenHeld?.Invoke();
+            await ShowConflictsAsync(plan.Mods, Again);
         }
         else if (!plan.Mods.IsReady)
         {
             row.InstallError = Describe(plan.Mods.Conflicts.Concat(plan.Mods.UnresolvedChoices));
+            await ShowConflictsAsync(plan.Mods, Again);
         }
         else if (whenHeld is not null || plan.Check.Outcome == UserContentOutcome.Changed || plan.Mods.Warnings.Count > 0 || plan.Enables.Count > 0
             || AddedMods(plan.Mods, null).Any() || InstallStepsOf(plan.Mods).Count > 0)
@@ -91,7 +93,15 @@ public partial class MainViewModel
         {
             await ExecuteContentPlanAsync(row, plan);
         }
+
+        Task Again() => RetryContentRow(row) is { } shown ? PlanContentAsync(shown, instanceId, release, name, discardChanges, whenHeld) : Task.CompletedTask;
     }
+
+    /// <summary>The reload after the removal builds new rows for the vehicles and saves of the instance page, and any other row stays.</summary>
+    private IContentPlanRow? RetryContentRow(IContentPlanRow row)
+        => row is GameSaveItem item && SelectedInstance?.InstanceId == item.InstanceId
+            ? item.Section.Items.FirstOrDefault(shown => shown.InstanceId == item.InstanceId && shown.FolderName == item.FolderName)
+            : row;
 
     /// <summary>
     /// Runs the plan the row holds. A plan that found changed files, or whose choices the player answered, plans again

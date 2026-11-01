@@ -318,6 +318,25 @@ public sealed class LinkViewModelTests
     }
 
     [Fact]
+    public async Task InstallLink_VehicleThatConflictsWithAMod_WaitsOnTheRowAfterTheRemoval()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync(dependencies: """{ "id": "KSArmory", "kind": "conflict", "source": "authored" }""");
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "KSArmory", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+
+        await viewModel.OpenLinkAsync("borea://install/examplerover");
+
+        var row = viewModel.SelectedContent!;
+        var conflict = Assert.Single(viewModel.ConflictDialog!.Rows);
+        await conflict.RemoveCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingInstall);
+        Assert.NotNull(row.LinkRequestText);
+        Assert.Empty(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+    }
+
+    [Fact]
     public async Task InstallLink_VehicleWithAVersion_HoldsThatVersion_AndAVersionNotInTheIndexOffersTheNewest()
     {
         using var harness = await UserContentViewModelTests.VehicleHarnessAsync();

@@ -4890,6 +4890,27 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentRemoveRequired(string modId, string dependents)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveRequiredFormat, modId, dependents);
 
+    public string ContentRemoveUpdateRunning => Resources.ContentRemoveUpdateRunning;
+
+    public string ConflictTitle => Resources.ConflictTitle;
+
+    public string ConflictWhy => Resources.ConflictWhy;
+
+    public string FormatConflictDeclared(string declarer, string other)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictDeclaredFormat, declarer, other);
+
+    public string FormatConflictRemove(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictRemoveFormat, name);
+
+    public string FormatConflictOpenPage(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictOpenPageFormat, name);
+
+    public string FormatConflictVersionUnknown(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictVersionUnknownFormat, name);
+
+    public string FormatConflictPackMember(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictPackMemberFormat, name);
+
     public string FormatContentNeededByVehicle(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentNeededByVehicleFormat, folder);
 

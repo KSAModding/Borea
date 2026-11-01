@@ -240,6 +240,7 @@ public partial class MainViewModel
             if (!planned.IsReady)
             {
                 row.InstallError = Describe(planned.Conflicts.Concat(planned.UnresolvedChoices));
+                await ShowConflictsAsync(planned, () => ManualInstallItems.FirstOrDefault(item => item.InstanceId == row.InstanceId && item.FolderName == row.FolderName) is { } shown ? PlanManualReplaceAsync(shown) : Task.CompletedTask);
             }
             else if (planned.Warnings.Count > 0)
             {

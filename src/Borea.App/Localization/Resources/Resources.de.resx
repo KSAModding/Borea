@@ -2436,6 +2436,30 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} bleibt, weil {1} es braucht.</value>
   </data>
+  <data name="ContentRemoveUpdateRunning" xml:space="preserve">
+    <value>Gerade läuft ein Update dieser Instanz. Versuche es noch einmal, wenn es fertig ist.</value>
+  </data>
+  <data name="ConflictTitle" xml:space="preserve">
+    <value>Diese Mods funktionieren nicht zusammen</value>
+  </data>
+  <data name="ConflictWhy" xml:space="preserve">
+    <value>Borea legt Mods, die nicht zusammen funktionieren, nicht in dieselbe Instanz. Darum hat es angehalten und nichts geändert.</value>
+  </data>
+  <data name="ConflictDeclaredFormat" xml:space="preserve">
+    <value>{0} gibt an, nicht mit {1} zusammen zu funktionieren.</value>
+  </data>
+  <data name="ConflictRemoveFormat" xml:space="preserve">
+    <value>{0} entfernen und fortfahren</value>
+  </data>
+  <data name="ConflictOpenPageFormat" xml:space="preserve">
+    <value>Seite von {0} öffnen</value>
+  </data>
+  <data name="ConflictVersionUnknownFormat" xml:space="preserve">
+    <value>Borea hat {0} nicht installiert und kann die Version nicht lesen, deshalb weiß es nicht, ob die beiden zusammen funktionieren.</value>
+  </data>
+  <data name="ConflictPackMemberFormat" xml:space="preserve">
+    <value>{0} gehört zum Modpack dieser Instanz, deshalb entfernt Borea sie nicht.</value>
+  </data>
   <data name="ContentNeededByVehicleFormat" xml:space="preserve">
     <value>Das Fahrzeug {0} braucht diesen Mod, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
   </data>

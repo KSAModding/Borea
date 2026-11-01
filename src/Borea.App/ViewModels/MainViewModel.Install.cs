@@ -151,7 +151,8 @@ public partial class MainViewModel
                 var release = await findRelease() ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
                 return [new RequestedMod(release, InstallReason.Manual, exactVersion is not null)];
             },
-            (_, plan) => Task.FromResult(confirm || AddedMods(plan, null).Any() || InstallStepsOf(plan).Count > 0));
+            (_, plan) => Task.FromResult(confirm || AddedMods(plan, null).Any() || InstallStepsOf(plan).Count > 0),
+            () => PlanInstallAsync(row, findRelease, exactVersion, target, confirm));
 
         if (executed)
             await ReloadInstancesAsync();
@@ -162,7 +163,8 @@ public partial class MainViewModel
     /// warnings or choices, unless <paramref name="waitForConfirmation"/> holds it.
     /// Returns whether the executor ran, so the caller reloads the instances.
     /// </summary>
-    private async Task<bool> PlanAndExecuteAsync(IInstallRow row, Guid instanceId, Func<Instance, Task<IReadOnlyList<RequestedMod>>> requestMods, Func<Instance, InstallPlan, Task<bool>>? waitForConfirmation = null)
+    /// <param name="again">Plans the same change again, for the conflict modal.</param>
+    private async Task<bool> PlanAndExecuteAsync(IInstallRow row, Guid instanceId, Func<Instance, Task<IReadOnlyList<RequestedMod>>> requestMods, Func<Instance, InstallPlan, Task<bool>>? waitForConfirmation = null, Func<Task>? again = null)
     {
         if (_services is null || row.IsInstalling)
             return false;
@@ -206,10 +208,12 @@ public partial class MainViewModel
                 HoldPlan(row, plan);
                 if (row is not ContentItem)
                     ReplanOnChange(row, choices, replanned => HoldPlan(row, replanned));
+                await ShowConflictsAsync(plan, again);
             }
             else if (!plan.IsReady)
             {
                 row.InstallError = Describe(plan.Conflicts.Concat(plan.UnresolvedChoices));
+                await ShowConflictsAsync(plan, again);
             }
             else if ((plan.Warnings.Count > 0 && !IsEmptyUpdateAll(row, plan)) || wait)
             {

@@ -468,11 +468,15 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     /// <param name="Age">How far the requests that are not exact sit behind their newest candidate.</param>
     private sealed record SearchResult(Dictionary<string, RequestedMod> Selected, int Age, IReadOnlyList<PlanningMessage> Warnings, IReadOnlyList<PlanningMessage> Unresolved, IReadOnlyList<PlanningMessage> Conflicts, IReadOnlyList<PlanningChoice> Choices)
     {
-        public SearchScore Score => new(Conflicts.Count, Conflicts.Count(value => value.Kind is PlanningMessageKind.UnsatisfiedDependency or PlanningMessageKind.PinnedDependency or PlanningMessageKind.MissingRequest or PlanningMessageKind.RetainedUnsatisfied) + Warnings.Count(value => value.Kind is PlanningMessageKind.MissingForVehicle or PlanningMessageKind.MissingForSave), Age, Unresolved.Count, Warnings.Count, Selected.Count);
+        // a plan with a conflict cannot run, so the first rank only decides what a stopped plan says, which is the conflict of the requested mod and not that Borea found no release of it.
+        // a recommendation does not count there, because the plan runs once the player goes without it
+        public SearchScore Score => new(Absent.Count(value => value.Dependency?.Kind != ModDependencyKind.Recommends), Conflicts.Count, Absent.Count() + Warnings.Count(value => value.Kind is PlanningMessageKind.MissingForVehicle or PlanningMessageKind.MissingForSave), Age, Unresolved.Count, Warnings.Count, Selected.Count);
+
+        private IEnumerable<PlanningMessage> Absent => Conflicts.Where(value => value.Kind is PlanningMessageKind.UnsatisfiedDependency or PlanningMessageKind.PinnedDependency or PlanningMessageKind.MissingRequest or PlanningMessageKind.RetainedUnsatisfied);
     }
     // age ranks above open choices, warnings and the number of mods, so a request does not fall back to an older release to avoid the dependencies of the newest one
-    private readonly record struct SearchScore(int Conflicts, int Missing, int Age, int Unresolved, int Warnings, int Selected) : IComparable<SearchScore>
+    private readonly record struct SearchScore(int Absent, int Conflicts, int Missing, int Age, int Unresolved, int Warnings, int Selected) : IComparable<SearchScore>
     {
-        public int CompareTo(SearchScore other) { var value = Conflicts.CompareTo(other.Conflicts); if (value != 0) return value; value = Missing.CompareTo(other.Missing); if (value != 0) return value; value = Age.CompareTo(other.Age); if (value != 0) return value; value = Unresolved.CompareTo(other.Unresolved); if (value != 0) return value; value = Warnings.CompareTo(other.Warnings); if (value != 0) return value; return Selected.CompareTo(other.Selected); }
+        public int CompareTo(SearchScore other) { var value = Absent.CompareTo(other.Absent); if (value != 0) return value; value = Conflicts.CompareTo(other.Conflicts); if (value != 0) return value; value = Missing.CompareTo(other.Missing); if (value != 0) return value; value = Age.CompareTo(other.Age); if (value != 0) return value; value = Unresolved.CompareTo(other.Unresolved); if (value != 0) return value; value = Warnings.CompareTo(other.Warnings); if (value != 0) return value; return Selected.CompareTo(other.Selected); }
     }
 }

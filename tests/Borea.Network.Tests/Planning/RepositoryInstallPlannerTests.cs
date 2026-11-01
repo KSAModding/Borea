@@ -375,6 +375,29 @@ public sealed class RepositoryInstallPlannerTests
     }
 
     [Fact]
+    public async Task PlanAsync_RequestThatConflictsWithInstalledMods_NamesTheConflictsAndNotAMissingRelease()
+    {
+        var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Conflict), new ModDependency("C", ModDependencyKind.Conflict)]);
+        var request = new InstallPlanningRequest(InstanceWith([Installed("B"), Installed("C")]), [new RequestedMod(a, InstallReason.Manual, Exact: false)], new FakeRepository([a, Release("B"), Release("C")]));
+        var plan = await PlanAsync(request);
+        Assert.False(plan.IsReady);
+        Assert.Equal(["B", "C"], plan.Conflicts.Where(value => value.Code == "dependency-conflict").Select(value => value.Dependency!.ModId));
+        Assert.DoesNotContain(plan.Conflicts, value => value.Code == "missing-request");
+    }
+
+    [Fact]
+    public async Task PlanAsync_RequiredModThatConflictsWithAnInstalledMod_NamesTheConflictAndNotAMissingMod()
+    {
+        var a = Release("A", dependencies: [Required("C")]);
+        var c = Release("C", dependencies: [new ModDependency("B", ModDependencyKind.Conflict)]);
+        var request = new InstallPlanningRequest(InstanceWith([Installed("B")]), [new RequestedMod(a, InstallReason.Manual, Exact: false)], new FakeRepository([a, c, Release("B")]));
+        var plan = await PlanAsync(request);
+        Assert.False(plan.IsReady);
+        Assert.Contains(plan.Conflicts, value => value.Code == "dependency-conflict" && value.ModId == "C");
+        Assert.DoesNotContain(plan.Conflicts, value => value.Code == "unsatisfied-dependency");
+    }
+
+    [Fact]
     public async Task PlanAsync_SelectedRecommendationTiesItsTargetToTheGroup()
     {
         var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Recommends)]);
