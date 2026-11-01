@@ -22,6 +22,20 @@ public sealed class PreviewThumbnailCacheTests : IDisposable
     private string Thumbs => Path.Combine(_paths.GetPreviewCacheFolder(), "thumbs");
 
     [Fact]
+    public void TheSceneKey_OfAStoredStill_IsRead_AndOtherArgumentsGiveNone()
+    {
+        var cache = new PreviewThumbnailCache(_paths, new RecordingLog());
+        var sha = new string('A', 64);
+        Assert.Null(cache.TryGetSceneKey(sha, Build));
+
+        cache.Store(sha, Build, "scene1m", [1, 2, 3]);
+
+        Assert.Equal("scene1m", cache.TryGetSceneKey(sha, Build));
+        Assert.Null(cache.TryGetSceneKey(sha, "2026.10.13.5602"));
+        Assert.Null(cache.TryGetSceneKey(null, Build));
+    }
+
+    [Fact]
     public void AStill_IsFoundByHashAndBuild_AnotherBuildMisses_AndANewSceneKeyReplacesIt()
     {
         var cache = new PreviewThumbnailCache(_paths, new RecordingLog());

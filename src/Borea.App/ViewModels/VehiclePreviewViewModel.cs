@@ -72,6 +72,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     /// <summary>Goes after the scene key of a still with a texture that failed, so a complete preview of the same scene replaces it.</summary>
     internal const string PartialKeySuffix = "p";
 
+    /// <summary>Goes after the scene key of a still that Discover drew while mods were missing, which is how the row knows to show its note.</summary>
+    internal const string MissingModsKeySuffix = "m";
+
     private readonly IVehiclePreview _service;
     private readonly ModVersionMetadata _release;
     private readonly Guid? _targetInstanceId;
@@ -477,17 +480,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
         try
         {
-            var stored = await Task.Run(
-                () =>
-                {
-                    var key = partial ? sceneKey + PartialKeySuffix : sceneKey;
-                    if (!thumbnails.NeedsUpdate(sha256, gameBuild, key) || (partial && !thumbnails.NeedsUpdate(sha256, gameBuild, sceneKey)))
-                        return false;
-
-                    thumbnails.Store(sha256, gameBuild, key, encoder.Encode(RenderStill(scene, token)));
-                    return true;
-                },
-                token);
+            var stored = await Task.Run(() => TryStoreStill(thumbnails, encoder, scene, sha256, gameBuild, sceneKey, partial, token), token);
             if (stored && !_disposed)
                 _stillStored?.Invoke(sha256);
         }
@@ -495,6 +488,17 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         {
             // A cancel, a dispose or a failed encode leaves the old still or none, and the next complete preview tries again.
         }
+    }
+
+    /// <summary>Renders and stores the still unless the stored one was made from the same scene. A partial still never replaces a complete one of that scene.</summary>
+    internal static bool TryStoreStill(IPreviewThumbnails thumbnails, IPngEncoder encoder, PreviewScene scene, string sha256, string gameBuild, string sceneKey, bool partial, CancellationToken token)
+    {
+        var key = partial ? sceneKey + PartialKeySuffix : sceneKey;
+        if (!thumbnails.NeedsUpdate(sha256, gameBuild, key) || (partial && !thumbnails.NeedsUpdate(sha256, gameBuild, sceneKey)))
+            return false;
+
+        thumbnails.Store(sha256, gameBuild, key, encoder.Encode(RenderStill(scene, token)));
+        return true;
     }
 
     /// <summary>Renders the scene from the default camera angles, framed as the page frames it, on a renderer of its own.</summary>

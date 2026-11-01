@@ -118,7 +118,7 @@
     <value>Load images from author hosts</value>
   </data>
   <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
-    <value>Each image request tells the author's host your IP address.</value>
+    <value>Each image request tells the author's host your IP address. Off, Borea also downloads no vehicle file by itself for a picture or a 3D preview.</value>
   </data>
   <data name="SettingsLibraryFolderLabel" xml:space="preserve">
     <value>Library folder</value>
@@ -2549,6 +2549,9 @@
   </data>
   <data name="DiscoverFavoritesOnly" xml:space="preserve">
     <value>Only favorites</value>
+  </data>
+  <data name="DiscoverStillMissingMods" xml:space="preserve">
+    <value>Mods missing</value>
   </data>
   <data name="DiscoverFavorite" xml:space="preserve">
     <value>In your favorites</value>

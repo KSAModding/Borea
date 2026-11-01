@@ -7,6 +7,7 @@ using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Planning;
 using Borea.Core.Preview;
+using Borea.Core.Sharing;
 using Borea.Core.State;
 using Borea.Core.UserContent;
 using Borea.Storage.Files;
@@ -50,6 +51,7 @@ public sealed class VehiclePreview : IVehiclePreview
     private readonly PreviewThumbnailCache? _thumbnails;
     private readonly IInstanceRepository _instances;
     private readonly IModDownloader _downloader;
+    private readonly Func<ShareHost, IModDownloader>? _shareFiles;
     private readonly IFreeSpaceProbe _freeSpace;
     private readonly IBoreaLog _log;
     private readonly Lock _gate = new();
@@ -62,6 +64,7 @@ public sealed class VehiclePreview : IVehiclePreview
     /// <param name="offlineMods">The repository over the index snapshots on disk, which never fetches. The composition passes its OfflineMods.</param>
     /// <param name="downloader">Fetches an archive into the preview cache, only when a load is allowed to.</param>
     /// <param name="thumbnails">The stills that <see cref="StartMaintenance"/> cleans up too, or null when there are none.</param>
+    /// <param name="shareFiles">Makes the downloader of <see cref="FetchFromShareHostAsync"/> for one host, or null when nothing may call it.</param>
     public VehiclePreview(
         IGamePathProvider paths,
         IInstallPlanner planner,
@@ -76,9 +79,11 @@ public sealed class VehiclePreview : IVehiclePreview
         IModDownloader downloader,
         IFreeSpaceProbe freeSpace,
         IBoreaLog log,
-        PreviewThumbnailCache? thumbnails = null)
+        PreviewThumbnailCache? thumbnails = null,
+        Func<ShareHost, IModDownloader>? shareFiles = null)
     {
         _thumbnails = thumbnails;
+        _shareFiles = shareFiles;
         ArgumentNullException.ThrowIfNull(paths);
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _archives = archives ?? throw new ArgumentNullException(nameof(archives));
@@ -330,6 +335,18 @@ public sealed class VehiclePreview : IVehiclePreview
         }
 
         return new VehiclePreviewResult(VehiclePreviewLoadState.Ready, scene, assets, missing, notices, SceneKey(gameBuild, sourceKeys), sha256, gameBuild);
+    }
+
+    public async Task FetchFromShareHostAsync(ModVersionMetadata release, ShareHost host, CancellationToken cancellationToken = default)
+    {
+        CheckVehicle(release);
+        ThrowIfDisposed();
+        if (_shareFiles is null)
+            throw new InvalidOperationException("This preview has no downloader for share hosts.");
+
+        // The same yield as in PrepareAsync, because a hit in the cache completes every await at once.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+        await _archives.FetchAsync(release, _shareFiles(host), _freeSpace, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     public Task StartMaintenance()

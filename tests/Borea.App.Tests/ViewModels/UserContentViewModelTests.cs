@@ -871,11 +871,13 @@ public sealed class UserContentViewModelTests
         Func<Borea.Composition.BoreaServices, Task>? seed = null,
         Func<Borea.Core.Planning.IInstallPlanner, Borea.Core.Planning.IInstallPlanner>? wrapInstallPlanner = null,
         Borea.Storage.Launch.IProcessStarter? processStarter = null,
-        ILauncher? loaderLauncher = null)
+        ILauncher? loaderLauncher = null,
+        Func<string, string>? editEntry = null)
     {
         var rover = RoverArchive();
         var entry = EntryNeeding("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, dependencies, ["1.0.0", "1.1.0"])
             .Replace("\"id\": \"ExampleRover\",", "\"id\": \"ExampleRover\", \"downloads\": { \"total\": 42, \"hosts\": { \"github\": 42 } },", StringComparison.Ordinal);
+        entry = editEntry?.Invoke(entry) ?? entry;
         return ViewModelHarness.CreateAsync(
             seed: seed,
             respond: request => request.RequestUri?.AbsoluteUri == RoverUrl ? ArchiveResponse(rover) : null,

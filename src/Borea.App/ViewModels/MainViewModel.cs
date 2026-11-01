@@ -555,6 +555,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
         RefreshVehiclePreviewWhenTargetChanged();
+        RefreshPreviewStills();
         OnPropertyChanged(nameof(ContentShareHostText));
         if (CurrentWindowListing)
             await ListingEditor.ReloadEmptyShareChooseAsync();
