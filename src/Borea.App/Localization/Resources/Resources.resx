@@ -777,6 +777,111 @@
   <data name="StewardWatcherGoneFailedFormat" xml:space="preserve">
     <value>Cannot read the content index. {0}</value>
   </data>
+  <data name="StewardTabStatistics" xml:space="preserve">
+    <value>Statistics</value>
+  </data>
+  <data name="StewardStatisticsHint" xml:space="preserve">
+    <value>Counted from the content index that Borea read. The numbers are about content and cover what a player can see, so a delisted entry is not in them.</value>
+  </data>
+  <data name="StewardStatisticsLoading" xml:space="preserve">
+    <value>Counting what the content index holds...</value>
+  </data>
+  <data name="StewardStatisticsTotalListings" xml:space="preserve">
+    <value>Listings in total</value>
+  </data>
+  <data name="StewardStatisticsModsNotBlocked" xml:space="preserve">
+    <value>Mods not blocked on the current build</value>
+  </data>
+  <data name="StewardStatisticsUpkeepListings" xml:space="preserve">
+    <value>Listings with upkeep problems</value>
+  </data>
+  <data name="StewardStatisticsTotalDownloads" xml:space="preserve">
+    <value>Downloads in total</value>
+  </data>
+  <data name="StewardStatisticsCurrentBuild" xml:space="preserve">
+    <value>Current build</value>
+  </data>
+  <data name="StewardStatisticsNoBuild" xml:space="preserve">
+    <value>The content index names no game build, so it is not known which mods are blocked.</value>
+  </data>
+  <data name="StewardStatisticsNoMods" xml:space="preserve">
+    <value>The content index lists no mods.</value>
+  </data>
+  <data name="StewardStatisticsNothing" xml:space="preserve">
+    <value>Nothing to count.</value>
+  </data>
+  <data name="StewardStatisticsNotBlockedFormat" xml:space="preserve">
+    <value>{0} of {1} mods are not blocked on game build {2}, because a release allows it. A release without a highest game version counts, so this does not say that anyone tested the build.</value>
+  </data>
+  <data name="StewardStatisticsNotBlocked" xml:space="preserve">
+    <value>Not blocked</value>
+  </data>
+  <data name="StewardStatisticsBlocked" xml:space="preserve">
+    <value>Blocked</value>
+  </data>
+  <data name="StewardStatisticsBlockedMods" xml:space="preserve">
+    <value>Mods blocked on this build</value>
+  </data>
+  <data name="StewardStatisticsDependencies" xml:space="preserve">
+    <value>Dependencies</value>
+  </data>
+  <data name="StewardStatisticsMostDependencies" xml:space="preserve">
+    <value>Most dependencies</value>
+  </data>
+  <data name="StewardStatisticsMostDependedOn" xml:space="preserve">
+    <value>Most depended on</value>
+  </data>
+  <data name="StewardStatisticsRequired" xml:space="preserve">
+    <value>Required</value>
+  </data>
+  <data name="StewardStatisticsOptional" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="StewardStatisticsUpkeep" xml:space="preserve">
+    <value>Upkeep</value>
+  </data>
+  <data name="StewardStatisticsListing" xml:space="preserve">
+    <value>Listing</value>
+  </data>
+  <data name="StewardStatisticsUpkeepEmpty" xml:space="preserve">
+    <value>No listing has an upkeep problem.</value>
+  </data>
+  <data name="StewardStatisticsNoCurrentRelease" xml:space="preserve">
+    <value>No release for the build</value>
+  </data>
+  <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
+    <value>No update for {0} days</value>
+  </data>
+  <data name="StewardStatisticsNoImage" xml:space="preserve">
+    <value>No image</value>
+  </data>
+  <data name="StewardStatisticsNoForumsThread" xml:space="preserve">
+    <value>No forums thread</value>
+  </data>
+  <data name="StewardStatisticsOverview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="StewardStatisticsTypes" xml:space="preserve">
+    <value>By type</value>
+  </data>
+  <data name="StewardStatisticsTags" xml:space="preserve">
+    <value>By tag</value>
+  </data>
+  <data name="StewardStatisticsLicenses" xml:space="preserve">
+    <value>By license</value>
+  </data>
+  <data name="StewardStatisticsReleaseHosts" xml:space="preserve">
+    <value>By release host</value>
+  </data>
+  <data name="StewardStatisticsMostDownloaded" xml:space="preserve">
+    <value>Most downloaded</value>
+  </data>
+  <data name="StewardStatisticsShowAllFormat" xml:space="preserve">
+    <value>Show all {0}</value>
+  </data>
+  <data name="StewardStatisticsShowFewer" xml:space="preserve">
+    <value>Show fewer</value>
+  </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>Status</value>
   </data>

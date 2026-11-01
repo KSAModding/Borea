@@ -777,6 +777,111 @@
   <data name="StewardWatcherGoneFailedFormat" xml:space="preserve">
     <value>Der Inhaltsindex ist nicht lesbar. {0}</value>
   </data>
+  <data name="StewardTabStatistics" xml:space="preserve">
+    <value>Statistik</value>
+  </data>
+  <data name="StewardStatisticsHint" xml:space="preserve">
+    <value>Gezählt aus dem Inhaltsindex, den Borea gelesen hat. Die Zahlen beschreiben Inhalte und umfassen, was Spieler sehen können, also fehlt ein ausgetragener Eintrag.</value>
+  </data>
+  <data name="StewardStatisticsLoading" xml:space="preserve">
+    <value>Der Inhaltsindex wird gezählt...</value>
+  </data>
+  <data name="StewardStatisticsTotalListings" xml:space="preserve">
+    <value>Einträge insgesamt</value>
+  </data>
+  <data name="StewardStatisticsModsNotBlocked" xml:space="preserve">
+    <value>Nicht blockierte Mods auf dem aktuellen Build</value>
+  </data>
+  <data name="StewardStatisticsUpkeepListings" xml:space="preserve">
+    <value>Einträge mit Pflegeproblemen</value>
+  </data>
+  <data name="StewardStatisticsTotalDownloads" xml:space="preserve">
+    <value>Downloads insgesamt</value>
+  </data>
+  <data name="StewardStatisticsCurrentBuild" xml:space="preserve">
+    <value>Aktueller Build</value>
+  </data>
+  <data name="StewardStatisticsNoBuild" xml:space="preserve">
+    <value>Der Inhaltsindex nennt keinen Spiel-Build, also ist nicht bekannt, welche Mods blockiert sind.</value>
+  </data>
+  <data name="StewardStatisticsNoMods" xml:space="preserve">
+    <value>Der Inhaltsindex listet keine Mods.</value>
+  </data>
+  <data name="StewardStatisticsNothing" xml:space="preserve">
+    <value>Nichts zu zählen.</value>
+  </data>
+  <data name="StewardStatisticsNotBlockedFormat" xml:space="preserve">
+    <value>{0} von {1} Mods sind auf dem Spiel-Build {2} nicht blockiert, weil ein Release ihn zulässt. Ein Release ohne höchste Spielversion zählt mit, also heißt das nicht, dass jemand den Build getestet hat.</value>
+  </data>
+  <data name="StewardStatisticsNotBlocked" xml:space="preserve">
+    <value>Nicht blockiert</value>
+  </data>
+  <data name="StewardStatisticsBlocked" xml:space="preserve">
+    <value>Blockiert</value>
+  </data>
+  <data name="StewardStatisticsBlockedMods" xml:space="preserve">
+    <value>Auf diesem Build blockierte Mods</value>
+  </data>
+  <data name="StewardStatisticsDependencies" xml:space="preserve">
+    <value>Abhängigkeiten</value>
+  </data>
+  <data name="StewardStatisticsMostDependencies" xml:space="preserve">
+    <value>Meiste Abhängigkeiten</value>
+  </data>
+  <data name="StewardStatisticsMostDependedOn" xml:space="preserve">
+    <value>Am häufigsten benötigt</value>
+  </data>
+  <data name="StewardStatisticsRequired" xml:space="preserve">
+    <value>Erforderlich</value>
+  </data>
+  <data name="StewardStatisticsOptional" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="StewardStatisticsUpkeep" xml:space="preserve">
+    <value>Pflege</value>
+  </data>
+  <data name="StewardStatisticsListing" xml:space="preserve">
+    <value>Eintrag</value>
+  </data>
+  <data name="StewardStatisticsUpkeepEmpty" xml:space="preserve">
+    <value>Kein Eintrag hat ein Pflegeproblem.</value>
+  </data>
+  <data name="StewardStatisticsNoCurrentRelease" xml:space="preserve">
+    <value>Kein Release für den Build</value>
+  </data>
+  <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
+    <value>Seit {0} Tagen kein Update</value>
+  </data>
+  <data name="StewardStatisticsNoImage" xml:space="preserve">
+    <value>Kein Bild</value>
+  </data>
+  <data name="StewardStatisticsNoForumsThread" xml:space="preserve">
+    <value>Kein Forenthread</value>
+  </data>
+  <data name="StewardStatisticsOverview" xml:space="preserve">
+    <value>Übersicht</value>
+  </data>
+  <data name="StewardStatisticsTypes" xml:space="preserve">
+    <value>Nach Typ</value>
+  </data>
+  <data name="StewardStatisticsTags" xml:space="preserve">
+    <value>Nach Tag</value>
+  </data>
+  <data name="StewardStatisticsLicenses" xml:space="preserve">
+    <value>Nach Lizenz</value>
+  </data>
+  <data name="StewardStatisticsReleaseHosts" xml:space="preserve">
+    <value>Nach Release-Host</value>
+  </data>
+  <data name="StewardStatisticsMostDownloaded" xml:space="preserve">
+    <value>Am häufigsten heruntergeladen</value>
+  </data>
+  <data name="StewardStatisticsShowAllFormat" xml:space="preserve">
+    <value>Alle {0} anzeigen</value>
+  </data>
+  <data name="StewardStatisticsShowFewer" xml:space="preserve">
+    <value>Weniger anzeigen</value>
+  </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>Status</value>
   </data>
