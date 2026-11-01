@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.UpdateAllModal"
+             x:DataType="vm:MainViewModel">
+    <UserControl.Resources>
+        <!-- the line of one mod. The version columns share their widths with the other rows, so each version starts at the same place -->
+        <DataTemplate x:Key="UpdateChangeLine" x:DataType="vm:UpdateChangeItem">
+            <Border Classes="list-row" BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="36">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="28" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="UpdateChangeFrom" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="UpdateChangeArrow" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="UpdateChangeTo" />
+                    </Grid.ColumnDefinitions>
+                    <Panel VerticalAlignment="Center" HorizontalAlignment="Left" IsVisible="{Binding CanExpand}">
+                        <Path Classes="icon size-16" Data="{StaticResource Icon.CaretRight}" IsVisible="{Binding !IsExpanded}" />
+                        <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" IsVisible="{Binding IsExpanded}" />
+                    </Panel>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Classes="heading-sm" Text="{Binding Name}" ToolTip.Tip="{Binding Name}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateAllNoNotes}" TextWrapping="Wrap" IsVisible="{Binding HasNoNotes}" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Classes="link" Margin="12,0,0,0" VerticalAlignment="Center" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding Link}" ToolTip.Tip="{Binding Link.Url}" IsVisible="{Binding Link, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.LinkSimple}" VerticalAlignment="Center" />
+                            <TextBlock Classes="action-md" Text="{Binding Link.Label}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Border Grid.Column="3" Classes="chip untested" Margin="12,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsOlder}">
+                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateAllOlder}" />
+                    </Border>
+                    <TextBlock Grid.Column="4" Classes="label-md" Margin="16,0,0,0" MaxWidth="180" Text="{Binding FromVersion}" ToolTip.Tip="{Binding FromVersion}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding !IsNew}" />
+                    <Path Grid.Column="5" Classes="icon size-16" Margin="6,0" Data="{StaticResource Icon.ArrowRight}" VerticalAlignment="Center" IsVisible="{Binding !IsNew}" />
+                    <Border Grid.Column="4" Grid.ColumnSpan="2" Classes="chip positive" Margin="16,0,6,0" HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding IsNew}">
+                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateAllNew}" />
+                    </Border>
+                    <TextBlock Grid.Column="6" Classes="label-md" MaxWidth="180" Text="{Binding ToVersion}" ToolTip.Tip="{Binding ToVersion}" AutomationProperties.Name="{Binding VersionChangeText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- only the line toggles, so that a press in an open changelog selects its text -->
+        <DataTemplate x:Key="UpdateChangeRow" x:DataType="vm:UpdateChangeItem">
+            <StackPanel>
+                <Button Classes="plain card-button" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding ToggleCommand}" ToolTip.Tip="{Binding ToggleText}" AutomationProperties.Name="{Binding ToggleText}" IsVisible="{Binding CanExpand}" Content="{Binding FoldingRow}" ContentTemplate="{StaticResource UpdateChangeLine}" />
+                <ContentControl IsVisible="{Binding !CanExpand}" Content="{Binding PlainRow}" ContentTemplate="{StaticResource UpdateChangeLine}" />
+                <ItemsControl Margin="44,0,16,12" ItemsSource="{Binding ShownChangelogs}" ItemTemplate="{StaticResource ChangelogEntry}" IsVisible="{Binding IsExpanded}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="12" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- the blocked line of the choices stays in the footer, because this box scrolls -->
+        <DataTemplate x:Key="UpdateChoicesBox" x:DataType="vm:InstallChoices">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="12" views:RoundedClip.IsEnabled="True">
+                <StackPanel>
+                    <Border Background="{StaticResource Brush.SurfaceRaised}" Padding="16,10">
+                        <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).UpdateAll.ChoicesHeadingText}" TextWrapping="Wrap" />
+                    </Border>
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,12">
+                        <views:InstallChoices ShowsBlockedText="False" />
+                    </Border>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- modal: what "Update all" changes, while its plan waits. The progress of the update stays on the page -->
+    <Panel x:Name="Backdrop" Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" MaxWidth="720" HorizontalAlignment="Stretch" Margin="104,24,24,24" KeyboardNavigation.TabNavigation="Cycle">
+            <!-- one area scrolls in the height that is left, so the title and the buttons stay in a window at its minimum height -->
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding UpdateAll.TitleText}" ToolTip.Tip="{Binding UpdateAll.TitleText}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding UpdateAll.CancelUpdateCommand}" IsEnabled="{Binding !UpdateAll.IsInstalling, FallbackValue={x:True}}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Grid.Row="1" Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <ScrollViewer x:Name="Scroller" Grid.Row="2" Focusable="True">
+                    <StackPanel Margin="36,24,24,16" Spacing="16">
+                        <!-- first, so that the player reads it before the button -->
+                        <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="12" Padding="16,10" IsVisible="{Binding !!UpdateAll.WarningLines.Count, FallbackValue={x:False}}">
+                            <ItemsControl x:Name="WarningList" ItemsSource="{Binding UpdateAll.WarningLines}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:UpdateWarningLine">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <Path x:Name="BreakingMark" Classes="icon size-16" Stroke="{StaticResource Brush.Danger}" Margin="0,2,8,0" VerticalAlignment="Top" Data="{StaticResource Icon.Warning}" IsVisible="{Binding IsBreaking}" />
+                                            <TextBlock Grid.Column="1" Classes="body-md" Classes.danger="{Binding IsBreaking}" Text="{Binding Text}" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+
+                        <ContentControl Content="{Binding UpdateAll.ChoicesFirst}" ContentTemplate="{StaticResource UpdateChoicesBox}" IsVisible="{Binding UpdateAll.ChoicesFirst, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue={x:False}}" />
+
+                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="12" views:RoundedClip.IsEnabled="True" Grid.IsSharedSizeScope="True" IsVisible="{Binding !!UpdateAll.Changes.Count, FallbackValue={x:False}}">
+                            <StackPanel>
+                                <Border Background="{StaticResource Brush.SurfaceRaised}" Padding="16,10">
+                                    <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.ListHeadingText}" TextWrapping="Wrap" />
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding UpdateAll.Changes}" ItemTemplate="{StaticResource UpdateChangeRow}" />
+                            </StackPanel>
+                        </Border>
+
+                        <ContentControl Content="{Binding UpdateAll.ChoicesLast}" ContentTemplate="{StaticResource UpdateChoicesBox}" IsVisible="{Binding UpdateAll.ChoicesLast, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue={x:False}}" />
+                    </StackPanel>
+                </ScrollViewer>
+                <!-- outside the scroll, because a modal that stays open after a press must say why in view -->
+                <StackPanel Grid.Row="3" Spacing="12" Margin="36,16,24,24">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" IsVisible="{Binding UpdateAll.IsInstalling, FallbackValue={x:False}}">
+                        <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                        <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.UpdateChecking}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                        <!-- the only way out while the plan waits for a slow network -->
+                        <Button Grid.Column="2" Classes="text" Content="{Binding UpdateAll.Run.StopText}" Command="{Binding UpdateAll.Run.StopCommand}" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Classes="body-md danger" Text="{Binding UpdateAll.Choices.BlockedText}" ToolTip.Tip="{Binding UpdateAll.Choices.BlockedText}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" IsVisible="{Binding UpdateAll.Choices.BlockedText, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue={x:False}}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding UpdateAll.InstallError}" ToolTip.Tip="{Binding UpdateAll.InstallError}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" IsVisible="{Binding UpdateAll.InstallError, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue={x:False}}" />
+                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.UpdateAllChooseFirst}" TextWrapping="Wrap" IsVisible="{Binding !UpdateAll.Choices.IsComplete, FallbackValue={x:False}}" />
+                    <!-- a long German button takes the next line -->
+                    <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8">
+                        <Button Classes="text tall" Content="{Binding Localization.LibraryCancel}" Command="{Binding UpdateAll.CancelUpdateCommand}" IsEnabled="{Binding !UpdateAll.IsInstalling, FallbackValue={x:True}}" VerticalAlignment="Center" />
+                        <Panel IsEnabled="{Binding CanChangeContent}">
+                            <Button Classes="cta" Command="{Binding UpdateAll.ConfirmUpdateCommand}" IsEnabled="{Binding UpdateAll.Choices.IsComplete, FallbackValue={x:True}}" IsVisible="{Binding !UpdateAll.HasBreakingWarning, FallbackValue={x:True}}">
+                                <TextBlock Classes="action-lg" Text="{Binding UpdateAll.ConfirmUpdateText}" VerticalAlignment="Center" />
+                            </Button>
+                            <Button Classes="text tall danger" Content="{Binding UpdateAll.ConfirmUpdateText}" Command="{Binding UpdateAll.ConfirmUpdateCommand}" IsEnabled="{Binding UpdateAll.Choices.IsComplete, FallbackValue={x:True}}" IsVisible="{Binding UpdateAll.HasBreakingWarning, FallbackValue={x:False}}" VerticalAlignment="Center" />
+                        </Panel>
+                    </WrapPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Panel>
+</UserControl>

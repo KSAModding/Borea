@@ -118,6 +118,16 @@
     <!-- modal: the plan of a duplicate or an import -->
     <views:ModListModal IsVisible="{Binding IsReviewingModList}" />
 
+    <!-- modal: what "Update all" changes, while its plan waits for a confirmation -->
+    <views:UpdateAllModal>
+        <views:UpdateAllModal.IsVisible>
+            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="CurrentWindowInstance" />
+                <Binding Path="UpdateAll.IsConfirmingUpdate" FallbackValue="{x:False}" />
+            </MultiBinding>
+        </views:UpdateAllModal.IsVisible>
+    </views:UpdateAllModal>
+
     <!-- modal: the game Borea found on the first start -->
     <views:FoundGameModal IsVisible="{Binding IsFoundGameModalOpen}" />
 

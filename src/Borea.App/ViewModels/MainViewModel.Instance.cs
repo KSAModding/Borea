@@ -40,6 +40,9 @@ public partial class MainViewModel
     private IReadOnlyList<ContentItem> _content = [];
     private ModPackMetadata? _contentPack;
     private readonly Dictionary<Guid, IInstallRow> _runningUpdates = [];
+
+    /// <summary>A plan of "Update all" that came to wait while another instance was shown, until the page of its instance opens again.</summary>
+    private readonly Dictionary<Guid, UpdateAllItem> _heldUpdates = [];
     private Task _contentUpdateCheck = Task.CompletedTask;
     private int _contentUpdateCheckGeneration;
     private Guid? _launchInstanceId;
@@ -179,7 +182,9 @@ public partial class MainViewModel
         }
 
         _runningUpdates.TryGetValue(item.InstanceId, out var running);
-        UpdateAll = running as UpdateAllItem ?? new UpdateAllItem(this, item.InstanceId);
+        // a reload behind the confirmation leaves it open, because the executor refuses its plan when the instance changed
+        _heldUpdates.Remove(item.InstanceId, out var heldElsewhere);
+        UpdateAll = running as UpdateAllItem ?? heldElsewhere ?? (UpdateAll is { IsConfirmingUpdate: true } held && held.InstanceId == item.InstanceId ? held : new UpdateAllItem(this, item.InstanceId));
         if (running is PackUpdateItem || PackUpdate?.InstanceId != item.InstanceId)
             PackUpdate = running as PackUpdateItem;
         _selectedInstanceEntity = await _services.Instances.GetByIdAsync(item.InstanceId);
@@ -513,7 +518,25 @@ public partial class MainViewModel
     /// dependency is resolved once.
     /// </summary>
     internal Task UpdateAllContentAsync(UpdateAllItem item)
-        => RunUpdateAsync(item, item.InstanceId, () => PlanUpdateAsync(item, item.InstanceId, _ => true));
+        => RunUpdateAsync(item, item.InstanceId, async () =>
+        {
+            item.ClearChanges();
+            var foundNothing = false;
+            var executed = await PlanUpdateAsync(item, item.InstanceId, _ => true, (instance, plan) =>
+            {
+                item.PlannedInstance = instance;
+                foundNothing = plan.Operations.Count == 0;
+            });
+
+            if (item.IsConfirmingUpdate && !ReferenceEquals(UpdateAll, item))
+                _heldUpdates[item.InstanceId] = item;
+
+            // the reload carries this over to the new item, and no toast says it, because a finished update without mods has none
+            if (executed && foundNothing && item.ProgressStatus is null && item.InstallError is null)
+                item.ProgressStatus = Localization.UpdateNothingFound;
+
+            return executed;
+        });
 
     internal Task ConfirmUpdateAsync(IUpdateRow row, Guid instanceId)
         => RunUpdateAsync(row, instanceId, () => ExecutePendingPlanAsync(row, () => row.Changelogs = []));
@@ -525,15 +548,21 @@ public partial class MainViewModel
     }
 
     /// <summary>Waits for a confirmation on planner warnings, choices or passed changelogs.</summary>
-    private Task<bool> PlanUpdateAsync(IUpdateRow row, Guid instanceId, Func<InstalledMod, bool> select)
+    /// <param name="planned">Runs when the plan is known, before the row can start to wait for a confirmation.</param>
+    private Task<bool> PlanUpdateAsync(IUpdateRow row, Guid instanceId, Func<InstalledMod, bool> select, Action<Instance, InstallPlan>? planned = null)
     {
         row.Changelogs = [];
         return PlanAndExecuteAsync(
             row,
             instanceId,
-            instance => Task.FromResult(UpdateRequests(instance.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea && select(mod)))),
+            instance =>
+            {
+                row.ProgressStatus = Localization.UpdateChecking;
+                return Task.FromResult(UpdateRequests(instance.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea && select(mod))));
+            },
             async (instance, plan) =>
             {
+                planned?.Invoke(instance, plan);
                 row.Changelogs = await PassedChangelogsAsync(instance, plan);
                 return row.Changelogs.Count > 0;
             });
@@ -552,7 +581,7 @@ public partial class MainViewModel
             if (installed is null || target.Version <= installed.Version)
                 continue;
 
-            var name = _content.FirstOrDefault(content => ModIds.Equals(content.ModId, target.ModId))?.Name ?? target.Listing?.Name ?? target.ModId;
+            var name = PlannedModName(target);
             try
             {
                 // the history keeps a passed release whose download is gone, because the update still holds its changes
@@ -562,7 +591,7 @@ public partial class MainViewModel
                 foreach (var release in passed.Prepend(target))
                 {
                     if (ReleaseChangelog.From(release, $"{name} {release.Version}", Localization.ContentChangelog) is { } changelog)
-                        changelogs.Add(changelog);
+                        changelogs.Add(changelog with { ModId = target.ModId, Version = release.Version.ToString() });
                 }
             }
             catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException or System.Text.Json.JsonException)
@@ -573,6 +602,37 @@ public partial class MainViewModel
 
         return changelogs;
     }
+
+    private string PlannedModName(ModVersionMetadata release)
+        => _content.FirstOrDefault(content => ModIds.Equals(content.ModId, release.ModId))?.Name ?? release.Listing?.Name ?? release.ModId;
+
+    /// <summary>What a plan of "Update all" changes, the updates by name and then the mods that it adds, each with the changelogs of its releases.</summary>
+    internal IReadOnlyList<UpdateChangeItem> UpdateChanges(InstallPlan plan, Instance? instance, IReadOnlyList<ReleaseChangelog> changelogs)
+        => plan.Operations
+            .Select(operation => operation.Release)
+            .Select(release => new UpdateChangeItem(
+                Localization,
+                release.ModId,
+                PlannedModName(release),
+                instance?.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, release.ModId))?.Version,
+                release.Version,
+                changelogs.Where(changelog => ModIds.Equals(changelog.ModId, release.ModId)).ToList()))
+            .OrderBy(change => change.IsNew)
+            .ThenBy(change => change.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+    /// <summary>
+    /// One line per message, with the names of all mods it is about, and a message about a recorded vehicle or save first.
+    /// That message names its mod itself, and every other one follows the names, as in <see cref="Describe"/>.
+    /// </summary>
+    internal IReadOnlyList<UpdateWarningLine> UpdateWarningLines(IEnumerable<PlanningMessage> warnings)
+        => warnings
+            .OrderBy(message => !BreaksContent(message))
+            .GroupBy(PlanningText.Message)
+            .Select(group => BreaksContent(group.First())
+                ? new UpdateWarningLine(group.Key, IsBreaking: true)
+                : new UpdateWarningLine($"{string.Join(", ", group.Select(message => ContentName(message.ModId)).Distinct(StringComparer.Ordinal))}: {group.Key}", IsBreaking: false))
+            .ToList();
 
     private static IReadOnlyList<RequestedMod> UpdateRequests(IEnumerable<InstalledMod> mods)
         => mods.Select(mod => new RequestedMod(mod.Metadata, mod.Reason, Exact: false)).ToList();
@@ -1845,7 +1905,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
 /// <summary>
 /// "Update all" on the instance page. It holds its plan and its outcome the
-/// way a row does.
+/// way a row does, and a modal shows the plan while it waits for a confirmation.
 /// </summary>
 public sealed partial class UpdateAllItem : ObservableObject, IUpdateRow
 {
@@ -1883,20 +1943,102 @@ public sealed partial class UpdateAllItem : ObservableObject, IUpdateRow
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingUpdate))]
+    [NotifyPropertyChangedFor(nameof(TitleText))]
+    [NotifyPropertyChangedFor(nameof(ConfirmUpdateText))]
+    [NotifyPropertyChangedFor(nameof(ChoicesFirst))]
+    [NotifyPropertyChangedFor(nameof(ChoicesLast))]
+    [NotifyPropertyChangedFor(nameof(ChoicesHeadingText))]
     private InstallChoices? _choices;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TitleText))]
+    [NotifyPropertyChangedFor(nameof(ConfirmUpdateText))]
+    [NotifyPropertyChangedFor(nameof(ChoicesFirst))]
+    [NotifyPropertyChangedFor(nameof(ChoicesLast))]
+    [NotifyPropertyChangedFor(nameof(ChoicesHeadingText))]
+    private InstallPlan? _pendingPlan;
+
+    /// <summary>The mods that the plan changes. A plan that is being replaced keeps them, so that the list does not jump.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ListHeadingText))]
+    private IReadOnlyList<UpdateChangeItem> _changes = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasBreakingWarning))]
+    private IReadOnlyList<UpdateWarningLine> _warningLines = [];
 
     public bool HasChangelogs => Changelogs.Count > 0;
 
     public bool IsConfirmingUpdate => InstallWarning is not null || HasChangelogs || Choices is not null;
 
-    public string ConfirmUpdateText => InstallWarning is null ? _owner.Localization.ContentUpdate : _owner.Localization.UpdateAnyway;
+    public bool HasBreakingWarning => WarningLines.Any(line => line.IsBreaking);
 
-    public InstallPlan? PendingPlan { get; set; }
+    private bool NeedsChoice => Choices?.Alternatives.Any(group => group.IsRequired) == true;
+
+    /// <summary>The choices while the plan needs one, which go above the list, so that the reason for a disabled button is in view.</summary>
+    public InstallChoices? ChoicesFirst => NeedsChoice ? Choices : null;
+
+    /// <summary>The choices while all of them are optional, which go below the list.</summary>
+    public InstallChoices? ChoicesLast => NeedsChoice ? null : Choices;
+
+    public string ChoicesHeadingText => NeedsChoice ? _owner.Localization.UpdateAllChooseMod : _owner.Localization.UpdateAllMoreMods;
+
+    /// <summary>The instance as the plan saw it, which names the installed versions and the title.</summary>
+    internal Instance? PlannedInstance { get; set; }
+
+    /// <summary>The plan on screen, also while a change of a choice plans the next one.</summary>
+    private InstallPlan? ShownPlan => PendingPlan ?? Choices?.ShownPlan;
+
+    public string TitleText => ShownPlan?.Operations.Count is > 0 and var count
+        ? _owner.Localization.FormatUpdateAllTitle(count, PlannedInstance?.Name ?? string.Empty)
+        : _owner.Localization.FormatUpdateAllTitleNoCount(PlannedInstance?.Name ?? string.Empty);
+
+    /// <summary>One mod starts open, so only a longer list needs the hint.</summary>
+    public string ListHeadingText => Changes.Count > 1 && Changes.Any(change => change.CanExpand) ? _owner.Localization.UpdateAllListHint : _owner.Localization.UpdateAllListHeading;
+
+    /// <summary>The count is what the toast of the finished update states, and the size is what the plan downloads, when the index states one.</summary>
+    public string ConfirmUpdateText
+    {
+        get
+        {
+            var plan = ShownPlan;
+            var localization = _owner.Localization;
+            var text = (plan?.Operations.Count ?? 0, InstallWarning) switch
+            {
+                (0, null) => localization.ContentUpdate,
+                (0, _) => localization.UpdateAnyway,
+                (var count, null) => localization.FormatUpdateAllConfirm(count),
+                (var count, _) => localization.FormatUpdateAllConfirmAnyway(count),
+            };
+            return MainViewModel.PlanSizeText(plan) is { } size ? $"{text} ({size})" : text;
+        }
+    }
 
     public UpdateAllItem(MainViewModel owner, Guid instanceId)
     {
         _owner = owner;
         InstanceId = instanceId;
+    }
+
+    internal void ClearChanges()
+    {
+        Changes = [];
+        WarningLines = [];
+    }
+
+    partial void OnPendingPlanChanged(InstallPlan? value)
+    {
+        if (value is null)
+            return;
+
+        var open = Changes.Where(change => change.IsExpanded).Select(change => change.ModId).ToHashSet(ModIds.Comparer);
+        var changes = _owner.UpdateChanges(value, PlannedInstance, Changelogs);
+        var opensAlone = Changes.Count == 0 && changes.Count == 1;
+        foreach (var change in changes)
+            change.IsExpanded = change.CanExpand && (opensAlone || open.Contains(change.ModId));
+
+        Changes = changes;
+        WarningLines = _owner.UpdateWarningLines(value.Warnings);
     }
 
     [RelayCommand]

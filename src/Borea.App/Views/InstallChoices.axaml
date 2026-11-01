@@ -1,11 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.InstallChoices"
              x:DataType="vm:InstallChoices">
     <StackPanel Spacing="8">
         <StackPanel Spacing="2" IsVisible="{Binding HasRecommended}">
             <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallChoicesRecommended}" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallChoicesRecommendedHint}" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding Recommended}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecommendedChoice">
@@ -37,6 +39,7 @@
         </ItemsControl>
         <StackPanel Spacing="2" IsVisible="{Binding HasSuggested}">
             <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallChoicesSuggested}" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallChoicesSuggestedHint}" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding Suggested}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="x:String">
@@ -45,6 +48,13 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </StackPanel>
-        <TextBlock Classes="body-sm danger" Text="{Binding BlockedText}" TextWrapping="Wrap" IsVisible="{Binding BlockedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Classes="body-sm danger" Text="{Binding BlockedText}" TextWrapping="Wrap">
+            <TextBlock.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="BlockedText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                    <Binding Path="$parent[views:InstallChoices].ShowsBlockedText" />
+                </MultiBinding>
+            </TextBlock.IsVisible>
+        </TextBlock>
     </StackPanel>
 </UserControl>

@@ -81,6 +81,22 @@ public sealed class InstallStopTests
         return (localization, new InstallRun(localization, task));
     }
 
+    [Theory]
+    [InlineData(InstallPhase.Downloading)]
+    [InlineData(InstallPhase.Extracting)]
+    public void IsPlanning_EndsWithTheFirstReport(InstallPhase phase)
+    {
+        var (_, run) = NewRun();
+        Assert.True(run.IsPlanning);
+        var changed = new List<string?>();
+        run.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        run.Report(phase);
+
+        Assert.False(run.IsPlanning);
+        Assert.Contains(nameof(InstallRun.IsPlanning), changed);
+    }
+
     [Fact]
     public void PauseButton_WorksOnlyWhileTheModDownloads()
     {

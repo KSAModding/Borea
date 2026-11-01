@@ -3949,7 +3949,7 @@
     <value>Das Fahrzeug {1} braucht {0}, deshalb lädt das Spiel dieses Fahrzeug nach dieser Änderung nicht.</value>
   </data>
   <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
-    <value>Der Spielstand {1} braucht {0}, deshalb lässt das Spiel nach dieser Änderung jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+    <value>Der Spielstand {1} braucht {0}. Nach dieser Änderung lädt das Spiel die Fahrzeuge nicht, die diese Mod brauchen, und beim nächsten Speichern gehen sie verloren.</value>
   </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} oder {1}</value>
@@ -5606,5 +5606,71 @@
   </data>
   <data name="AboutOriginalRepository" xml:space="preserve">
     <value>Borea-Repository</value>
+  </data>
+  <data name="UpdateAllTitleFormat" xml:space="preserve">
+    <value>{0} Mods in {1} aktualisieren</value>
+  </data>
+  <data name="UpdateAllTitleOneFormat" xml:space="preserve">
+    <value>1 Mod in {0} aktualisieren</value>
+  </data>
+  <data name="UpdateAllTitleNoCountFormat" xml:space="preserve">
+    <value>Die Mods in {0} aktualisieren</value>
+  </data>
+  <data name="UpdateAllConfirmFormat" xml:space="preserve">
+    <value>{0} Mods aktualisieren</value>
+  </data>
+  <data name="UpdateAllConfirmOne" xml:space="preserve">
+    <value>1 Mod aktualisieren</value>
+  </data>
+  <data name="UpdateAllConfirmAnywayFormat" xml:space="preserve">
+    <value>{0} Mods trotzdem aktualisieren</value>
+  </data>
+  <data name="UpdateAllConfirmAnywayOne" xml:space="preserve">
+    <value>1 Mod trotzdem aktualisieren</value>
+  </data>
+  <data name="UpdateAllListHeading" xml:space="preserve">
+    <value>Was sich ändert</value>
+  </data>
+  <data name="UpdateAllListHint" xml:space="preserve">
+    <value>Wähle eine Mod aus, um die Änderungen zu lesen.</value>
+  </data>
+  <data name="UpdateAllNew" xml:space="preserve">
+    <value>Neu</value>
+  </data>
+  <data name="UpdateAllOlder" xml:space="preserve">
+    <value>Ältere Version</value>
+  </data>
+  <data name="UpdateAllVersionChangeFormat" xml:space="preserve">
+    <value>{0} auf {1}</value>
+  </data>
+  <data name="UpdateAllShowChangesFormat" xml:space="preserve">
+    <value>Änderungen von {0} anzeigen</value>
+  </data>
+  <data name="UpdateAllHideChangesFormat" xml:space="preserve">
+    <value>Änderungen von {0} ausblenden</value>
+  </data>
+  <data name="UpdateAllMoreMods" xml:space="preserve">
+    <value>Weitere Mods</value>
+  </data>
+  <data name="UpdateAllChooseMod" xml:space="preserve">
+    <value>Mod wählen</value>
+  </data>
+  <data name="UpdateAllNoNotes" xml:space="preserve">
+    <value>Keine Änderungsnotizen</value>
+  </data>
+  <data name="UpdateAllChooseFirst" xml:space="preserve">
+    <value>Wähle in jeder Liste eine Mod aus, um fortzufahren.</value>
+  </data>
+  <data name="UpdateChecking" xml:space="preserve">
+    <value>Updates werden geprüft</value>
+  </data>
+  <data name="UpdateNothingFound" xml:space="preserve">
+    <value>Borea hat nichts gefunden, das es jetzt aktualisieren kann.</value>
+  </data>
+  <data name="InstallChoicesRecommendedHint" xml:space="preserve">
+    <value>Borea fügt die Mods hinzu, die du anhakst.</value>
+  </data>
+  <data name="InstallChoicesSuggestedHint" xml:space="preserve">
+    <value>Borea fügt diese Mods nicht hinzu. Du kannst sie später unter Entdecken installieren.</value>
   </data>
 </root>
