@@ -481,6 +481,7 @@ public partial class MainViewModel
         VersionFilter = OptionFor(SavedReleaseChannel);
 
         _contentShareHost = null;
+        ForgetContentOwner();
         FillLinks(ContentLinks, item.Links);
         OnPropertyChanged(nameof(HasContentLinks));
 
@@ -572,6 +573,7 @@ public partial class MainViewModel
             ContentLinks.Add(link);
         OnPropertyChanged(nameof(HasContentLinks));
         OnPropertyChanged(nameof(ContentShareHostText));
+        await ShowContentOwnerAsync(item, host);
     }
 
     // the order and names of the detail panel in #8; unknown keys follow with a capital first letter

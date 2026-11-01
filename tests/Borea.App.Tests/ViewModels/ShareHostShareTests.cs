@@ -1959,6 +1959,385 @@ public sealed class ShareHostShareTests
         editor.ContinueShareCommand.Execute(null);
     }
 
+    private const string OwnPage = "https://ksamods.gg/vehicles/ExampleRover";
+
+    private static readonly SharedContentEntry OwnRecord = new(ContentType.Vehicle, "ksamods", "ksamods.gg", "ExampleRover", "Example Rover", "1.2.0", new Uri(OwnPage));
+
+    /// <summary>The page of the listed rover, whose owner the record says the player is when <paramref name="record"/> is given.</summary>
+    private static async Task<ViewModelHarness> OwnedPageAsync(FakeHost host, SharedContentEntry? record, string? homepage = null, bool isYanked = false)
+    {
+        var links = homepage is null ? string.Empty : $$""" "links": { "homepage": "{{homepage}}" }, """;
+        var vehicles = ListedRover.Replace("\"releases\": { \"ksamods\"", links + "\"releases\": { \"ksamods\"", StringComparison.Ordinal);
+        if (isYanked)
+            vehicles = vehicles.Replace("\"release_status\": \"stable\"", "\"release_status\": \"stable\", \"yanked\": true", StringComparison.Ordinal);
+
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles), shareHostClient: host);
+        if (record is not null)
+            await harness.Services.SharedContent.RecordAsync(record, author: null);
+
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+        return harness;
+    }
+
+    /// <summary>The page of a rover that the player owns, for the views.</summary>
+    internal static Task<ViewModelHarness> OwnedPageHarnessAsync() => OwnedPageAsync(new FakeHost(), OwnRecord);
+
+    /// <summary>The page of a rover whose last version the player took down, and the index knows that too.</summary>
+    internal static Task<ViewModelHarness> OwnedPageWithoutVersionsHarnessAsync() => OwnedPageAsync(new FakeHost(), OwnRecord with { Version = string.Empty }, isYanked: true);
+
+    private static async Task<ShareManageDialog> TakeDownDialogAsync(ViewModelHarness harness)
+    {
+        await harness.ViewModel.TakeDownContentVersionCommand.ExecuteAsync(null);
+        return Assert.IsType<ShareManageDialog>(harness.ViewModel.ShareManage);
+    }
+
+    private static ShareManageDialog ChangeDialog(ViewModelHarness harness)
+    {
+        harness.ViewModel.ChangeContentOnHostCommand.Execute(null);
+        return Assert.IsType<ShareManageDialog>(harness.ViewModel.ShareManage);
+    }
+
+    [Theory]
+    [InlineData(OwnPage, null, OwnPage)]
+    [InlineData(null, OwnPage, OwnPage)]
+    [InlineData(null, "https://evil.example/ExampleRover", null)]
+    [InlineData(null, null, null)]
+    public async Task ContentPage_OwnListing_LinksThePageOfTheRecordOrAHomepageOnTheHost(string? recorded, string? homepage, string? expected)
+    {
+        var record = OwnRecord with { Page = recorded is null ? null : new Uri(recorded) };
+        using var harness = await OwnedPageAsync(new FakeHost(), record, homepage);
+        var viewModel = harness.ViewModel;
+        var opened = new List<string>();
+        viewModel.OpenWithSystem = opened.Add;
+
+        Assert.True(viewModel.CanManageContent);
+        Assert.Equal(expected is null ? null : harness.Localization.FormatShareManageOnHost("ksamods.gg"), viewModel.ContentManageOnHostText);
+
+        viewModel.OpenContentManagePageCommand.Execute(null);
+
+        Assert.Equal(expected is null ? [] : [expected], opened);
+    }
+
+    [Theory]
+    [InlineData(ContentType.Vehicle, "OtherRover", "ksamods")]
+    [InlineData(ContentType.Vehicle, "ExampleRover", "ownhost")]
+    [InlineData(ContentType.Save, "ExampleRover", "ksamods")]
+    public async Task ContentPage_RecordOfAnotherListing_OffersNothing(ContentType type, string id, string hostKey)
+    {
+        using var harness = await OwnedPageAsync(new FakeHost(), OwnRecord with { Type = type, ListingId = id, HostKey = hostKey });
+
+        Assert.False(harness.ViewModel.CanManageContent);
+        Assert.Null(harness.ViewModel.ContentManageOnHostText);
+    }
+
+    [Fact]
+    public async Task ContentPage_NoRecord_OffersNothing_AndTheCommandsOpenNoDialog()
+    {
+        using var harness = await OwnedPageAsync(new FakeHost(), record: null, homepage: OwnPage);
+        var viewModel = harness.ViewModel;
+
+        viewModel.ChangeContentOnHostCommand.Execute(null);
+        await viewModel.TakeDownContentVersionCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.CanManageContent);
+        Assert.False(viewModel.IsShareManageOpen);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Change_SendsOnlyTheChangedFields_AndSaysThatItGoesToDiscoverByARequest(bool hasRequest)
+    {
+        var host = new FakeHost { PullRequest = hasRequest ? new Uri("https://github.com/KSAModding/content-index/pull/130") : null };
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var dialog = ChangeDialog(harness);
+        Assert.Equal(("Example Rover", "A small rover.", "CC0-1.0"), (dialog.Name, dialog.Abstract, dialog.License));
+        Assert.Equal(harness.Localization.ShareManageNoChange, dialog.SendReason);
+        Assert.False(dialog.SendChangeCommand.CanExecute(null));
+
+        dialog.Abstract = "A sturdier rover.";
+        dialog.FreeTags = "Rover, moon";
+        await dialog.SendChangeCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, host.SignIns);
+        var sent = Assert.Single(host.Changes);
+        Assert.Equal(("vehicle", "ExampleRover"), (sent.Type, sent.Id));
+        Assert.Equal((null, "A sturdier rover.", null, null), (sent.Fields.Name, sent.Fields.Abstract, sent.Fields.Description, sent.Fields.License));
+        Assert.Equal(["rover", "moon"], sent.Fields.Tags);
+        Assert.Equal(hasRequest ? harness.Localization.FormatShareManageSent("ksamods.gg") : harness.Localization.FormatShareManageSentLater("ksamods.gg"), dialog.DoneText);
+        Assert.Equal(host.PullRequest, dialog.PullRequest);
+        Assert.False(dialog.ShowsChangeFields);
+        Assert.False(dialog.SendChangeCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Change_ChecksWhatChanged_LikeTheDescribeStep()
+    {
+        var host = new FakeHost();
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var localization = harness.Localization;
+        var dialog = ChangeDialog(harness);
+
+        dialog.Abstract = string.Empty;
+        Assert.Equal(localization.FormatListingStillMissing(localization.ShareMissingSentence), dialog.SendReason);
+
+        dialog.Abstract = new string('a', ListingDraft.AbstractLimit + 1);
+        Assert.Equal(localization.FormatShareSentenceTooLong(ListingDraft.AbstractLimit + 1, ListingDraft.AbstractLimit), dialog.SendReason);
+
+        dialog.Abstract = "A small rover.";
+        dialog.License = "Not a license";
+        Assert.Equal(localization.ShareLicenseInvalid, dialog.SendReason);
+
+        dialog.License = "CC0-1.0";
+        dialog.FreeTags = "!!";
+        Assert.Equal(localization.FormatListingTagInvalid("!!"), dialog.SendReason);
+        Assert.False(dialog.SendChangeCommand.CanExecute(null));
+
+        dialog.FreeTags = string.Empty;
+        dialog.Description = "Longer text.";
+        Assert.Null(dialog.SendReason);
+        Assert.True(dialog.SendChangeCommand.CanExecute(null));
+        Assert.Empty(host.Changes);
+    }
+
+    [Fact]
+    public async Task Change_OpenedAgain_StartsFromWhatTheHostHolds_AndCanSendTheOldTextBack()
+    {
+        var host = new FakeHost();
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var first = ChangeDialog(harness);
+        first.Abstract = "A sturdier rover.";
+        await first.SendChangeCommand.ExecuteAsync(null);
+        first.CloseCommand.Execute(null);
+        var second = ChangeDialog(harness);
+        Assert.Equal(harness.Localization.ShareManageNoChange, second.SendReason);
+        second.Name = "Sturdy Rover";
+        await second.SendChangeCommand.ExecuteAsync(null);
+        second.CloseCommand.Execute(null);
+
+        var third = ChangeDialog(harness);
+
+        Assert.Equal(("Sturdy Rover", "A sturdier rover."), (third.Name, third.Abstract));
+        Assert.Equal(harness.Localization.ShareManageNoChange, third.SendReason);
+
+        third.Abstract = "A small rover.";
+        await third.SendChangeCommand.ExecuteAsync(null);
+
+        var sent = host.Changes.Last().Fields;
+        Assert.Equal((null, "A small rover."), (sent.Name, sent.Abstract));
+    }
+
+    [Fact]
+    public async Task TakeDown_OpeningSendsNothing_TheConfirmationNamesTheChosenVersion_AndOnlyItsButtonSends()
+    {
+        var host = new FakeHost();
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var localization = harness.Localization;
+
+        var dialog = await TakeDownDialogAsync(harness);
+
+        Assert.Equal(["1.2.0", "1.0.0"], dialog.Versions);
+        Assert.Null(dialog.SelectedVersion);
+        Assert.Null(dialog.TakeDownWarning);
+        Assert.False(dialog.TakeDownCommand.CanExecute(null));
+
+        dialog.SelectedVersion = "1.2.0";
+
+        Assert.Equal(localization.FormatShareTakeDownWarning("1.2.0", "Example Rover", "ksamods.gg"), dialog.TakeDownWarning);
+        Assert.Equal(localization.FormatShareTakeDownVersion("1.2.0"), dialog.TakeDownText);
+        Assert.Empty(host.TakeDowns);
+
+        await dialog.TakeDownCommand.ExecuteAsync(null);
+
+        Assert.Equal(new TakeDown("vehicle", "ExampleRover", "1.2.0"), Assert.Single(host.TakeDowns));
+        Assert.Equal(localization.FormatShareTakenDown("1.2.0"), dialog.DoneText);
+        Assert.Equal("1.0.0", Assert.Single(await harness.Services.SharedContent.ListAsync()).Version);
+        Assert.False(dialog.TakeDownCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task DoneStep_TakesDownThePublishedVersion_AndNoLongerSaysThatItIsOnline()
+    {
+        var host = new FakeHost { Page = new Uri(OwnPage) };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await PublishAsync(harness);
+        var localization = harness.Localization;
+        Assert.Equal(localization.ShareDoneNow, editor.ShareDoneStateText);
+        Assert.Equal(localization.FormatShareManageOnHost("ksamods.gg"), editor.ShareDoneManageOnHostText);
+
+        editor.TakeDownShareDoneCommand.Execute(null);
+        var dialog = Assert.IsType<ShareManageDialog>(harness.ViewModel.ShareManage);
+        Assert.Equal("1.0.0", dialog.SelectedVersion);
+        Assert.False(dialog.ShowsVersionChoice);
+        Assert.Empty(host.TakeDowns);
+
+        await dialog.TakeDownCommand.ExecuteAsync(null);
+        dialog.CloseCommand.Execute(null);
+
+        Assert.Equal(new TakeDown("vehicle", "ExampleRover", "1.0.0"), Assert.Single(host.TakeDowns));
+        Assert.False(harness.ViewModel.IsShareManageOpen);
+        Assert.Equal(localization.FormatShareTakenDownHeading("Example Rover", "1.0.0"), editor.ShareDoneHeadingText);
+        Assert.Equal(localization.FormatShareTakenDown("1.0.0"), editor.ShareDoneStateText);
+        Assert.Null(editor.ShareDoneDiscoverText);
+        Assert.Null(editor.ShareDoneTakeDownText);
+        Assert.Equal(string.Empty, Assert.Single(await harness.Services.SharedContent.ListAsync()).Version);
+
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        Assert.True(editor.IsAskingShareListing);
+        Assert.Null(editor.ShareVersionOnlineText);
+    }
+
+    [Fact]
+    public async Task DoneStep_NewListing_ChangeStartsFromWhatItPublished()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await PublishAsync(harness);
+
+        editor.ChangeShareDoneOnHostCommand.Execute(null);
+
+        var dialog = Assert.IsType<ShareManageDialog>(harness.ViewModel.ShareManage);
+        Assert.Equal((editor.Draft.Name, editor.Draft.Abstract, editor.Draft.License), (dialog.Name, dialog.Abstract, dialog.License));
+        Assert.Null(editor.ShareDoneManageOnHostText);
+        Assert.Equal(harness.Localization.FormatShareOpenHost("ksamods.gg"), dialog.ManageLinkText);
+    }
+
+    [Fact]
+    public async Task Refusal_NotOwner_ShowsItsMessage_KeepsTheRecord_AndOffersAnotherAccount()
+    {
+        var host = new FakeHost { ManageFailure = new ShareHostException(ShareHostFailure.Host, "Your account does not own ExampleRover.", "not_owner") };
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var dialog = ChangeDialog(harness);
+        dialog.Name = "New name";
+
+        await dialog.SendChangeCommand.ExecuteAsync(null);
+
+        Assert.Equal("Your account does not own ExampleRover.", dialog.Error);
+        Assert.Null(dialog.DoneText);
+        Assert.Equal(harness.Localization.FormatShareSignOut("ksamods.gg"), dialog.SignOutText);
+        Assert.Single(await harness.Services.SharedContent.ListAsync());
+
+        dialog.SignOutCommand.Execute(null);
+
+        Assert.Equal(1, host.SignOuts);
+        Assert.Null(dialog.SignOutText);
+        Assert.Null(dialog.Error);
+    }
+
+    [Fact]
+    public async Task Refusal_HostWithoutTheRequest_SaysSo_AndTheLinkStays()
+    {
+        var host = new FakeHost { ManageFailure = new ShareHostException(ShareHostFailure.NotOffered, "ksamods.gg does not offer this request.") };
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var opened = new List<string>();
+        harness.ViewModel.OpenWithSystem = opened.Add;
+        var dialog = await TakeDownDialogAsync(harness);
+        dialog.SelectedVersion = "1.0.0";
+
+        await dialog.TakeDownCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatShareManageNotOffered("ksamods.gg"), dialog.Error);
+        Assert.Null(dialog.DoneText);
+        Assert.Equal("1.2.0", Assert.Single(await harness.Services.SharedContent.ListAsync()).Version);
+        Assert.Equal(harness.Localization.FormatShareManageOnHost("ksamods.gg"), dialog.ManageLinkText);
+
+        dialog.OpenManageLinkCommand.Execute(null);
+
+        Assert.Equal([OwnPage], opened);
+    }
+
+    [Theory]
+    [InlineData(ShareHostFailure.NetworkError, false)]
+    [InlineData(ShareHostFailure.UnexpectedResponse, false)]
+    [InlineData(ShareHostFailure.Unavailable, false)]
+    [InlineData(ShareHostFailure.Host, true)]
+    public async Task TakeDown_WithoutAClearAnswer_SaysThatItMayHaveGoneThrough(ShareHostFailure failure, bool isServerError)
+    {
+        var host = new FakeHost { ManageFailure = new ShareHostException(failure, "Busy.") { IsServerError = isServerError } };
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var dialog = await TakeDownDialogAsync(harness);
+        dialog.SelectedVersion = "1.0.0";
+
+        await dialog.TakeDownCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatShareTakeDownLostAnswer("ksamods.gg", "1.0.0"), dialog.Error);
+        Assert.Null(dialog.DoneText);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task TakeDown_SignInFails_SaysWhatFailed_AndNotThatItMayHaveGoneThrough(int tokenRefusals)
+    {
+        var host = new FakeHost { TokenRefusals = tokenRefusals };
+        host.DuringSignIn = () => host.SignIns > tokenRefusals ? throw new ShareHostException(ShareHostFailure.NetworkError, "No network.") : Task.CompletedTask;
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var dialog = await TakeDownDialogAsync(harness);
+        dialog.SelectedVersion = "1.0.0";
+
+        await dialog.TakeDownCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatListingShareHostNetwork("ksamods.gg"), dialog.Error);
+        Assert.Equal(tokenRefusals, host.TakeDowns.Count);
+    }
+
+    [Fact]
+    public async Task TakeDown_TokenRefusedOnce_SignsInAndSendsOnceMore()
+    {
+        var host = new FakeHost { TokenRefusals = 1 };
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var dialog = await TakeDownDialogAsync(harness);
+        dialog.SelectedVersion = "1.0.0";
+
+        await dialog.TakeDownCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, host.SignIns);
+        Assert.Equal(2, host.TakeDowns.Count);
+        Assert.Equal(harness.Localization.FormatShareTakenDown("1.0.0"), dialog.DoneText);
+    }
+
+    [Fact]
+    public async Task Close_DuringTheSignIn_SendsNothing()
+    {
+        var host = new FakeHost();
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var dialog = await TakeDownDialogAsync(harness);
+        dialog.SelectedVersion = "1.0.0";
+        host.DuringSignIn = () =>
+        {
+            dialog.CloseCommand.Execute(null);
+            return Task.CompletedTask;
+        };
+
+        await dialog.TakeDownCommand.ExecuteAsync(null);
+
+        Assert.Empty(host.TakeDowns);
+        Assert.False(harness.ViewModel.IsShareManageOpen);
+    }
+
+    [Fact]
+    public async Task Close_IsOffWhileARequestIsOut()
+    {
+        var answer = new TaskCompletionSource();
+        var host = new FakeHost { DuringSend = () => answer.Task };
+        using var harness = await OwnedPageAsync(host, OwnRecord);
+        var dialog = await TakeDownDialogAsync(harness);
+        dialog.SelectedVersion = "1.0.0";
+        var sending = dialog.TakeDownCommand.ExecuteAsync(null);
+
+        Assert.True(dialog.IsSending);
+        Assert.False(dialog.CloseCommand.CanExecute(null));
+
+        answer.SetResult();
+        await sending;
+
+        Assert.True(dialog.CloseCommand.CanExecute(null));
+    }
+
     /// <summary>Runs a click at the first moment the page takes one again, which is before the rename lists the instance again.</summary>
     private static void ClickWhenTheModalCloses(MainViewModel viewModel, Action click)
     {

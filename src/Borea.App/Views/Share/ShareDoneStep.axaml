@@ -14,7 +14,7 @@
                 <Path Classes="icon" Data="{StaticResource Icon.CheckCircle}" Stroke="{StaticResource Brush.Positive}" VerticalAlignment="Top" />
                 <TextBlock Grid.Column="2" Classes="heading-md" Text="{Binding ListingEditor.ShareDoneHeadingText}" TextWrapping="Wrap" VerticalAlignment="Center" />
             </Grid>
-            <TextBlock Classes="body-md" Text="{Binding Localization.ShareDoneNow}" TextWrapping="Wrap" />
+            <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareDoneStateText}" TextWrapping="Wrap" />
             <WrapPanel ItemSpacing="12" LineSpacing="8" Margin="0,8,0,8">
                 <Button Classes="cta" Command="{Binding ListingEditor.OpenShareDonePageCommand}" ToolTip.Tip="{Binding ListingEditor.ShareDoneLink}">
                     <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareDoneOpenText}" VerticalAlignment="Center" />
@@ -26,7 +26,23 @@
                 <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
                 <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" />
             </Grid>
-            <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.ShareDoneDiscoverText}" TextWrapping="Wrap" />
+            <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.ShareDoneDiscoverText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareDoneDiscoverText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+            <!-- the host took the publish from this account, so the player owns the listing -->
+            <StackPanel Spacing="4" Margin="0,8,0,0">
+                <TextBlock Classes="body-md secondary" Text="{Binding Localization.ShareManageDoneHint}" TextWrapping="Wrap" />
+                <WrapPanel ItemSpacing="8" LineSpacing="4" Margin="-8,0,0,0">
+                    <Button Classes="link" Command="{Binding ListingEditor.ChangeShareDoneOnHostCommand}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareManageChange}" />
+                    </Button>
+                    <Button Classes="link" Command="{Binding ListingEditor.TakeDownShareDoneCommand}" IsVisible="{Binding ListingEditor.ShareDoneTakeDownText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareDoneTakeDownText}" />
+                    </Button>
+                    <Button Classes="link" Command="{Binding ListingEditor.OpenShareDoneManagePageCommand}" IsVisible="{Binding ListingEditor.ShareDoneManageOnHostText, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.ControlTypeOverride="Hyperlink">
+                        <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareDoneManageOnHostText}" />
+                    </Button>
+                </WrapPanel>
+            </StackPanel>
 
             <!-- the request is for those who follow it, and a player does not need it -->
             <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.SharePullRequest, Converter={x:Static ObjectConverters.IsNotNull}}">

@@ -988,6 +988,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var item in GamePatchNotes)
             item.RefreshText();
         OnPropertyChanged(nameof(AnnouncementDateText));
+        RefreshContentManage();
         RefreshPackText();
         Tasks.RefreshText();
     }

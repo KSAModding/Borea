@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
@@ -7,6 +9,7 @@ using Borea.App.Views;
 using Borea.App.Views.Pages;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using ContentPage = Borea.App.Views.Pages.ContentPage;
 
 namespace Borea.App.Tests.Views;
 
@@ -358,6 +361,8 @@ public sealed class GameSaveShareViewTests
         Assert.Contains(localization.ShareAnother, texts);
         Assert.Contains(localization.ShareDoneNewListing, texts);
         Assert.Contains("No browser.", texts);
+        Assert.Contains(localization.ShareManageChange, texts);
+        Assert.Contains(localization.FormatShareTakeDownVersion("1.0.0"), texts);
         Assert.Contains(localization.ShareTechnicalDetails, texts);
         Assert.DoesNotContain(localization.ShareShowRequest, texts);
         Assert.DoesNotContain(editor.ShareCheckOnHostText, texts);
@@ -422,6 +427,119 @@ public sealed class GameSaveShareViewTests
             window.Close();
             return Task.FromResult(shows);
         });
+
+    [Fact]
+    public async Task ContentPage_OwnListing_ShowsTheWaysToManageIt()
+    {
+        using var harness = await ShareHostShareTests.OwnedPageHarnessAsync();
+        var localization = harness.Localization;
+
+        var texts = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ContentPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var shown = page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+            window.Close();
+            return Task.FromResult(shown);
+        });
+
+        Assert.Contains(localization.ShareManageHeading, texts);
+        Assert.Contains(localization.ShareManageChange, texts);
+        Assert.Contains(localization.ShareManageTakeDown, texts);
+        Assert.Contains(localization.FormatShareManageOnHost("ksamods.gg"), texts);
+    }
+
+    [Fact]
+    public async Task ManageModal_TakeDown_ShowsTheWarningAndTheButtonOnlyOnceAVersionIsChosen()
+    {
+        using var harness = await ShareHostShareTests.OwnedPageHarnessAsync();
+        var localization = harness.Localization;
+        await harness.ViewModel.TakeDownContentVersionCommand.ExecuteAsync(null);
+        var dialog = harness.ViewModel.ShareManage!;
+
+        var (before, buttonBefore, after, buttonAfter) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var modal = new ShareManageModal();
+            var window = new Window { Width = 1280, Height = 480, Content = modal, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var shownBefore = Shown(modal);
+            var hasButtonBefore = ShowsTakeDownButton(modal);
+            dialog.SelectedVersion = "1.2.0";
+            window.UpdateLayout();
+            var shownAfter = Shown(modal);
+            var hasButtonAfter = ShowsTakeDownButton(modal);
+            window.Close();
+            return Task.FromResult((shownBefore, hasButtonBefore, shownAfter, hasButtonAfter));
+        });
+
+        Assert.Contains(localization.ShareTakeDownChoose, before);
+        Assert.False(buttonBefore);
+        Assert.Contains(localization.FormatShareTakeDownWarning("1.2.0", "Example Rover", "ksamods.gg"), after);
+        Assert.True(buttonAfter);
+        Assert.Contains(localization.FormatShareManageOnHost("ksamods.gg"), after);
+
+        bool ShowsTakeDownButton(Control modal) =>
+            modal.GetVisualDescendants().OfType<Button>().Any(button => button.IsEffectivelyVisible && button.Command == dialog.TakeDownCommand);
+
+        static List<string?> Shown(Control modal) =>
+            [.. modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text)];
+    }
+
+    [Fact]
+    public async Task ManageModal_TakeDown_NoKnownVersion_SaysSo_AndKeepsTheLink()
+    {
+        using var harness = await ShareHostShareTests.OwnedPageWithoutVersionsHarnessAsync();
+        var localization = harness.Localization;
+        await harness.ViewModel.TakeDownContentVersionCommand.ExecuteAsync(null);
+
+        var texts = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var modal = new ShareManageModal();
+            var window = new Window { Width = 1280, Height = 480, Content = modal, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var shown = modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+            window.Close();
+            return Task.FromResult(shown);
+        });
+
+        Assert.Contains(localization.ShareTakeDownNoVersion, texts);
+        Assert.Contains(localization.FormatShareManageOnHost("ksamods.gg"), texts);
+    }
+
+    /// <summary>The fields in the order of the modal, with the license box that shows for another license.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public async Task ManageModal_Change_EscapeInAField_Closes(int field)
+    {
+        using var harness = await ShareHostShareTests.OwnedPageHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.ChangeContentOnHostCommand.Execute(null);
+        var dialog = viewModel.ShareManage!;
+        dialog.SelectedLicense = dialog.LicenseChoices[^1];
+
+        var isFocused = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var modal = new ShareManageModal();
+            var window = new Window { Width = 1280, Height = 832, Content = modal, DataContext = viewModel };
+            window.Show();
+            window.UpdateLayout();
+            var focused = modal.GetVisualDescendants().OfType<TextBox>().Where(box => box.Classes.Contains("field")).ElementAt(field).Focus();
+            window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+            window.Close();
+            return Task.FromResult(focused);
+        });
+
+        Assert.True(isFocused);
+        Assert.False(viewModel.IsShareManageOpen);
+    }
 
     private static Task<List<string?>> PageTextsAsync(ViewModelHarness harness, Func<Task>? afterShow = null) =>
         HeadlessApp.RunAsync(harness, async () =>

@@ -3996,6 +3996,72 @@
   <data name="ShareOpenHostFormat" xml:space="preserve">
     <value>Open {0}</value>
   </data>
+  <data name="ShareManageHeading" xml:space="preserve">
+    <value>You shared this</value>
+  </data>
+  <data name="ShareManageDoneHint" xml:space="preserve">
+    <value>You can change the page or take down a version later.</value>
+  </data>
+  <data name="ShareManageChange" xml:space="preserve">
+    <value>Change the page</value>
+  </data>
+  <data name="ShareManageTakeDown" xml:space="preserve">
+    <value>Take down a version</value>
+  </data>
+  <data name="ShareManageOnHostFormat" xml:space="preserve">
+    <value>Manage it on {0}</value>
+  </data>
+  <data name="ShareManageChangeTitleFormat" xml:space="preserve">
+    <value>Change the page of {0}</value>
+  </data>
+  <data name="ShareManageChangeHint" xml:space="preserve">
+    <value>Your change goes to Discover as a request. A field that you do not change stays as it is.</value>
+  </data>
+  <data name="ShareManageNoChange" xml:space="preserve">
+    <value>Nothing is changed yet.</value>
+  </data>
+  <data name="ShareManageSend" xml:space="preserve">
+    <value>Send the change</value>
+  </data>
+  <data name="ShareManageSendingFormat" xml:space="preserve">
+    <value>Sending the change to {0}...</value>
+  </data>
+  <data name="ShareManageSentFormat" xml:space="preserve">
+    <value>{0} has your change. It shows up in Discover after its request went through, and this can take some hours. You do not need to do anything.</value>
+  </data>
+  <data name="ShareManageSentLaterFormat" xml:space="preserve">
+    <value>{0} has your change. It shows up in Discover later, because {0} could not send the request yet and tries again by itself. You do not need to do anything.</value>
+  </data>
+  <data name="ShareManageNotOfferedFormat" xml:space="preserve">
+    <value>{0} does not offer this in Borea. Use the link below to do it on {0}.</value>
+  </data>
+  <data name="ShareTakeDownTitleFormat" xml:space="preserve">
+    <value>Take down a version of {0}</value>
+  </data>
+  <data name="ShareTakeDownChoose" xml:space="preserve">
+    <value>Choose the version to take down.</value>
+  </data>
+  <data name="ShareTakeDownNoVersion" xml:space="preserve">
+    <value>Borea knows no version to take down. Use the link below.</value>
+  </data>
+  <data name="ShareTakeDownWarningFormat" xml:space="preserve">
+    <value>This takes down version {0} of {1} on {2}. Its file and its copy on the Internet Archive are deleted. You cannot undo this, and the version number {0} can never be used again. The download can keep working for up to 10 minutes.</value>
+  </data>
+  <data name="ShareTakeDownVersionFormat" xml:space="preserve">
+    <value>Take down version {0}</value>
+  </data>
+  <data name="ShareTakingDownFormat" xml:space="preserve">
+    <value>Taking down version {0}...</value>
+  </data>
+  <data name="ShareTakenDownFormat" xml:space="preserve">
+    <value>Version {0} is taken down. Its download can keep working for up to 10 minutes, and it leaves Discover within some hours.</value>
+  </data>
+  <data name="ShareTakenDownHeadingFormat" xml:space="preserve">
+    <value>Version {1} of {0} is taken down</value>
+  </data>
+  <data name="ShareTakeDownLostAnswerFormat" xml:space="preserve">
+    <value>Borea got no answer from {0}, so it does not know whether version {1} is taken down. Check the page on {0}.</value>
+  </data>
   <data name="ShareDoneHeadingFormat" xml:space="preserve">
     <value>{0} is published</value>
   </data>

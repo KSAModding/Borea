@@ -108,10 +108,14 @@ public sealed partial class ListingEditor
 
     public bool IsShareDone => ShareFlowStep == ShareFlowStep.Done;
 
-    public string? ShareDoneHeadingText => _sharePublished is { } done ? Localization.FormatShareDoneHeading(done.Name) : null;
+    public string? ShareDoneHeadingText => _sharePublished is not { } done ? null
+        : _isShareDoneTakenDown ? Localization.FormatShareTakenDownHeading(done.Name, done.Version)
+        : Localization.FormatShareDoneHeading(done.Name);
+
+    public string ShareDoneStateText => _isShareDoneTakenDown && _sharePublished is { } done ? Localization.FormatShareTakenDown(done.Version) : Localization.ShareDoneNow;
 
     /// <summary>When Discover shows it. A new listing without a request shows later, because the host still has to send that request.</summary>
-    public string? ShareDoneDiscoverText => _sharePublished is not { } done ? null
+    public string? ShareDoneDiscoverText => _sharePublished is not { } done || _isShareDoneTakenDown ? null
         : done.IsNewVersion ? Localization.ShareDoneNewVersion
         : SharePullRequest is null ? Localization.FormatShareDoneNewListingLater(done.Host.Name)
         : Localization.ShareDoneNewListing;
@@ -122,6 +126,14 @@ public sealed partial class ListingEditor
     public string? ShareDoneOpenText => _sharePublished is not { } done ? null
         : done.Page is null ? Localization.FormatShareOpenHost(done.Host.Name)
         : Localization.ShareOpenPage;
+
+    public string? ShareDoneTakeDownText => _sharePublished is { } done && !_isShareDoneTakenDown ? Localization.FormatShareTakeDownVersion(done.Version) : null;
+
+    /// <summary>The page in the answer of the host, else the homepage that the index lists for a new version while it is on the host. Borea never builds this address.</summary>
+    private Uri? ShareDoneManagePage => _sharePublished is not { } done ? null
+        : done.Page ?? (ListedShareAuthored?.Links.TryGetValue("homepage", out var homepage) == true ? done.Host.PageOnHost(homepage) : null);
+
+    public string? ShareDoneManageOnHostText => _sharePublished is { } done && ShareDoneManagePage is not null ? Localization.FormatShareManageOnHost(done.Host.Name) : null;
 
     /// <summary>A new version sends only the upload and its mods, because the host keeps the listing as it is.</summary>
     public bool IsNewVersionShare => _shareListing is not null;
@@ -164,8 +176,10 @@ public sealed partial class ListingEditor
 
     public string PreviewHeading => !IsShareStep ? Localization.ListingPreview : IsSave ? Localization.SharePreviewSave : Localization.SharePreviewVehicle;
 
-    public IReadOnlyList<ShareLicenseChoice> ShareLicenseChoices =>
-        [.. ShareLicenses.Select(license => new ShareLicenseChoice(license.Spdx, license.Label(Localization))), new ShareLicenseChoice(null, Localization.ShareLicenseOther)];
+    public IReadOnlyList<ShareLicenseChoice> ShareLicenseChoices => ShareLicenseChoicesIn(Localization);
+
+    internal static IReadOnlyList<ShareLicenseChoice> ShareLicenseChoicesIn(LocalizationService localization) =>
+        [.. ShareLicenses.Select(license => new ShareLicenseChoice(license.Spdx, license.Label(localization))), new ShareLicenseChoice(null, localization.ShareLicenseOther)];
 
     public bool IsOtherShareLicense => _choseOtherLicense;
 
@@ -199,7 +213,7 @@ public sealed partial class ListingEditor
         }
     }
 
-    private static bool IsListedLicense(string license) => ShareLicenses.Any(listed => listed.Spdx == license.Trim());
+    internal static bool IsListedLicense(string license) => ShareLicenses.Any(listed => listed.Spdx == license.Trim());
 
     /// <summary>The name that the index lists for the mod, or the id when it lists none.</summary>
     internal string ShareModName(string id) => (_snapshot is { } snapshot ? ListingDependencyChoices.Listing(snapshot, id)?.Authored?.Name : null) ?? id;
@@ -232,7 +246,10 @@ public sealed partial class ListingEditor
         if (share.SharedEntry is { } entry && !_declinedShareListings.Contains(entry.ListingId))
         {
             var listed = listings.FirstOrDefault(listing => ModIds.Equals(listing.Id, entry.ListingId));
-            return new ShareListing(entry.ListingId, listed?.Authored?.Name ?? entry.FolderName, entry.HostKey, entry.HostName, entry.ListingId, listed is null ? entry.Version : NewestShareVersion(listed, entry.Version), listed is not null && HoldsShareName(listed, name));
+
+            // A record names no version once the player took down the last one.
+            var recorded = entry.Version.Length > 0 ? entry.Version : null;
+            return new ShareListing(entry.ListingId, listed?.Authored?.Name ?? entry.FolderName, entry.HostKey, entry.HostName, entry.ListingId, listed is null ? recorded : NewestShareVersion(listed, recorded), listed is not null && HoldsShareName(listed, name));
         }
 
         return listings.Where(listing => IsUndeclined(listing, share.InstalledListingId))
@@ -530,4 +547,43 @@ public sealed partial class ListingEditor
 
     [RelayCommand]
     private Task CopyShareDoneLinkAsync() => _owner.CopyShareLinkAsync(ShareDoneLink?.AbsoluteUri);
+
+    [RelayCommand]
+    private void ChangeShareDoneOnHost()
+    {
+        if (ShareDoneManageTarget([]) is { } target)
+            _owner.BeginShareManage(target, ShareManageAction.Change);
+    }
+
+    [RelayCommand]
+    private void TakeDownShareDone()
+    {
+        if (_sharePublished is { } done && !_isShareDoneTakenDown && ShareDoneManageTarget([done.Version]) is { } target)
+            _owner.BeginShareManage(target, ShareManageAction.TakeDown);
+    }
+
+    [RelayCommand]
+    private void OpenShareDoneManagePage() => OpenShareDoneLink(ShareDoneManagePage);
+
+    /// <summary>A new listing sent the draft, and a new version sent no text, so its fields start from the index, or empty while the index does not hold it.</summary>
+    private ShareManageTarget? ShareDoneManageTarget(IReadOnlyList<string> versions)
+    {
+        if (_sharePublished is not { } done || _share is not { } share)
+            return null;
+
+        var fields = !done.IsNewVersion ? new ShareManageFields(Draft.Name, Draft.Abstract, Draft.Description, Draft.License, Draft.Tags)
+            : ListedShareAuthored is { } listed ? new ShareManageFields(listed.Name, listed.Abstract, listed.Description, listed.License, listed.Tags)
+            : new ShareManageFields(done.Name, string.Empty, null, string.Empty, []);
+        return new ShareManageTarget(done.Host, share.Entry.Kind.ToContentType(), done.Id, done.Name, ShareDoneManagePage, fields, versions);
+    }
+
+    /// <summary>The published version of the step is gone, so the step no longer says that everyone can download it.</summary>
+    internal void ShowShareTakenDown(string listingId, string version)
+    {
+        if (_sharePublished is not { } done || !ModIds.Equals(done.Id, listingId) || done.Version != version)
+            return;
+
+        _isShareDoneTakenDown = true;
+        RefreshShareRun();
+    }
 }
