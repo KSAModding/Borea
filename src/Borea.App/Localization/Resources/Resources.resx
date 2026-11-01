@@ -3931,7 +3931,7 @@
     <value>This installed mod needs {0}, but it is not installed.</value>
   </data>
   <data name="InstallMessageSearchLimitFormat" xml:space="preserve">
-    <value>Borea stopped after {0:N0} combinations and found no plan.</value>
+    <value>Borea stopped after {0:N0} combinations and found no plan for {1}. If you changed several mods at once, change fewer of them.</value>
   </data>
   <data name="InstallMessageRetractedPack" xml:space="preserve">
     <value>This pack version is retracted.</value>

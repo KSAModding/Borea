@@ -3826,7 +3826,7 @@
     <value>此已安装模组需要 {0}，但尚未安装。</value>
   </data>
   <data name="InstallMessageSearchLimitFormat" xml:space="preserve">
-    <value>Borea 检查了 {0:N0} 种组合后停止，未找到可行计划。</value>
+    <value>Borea 检查了 {0:N0} 种组合后停止，未找到 {1} 的可行计划。如果你一次更改了多个模组，请减少更改的模组数量。</value>
   </data>
   <data name="InstallMessageRetractedPack" xml:space="preserve">
     <value>此整合包版本已撤回。</value>

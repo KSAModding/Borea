@@ -190,7 +190,7 @@ public partial class MainViewModel
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
             var requested = await requestMods(instance);
-            var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, requested), null);
+            var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, requested), null, run.InstallStop.Token);
             var choices = InstallChoices.AreNeeded(plan) ? NewChoices(instanceId, requested, plan) : null;
             var wait = (plan.IsReady || choices is not null) && waitForConfirmation is not null && await waitForConfirmation(instance, plan);
 
@@ -228,6 +228,13 @@ public partial class MainViewModel
         {
             run.TaskItem.StoppedAfter = (exception.Completed, exception.Total);
             stopped = StoppedText(row, exception.Completed, exception.Total);
+        }
+        catch (OperationCanceledException) when (!executed && run.InstallStop.IsRequested)
+        {
+            // the plan writes nothing, so a stop during it ends the run the way a stop before the first mod does
+            if (row is IUpdateRow update)
+                update.Changelogs = [];
+            stopped = StoppedText(row);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -678,12 +685,12 @@ public partial class MainViewModel
     /// </summary>
     /// <summary>
     /// The messages after the id of their mod. A message about a recorded vehicle or save comes first and names the mod
-    /// itself, so it stays visible where a row shows only the start of the text.
+    /// itself, so it stays visible where a row shows only the start of the text. A stopped search belongs to no mod, so it has no id.
     /// </summary>
     private static string Describe(IEnumerable<PlanningMessage> messages)
         => string.Join(" ", messages
             .OrderBy(message => !BreaksContent(message))
-            .Select(message => BreaksContent(message) ? PlanningText.Message(message) : $"{message.ModId}: {PlanningText.Message(message)}"));
+            .Select(message => BreaksContent(message) || message.Kind == PlanningMessageKind.SearchLimit ? PlanningText.Message(message) : $"{message.ModId}: {PlanningText.Message(message)}"));
 
     private static bool BreaksContent(PlanningMessage message) => message.Kind is PlanningMessageKind.BreaksVehicle or PlanningMessageKind.BreaksSave;
 }
