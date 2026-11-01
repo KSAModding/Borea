@@ -292,6 +292,23 @@ public sealed class InstallChoicesTests
     }
 
     [Fact]
+    public async Task Install_RecommendationThatNeedsAModInConflictWithAnInstalledMod_StartsDeselected()
+    {
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [Recommends("extra")]);
+        harness.SpaceDock.Releases.AddRange([release, Release("extra", dependencies: [new ModDependency("needed", ModDependencyKind.Required)]), Release("needed", dependencies: [new ModDependency("kept", ModDependencyKind.Conflict)]), Release("kept")]);
+        await ActivateInstanceAsync(harness);
+        await InstalledContent.AddAsync(harness, "kept", activate: true, ownership: ModInstallOwnership.Borea);
+        var row = new VersionItem(harness.ViewModel, release);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.False(Assert.Single(row.Choices!.Recommended).IsSelected);
+        Assert.Null(row.InstallError);
+        Assert.True(row.PendingPlan is { IsReady: true });
+    }
+
+    [Fact]
     public async Task Install_RequiredAlternative_InstallsTheChosenMod()
     {
         using var harness = await CreateWithGameAsync();

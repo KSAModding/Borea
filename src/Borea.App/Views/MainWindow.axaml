@@ -128,6 +128,9 @@
         </views:UpdateAllModal.IsVisible>
     </views:UpdateAllModal>
 
+    <!-- modal: a plan stopped because two mods do not work together, over the plan of a duplicate or an import -->
+    <views:ConflictModal IsVisible="{Binding IsConflictOpen}" />
+
     <!-- modal: the game Borea found on the first start -->
     <views:FoundGameModal IsVisible="{Binding IsFoundGameModalOpen}" />
 

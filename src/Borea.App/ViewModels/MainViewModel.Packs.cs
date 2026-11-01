@@ -612,6 +612,8 @@ public partial class MainViewModel
                 if (choices is not null)
                     ReplanOnChange(pack, choices, replanned => HoldPack(pack, replanned));
                 pack.ReopenContentName = AskContentName(content, pack.ContentNames, () => PlanPackInstallAsync(pack, instanceId, newInstanceName, version, confirm: true));
+                if (plan is not null)
+                    await ShowConflictsAsync(plan, () => PlanPackInstallAsync(pack, instanceId, newInstanceName, version, confirm));
             }
             else
             {
@@ -835,6 +837,9 @@ public partial class MainViewModel
         }
 
         pack.InstallError = IncompleteText(result);
+        if (result.Plan is { } plan)
+            await ShowConflictsAsync(plan, () => PlanPackInstallAsync(pack, newInstanceName is null ? request.InstanceId : null, newInstanceName, pack.RequestedVersion));
+
         return null;
     }
 

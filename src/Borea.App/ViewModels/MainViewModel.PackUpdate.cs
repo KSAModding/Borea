@@ -111,6 +111,9 @@ public partial class MainViewModel
                 HoldPackUpdate(item, pending, result);
                 item.ReopenContentName = AskContentName(result.Content, item.ContentNames, () => UpdatePackAsync(item));
             }
+
+            if (stopped is null && result.Plan is { } planned)
+                await ShowConflictsAsync(planned, () => RetryRow(item, item.InstanceId) is { } shown ? UpdatePackAsync(shown) : Task.CompletedTask);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
