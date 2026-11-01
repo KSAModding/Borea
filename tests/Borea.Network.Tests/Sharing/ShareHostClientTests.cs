@@ -61,18 +61,34 @@ public sealed class ShareHostClientTests
         Assert.Empty(_secrets.Calls);
     }
 
-    [Fact]
-    public async Task SignInAsync_KeptRefreshToken_SignsInWithoutACode()
+    [Theory]
+    [InlineData(TokenJson, "refresh:rt1")]
+    [InlineData("""{"access_token":"at1","token_type":"Bearer"}""", "refresh:rt0")]
+    public async Task SignInAsync_KeptRefreshToken_SignsInWithoutACode(string answer, string kept)
     {
         _secrets.Write(ShareHostClient.SecretName(Host), "refresh:rt0");
-        _tokenAnswers.Enqueue(Json(TokenJson));
+        _tokenAnswers.Enqueue(Json(answer));
         var client = Client();
 
         await client.SignInAsync(Host, keepSignedIn: true);
 
         Assert.True(client.IsSignedIn(Host));
         Assert.Equal("grant_type=refresh_token&refresh_token=rt0&client_id=borea", Assert.Single(_sent).Body);
-        Assert.Equal("refresh:rt1", _secrets.Read(ShareHostClient.SecretName(Host)));
+        Assert.Equal(kept, _secrets.Read(ShareHostClient.SecretName(Host)));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest, """{"error":"invalid_grant"}""", null)]
+    [InlineData(HttpStatusCode.TooManyRequests, """{"error":"invalid_request","error_description":"Too many requests."}""", "refresh:rt0")]
+    public async Task SignInAsync_RefreshRefused_DeletesTheKeptTokenOnlyOnInvalidGrant(HttpStatusCode status, string answer, string? kept)
+    {
+        _secrets.Write(ShareHostClient.SecretName(Host), "refresh:rt0");
+        _tokenAnswers.Enqueue(Json(answer, status));
+        _deviceStatus = HttpStatusCode.ServiceUnavailable;
+
+        await Assert.ThrowsAsync<ShareHostException>(() => Client().SignInAsync(Host, keepSignedIn: true));
+
+        Assert.Equal(kept, _secrets.Read(ShareHostClient.SecretName(Host)));
     }
 
     [Fact]
@@ -359,15 +375,35 @@ public sealed class ShareHostClientTests
     }
 
     [Fact]
-    public async Task UploadAsync_TokenRefused_SignsOutAndDeletesTheKeptToken()
+    public async Task UploadAsync_TokenRefused_SignsOutAndTheKeptRefreshTokenSignsInWithoutACode()
     {
         _apiAnswer = _ => Json(ShareHostReplies.Unauthorized, HttpStatusCode.Unauthorized);
         var client = await SignedInAsync(keep: true);
+        var sent = _sent.Count;
 
         var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.UploadAsync(Host, new MemoryStream([1]), "a.zip", [], null));
 
         Assert.Equal(ShareHostFailure.SignedOut, exception.Failure);
         Assert.False(client.IsSignedIn(Host));
+
+        _tokenAnswers.Enqueue(Json("""{"access_token":"at2","refresh_token":"rt2"}"""));
+        await client.SignInAsync(Host, keepSignedIn: true);
+
+        Assert.True(client.IsSignedIn(Host));
+        Assert.Equal([Api + "uploads", Api + "oauth/token"], _sent.Skip(sent).Select(request => request.Url));
+        Assert.Equal("refresh:rt2", _secrets.Read(ShareHostClient.SecretName(Host)));
+    }
+
+    [Fact]
+    public async Task UploadAsync_TokenRefused_DeletesAKeptAccessToken()
+    {
+        _secrets.Write(ShareHostClient.SecretName(Host), "access:at0");
+        _apiAnswer = _ => Json(ShareHostReplies.Unauthorized, HttpStatusCode.Unauthorized);
+        var client = Client();
+        await client.SignInAsync(Host, keepSignedIn: true);
+
+        await Assert.ThrowsAsync<ShareHostException>(() => client.UploadAsync(Host, new MemoryStream([1]), "a.zip", [], null));
+
         Assert.Null(_secrets.Read(ShareHostClient.SecretName(Host)));
     }
 

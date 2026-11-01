@@ -191,6 +191,97 @@ public sealed class ShareHostShareTests
     }
 
     [Fact]
+    public async Task RefusedToken_SignsInAgainAndSendsOnceMore()
+    {
+        var host = new FakeHost { TokenRefusals = 1 };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal((2, 2), (host.SignIns, host.Uploads.Count));
+        Assert.True(editor.CanPublishToShareHost);
+
+        host.TokenRefusals = 1;
+        host.DuringSignIn = () =>
+        {
+            editor.ShareHostVersion = "2.0.0";
+            editor.ShareHostStatus = "dev";
+            return Task.CompletedTask;
+        };
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal((3, 2), (host.SignIns, host.Publishes.Count));
+        Assert.All(host.Publishes, publish => Assert.Equal(("1.0.0", "stable"), (publish.Version, publish.Status)));
+        Assert.Equal(harness.Localization.FormatListingShareHostPublished("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
+        Assert.Null(editor.ShareHostError);
+        Assert.Equal(0, host.SignOuts);
+    }
+
+    [Fact]
+    public async Task SignInThatFailsDuringAPublish_TakesTheCodeAwayAndKeepsTheUpload()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        var codeShown = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        editor.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(ListingEditor.ShareHostUserCode) && editor.ShareHostUserCode is not null)
+                codeShown.TrySetResult();
+        };
+        var signIn = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        host.TokenRefusals = 1;
+        host.DuringSignIn = () => signIn.Task;
+        var publish = editor.PublishToShareHostCommand.ExecuteAsync(null);
+        await codeShown.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        signIn.SetException(new ShareHostException(ShareHostFailure.SignInRefused, "The sign-in code expired.", "expired_token"));
+        await publish;
+
+        Assert.Null(editor.ShareHostUserCode);
+        Assert.Null(editor.ShareHostCodeText);
+        Assert.Equal(harness.Localization.ListingShareHostSignInRefused, editor.ShareHostError);
+        Assert.True(editor.CanPublishToShareHost);
+    }
+
+    [Fact]
+    public async Task CancelAtTheEndOfASignIn_SendsNothingAndLeavesNoProgress()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+        host.DuringSignIn = () =>
+        {
+            editor.CancelShareHostCommand.Execute(null);
+            return Task.CompletedTask;
+        };
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Empty(host.Uploads);
+        Assert.Null(editor.ShareHostProgress);
+    }
+
+    [Fact]
+    public async Task TokenRefusedAfterANewSignIn_StopsWithTheSignedOutText()
+    {
+        var host = new FakeHost { TokenRefusals = 2 };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal((2, 2), (host.SignIns, host.Uploads.Count));
+        Assert.Equal(harness.Localization.ListingShareHostSignedOut, editor.ShareHostError);
+        Assert.False(editor.HasShareUpload);
+        Assert.Null(editor.ShareHostProgress);
+        Assert.Equal(1, host.SignOuts);
+    }
+
+    [Fact]
     public async Task VehicleListedOnTheHost_UploadsAsANewVersionOfItsListing()
     {
         // The dependency list did not change, so the host publishes the release without a listing pull request.
@@ -298,28 +389,58 @@ public sealed class ShareHostShareTests
 
         public string? PublishedId { get; init; } = "ExampleRover";
 
+        /// <summary>How many of the next requests the host answers with a refused token.</summary>
+        public int TokenRefusals { get; set; }
+
+        /// <summary>Runs after the code shows and before the sign-in ends, for what the player does in that time.</summary>
+        public Func<Task>? DuringSignIn { get; set; }
+
+        public int SignOuts { get; private set; }
+
         public bool IsSignedIn(ShareHost host) => _signedIn;
 
-        public Task SignInAsync(ShareHost host, IProgress<GitHubDeviceCode>? progress = null, bool keepSignedIn = false, CancellationToken cancellationToken = default)
+        public async Task SignInAsync(ShareHost host, IProgress<GitHubDeviceCode>? progress = null, bool keepSignedIn = false, CancellationToken cancellationToken = default)
         {
             SignIns++;
             progress?.Report(new GitHubDeviceCode("ROVR-1234", "https://ksamods.gg/device"));
+            if (DuringSignIn is { } during)
+                await during();
+
             _signedIn = true;
-            return Task.CompletedTask;
         }
 
-        public void SignOut(ShareHost host) => _signedIn = false;
+        public void SignOut(ShareHost host)
+        {
+            SignOuts++;
+            _signedIn = false;
+        }
 
         public Task<ShareUpload> UploadAsync(ShareHost host, Stream archive, string fileName, IReadOnlyList<ListingDependency> dependencies, string? listingId, CancellationToken cancellationToken = default)
         {
             Uploads.Enqueue(new Upload(fileName, archive.Length, dependencies, listingId));
+
+            // The real client disposes the stream with its request, so a second send needs a new one.
+            archive.Dispose();
+            if (RefuseToken() is { } refused)
+                return Task.FromException<ShareUpload>(refused);
+
             return UploadFailure is { } failure ? Task.FromException<ShareUpload>(failure) : Task.FromResult(Upload);
         }
 
         public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
         {
             Publishes.Enqueue(new Publish(uploadId, version, status, listing));
-            return Task.FromResult(new SharePublished(PublishedId, version, PullRequest));
+            return RefuseToken() is { } refused ? Task.FromException<SharePublished>(refused) : Task.FromResult(new SharePublished(PublishedId, version, PullRequest));
+        }
+
+        private ShareHostException? RefuseToken()
+        {
+            if (TokenRefusals == 0)
+                return null;
+
+            TokenRefusals--;
+            _signedIn = false;
+            return new ShareHostException(ShareHostFailure.SignedOut, "ksamods.gg no longer takes the sign-in.");
         }
     }
 }
