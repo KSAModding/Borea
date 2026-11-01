@@ -16,12 +16,15 @@ public enum ListingStepState
     ToDo = 1,
     Fix = 2,
     Optional = 3,
+
+    /// <summary>The step of the share steps that the page shows.</summary>
+    Current = 4,
 }
 
 /// <summary>One section of the form, as the step list in the side panel shows it.</summary>
 public sealed class ListingStepItem(string key, string name, ListingStepState state, string detail)
 {
-    /// <summary>The Tag of the section card on the page.</summary>
+    /// <summary>The Tag of the section card on the page, or the key of a share step.</summary>
     public string Key { get; } = key;
 
     public string Name { get; } = name;
@@ -65,7 +68,7 @@ public sealed partial class ListingEditor
 
     public string? PreviewAuthors => Authors.Trim().Length > 0 ? Localization.FormatContentByAuthor(Authors.Trim()) : null;
 
-    public string PreviewAbstract => Abstract.Trim().Length > 0 ? Abstract.Trim() : Localization.ListingPreviewAbstract;
+    public string PreviewAbstract => Abstract.Trim().Length > 0 ? Abstract.Trim() : IsShareStep ? Localization.SharePreviewSentence : Localization.ListingPreviewAbstract;
 
     public IReadOnlyList<string> PreviewTags =>
         CuratedTags.Where(chip => chip.IsSelected).Select(chip => chip.Name)
@@ -151,7 +154,6 @@ public sealed partial class ListingEditor
         steps.Add(Step("images", Localization.ListingImages, Icon is not null || DescriptionImages.Count > 0));
         if (HasFixedId)
             steps.Add(Step("status", Localization.ListingStatus, IsDeprecated));
-        steps.RemoveAll(step => (!ShowsIndexOnlyCards && IndexOnlySections.Contains(step.Key)) || (!ShowsListingCards && step.Key is "about" or "tags"));
         MainViewModel.Arrange(Steps, steps);
 
         OnPropertyChanged(nameof(HasVisibleErrors));
@@ -161,6 +163,8 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(PreviewAuthors));
         OnPropertyChanged(nameof(PreviewAbstract));
         OnPropertyChanged(nameof(PreviewTags));
+        OnPropertyChanged(nameof(PreviewHeading));
+        OnPropertyChanged(nameof(ShowsPreviewCard));
 
         ListingStepItem Step(string key, string name, bool filled, bool recommended = false)
         {

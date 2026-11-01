@@ -3381,6 +3381,135 @@
   <data name="ListingSaveFailed" xml:space="preserve">
     <value>The listing file could not be saved.</value>
   </data>
+  <data name="ShareFlowTitle" xml:space="preserve">
+    <value>Share a vehicle or save</value>
+  </data>
+  <data name="ShareFlowIntro" xml:space="preserve">
+    <value>Sharing puts your vehicle or save on a sharing site and in Discover, where every Borea player can find it.</value>
+  </data>
+  <data name="ShareStepChoose" xml:space="preserve">
+    <value>Choose</value>
+  </data>
+  <data name="ShareStepDescribe" xml:space="preserve">
+    <value>Describe</value>
+  </data>
+  <data name="ShareNext" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="SharePreviewVehicle" xml:space="preserve">
+    <value>Your vehicle</value>
+  </data>
+  <data name="SharePreviewSave" xml:space="preserve">
+    <value>Your save</value>
+  </data>
+  <data name="SharePreviewSentence" xml:space="preserve">
+    <value>Your sentence shows here, in lists and search.</value>
+  </data>
+  <data name="ShareItemInFormat" xml:space="preserve">
+    <value>{0} in {1}</value>
+  </data>
+  <data name="ShareNewVersionLineFormat" xml:space="preserve">
+    <value>New version of {0} on {1}. The description stays as it is.</value>
+  </data>
+  <data name="ShareDescribeVehicle" xml:space="preserve">
+    <value>Describe your vehicle</value>
+  </data>
+  <data name="ShareDescribeSave" xml:space="preserve">
+    <value>Describe your save</value>
+  </data>
+  <data name="ShareNameHint" xml:space="preserve">
+    <value>The name from the game. Players see it in Discover.</value>
+  </data>
+  <data name="ShareYourName" xml:space="preserve">
+    <value>Your name</value>
+  </data>
+  <data name="ShareYourNameHint" xml:space="preserve">
+    <value>Shown as the author. Use the name people should know you by. Separate several names with commas.</value>
+  </data>
+  <data name="ShareOneSentence" xml:space="preserve">
+    <value>In one sentence</value>
+  </data>
+  <data name="ShareOneSentenceHint" xml:space="preserve">
+    <value>What is it? Players read this in the list.</value>
+  </data>
+  <data name="ShareSentenceVehicleExample" xml:space="preserve">
+    <value>A six-wheel rover for the Moon.</value>
+  </data>
+  <data name="ShareSentenceSaveExample" xml:space="preserve">
+    <value>A Moon base with three landers, ready to fly.</value>
+  </data>
+  <data name="ShareSentenceTooLongFormat" xml:space="preserve">
+    <value>One sentence can have at most {1} characters. This one has {0}.</value>
+  </data>
+  <data name="ShareLicenseHint" xml:space="preserve">
+    <value>This says what other players may do with it. You cannot take it back for copies that players already have.</value>
+  </data>
+  <data name="ShareLicenseInvalid" xml:space="preserve">
+    <value>Borea does not know this license. Use its short name, for example MIT.</value>
+  </data>
+  <data name="ShareLicensePlaceholder" xml:space="preserve">
+    <value>Choose a license</value>
+  </data>
+  <data name="ShareLicenseCcBy" xml:space="preserve">
+    <value>Everyone, if they name you (CC BY 4.0)</value>
+  </data>
+  <data name="ShareLicenseCc0" xml:space="preserve">
+    <value>Everyone, without conditions (CC0)</value>
+  </data>
+  <data name="ShareLicenseCcBySa" xml:space="preserve">
+    <value>Everyone, if they name you and share changes the same way (CC BY-SA 4.0)</value>
+  </data>
+  <data name="ShareLicenseCcByNc" xml:space="preserve">
+    <value>Everyone, if they name you, but not for business (CC BY-NC 4.0)</value>
+  </data>
+  <data name="ShareLicenseOther" xml:space="preserve">
+    <value>Another license...</value>
+  </data>
+  <data name="ShareMoreOptions" xml:space="preserve">
+    <value>More options</value>
+  </data>
+  <data name="ShareShortName" xml:space="preserve">
+    <value>Short name</value>
+  </data>
+  <data name="ShareShortNameHint" xml:space="preserve">
+    <value>Used in the web address of the page. It cannot change later, and it does not change the name in the game.</value>
+  </data>
+  <data name="ShareIdEmpty" xml:space="preserve">
+    <value>Borea could not make a short name from this name. Type letters or digits, for example KittenRover.</value>
+  </data>
+  <data name="ShareIdHeldFormat" xml:space="preserve">
+    <value>Another vehicle, save or mod already uses the short name {0}. It cannot change later, so choose one now.</value>
+  </data>
+  <data name="ShareIdInvalid" xml:space="preserve">
+    <value>A short name has letters and digits, also . _ - between them, and at most 64 characters. Some names, such as Core, are reserved.</value>
+  </data>
+  <data name="ShareDescriptionHint" xml:space="preserve">
+    <value>Optional. A longer text for the page. You can format it with Markdown, for example **bold** or - lists.</value>
+  </data>
+  <data name="ShareMissingName" xml:space="preserve">
+    <value>a name</value>
+  </data>
+  <data name="ShareMissingAuthor" xml:space="preserve">
+    <value>your name</value>
+  </data>
+  <data name="ShareMissingSentence" xml:space="preserve">
+    <value>one sentence</value>
+  </data>
+  <data name="ShareMissingLicense" xml:space="preserve">
+    <value>a license</value>
+  </data>
+  <data name="ShareMissingId" xml:space="preserve">
+    <value>a short name</value>
+  </data>
+  <data name="ShareOtherFields" xml:space="preserve">
+    <value>Some fields outside this step need a fix.</value>
+  </data>
+  <data name="ShareEditAll" xml:space="preserve">
+    <value>Edit all fields</value>
+  </data>
+  <data name="ShareBackToSteps" xml:space="preserve">
+    <value>Back to the share steps</value>
+  </data>
   <data name="ListingShareHeading" xml:space="preserve">
     <value>What you share</value>
   </data>

@@ -786,7 +786,7 @@ public partial class MainViewModel : ViewModelBase
         await RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId), () => Localization.FormatToastDeleteFailed(name));
     }
 
-    private string InstanceName(Guid instanceId) => Instances.FirstOrDefault(instance => instance.InstanceId == instanceId)?.Name ?? instanceId.ToString();
+    internal string InstanceName(Guid instanceId) => Instances.FirstOrDefault(instance => instance.InstanceId == instanceId)?.Name ?? instanceId.ToString();
 
     /// <summary>Opens the folder of the instance, and creates it when it does not exist yet.</summary>
     internal void OpenInstanceFolder(Guid instanceId)

@@ -1,0 +1,86 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.Share.SharePublishStep"
+             x:DataType="vm:MainViewModel">
+    <StackPanel Spacing="16">
+        <!-- a share host of hosts.toml that takes this type (RFC 0094) -->
+        <Border Classes="card" Padding="24" IsVisible="{Binding ListingEditor.HasShareHosts}">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostHeading}" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingShareHostHint}" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostRows}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel ItemSpacing="8" LineSpacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShareHostRow">
+                            <Button Classes="text" Content="{Binding Label}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).ListingEditor.CanUploadToShareHost}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <WrapPanel ItemSpacing="8" LineSpacing="8" IsVisible="{Binding ListingEditor.ShareHostProgress, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostProgress}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" />
+                </WrapPanel>
+                <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.ShareHostUserCode, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostCodeText}" TextWrapping="Wrap" />
+                    <SelectableTextBlock Text="{Binding ListingEditor.ShareHostUserCode}" FontFamily="{StaticResource Font.Mono}" FontSize="28" HorizontalAlignment="Left" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.GitHubSignInCodeWarning}" TextWrapping="Wrap" />
+                    <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.CopyShareHostCodeAndOpenCommand}" HorizontalAlignment="Left">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ListingShareHostCopyCode}" />
+                    </Button>
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding ListingEditor.ShareHostChecks}" IsVisible="{Binding !!ListingEditor.ShareHostChecks.Count}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShareCheckRow">
+                            <TextBlock Classes="body-sm" Classes.danger="{Binding Failed}" Text="{Binding Text}" TextWrapping="Wrap" Margin="12,0,0,0" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.ShareHostListingText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Classes="body-sm" Text="{Binding Localization.ListingShareHostListing}" />
+                    <SelectableTextBlock Classes="body-sm secondary" FontFamily="{StaticResource Font.Mono}" Text="{Binding ListingEditor.ShareHostListingText}" TextWrapping="Wrap" />
+                </StackPanel>
+                <WrapPanel ItemSpacing="16" LineSpacing="8" IsVisible="{Binding ListingEditor.HasShareUpload}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostVersion}" />
+                        <TextBox Classes="field" Width="160" Text="{Binding ListingEditor.ShareHostVersion}" PlaceholderText="1.0.0" AutomationProperties.Name="{Binding Localization.ListingShareHostVersion}" />
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostStatus}" />
+                        <ComboBox ItemsSource="{Binding ListingEditor.ShareStatusChoices}" SelectedItem="{Binding ListingEditor.SelectedShareStatus}" AutomationProperties.Name="{Binding Localization.ListingShareHostStatus}" MinWidth="140">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ShareStatusChoice">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <Button Classes="cta" Command="{Binding ListingEditor.PublishToShareHostCommand}" IsEnabled="{Binding ListingEditor.CanPublishToShareHost}" VerticalAlignment="Bottom">
+                        <TextBlock Classes="action-lg" Text="{Binding Localization.ListingShareHostPublish}" VerticalAlignment="Center" />
+                    </Button>
+                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" IsVisible="{Binding !ListingEditor.IsSharing}" VerticalAlignment="Bottom" />
+                </WrapPanel>
+                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostOutcome}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostOutcome, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Button Classes="link" Margin="-8,0,0,0" Command="{Binding ListingEditor.OpenSharePullRequestCommand}" HorizontalAlignment="Left" IsVisible="{Binding ListingEditor.SharePullRequest, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingEditor.SharePullRequest}">
+                    <TextBlock Classes="action-md" Text="{Binding Localization.ListingOpenYourPullRequest}" />
+                </Button>
+            </StackPanel>
+        </Border>
+        <WrapPanel ItemSpacing="16" LineSpacing="8">
+            <Button Classes="text" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareDescribeCommand}" />
+            <Button Classes="link" Margin="-8,0,0,0" VerticalAlignment="Center" Command="{Binding ListingEditor.EditAllShareFieldsCommand}">
+                <TextBlock Classes="action-md" Text="{Binding Localization.ShareEditAll}" />
+            </Button>
+        </WrapPanel>
+    </StackPanel>
+</UserControl>
