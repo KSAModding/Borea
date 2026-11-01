@@ -462,6 +462,11 @@ public partial class MainViewModel
         try
         {
             var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, UpdateRequests([installed])));
+
+            // only a release that conflicts too is left for a mod next to the mod it conflicts with, so no update of it could run
+            if (plan.Conflicts.Any(conflict => conflict.Dependency is { Kind: ModDependencyKind.Conflict } entry && (ModIds.Equals(conflict.ModId, installed.ModId) || ModIds.Equals(entry.ModId, installed.ModId))))
+                return UpdateCheck.None;
+
             var newer = plan.Operations
                 .Select(operation => operation.Release)
                 .FirstOrDefault(release => ModIds.Equals(release.ModId, installed.ModId) && release.Version > installed.Version)?.Version;
@@ -515,7 +520,11 @@ public partial class MainViewModel
     /// Updates one mod Borea owns, with what its new release requires.
     /// </summary>
     internal Task UpdateContentAsync(ContentItem item)
-        => RunUpdateAsync(item, item.InstanceId, () => PlanUpdateAsync(item, item.InstanceId, mod => ModIds.Equals(mod.ModId, item.ModId)));
+        => RunUpdateAsync(item, item.InstanceId, () => PlanUpdateAsync(
+            item,
+            item.InstanceId,
+            mod => ModIds.Equals(mod.ModId, item.ModId),
+            again: () => RetryRow(item, item.InstanceId) is { } shown ? UpdateContentAsync(shown) : Task.CompletedTask));
 
     /// <summary>
     /// Plans every mod Borea owns in the instance together, so a shared
@@ -528,11 +537,16 @@ public partial class MainViewModel
             item.ClearChanges();
             item.RecordedChanges = RecordedUpdateChanges(item.InstanceId);
             var foundNothing = false;
-            var executed = await PlanUpdateAsync(item, item.InstanceId, _ => true, (instance, plan) =>
-            {
-                item.PlannedInstance = instance;
-                foundNothing = plan.Operations.Count == 0;
-            });
+            var executed = await PlanUpdateAsync(
+                item,
+                item.InstanceId,
+                _ => true,
+                (instance, plan) =>
+                {
+                    item.PlannedInstance = instance;
+                    foundNothing = plan.Operations.Count == 0;
+                },
+                () => RetryRow(item, item.InstanceId) is { } shown ? UpdateAllContentAsync(shown) : Task.CompletedTask);
 
             if (item.IsConfirmingUpdate && !ReferenceEquals(UpdateAll, item))
                 _heldUpdates[item.InstanceId] = item;
@@ -562,7 +576,8 @@ public partial class MainViewModel
 
     /// <summary>Waits for a confirmation on planner warnings, choices or passed changelogs.</summary>
     /// <param name="planned">Runs when the plan is known, before the row can start to wait for a confirmation.</param>
-    private Task<bool> PlanUpdateAsync(IUpdateRow row, Guid instanceId, Func<InstalledMod, bool> select, Action<Instance, InstallPlan>? planned = null)
+    /// <param name="again">Plans the same update again, for the conflict modal.</param>
+    private Task<bool> PlanUpdateAsync(IUpdateRow row, Guid instanceId, Func<InstalledMod, bool> select, Action<Instance, InstallPlan>? planned = null, Func<Task>? again = null)
     {
         row.Changelogs = [];
         return PlanAndExecuteAsync(
@@ -578,7 +593,8 @@ public partial class MainViewModel
                 planned?.Invoke(instance, plan);
                 row.Changelogs = await PassedChangelogsAsync(instance, plan);
                 return row.Changelogs.Count > 0;
-            });
+            },
+            again);
     }
 
     /// <summary>Newest first, from the installed release up to the planned one.</summary>
@@ -681,14 +697,7 @@ public partial class MainViewModel
         if ((error is null && stopped is null) || SelectedInstance?.InstanceId != instanceId)
             return true;
 
-        IInstallRow? target = row switch
-        {
-            ContentItem item => _content.FirstOrDefault(content => ModIds.Equals(content.ModId, item.ModId)),
-            PackUpdateItem => PackUpdate,
-            MissingContentItem => MissingContent,
-            _ => UpdateAll,
-        };
-        if (target is not null)
+        if (ShownRow(row) is { } target)
         {
             target.InstallError = error;
             target.ProgressStatus = stopped;
@@ -696,6 +705,20 @@ public partial class MainViewModel
 
         return true;
     }
+
+    /// <summary>The row of the instance page that shows the same change after a reload built new rows.</summary>
+    private IInstallRow? ShownRow(IInstallRow row) => row switch
+    {
+        ContentItem item => _content.FirstOrDefault(content => ModIds.Equals(content.ModId, item.ModId)),
+        PackUpdateItem => PackUpdate,
+        MissingContentItem => MissingContent,
+        _ => UpdateAll,
+    };
+
+    /// <summary>The row that plans a change again after the conflict modal. While the page shows another instance, the old row still plans for its own instance, and the row of the page would change the wrong one.</summary>
+    private TRow? RetryRow<TRow>(TRow row, Guid instanceId)
+        where TRow : class, IInstallRow
+        => SelectedInstance?.InstanceId == instanceId ? ShownRow(row) as TRow : row;
 
     /// <summary>What the Home launch button starts, which is the option last chosen in its menu.</summary>
     public HomeLaunchOption HomeLaunch
@@ -1331,19 +1354,25 @@ public partial class MainViewModel
     /// Removes a mod Borea installed, with its folder and its record. A mod
     /// that another installed mod requires stays, and so does a mod Borea did
     /// not install, because its files are not Borea's to delete. The toast of
-    /// the task says why a mod stays.
+    /// the task says why a mod stays. Returns whether the mod went.
     /// </summary>
-    internal async Task RemoveContentAsync(Guid instanceId, string modId)
+    internal async Task<bool> RemoveContentAsync(Guid instanceId, string modId)
     {
-        if (_services is null || _runningUpdates.ContainsKey(instanceId))
-            return;
+        if (_services is null)
+            return false;
 
         var name = _content.FirstOrDefault(content => content.InstanceId == instanceId && ModIds.Equals(content.ModId, modId))?.Name ?? modId;
+        if (_runningUpdates.ContainsKey(instanceId))
+        {
+            ShowErrorToast(() => Localization.FormatToastRemoveFailed(name), Localization.ContentRemoveUpdateRunning);
+            return false;
+        }
+
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
             ShowErrorToast(() => Localization.FormatToastRemoveFailed(name), Localization.LibraryFolderBusy);
-            return;
+            return false;
         }
 
         var task = StartTask(TaskKind.ModRemoval, name, instanceId, modId);
@@ -1364,6 +1393,7 @@ public partial class MainViewModel
         }
 
         await ReloadInstancesAsync();
+        return completed && error is null;
     }
 
     /// <summary>

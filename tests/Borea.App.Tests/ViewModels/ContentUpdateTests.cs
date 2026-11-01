@@ -39,6 +39,22 @@ public sealed class ContentUpdateTests
     }
 
     [Fact]
+    public async Task Open_EveryReleaseConflictsWithAnInstalledMod_IsNoUpdate()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ConflictDialogTests.Declares("MeasureTools", "KSArmory"));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true, ownership: ModInstallOwnership.Borea);
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea, version: "1.1.9");
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.False(viewModel.ContentGroups.Single().Items.Single(row => row.ModId == "MeasureTools").HasUpdate);
+        Assert.Equal(0, viewModel.ActiveInstanceUpdateCount);
+    }
+
+    [Fact]
     public async Task Open_ReleaseWhoseDownloadIsGone_IsNoUpdate_AndAnInstalledCopyStaysWithANote()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
@@ -383,6 +399,38 @@ public sealed class ContentUpdateTests
 
         Assert.True(viewModel.CanChangeContent);
         Assert.Equal("1.1.0", viewModel.ContentGroups.Single().Items.Single().Version);
+    }
+
+    [Fact]
+    public async Task Remove_WhileAnUpdateOfTheInstanceRuns_SaysWhyItDoesNotRun()
+    {
+        using var download = new ManualResetEventSlim();
+        var requested = new TaskCompletionSource();
+        var hold = HoldArchive(download);
+        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
+        {
+            if (request.RequestUri?.Host == ArchiveHost)
+                requested.TrySetResult();
+            return hold(request);
+        });
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0")]);
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.Single().Items.Single();
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        var update = row.ConfirmUpdateCommand.ExecuteAsync(null);
+        await requested.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.False(await viewModel.RemoveContentAsync(instance.InstanceId, OwnId));
+        Assert.Equal(harness.Localization.ContentRemoveUpdateRunning, viewModel.Toasts.Items[^1].Detail);
+
+        download.Set();
+        await update;
+
+        Assert.Equal(OwnId, Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).ModId);
     }
 
     [Fact]

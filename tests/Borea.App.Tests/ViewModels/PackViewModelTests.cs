@@ -770,6 +770,48 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task Install_MemberConflictsWithAnInstalledMod_WhileThePackWaits_ShowsTheModalAndPlansAgainAfterTheRemoval()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => ConflictDialogTests.Declares("KSArmory", "MeasureTools")(WithPacks(Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44"))))(snapshot)));
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+
+        await pack.InstallCommand.ExecuteAsync(null);
+
+        var conflict = Assert.Single(viewModel.ConflictDialog!.Rows);
+        Assert.Equal(harness.Localization.FormatConflictRemove(viewModel.ContentName("MeasureTools")), conflict.RemoveText);
+
+        await conflict.RemoveCommand.ExecuteAsync(null);
+
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.True(pack.PendingPlan is { IsReady: true });
+    }
+
+    [Fact]
+    public async Task Install_MemberConflictsWithAnInstalledMod_WhenThePackRunsAtOnce_ShowsTheModal()
+    {
+        var pack = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))
+            .Replace("\"game_min\": \"2026.8.19.5261\" }", "\"game_min\": \"2026.8.0.1\" }", StringComparison.Ordinal);
+        using var harness = await CreateWithGameAsync(snapshot => Bounds(ConflictDialogTests.Declares("KSArmory", "MeasureTools")(WithPacks(pack)(snapshot)), "KSArmory", "0.8.44", "2026.8.3.5117"));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var row = Assert.Single(viewModel.DiscoverPacks);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.PendingInstall);
+        Assert.NotNull(row.InstallError);
+        Assert.Equal(harness.Localization.FormatConflictRemove(viewModel.ContentName("MeasureTools")), Assert.Single(viewModel.ConflictDialog!.Rows).RemoveText);
+    }
+
+    [Fact]
     public async Task Install_DeprecatedPack_WaitsForConfirmation()
     {
         var pack = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))

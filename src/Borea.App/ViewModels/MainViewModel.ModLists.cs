@@ -48,7 +48,7 @@ public partial class MainViewModel
             // the copy runs on the build of the source, so it is checked against that build and never against the settings' one
             var gameVersion = PlanningGameVersion(services, instance);
             var plan = await installer.PlanAsync(RequestFor(services, ModList.FromInstance(instance, manifest), instance.Source, reasons) with { GameVersion = gameVersion, Origin = InstanceOrigin.Duplicate, GameBuild = instance.GameBuild, Loader = instance.Loader });
-            ShowModListPlan(new ModListImportItem(this, plan, name, isDuplicate: true, instance.ForeignMods.Select(mod => mod.FolderName).ToList()));
+            await ShowModListPlanAsync(new ModListImportItem(this, plan, name, isDuplicate: true, instance.ForeignMods.Select(mod => mod.FolderName).ToList()));
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -102,7 +102,7 @@ public partial class MainViewModel
             var wanted = modList.Name ?? Path.GetFileNameWithoutExtension(fileName);
             var name = string.IsNullOrWhiteSpace(wanted) ? string.Empty : await installer.FreeNameAsync(wanted);
             var plan = await installer.PlanAsync(RequestFor(services, modList, InstanceSource.Custom.Value, reasons: null));
-            ShowModListPlan(new ModListImportItem(this, plan, name, isDuplicate: false, notCopied: []));
+            await ShowModListPlanAsync(new ModListImportItem(this, plan, name, isDuplicate: false, notCopied: []));
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -221,10 +221,12 @@ public partial class MainViewModel
         return new string(instanceName.Select(character => invalid.Contains(character) ? '_' : character).ToArray()) + ".toml";
     }
 
-    private void ShowModListPlan(ModListImportItem item)
+    /// <summary>The new instance does not exist yet, so the conflict modal has no mod to remove.</summary>
+    private async Task ShowModListPlanAsync(ModListImportItem item)
     {
         ModListImport = item;
         RefreshModListText();
+        await ShowConflictsAsync(item.Plan.Plan, again: null);
     }
 
     /// <summary>A yanked release is a note already, so the planner's warning about it is left out.</summary>
