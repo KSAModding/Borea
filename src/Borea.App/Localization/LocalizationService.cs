@@ -898,15 +898,30 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardStatisticsLoading => Resources.StewardStatisticsLoading;
 
-    public string StewardStatisticsGameSupport => Resources.StewardStatisticsGameSupport;
+    public string StewardStatisticsTotalListings => Resources.StewardStatisticsTotalListings;
+
+    public string StewardStatisticsModsNotBlocked => Resources.StewardStatisticsModsNotBlocked;
+
+    public string StewardStatisticsUpkeepListings => Resources.StewardStatisticsUpkeepListings;
+
+    public string StewardStatisticsTotalDownloads => Resources.StewardStatisticsTotalDownloads;
+
+    public string StewardStatisticsCurrentBuild => Resources.StewardStatisticsCurrentBuild;
 
     public string StewardStatisticsNoBuild => Resources.StewardStatisticsNoBuild;
 
-    public string FormatStewardStatisticsSupport(string supporting, string total, string build)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsSupportFormat, supporting, total, build);
+    public string StewardStatisticsNoMods => Resources.StewardStatisticsNoMods;
 
-    public string FormatStewardStatisticsUnsupported(string count)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsUnsupportedFormat, count);
+    public string StewardStatisticsNothing => Resources.StewardStatisticsNothing;
+
+    public string FormatStewardStatisticsNotBlocked(string notBlocked, string total, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNotBlockedFormat, notBlocked, total, build);
+
+    public string StewardStatisticsNotBlocked => Resources.StewardStatisticsNotBlocked;
+
+    public string StewardStatisticsBlocked => Resources.StewardStatisticsBlocked;
+
+    public string StewardStatisticsBlockedMods => Resources.StewardStatisticsBlockedMods;
 
     public string StewardStatisticsDependencies => Resources.StewardStatisticsDependencies;
 
@@ -914,25 +929,29 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardStatisticsMostDependedOn => Resources.StewardStatisticsMostDependedOn;
 
-    public string FormatStewardStatisticsDependencyCount(string required, string optional)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsDependencyCountFormat, required, optional);
+    public string StewardStatisticsRequired => Resources.StewardStatisticsRequired;
 
-    public string FormatStewardStatisticsDependentCount(string required, string optional)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsDependentCountFormat, required, optional);
+    public string StewardStatisticsOptional => Resources.StewardStatisticsOptional;
 
     public string StewardStatisticsUpkeep => Resources.StewardStatisticsUpkeep;
 
-    public string FormatStewardStatisticsNoCurrentRelease(string count)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoCurrentReleaseFormat, count);
+    public string StewardStatisticsListing => Resources.StewardStatisticsListing;
 
-    public string FormatStewardStatisticsNoUpdate(string days, string count)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoUpdateFormat, days, count);
+    public string StewardStatisticsUpkeepEmpty => Resources.StewardStatisticsUpkeepEmpty;
 
-    public string FormatStewardStatisticsNoImage(string count)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoImageFormat, count);
+    public string StewardStatisticsNoCurrentRelease => Resources.StewardStatisticsNoCurrentRelease;
 
-    public string FormatStewardStatisticsNoForumsThread(string count)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoForumsThreadFormat, count);
+    public string FormatStewardStatisticsNoUpdate(string days)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoUpdateFormat, days);
+
+    public string StewardStatisticsNoImage => Resources.StewardStatisticsNoImage;
+
+    public string StewardStatisticsNoForumsThread => Resources.StewardStatisticsNoForumsThread;
+
+    public string FormatStewardStatisticsShowAll(string count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsShowAllFormat, count);
+
+    public string StewardStatisticsShowFewer => Resources.StewardStatisticsShowFewer;
 
     public string StewardStatisticsOverview => Resources.StewardStatisticsOverview;
 

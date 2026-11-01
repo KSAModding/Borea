@@ -34,6 +34,7 @@
                     <Color x:Key="Color.TextMuted">#777777</Color>
                     <Color x:Key="Color.Accent">#CABCFF</Color>
                     <Color x:Key="Color.AccentSoft">#26CABCFF</Color>
+                    <Color x:Key="Color.AccentMuted">#787192</Color>
                     <Color x:Key="Color.OnAccent">#000000</Color>
                     <Color x:Key="Color.Positive">#C1FFB5</Color>
                     <Color x:Key="Color.PositiveSoft">#0DC1FFB5</Color>
@@ -65,6 +66,7 @@
                     <Color x:Key="Color.TextMuted">#7E7E88</Color>
                     <Color x:Key="Color.Accent">#6A56E0</Color>
                     <Color x:Key="Color.AccentSoft">#266A56E0</Color>
+                    <Color x:Key="Color.AccentMuted">#8C7DE5</Color>
                     <Color x:Key="Color.OnAccent">#FFFFFF</Color>
                     <Color x:Key="Color.Positive">#2B6A1A</Color>
                     <Color x:Key="Color.PositiveSoft">#1A2B6A1A</Color>
@@ -98,6 +100,7 @@
             <SolidColorBrush x:Key="Brush.TextMuted" Color="{DynamicResource Color.TextMuted}" />
             <SolidColorBrush x:Key="Brush.Accent" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="Brush.AccentSoft" Color="{DynamicResource Color.AccentSoft}" />
+            <SolidColorBrush x:Key="Brush.AccentMuted" Color="{DynamicResource Color.AccentMuted}" />
             <SolidColorBrush x:Key="Brush.OnAccent" Color="{DynamicResource Color.OnAccent}" />
             <SolidColorBrush x:Key="Brush.Positive" Color="{DynamicResource Color.Positive}" />
             <SolidColorBrush x:Key="Brush.PositiveSoft" Color="{DynamicResource Color.PositiveSoft}" />

@@ -16,7 +16,7 @@ public sealed class IndexStatisticsTests
     private static readonly ContentImages Icon = new(new IconImage("https://example.com/icon.png", new string('A', 64), 256, 256, 1), []);
 
     [Fact]
-    public void GameSupport_CountsOnlyTheMods_AndTakesAReleaseThatBoreaOffersAndThatFitsTheNewestBuild()
+    public void ModsNotBlocked_CountsOnlyTheMods_TakesAReleaseThatBoreaOffers_AndCountsAnOpenUpperBound()
     {
         var statistics = From(
             Listing("Fits", releases: [Release("Fits", "1.0.0")]),
@@ -29,21 +29,21 @@ public sealed class IndexStatisticsTests
             Listing("Loader", ContentType.ModLoader, releases: [Release("Loader", "1.0.0", ContentType.ModLoader, gameMax: (Older, OlderRevision))]));
 
         Assert.Equal(Build, statistics.CurrentBuild?.ToString());
-        Assert.Equal(2, statistics.ModsOnCurrentBuild);
-        Assert.Equal(["NoRelease", "OnlyGone", "OnlyYanked", "TooNew", "TooOld"], statistics.ModsNotOnCurrentBuild.Select(row => row.Id));
+        Assert.Equal(2, statistics.ModsNotBlocked);
+        Assert.Equal(["NoRelease", "OnlyGone", "OnlyYanked", "TooNew", "TooOld"], statistics.ModsBlocked.Select(row => row.Id));
         Assert.Equal(["Loader", "NoRelease", "OnlyGone", "OnlyYanked", "TooNew", "TooOld"], statistics.NoCurrentRelease.Select(row => row.Id));
     }
 
     [Fact]
-    public void SnapshotWithoutABuild_SaysNothingAboutGameSupport()
+    public void SnapshotWithoutABuild_SaysNothingAboutTheBuild()
     {
         var snapshot = new ContentIndexSnapshot(1, [Listing("Mod", releases: [])], [Pack("Pack", "1.0.0")], null, []);
 
         var statistics = IndexStatistics.From(snapshot, Now);
 
         Assert.Null(statistics.CurrentBuild);
-        Assert.Equal(0, statistics.ModsOnCurrentBuild);
-        Assert.Empty(statistics.ModsNotOnCurrentBuild);
+        Assert.Equal(0, statistics.ModsNotBlocked);
+        Assert.Empty(statistics.ModsBlocked);
         Assert.Empty(statistics.NoCurrentRelease);
     }
 

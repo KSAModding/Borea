@@ -786,47 +786,77 @@
   <data name="StewardStatisticsLoading" xml:space="preserve">
     <value>Counting what the content index holds...</value>
   </data>
-  <data name="StewardStatisticsGameSupport" xml:space="preserve">
-    <value>Game support</value>
+  <data name="StewardStatisticsTotalListings" xml:space="preserve">
+    <value>Listings in total</value>
+  </data>
+  <data name="StewardStatisticsModsNotBlocked" xml:space="preserve">
+    <value>Mods not blocked on the current build</value>
+  </data>
+  <data name="StewardStatisticsUpkeepListings" xml:space="preserve">
+    <value>Listings with upkeep problems</value>
+  </data>
+  <data name="StewardStatisticsTotalDownloads" xml:space="preserve">
+    <value>Downloads in total</value>
+  </data>
+  <data name="StewardStatisticsCurrentBuild" xml:space="preserve">
+    <value>Current build</value>
   </data>
   <data name="StewardStatisticsNoBuild" xml:space="preserve">
-    <value>The content index names no game build, so game support is not known.</value>
+    <value>The content index names no game build, so it is not known which mods are blocked.</value>
   </data>
-  <data name="StewardStatisticsSupportFormat" xml:space="preserve">
-    <value>{0} of {1} mods support game build {2}.</value>
+  <data name="StewardStatisticsNoMods" xml:space="preserve">
+    <value>The content index lists no mods.</value>
   </data>
-  <data name="StewardStatisticsUnsupportedFormat" xml:space="preserve">
-    <value>Mods that do not support it ({0})</value>
+  <data name="StewardStatisticsNothing" xml:space="preserve">
+    <value>Nothing to count.</value>
+  </data>
+  <data name="StewardStatisticsNotBlockedFormat" xml:space="preserve">
+    <value>{0} of {1} mods are not blocked on game build {2}, because a release allows it. A release without a highest game version counts, so this does not say that anyone tested the build.</value>
+  </data>
+  <data name="StewardStatisticsNotBlocked" xml:space="preserve">
+    <value>Not blocked</value>
+  </data>
+  <data name="StewardStatisticsBlocked" xml:space="preserve">
+    <value>Blocked</value>
+  </data>
+  <data name="StewardStatisticsBlockedMods" xml:space="preserve">
+    <value>Mods blocked on this build</value>
   </data>
   <data name="StewardStatisticsDependencies" xml:space="preserve">
     <value>Dependencies</value>
   </data>
   <data name="StewardStatisticsMostDependencies" xml:space="preserve">
-    <value>Most direct dependencies</value>
+    <value>Most dependencies</value>
   </data>
   <data name="StewardStatisticsMostDependedOn" xml:space="preserve">
-    <value>What most listings depend on</value>
+    <value>Most depended on</value>
   </data>
-  <data name="StewardStatisticsDependencyCountFormat" xml:space="preserve">
-    <value>{0} required, {1} optional</value>
+  <data name="StewardStatisticsRequired" xml:space="preserve">
+    <value>Required</value>
   </data>
-  <data name="StewardStatisticsDependentCountFormat" xml:space="preserve">
-    <value>required by {0}, optional for {1}</value>
+  <data name="StewardStatisticsOptional" xml:space="preserve">
+    <value>Optional</value>
   </data>
   <data name="StewardStatisticsUpkeep" xml:space="preserve">
     <value>Upkeep</value>
   </data>
-  <data name="StewardStatisticsNoCurrentReleaseFormat" xml:space="preserve">
-    <value>No release for the current game build ({0})</value>
+  <data name="StewardStatisticsListing" xml:space="preserve">
+    <value>Listing</value>
+  </data>
+  <data name="StewardStatisticsUpkeepEmpty" xml:space="preserve">
+    <value>No listing has an upkeep problem.</value>
+  </data>
+  <data name="StewardStatisticsNoCurrentRelease" xml:space="preserve">
+    <value>No release for the build</value>
   </data>
   <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
-    <value>No update for {0} days ({1})</value>
+    <value>No update for {0} days</value>
   </data>
-  <data name="StewardStatisticsNoImageFormat" xml:space="preserve">
-    <value>No image ({0})</value>
+  <data name="StewardStatisticsNoImage" xml:space="preserve">
+    <value>No image</value>
   </data>
-  <data name="StewardStatisticsNoForumsThreadFormat" xml:space="preserve">
-    <value>No forums thread ({0})</value>
+  <data name="StewardStatisticsNoForumsThread" xml:space="preserve">
+    <value>No forums thread</value>
   </data>
   <data name="StewardStatisticsOverview" xml:space="preserve">
     <value>Overview</value>
@@ -845,6 +875,12 @@
   </data>
   <data name="StewardStatisticsMostDownloaded" xml:space="preserve">
     <value>Most downloaded</value>
+  </data>
+  <data name="StewardStatisticsShowAllFormat" xml:space="preserve">
+    <value>Show all {0}</value>
+  </data>
+  <data name="StewardStatisticsShowFewer" xml:space="preserve">
+    <value>Show fewer</value>
   </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>Status</value>

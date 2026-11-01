@@ -152,11 +152,14 @@ public sealed class StewardViewsTests
 
         Assert.Contains(harness.Localization.StewardTabStatistics, buttons);
         Assert.Contains(harness.Localization.StewardStatisticsHint, texts);
-        Assert.Contains(harness.Localization.StewardStatisticsGameSupport, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsCurrentBuild, texts);
         Assert.Contains(harness.Localization.StewardStatisticsDependencies, texts);
         Assert.Contains(harness.Localization.StewardStatisticsUpkeep, texts);
         Assert.Contains(harness.Localization.StewardStatisticsOverview, texts);
         Assert.Contains(harness.Localization.StewardStatisticsMostDownloaded, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsTotalListings, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsRequired, texts);
+        Assert.Contains(harness.Localization.StewardStatisticsNoImage, texts);
         Assert.Contains(viewModel.DiscoverItems.First(item => item.ModId == "AdvancedFlightComputer").Name, texts);
         Assert.Contains("MIT", texts);
         Assert.DoesNotContain("Maxi", texts);

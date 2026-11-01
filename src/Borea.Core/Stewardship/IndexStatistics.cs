@@ -11,8 +11,8 @@ namespace Borea.Core.Stewardship;
 /// They cover what a player can see, so a delisted entry, an entry without an authored document and a pack without a version that is not retracted do not count.
 /// </summary>
 /// <param name="CurrentBuild">The newest build in game_versions of the snapshot, or null when it names none. Without it, no listing counts as with or without a release for the build.</param>
-/// <param name="ModsOnCurrentBuild">The mods that fit the current build.</param>
-/// <param name="ModsNotOnCurrentBuild">The other mods, by name.</param>
+/// <param name="ModsNotBlocked">The mods with a release whose bounds allow the current build. A release without an upper bound allows it, so this says that a player can install the mod and not that anyone tested the build. The snapshot cannot say that, because an open bound is the recommended default and game_versions carries no dates to compare a release_date with.</param>
+/// <param name="ModsBlocked">The other mods, by name, so also a mod without a release that Borea offers.</param>
 /// <param name="MostDependencies">The listings with the most direct dependencies, the most first.</param>
 /// <param name="MostDependedOn">The ids that the most listings depend on directly, the most first.</param>
 /// <param name="NoCurrentRelease">The content of every type that does not fit the current build, by name.</param>
@@ -22,8 +22,8 @@ namespace Borea.Core.Stewardship;
 /// <param name="TotalDownloads">The downloads of every listing that reports them, so also of a listing past the end of <paramref name="MostDownloaded"/>.</param>
 public sealed record IndexStatistics(
     GameVersion? CurrentBuild,
-    int ModsOnCurrentBuild,
-    IReadOnlyList<IndexStatistics.Listing> ModsNotOnCurrentBuild,
+    int ModsNotBlocked,
+    IReadOnlyList<IndexStatistics.Listing> ModsBlocked,
     IReadOnlyList<IndexStatistics.DependencyCount> MostDependencies,
     IReadOnlyList<IndexStatistics.DependencyCount> MostDependedOn,
     IReadOnlyList<IndexStatistics.Listing> NoCurrentRelease,
@@ -129,7 +129,7 @@ public sealed record IndexStatistics(
 
     private static HashSet<string> Ids(IEnumerable<Listing> listings) => listings.Select(listing => listing.Id).ToHashSet(ModIds.Comparer);
 
-    /// <summary>A listing fits the build when one release that Borea offers fits it, whichever channel that release is in.</summary>
+    /// <summary>A listing fits the build when the bounds of one release that Borea offers allow it, whichever channel that release is in.</summary>
     private static Entry EntryOf(ContentIndexListing listing, GameVersion? build)
     {
         var authored = listing.Authored!;
