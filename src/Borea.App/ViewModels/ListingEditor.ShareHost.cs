@@ -41,6 +41,9 @@ public sealed partial class ListingEditor
     private CancellationTokenSource? _signInRun;
     private ShareErrorAction _shareErrorAction;
 
+    /// <summary>The version that the host refused at a publish, until the player changes it. The upload stays, because only the version has to change.</summary>
+    private string? _refusedShareVersion;
+
     /// <summary>The one way forward that an error of a host offers.</summary>
     private enum ShareErrorAction
     {
@@ -78,13 +81,14 @@ public sealed partial class ListingEditor
 
     public string? ShareCheckHintText => SelectedShareHostRow is { } row ? Localization.FormatShareCheckHint(row.Host.Name) : null;
 
-    public bool ShowsShareCheckButton => HasShareHosts && !HasShareUpload && !IsSharing;
+    /// <summary>A short name that the host refused comes back with the next check, so that error offers the step with the short name instead.</summary>
+    public bool ShowsShareCheckButton => HasShareHosts && !HasShareUpload && !IsSharing && _shareErrorAction != ShareErrorAction.BackToDescription;
 
     public ObservableCollection<string> ShareHostFailedChecks { get; } = [];
 
     public ObservableCollection<string> ShareHostPassedChecks { get; } = [];
 
-    public string? ShareChecksPassedText => _shareUpload is { Upload.Checks.Count: > 0 } shared ? Localization.FormatShareChecksPassed(shared.Upload.Checks.Count, shared.Host.Name) : null;
+    public string? ShareChecksPassedText => _refusedShareVersion is null && _shareUpload is { Upload.Checks.Count: > 0 } shared ? Localization.FormatShareChecksPassed(shared.Upload.Checks.Count, shared.Host.Name) : null;
 
     public bool HasShareDetails => ShareHostPassedChecks.Count > 0 || ShareHostListingText is not null || ShareHostFileDetail is not null;
 
@@ -191,7 +195,7 @@ public sealed partial class ListingEditor
 
     public string? ShareSignOutText => SignedInShareHost is { } host ? Localization.FormatShareSignOut(host.Name) : null;
 
-    public bool CanPublishToShareHost => _shareUpload is not null && IsShareVersionValid && !IsSharing;
+    public bool CanPublishToShareHost => _shareUpload is not null && _refusedShareVersion is null && IsShareVersionValid && !IsSharing;
 
     private bool IsShareVersionValid => ModVersion.TryParse(ShareHostVersion.Trim(), out _);
 
@@ -305,6 +309,7 @@ public sealed partial class ListingEditor
 
     private void RefreshShareErrorAction()
     {
+        OnPropertyChanged(nameof(ShowsShareCheckButton));
         OnPropertyChanged(nameof(ShareErrorActionText));
         OnPropertyChanged(nameof(ShareSignedInText));
         OnPropertyChanged(nameof(ShareSignOutText));
@@ -318,12 +323,24 @@ public sealed partial class ListingEditor
         RefreshShareErrorAction();
     }
 
+    /// <summary>Another version answers the refusal, so the step goes on with the checks that passed.</summary>
+    partial void OnShareHostVersionChanged(string value)
+    {
+        if (_refusedShareVersion is null || value.Trim() == _refusedShareVersion)
+            return;
+
+        _refusedShareVersion = null;
+        ShareHostError = null;
+        OnPropertyChanged(nameof(ShareChecksPassedText));
+    }
+
     /// <summary>Drops a running share and its result, because they belong to the item before.</summary>
     private void ForgetShareHostRun()
     {
         _shareHostRun?.Cancel();
         _shareHostRun = null;
         _shareUpload = null;
+        _refusedShareVersion = null;
         _sharePublished = null;
         _shareHostCode = null;
         ShareHostProgress = null;
@@ -734,10 +751,16 @@ public sealed partial class ListingEditor
         switch (exception.Error)
         {
             case "version_taken":
+                _refusedShareVersion = version;
                 IsEditingShareVersion = true;
+                RefreshShareRun();
                 break;
             case "id_taken":
                 _refusedShareId = Draft.Id;
+
+                // The id went out with the publish, and the upload cannot go on without another one.
+                _shareUpload = null;
+                RefreshShareRun();
                 Refresh();
                 break;
             case "invalid_archive" when ShareHostFailedChecks.Count == 0:

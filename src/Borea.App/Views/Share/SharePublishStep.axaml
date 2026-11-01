@@ -67,12 +67,6 @@
                             <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareSignOutText}" />
                         </Button>
                     </WrapPanel>
-                    <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.ShowsShareCheckButton}">
-                        <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding ListingEditor.SelectedShareHostRow}">
-                            <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareCheckOnHostText}" VerticalAlignment="Center" />
-                        </Button>
-                        <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareCheckHintText}" TextWrapping="Wrap" />
-                    </StackPanel>
                 </StackPanel>
 
                 <!-- the text in the language of the player, the message of the host and the one way forward -->
@@ -106,6 +100,14 @@
                 <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.RenameForShareCommand}" IsVisible="{Binding ListingEditor.ShowsShareRename}">
                     <TextBlock Classes="action-md" Text="{Binding Localization.ShareRenameAndCheck}" />
                 </Button>
+
+                <!-- the check comes after what stopped the last one -->
+                <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.ShowsShareCheckButton}">
+                    <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding ListingEditor.SelectedShareHostRow}">
+                        <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareCheckOnHostText}" VerticalAlignment="Center" />
+                    </Button>
+                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareCheckHintText}" TextWrapping="Wrap" />
+                </StackPanel>
 
                 <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareChecksPassedText, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <Path Classes="icon size-16" Data="{StaticResource Icon.CheckCircle}" Stroke="{StaticResource Brush.Positive}" VerticalAlignment="Top" />

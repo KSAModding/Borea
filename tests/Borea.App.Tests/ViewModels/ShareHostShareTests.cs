@@ -1495,7 +1495,9 @@ public sealed class ShareHostShareTests
         };
         Assert.Equal(expected, (editor.ShareHostError, editor.ShareHostErrorDetail, editor.ShareErrorActionText));
         Assert.Equal(code == "invalid_archive" ? said : null, editor.ShareHostFileDetail);
-        Assert.Equal(code is "id_taken" or "version_taken", editor.HasShareUpload);
+        Assert.Equal(code == "version_taken", editor.HasShareUpload);
+        Assert.Null(editor.ShareChecksPassedText);
+        Assert.False(editor.CanPublishToShareHost);
         Assert.Equal(code == "version_taken", editor.IsEditingShareVersion);
         Assert.Equal(code == "upload_expired" || atUpload, editor.ShowsShareCheckButton);
     }
@@ -1710,6 +1712,27 @@ public sealed class ShareHostShareTests
         Assert.Equal(1, host.SignOuts);
         Assert.False(editor.HasShareUpload);
         Assert.Null(editor.ShareSignedInText);
+    }
+
+    [Fact]
+    public async Task VersionTaken_HoldsPublishUntilThePlayerChangesTheVersion()
+    {
+        var host = new FakeHost { PublishFailure = new ShareHostException(ShareHostFailure.Host, "It had that version.", "version_taken") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        var passed = editor.ShareChecksPassedText;
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Null(editor.ShareChecksPassedText);
+        Assert.False(editor.CanPublishToShareHost);
+        Assert.True(editor.IsEditingShareVersion);
+
+        editor.ShareHostVersion = "1.1.0";
+
+        Assert.Equal(passed, editor.ShareChecksPassedText);
+        Assert.True(editor.CanPublishToShareHost);
+        Assert.Null(editor.ShareHostError);
     }
 
     [Fact]
