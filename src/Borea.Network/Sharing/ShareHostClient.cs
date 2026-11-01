@@ -182,27 +182,75 @@ public sealed class ShareHostClient : IShareHostClient
         }
 
         using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
+        var reply = await WithAnswerLimitAsync(token => SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, token), cancellationToken).ConfigureAwait(false);
+        var published = Parse<ShareHostJson.Published>(reply.Body) ?? new ShareHostJson.Published();
+        return new SharePublished(
+            ShareHostJson.Text(published.Id) is { Length: > 0 } id ? id : listing?.Id,
+            ShareHostJson.Text(published.Version) is { Length: > 0 } released ? released : version,
+            PullRequestLink(published.PullRequest),
+            host.PageOnHost(ShareHostJson.Text(published.Page)));
+    }
+
+    public async Task<ShareListingChanged> ChangeListingAsync(ShareHost host, string type, string id, ShareListingChange change, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentNullException.ThrowIfNull(change);
+        var body = new JsonObject();
+        if (change.Name is { } name)
+            body[ShareHostJson.Name] = name;
+        if (change.Abstract is { } sentence)
+            body[ShareHostJson.Abstract] = sentence;
+        if (change.Description is { } description)
+            body[ShareHostJson.Description] = description;
+        if (change.License is { } license)
+            body[ShareHostJson.License] = license;
+        if (change.Tags is { } tags)
+            body[ShareHostJson.Tags] = new JsonArray([.. tags.Select(tag => JsonValue.Create(tag))]);
+
+        using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
+        var reply = await SendOptionalAsync(host, HttpMethod.Patch, ListingPath(type, id), content, cancellationToken).ConfigureAwait(false);
+        var changed = Parse<ShareHostJson.ListingChanged>(reply.Body) ?? new ShareHostJson.ListingChanged();
+        return new ShareListingChanged(PullRequestLink(changed.PullRequest), host.PageOnHost(ShareHostJson.Text(changed.Page)));
+    }
+
+    public async Task TakeDownReleaseAsync(ShareHost host, string type, string id, string version, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentException.ThrowIfNullOrEmpty(version);
+        var path = $"{ListingPath(type, id)}/{ShareHostApi.ReleasesPath}/{Uri.EscapeDataString(version)}/{ShareHostApi.TakeDownPath}";
+        var reply = await SendOptionalAsync(host, HttpMethod.Post, path, content: null, cancellationToken).ConfigureAwait(false);
+
+        // The player is told that the version is gone, so any other answer must not read as a success.
+        if (Parse<ShareHostJson.TakenDown>(reply.Body) is not { Value: true })
+            throw Unexpected(host, reply);
+    }
+
+    private static string ListingPath(string type, string id) =>
+        $"{ShareHostApi.ListingsPath}/{Uri.EscapeDataString(type)}/{Uri.EscapeDataString(id)}";
+
+    /// <summary>A request that a host need not offer. A 404 with the code of a missing listing or version comes from the request itself, and any other 404 means that the host does not have it.</summary>
+    private async Task<Reply> SendOptionalAsync(ShareHost host, HttpMethod method, string path, HttpContent? content, CancellationToken cancellationToken)
+    {
+        var reply = await WithAnswerLimitAsync(token => ExchangeAsync(host, method, path, content, token), cancellationToken).ConfigureAwait(false);
+        if (reply.Status == HttpStatusCode.NotFound && Parse<ShareHostJson.Error>(reply.Body)?.Code is not ("not_owner" or "invalid_request"))
+            throw new ShareHostException(ShareHostFailure.NotOffered, $"{host.Name} does not offer this request.");
+
+        return (int)reply.Status is < 200 or > 299 ? throw Refused(host, reply) : reply;
+    }
+
+    /// <summary>Ends a send at <see cref="PublishAnswerLimit"/>, which then counts as a request with no answer.</summary>
+    private async Task<Reply> WithAnswerLimitAsync(Func<CancellationToken, Task<Reply>> send, CancellationToken cancellationToken)
+    {
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         limit.CancelAfter(PublishAnswerLimit);
-        Reply reply;
         try
         {
-            reply = await SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, limit.Token).ConfigureAwait(false);
+            return await send(limit.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             throw Network();
         }
-
-        var published = Parse<ShareHostJson.Published>(reply.Body) ?? new ShareHostJson.Published();
-
-        // Borea opens this page in the browser, and the host opens every listing pull request on GitHub.
-        var pullRequest = Https(ShareHostJson.Text(published.PullRequest)) is { } link && string.Equals(link.Host, "github.com", StringComparison.OrdinalIgnoreCase) ? link : null;
-        return new SharePublished(
-            ShareHostJson.Text(published.Id) is { Length: > 0 } id ? id : listing?.Id,
-            ShareHostJson.Text(published.Version) is { Length: > 0 } released ? released : version,
-            pullRequest,
-            PageOnHost(host, ShareHostJson.Text(published.Page)));
     }
 
     /// <summary>The answer lists the pictures of the listing, and Borea does not read it, because a 2xx already says that the host took this one.</summary>
@@ -227,23 +275,9 @@ public sealed class ShareHostClient : IShareHostClient
         await SendAsync(host, HttpMethod.Post, path, content, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// The address when it is https on the host of the api, or on a sub-domain or a parent of it, because a host may serve its pages
-    /// and its api from different names. A top-level name such as gg counts as no parent.
-    /// </summary>
-    internal static Uri? PageOnHost(ShareHost host, string? address)
-    {
-        if (Https(address) is not { } page)
-            return null;
-
-        var api = host.Api.Host;
-        var site = page.Host;
-        return string.Equals(site, api, StringComparison.OrdinalIgnoreCase)
-            || site.EndsWith("." + api, StringComparison.OrdinalIgnoreCase)
-            || (site.Contains('.') && api.EndsWith("." + site, StringComparison.OrdinalIgnoreCase))
-                ? page
-                : null;
-    }
+    /// <summary>Borea opens this page in the browser, and the host opens every listing pull request on GitHub.</summary>
+    private static Uri? PullRequestLink(JsonElement value) =>
+        Https(ShareHostJson.Text(value)) is { } link && string.Equals(link.Host, "github.com", StringComparison.OrdinalIgnoreCase) ? link : null;
 
     private static Uri? Https(string? address) =>
         Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps ? uri : null;
@@ -333,6 +367,13 @@ public sealed class ShareHostClient : IShareHostClient
 
     private async Task<Reply> SendAsync(ShareHost host, HttpMethod method, string path, HttpContent content, CancellationToken cancellationToken)
     {
+        var reply = await ExchangeAsync(host, method, path, content, cancellationToken).ConfigureAwait(false);
+        return (int)reply.Status is < 200 or > 299 ? throw Refused(host, reply) : reply;
+    }
+
+    /// <summary>Sends with the token of the host and gives any answer but a refused token, which drops the token.</summary>
+    private async Task<Reply> ExchangeAsync(ShareHost host, HttpMethod method, string path, HttpContent? content, CancellationToken cancellationToken)
+    {
         string token;
         lock (_tokens)
         {
@@ -357,9 +398,6 @@ public sealed class ShareHostClient : IShareHostClient
             ForgetKeptAccessToken(host);
             throw new ShareHostException(ShareHostFailure.SignedOut, $"{host.Name} no longer takes the sign-in.");
         }
-
-        if ((int)reply.Status is < 200 or > 299)
-            throw Refused(host, reply);
 
         return reply;
     }

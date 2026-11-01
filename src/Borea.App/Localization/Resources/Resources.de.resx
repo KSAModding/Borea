@@ -4047,6 +4047,72 @@
   <data name="ShareOpenHostFormat" xml:space="preserve">
     <value>{0} öffnen</value>
   </data>
+  <data name="ShareManageHeading" xml:space="preserve">
+    <value>Von dir geteilt</value>
+  </data>
+  <data name="ShareManageDoneHint" xml:space="preserve">
+    <value>Du kannst die Seite später ändern oder eine Version entfernen.</value>
+  </data>
+  <data name="ShareManageChange" xml:space="preserve">
+    <value>Seite ändern</value>
+  </data>
+  <data name="ShareManageTakeDown" xml:space="preserve">
+    <value>Eine Version entfernen</value>
+  </data>
+  <data name="ShareManageOnHostFormat" xml:space="preserve">
+    <value>Auf {0} verwalten</value>
+  </data>
+  <data name="ShareManageChangeTitleFormat" xml:space="preserve">
+    <value>Seite von {0} ändern</value>
+  </data>
+  <data name="ShareManageChangeHint" xml:space="preserve">
+    <value>Deine Änderung geht als Anfrage an die Seite Entdecken. Ein Feld, das du nicht änderst, bleibt, wie es ist.</value>
+  </data>
+  <data name="ShareManageNoChange" xml:space="preserve">
+    <value>Noch ist nichts geändert.</value>
+  </data>
+  <data name="ShareManageSend" xml:space="preserve">
+    <value>Änderung senden</value>
+  </data>
+  <data name="ShareManageSendingFormat" xml:space="preserve">
+    <value>Die Änderung wird an {0} gesendet...</value>
+  </data>
+  <data name="ShareManageSentFormat" xml:space="preserve">
+    <value>{0} hat deine Änderung. Sie erscheint auf der Seite Entdecken, sobald ihre Anfrage durch ist, und das kann einige Stunden dauern. Du musst nichts tun.</value>
+  </data>
+  <data name="ShareManageSentLaterFormat" xml:space="preserve">
+    <value>{0} hat deine Änderung. Sie erscheint später auf der Seite Entdecken, weil {0} die Anfrage noch nicht senden konnte und es von selbst erneut versucht. Du musst nichts tun.</value>
+  </data>
+  <data name="ShareManageNotOfferedFormat" xml:space="preserve">
+    <value>{0} bietet das in Borea nicht an. Erledige es über den Link unten auf {0}.</value>
+  </data>
+  <data name="ShareTakeDownTitleFormat" xml:space="preserve">
+    <value>Eine Version von {0} entfernen</value>
+  </data>
+  <data name="ShareTakeDownChoose" xml:space="preserve">
+    <value>Wähle die Version, die du entfernen willst.</value>
+  </data>
+  <data name="ShareTakeDownNoVersion" xml:space="preserve">
+    <value>Borea kennt keine Version, die du entfernen kannst. Nutze den Link unten.</value>
+  </data>
+  <data name="ShareTakeDownWarningFormat" xml:space="preserve">
+    <value>Damit wird Version {0} von {1} auf {2} entfernt. Ihre Datei und ihre Kopie im Internet Archive werden gelöscht. Das lässt sich nicht rückgängig machen, und die Versionsnummer {0} lässt sich nie wieder verwenden. Der Download kann noch bis zu 10 Minuten funktionieren.</value>
+  </data>
+  <data name="ShareTakeDownVersionFormat" xml:space="preserve">
+    <value>Version {0} entfernen</value>
+  </data>
+  <data name="ShareTakingDownFormat" xml:space="preserve">
+    <value>Version {0} wird entfernt...</value>
+  </data>
+  <data name="ShareTakenDownFormat" xml:space="preserve">
+    <value>Version {0} ist entfernt. Ihr Download kann noch bis zu 10 Minuten funktionieren, und sie verschwindet innerhalb einiger Stunden von der Seite Entdecken.</value>
+  </data>
+  <data name="ShareTakenDownHeadingFormat" xml:space="preserve">
+    <value>Version {1} von {0} ist entfernt</value>
+  </data>
+  <data name="ShareTakeDownLostAnswerFormat" xml:space="preserve">
+    <value>Borea hat keine Antwort von {0} bekommen und weiß darum nicht, ob Version {1} entfernt ist. Sieh auf der Seite von {0} nach.</value>
+  </data>
   <data name="ShareDoneHeadingFormat" xml:space="preserve">
     <value>{0} ist veröffentlicht</value>
   </data>

@@ -22,6 +22,10 @@ internal static class ShareHostApi
 
     public const string ImagesPath = "images";
 
+    public const string ReleasesPath = "releases";
+
+    public const string TakeDownPath = "take-down";
+
     /// <summary>The kept secret says which kind of token it holds, because a host may give no refresh token.</summary>
     public const string RefreshPrefix = "refresh:";
 
@@ -138,6 +142,22 @@ internal static class ShareHostJson
 
         [JsonPropertyName("page")]
         public JsonElement Page { get; set; }
+    }
+
+    public sealed class ListingChanged
+    {
+        // A 2xx is a change that the host took, so these take any JSON value, and a malformed one costs only itself.
+        [JsonPropertyName("pull_request")]
+        public JsonElement PullRequest { get; set; }
+
+        [JsonPropertyName("page")]
+        public JsonElement Page { get; set; }
+    }
+
+    public sealed class TakenDown
+    {
+        [JsonPropertyName("taken_down")]
+        public bool Value { get; set; }
     }
 
     public sealed class Error

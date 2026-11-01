@@ -2303,6 +2303,24 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareCopyCode => Resources.ShareCopyCode;
 
+    public string ShareManageHeading => Resources.ShareManageHeading;
+
+    public string ShareManageDoneHint => Resources.ShareManageDoneHint;
+
+    public string ShareManageChange => Resources.ShareManageChange;
+
+    public string ShareManageTakeDown => Resources.ShareManageTakeDown;
+
+    public string ShareManageChangeHint => Resources.ShareManageChangeHint;
+
+    public string ShareManageNoChange => Resources.ShareManageNoChange;
+
+    public string ShareManageSend => Resources.ShareManageSend;
+
+    public string ShareTakeDownChoose => Resources.ShareTakeDownChoose;
+
+    public string ShareTakeDownNoVersion => Resources.ShareTakeDownNoVersion;
+
     public string ShareDoneNow => Resources.ShareDoneNow;
 
     public string ShareOpenPage => Resources.ShareOpenPage;
@@ -4197,6 +4215,45 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatShareOpenHost(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareOpenHostFormat, host);
+
+    public string FormatShareManageOnHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageOnHostFormat, host);
+
+    public string FormatShareManageChangeTitle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageChangeTitleFormat, name);
+
+    public string FormatShareManageSending(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageSendingFormat, host);
+
+    public string FormatShareManageSent(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageSentFormat, host);
+
+    public string FormatShareManageSentLater(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageSentLaterFormat, host);
+
+    public string FormatShareManageNotOffered(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageNotOfferedFormat, host);
+
+    public string FormatShareTakeDownTitle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakeDownTitleFormat, name);
+
+    public string FormatShareTakeDownWarning(string version, string name, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakeDownWarningFormat, version, name, host);
+
+    public string FormatShareTakeDownVersion(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakeDownVersionFormat, version);
+
+    public string FormatShareTakingDown(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakingDownFormat, version);
+
+    public string FormatShareTakenDown(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakenDownFormat, version);
+
+    public string FormatShareTakenDownHeading(string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakenDownHeadingFormat, name, version);
+
+    public string FormatShareTakeDownLostAnswer(string host, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakeDownLostAnswerFormat, host, version);
 
     public string FormatShareDoneHeading(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareDoneHeadingFormat, name);

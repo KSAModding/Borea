@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Borea.App.Localization;
 using Borea.Core.GitHub;
 using Borea.Core.Instances;
 using Borea.Core.Listings;
@@ -35,7 +36,8 @@ public sealed partial class ListingEditor
     private ShareHost? _checkedHost;
     private IReadOnlyList<ShareCheck> _shareChecks = [];
     private (ShareHost Host, ShareUpload Upload, string? ListingId)? _shareUpload;
-    private (string Name, ShareHost Host, Uri? Page, bool IsNewVersion, string? SiteLink)? _sharePublished;
+    private (string Name, ShareHost Host, Uri? Page, bool IsNewVersion, string? SiteLink, string Id, string Version)? _sharePublished;
+    private bool _isShareDoneTakenDown;
     private (string HostName, string Page, string? CompletePage, string Code)? _shareHostCode;
     private CancellationTokenSource? _publishRun;
     private CancellationTokenSource? _signInRun;
@@ -301,6 +303,9 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareDoneLink));
         OnPropertyChanged(nameof(ShareDoneCopyLink));
         OnPropertyChanged(nameof(ShareDoneOpenText));
+        OnPropertyChanged(nameof(ShareDoneStateText));
+        OnPropertyChanged(nameof(ShareDoneTakeDownText));
+        OnPropertyChanged(nameof(ShareDoneManageOnHostText));
         RefreshShareErrorAction();
         RefreshShareHostCode();
     }
@@ -349,6 +354,7 @@ public sealed partial class ListingEditor
         _shareUpload = null;
         _refusedShareVersion = null;
         _sharePublished = null;
+        _isShareDoneTakenDown = false;
         _shareHostCode = null;
         ShareHostProgress = null;
         ShareHostError = null;
@@ -572,7 +578,7 @@ public sealed partial class ListingEditor
             // A publish without an id in its answer is a new version, which always has the id of the listing on the host.
             var id = published.Id ?? shared.ListingId!;
             _shareUpload = null;
-            _sharePublished = (ShareListingName, shared.Host, published.Page, listing is null, ShareLinks.ForPublished(share.Entry.Kind.ToContentType(), id));
+            _sharePublished = (ShareListingName, shared.Host, published.Page, listing is null, ShareLinks.ForPublished(share.Entry.Kind.ToContentType(), id), id, published.Version);
             SharePullRequest = published.PullRequest;
             IsShareDetailsOpen = false;
             RefreshShareRun();
@@ -799,22 +805,13 @@ public sealed partial class ListingEditor
     /// </summary>
     private (string Text, string? Detail, ShareErrorAction Action) ShareHostFailureText(ShareHost host, ShareHostException exception, string? version) => exception switch
     {
-        { Failure: ShareHostFailure.SignedOut } => (Localization.FormatListingShareHostSignedOut(host.Name), null, ShareErrorAction.None),
-        { Failure: ShareHostFailure.SignInRefused } => (Localization.FormatListingShareHostSignInRefused(host.Name), null, ShareErrorAction.None),
-        { Failure: not ShareHostFailure.Host } when version is not null => (Localization.FormatShareErrorLostAnswer(host.Name), null, ShareErrorAction.OpenHost),
-        { IsServerError: true } when version is not null => (Localization.FormatShareErrorLostAnswer(host.Name), exception.Message, ShareErrorAction.OpenHost),
-        { Failure: ShareHostFailure.NetworkError } => (Localization.FormatListingShareHostNetwork(host.Name), null, ShareErrorAction.None),
-        { Failure: ShareHostFailure.Unavailable } => (Localization.FormatShareErrorUnavailable(host.Name), null, ShareErrorAction.None),
-        { Failure: not ShareHostFailure.Host } => (Localization.FormatListingShareHostUnexpected(host.Name), null, ShareErrorAction.None),
+        { Failure: not (ShareHostFailure.Host or ShareHostFailure.SignedOut or ShareHostFailure.SignInRefused) } when version is not null => (Localization.FormatShareErrorLostAnswer(host.Name), null, ShareErrorAction.OpenHost),
+        { Failure: ShareHostFailure.Host, IsServerError: true } when version is not null => (Localization.FormatShareErrorLostAnswer(host.Name), exception.Message, ShareErrorAction.OpenHost),
+        _ when AnyRequestFailureText(Localization, host.Name, exception) is { } text => (text, null, ShareErrorAction.None),
         { Error: "id_taken" } => (Localization.FormatShareErrorIdTaken(Draft.Id, host.Name), null, ShareErrorAction.BackToDescription),
         { Error: "version_taken" } when ModVersion.TryParse(version, out var taken) =>
             (Localization.FormatShareErrorVersionTaken(ShareListingName, version!, new ModVersion(taken.Major, taken.Minor + 1, 0).ToString()), null, ShareErrorAction.None),
         { Error: "not_owner" } => (Localization.FormatShareErrorNotOwner(host.Name, ShareListingName), null, ShareErrorAction.SignOut),
-
-        // FormatDuration rounds down, so a wait of some seconds would read as 0 minutes.
-        { Error: "rate_limited", RetryAfter: { } wait } =>
-            (Localization.FormatShareErrorRateLimited(host.Name, Localization.FormatDuration(TimeSpan.FromMinutes(Math.Ceiling(wait.TotalMinutes)))), null, ShareErrorAction.None),
-        { Error: "rate_limited" } => (Localization.FormatShareErrorRateLimitedLater(host.Name), null, ShareErrorAction.None),
         { Error: "upload_expired" } => (Localization.FormatShareErrorUploadGone(host.Name), null, ShareErrorAction.OpenHost),
         { Error: "too_large" } => (Localization.FormatShareErrorTooLarge(host.Name), null, ShareErrorAction.None),
         { Error: "type_not_accepted" } => (IsSave ? Localization.FormatShareErrorNoSaves(host.Name) : Localization.FormatShareErrorNoVehicles(host.Name), null, ShareErrorAction.None),
@@ -825,6 +822,21 @@ public sealed partial class ListingEditor
         _ when ShareHostFailedChecks.Count > 0 => (Localization.FormatListingShareHostChecksFailed(host.Name), null, ShareErrorAction.None),
         { Error: "invalid_archive" } => (Localization.FormatListingShareHostChecksFailed(host.Name), null, ShareErrorAction.None),
         _ => (Localization.FormatListingShareHostSaid(host.Name, exception.Message), null, ShareErrorAction.None),
+    };
+
+    /// <summary>The text of a failure that reads the same for every request to a share host, or null when the request decides what it means.</summary>
+    internal static string? AnyRequestFailureText(LocalizationService localization, string host, ShareHostException exception) => exception switch
+    {
+        { Failure: ShareHostFailure.SignedOut } => localization.FormatListingShareHostSignedOut(host),
+        { Failure: ShareHostFailure.SignInRefused } => localization.FormatListingShareHostSignInRefused(host),
+        { Failure: ShareHostFailure.NetworkError } => localization.FormatListingShareHostNetwork(host),
+        { Failure: ShareHostFailure.Unavailable } => localization.FormatShareErrorUnavailable(host),
+        { Failure: not ShareHostFailure.Host } => localization.FormatListingShareHostUnexpected(host),
+
+        // FormatDuration rounds down, so a wait of some seconds would read as 0 minutes.
+        { Error: "rate_limited", RetryAfter: { } wait } => localization.FormatShareErrorRateLimited(host, localization.FormatDuration(TimeSpan.FromMinutes(Math.Ceiling(wait.TotalMinutes)))),
+        { Error: "rate_limited" } => localization.FormatShareErrorRateLimitedLater(host),
+        _ => null,
     };
 
     [RelayCommand]

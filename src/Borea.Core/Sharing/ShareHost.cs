@@ -41,6 +41,24 @@ public sealed record ShareHost(string Key, string Name, Uri Api, IReadOnlyList<s
 
     /// <summary>The site of the host. hosts.toml has no key for it, so it is the origin of <see cref="Api"/>.</summary>
     public Uri Page => new(Api.GetLeftPart(UriPartial.Authority) + "/");
+
+    /// <summary>
+    /// The address when it is https on the host of the api, or on a sub-domain or a parent of it, because a host may serve its pages
+    /// and its api from different names. A top-level name such as gg counts as no parent.
+    /// </summary>
+    public Uri? PageOnHost(string? address)
+    {
+        if (!Uri.TryCreate(address, UriKind.Absolute, out var page) || page.Scheme != Uri.UriSchemeHttps)
+            return null;
+
+        var api = Api.Host;
+        var site = page.Host;
+        return string.Equals(site, api, StringComparison.OrdinalIgnoreCase)
+            || site.EndsWith("." + api, StringComparison.OrdinalIgnoreCase)
+            || (site.Contains('.') && api.EndsWith("." + site, StringComparison.OrdinalIgnoreCase))
+                ? page
+                : null;
+    }
 }
 
 /// <summary>The share hosts that content-index registers.</summary>
