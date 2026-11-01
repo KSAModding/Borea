@@ -48,6 +48,27 @@ public sealed class VehiclePreviewViewModelTests
         Assert.False(preview.HasMissingMods);
     }
 
+    [Fact]
+    public async Task Expand_NeedsAScene_AndTheSceneLeavingShrinksTheView()
+    {
+        using var preview = Start(new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NoGameFolder });
+        await preview.Loading;
+        Assert.False(preview.ExpandCommand.CanExecute(null));
+
+        preview.Scene = PreviewTestScenes.StackedBoxes();
+        Assert.True(preview.ExpandCommand.CanExecute(null));
+        preview.ExpandCommand.Execute(null);
+        Assert.Same(preview, preview.Expanded);
+
+        preview.CollapseCommand.Execute(null);
+        Assert.Null(preview.Expanded);
+
+        preview.ExpandCommand.Execute(null);
+        preview.Scene = null;
+        Assert.False(preview.IsExpanded);
+        Assert.Null(preview.Expanded);
+    }
+
     [Theory]
     [InlineData(2_500_000L)]
     [InlineData(VehiclePreviewViewModel.AutoFetchVehicleBytes)]

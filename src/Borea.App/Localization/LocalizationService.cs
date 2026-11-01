@@ -3233,6 +3233,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatPreviewFactStages(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.PreviewFactStagesFormat, count);
 
+    public string PreviewExpandView => Resources.PreviewExpandView;
+
+    public string PreviewCollapseView => Resources.PreviewCollapseView;
+
     public string PreviewAttribution => Resources.PreviewAttribution;
 
     /// <param name="mod">The mod Id and its version, such as "Wings 1.0.0".</param>
