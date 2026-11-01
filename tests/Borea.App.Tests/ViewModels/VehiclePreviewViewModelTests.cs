@@ -691,6 +691,130 @@ public sealed class VehiclePreviewViewModelTests
         Assert.Contains(Localization.FormatShareSummaryMods("1"), preview.Facts);
     }
 
+    [Fact]
+    public async Task SavePicture_WritesThePngOfTheViewToThePickedFile()
+    {
+        var picks = new List<string>();
+        var encoder = new RecordingEncoder();
+        using var written = new MemoryStream();
+        using var preview = Start(new FakeVehiclePreview(), encoder: encoder, savePicture: async (name, write) =>
+        {
+            picks.Add(name);
+            await write(written);
+        });
+        await preview.Loading;
+        var scene = PreviewTestScenes.StackedBoxes();
+        preview.Scene = scene;
+        var camera = new OrbitCamera();
+        camera.Frame(scene.Bounds, 64f / 36f);
+
+        await preview.SavePictureCommand.ExecuteAsync(new FixedPicture(new VehiclePicture(scene, camera, 64, 36)));
+
+        Assert.Equal(["ExampleRover.png"], picks);
+        Assert.Equal(RecordingEncoder.Png, written.ToArray());
+        var frame = Assert.Single(encoder.Frames);
+        Assert.Equal((64, 36), (frame.Width, frame.Height));
+
+        // The vehicle shows, and the pixels around it stay transparent.
+        Assert.InRange(frame.Covered, 1, 64 * 36 - 1);
+    }
+
+    [Fact]
+    public async Task SavePicture_DrawsNothing_WhenThePlayerCancelsThePick_AndAsksNothing_WithoutAPicture()
+    {
+        var picks = 0;
+        var encoder = new RecordingEncoder();
+        using var preview = Start(new FakeVehiclePreview(), encoder: encoder, savePicture: (_, _) =>
+        {
+            picks++;
+            return Task.CompletedTask;
+        });
+        await preview.Loading;
+        var scene = PreviewTestScenes.StackedBoxes();
+        preview.Scene = scene;
+
+        await preview.SavePictureCommand.ExecuteAsync(new FixedPicture(null));
+        Assert.Equal(0, picks);
+
+        await preview.SavePictureCommand.ExecuteAsync(new FixedPicture(new VehiclePicture(scene, new OrbitCamera(), 8, 8)));
+        Assert.Equal(1, picks);
+        Assert.Empty(encoder.Frames);
+    }
+
+    [Fact]
+    public async Task SavePicture_IsOffWithoutAScene()
+    {
+        using var preview = Start(new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NoGameFolder });
+        await preview.Loading;
+        Assert.False(preview.SavePictureCommand.CanExecute(null));
+
+        preview.Scene = PreviewTestScenes.StackedBoxes();
+        Assert.True(preview.SavePictureCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SavePicture_OnTheOpenPage_ShowsTheSavedFile_OrAnErrorWhenTheFileCannotBeWritten()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview();
+        viewModel.VehiclePreviewEncoder = new RecordingEncoder();
+        var window = new GameSaveShareTests.ArchiveWindow();
+        viewModel.WindowServices = window;
+        await OpenRoverAsync(viewModel);
+        var preview = viewModel.VehiclePreview!;
+        var scene = PreviewTestScenes.StackedBoxes();
+        preview.Scene = scene;
+        var picture = new FixedPicture(new VehiclePicture(scene, new OrbitCamera(), 8, 8));
+
+        await preview.SavePictureCommand.ExecuteAsync(picture);
+        Assert.Equal(harness.Localization.FormatListingSaved("ExampleRover.png"), viewModel.Toasts.Items[^1].Message);
+        Assert.Equal(RecordingEncoder.Png, window.Written.ToArray());
+
+        viewModel.WindowServices = new FailingWindow();
+        await preview.SavePictureCommand.ExecuteAsync(picture);
+        Assert.Equal(harness.Localization.PreviewPictureFailed, viewModel.Toasts.Items[^1].Message);
+        Assert.Equal("Disk full.", viewModel.Toasts.Items[^1].Detail);
+    }
+
+    private sealed class FixedPicture(VehiclePicture? picture) : IVehiclePictureSource
+    {
+        public VehiclePicture? CurrentPicture() => picture;
+    }
+
+    private sealed class RecordingEncoder : IPngEncoder
+    {
+        public static readonly byte[] Png = [1, 2, 3];
+
+        public List<(int Width, int Height, int Covered)> Frames { get; } = [];
+
+        public byte[] Encode(FrameBuffer frame)
+        {
+            var covered = 0;
+            for (var i = 3; i < frame.Rgba.Length; i += 4)
+            {
+                if (frame.Rgba[i] != 0)
+                    covered++;
+            }
+
+            Frames.Add((frame.Width, frame.Height, covered));
+            return Png;
+        }
+    }
+
+    private sealed class FailingWindow : IWindowServices
+    {
+        public Task<string?> SaveTextFileAsync(string title, string suggestedFileName, string fileTypeName, string text) => Task.FromResult<string?>(null);
+
+        public Task<string?> SaveFileAsync(string title, string suggestedFileName, string extension, string fileTypeName, Func<Stream, Task> write) => Task.FromException<string?>(new IOException("Disk full."));
+
+        public Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName) => Task.FromResult<PickedTextFile?>(null);
+
+        public Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes) => Task.FromResult<PickedBinaryFile?>(null);
+
+        public Task CopyTextAsync(string text) => Task.CompletedTask;
+    }
+
     internal static async Task OpenRoverAsync(MainViewModel viewModel)
     {
         await OpenRoverPageAsync(viewModel);
@@ -727,7 +851,9 @@ public sealed class VehiclePreviewViewModelTests
         Action<string>? stillStored = null,
         IRgbaImageDecoder? decoder = null,
         ModVersionMetadata? release = null,
-        TimeSpan? autoFetchDelay = null)
+        TimeSpan? autoFetchDelay = null,
+        IPngEncoder? encoder = null,
+        Func<string, Func<Stream, Task>, Task>? savePicture = null)
     {
         var preview = new VehiclePreviewViewModel(
             service,
@@ -737,9 +863,10 @@ public sealed class VehiclePreviewViewModelTests
             openSettings ?? (() => { }),
             new PreviewSceneBuilder(new PreviewTextureLoader(decoder)),
             thumbnails: thumbnails,
-            encoder: thumbnails,
+            encoder: encoder ?? thumbnails,
             stillStored: stillStored,
-            autoFetchDelay: autoFetchDelay);
+            autoFetchDelay: autoFetchDelay,
+            savePicture: savePicture);
         preview.Start();
         return preview;
     }

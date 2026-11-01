@@ -3157,6 +3157,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PreviewResetView => Resources.PreviewResetView;
 
+    public string PreviewSavePicture => Resources.PreviewSavePicture;
+
+    public string PreviewSavePictureTip => Resources.PreviewSavePictureTip;
+
+    public string PreviewPictureFileType => Resources.PreviewPictureFileType;
+
+    public string PreviewPictureFailed => Resources.PreviewPictureFailed;
+
     public string FormatPreviewFactParts(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.PreviewFactPartsFormat, count);
 

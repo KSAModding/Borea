@@ -312,7 +312,7 @@
                                 <StackPanel Spacing="8">
                                     <Border Classes="card" Padding="0" views:RoundedClip.IsEnabled="True">
                                         <views:AspectRatioPanel>
-                                            <preview:VehiclePreviewView Scene="{Binding Scene}" ResetCount="{Binding ResetCount}" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
+                                            <preview:VehiclePreviewView x:Name="PreviewView" Scene="{Binding Scene}" ResetCount="{Binding ResetCount}" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
                                             <!-- before there is a scene: what the preview needs, and the click that starts it -->
                                             <StackPanel Spacing="12" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasScene}">
                                                 <TextBlock Classes="body-md secondary" Text="{Binding StatusText}" TextWrapping="Wrap" TextAlignment="Center" IsVisible="{Binding StatusText, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -324,7 +324,10 @@
                                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
                                                 </WrapPanel>
                                             </StackPanel>
-                                            <Button Classes="text" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" IsVisible="{Binding HasScene}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasScene}">
+                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePicture}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePictureTip}" Command="{Binding SavePictureCommand}" CommandParameter="{Binding #PreviewView}" />
+                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" />
+                                            </StackPanel>
                                             <!-- the camera controls, in a flyout so that they never cover the scene until the player asks for them -->
                                             <Button Classes="info" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding HasScene}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}">
                                                 <Button.Flyout>

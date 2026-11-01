@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -84,6 +85,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     private readonly IPreviewThumbnails? _thumbnails;
     private readonly IPngEncoder? _encoder;
     private readonly Action<string>? _stillStored;
+    private readonly Func<string, Func<Stream, Task>, Task>? _savePicture;
     private readonly TimeSpan _autoFetchDelay;
     private readonly bool _autoFetch;
     private readonly CancellationTokenSource _lifetime = new();
@@ -108,6 +110,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     /// <param name="stillStored">Gets the vehicle hash after a new still was stored, on the thread that started the load.</param>
     /// <param name="autoFetchDelay">The wait before a small vehicle file downloads on its own, or null for <see cref="DefaultAutoFetchDelay"/>.</param>
     /// <param name="autoFetch">False when a small vehicle file must also wait for the click, such as after the player cancelled this release.</param>
+    /// <param name="savePicture">Asks the player for a file with the given suggested name and lets the given write fill it, or null to save no picture.</param>
     public VehiclePreviewViewModel(
         IVehiclePreview service,
         ModVersionMetadata release,
@@ -119,7 +122,8 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         IPngEncoder? encoder = null,
         Action<string>? stillStored = null,
         TimeSpan? autoFetchDelay = null,
-        bool autoFetch = true)
+        bool autoFetch = true,
+        Func<string, Func<Stream, Task>, Task>? savePicture = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _release = release ?? throw new ArgumentNullException(nameof(release));
@@ -133,6 +137,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _stillStored = stillStored;
         _autoFetchDelay = autoFetchDelay ?? DefaultAutoFetchDelay;
         _autoFetch = autoFetch;
+        _savePicture = savePicture;
         ShowFacts();
     }
 
@@ -159,6 +164,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasScene))]
     [NotifyCanExecuteChangedFor(nameof(ResetViewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SavePictureCommand))]
     private PreviewScene? _scene;
 
     /// <summary>Goes up by one for each Reset view click. The view frames the vehicle again when it changes.</summary>
@@ -264,6 +270,20 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
     [RelayCommand(CanExecute = nameof(HasScene))]
     private void ResetView() => ResetCount++;
+
+    /// <summary>Saves the view of the click as a PNG in a file that the player picks. The picture draws only after the pick, and it goes nowhere else.</summary>
+    [RelayCommand(CanExecute = nameof(HasScene))]
+    private async Task SavePictureAsync(IVehiclePictureSource? view)
+    {
+        if (_encoder is not { } encoder || _savePicture is not { } save || view?.CurrentPicture() is not { } picture)
+            return;
+
+        await save(_release.ModId + ".png", async stream =>
+        {
+            var png = await Task.Run(() => encoder.Encode(RenderPicture(picture)));
+            await stream.WriteAsync(png);
+        });
+    }
 
     [RelayCommand]
     private void OpenSettings() => _openSettings();
@@ -525,6 +545,14 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
         // The renderer is dropped after this one frame, so it keeps no vertex cache and no work buffers.
         new SoftwareRenderer().Render(scene, camera, frame, new RenderOptions { WorldCacheBytes = 0, WorkBufferBytes = 0 }, token);
+        return frame;
+    }
+
+    /// <summary>Renders one picture at High quality, the quality of a view at rest, on a renderer of its own, so the view can keep rendering.</summary>
+    private static FrameBuffer RenderPicture(VehiclePicture picture)
+    {
+        var frame = new FrameBuffer(picture.Width, picture.Height);
+        new SoftwareRenderer().Render(picture.Scene, picture.Camera, frame, new RenderOptions { Quality = RenderQuality.High, WorldCacheBytes = 0, WorkBufferBytes = 0 }, CancellationToken.None);
         return frame;
     }
 

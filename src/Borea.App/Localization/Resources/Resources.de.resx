@@ -6015,6 +6015,18 @@
   <data name="PreviewResetView" xml:space="preserve">
     <value>Ansicht zurücksetzen</value>
   </data>
+  <data name="PreviewSavePicture" xml:space="preserve">
+    <value>Bild speichern</value>
+  </data>
+  <data name="PreviewSavePictureTip" xml:space="preserve">
+    <value>Speichert diese Ansicht als PNG-Datei auf deinem Computer. Es wird nichts hochgeladen.</value>
+  </data>
+  <data name="PreviewPictureFileType" xml:space="preserve">
+    <value>PNG-Bild</value>
+  </data>
+  <data name="PreviewPictureFailed" xml:space="preserve">
+    <value>Das Bild konnte nicht gespeichert werden.</value>
+  </data>
   <data name="PreviewFactPartsFormat" xml:space="preserve">
     <value>Teile: {0}</value>
   </data>

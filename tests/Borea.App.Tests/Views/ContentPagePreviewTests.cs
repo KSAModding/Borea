@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -13,6 +14,7 @@ using Borea.App.ViewModels;
 using Borea.App.Views.Preview;
 using Borea.Core.Preview;
 using Borea.Preview.Scene;
+using CommunityToolkit.Mvvm.Input;
 using static Borea.App.Tests.ViewModels.UserContentViewModelTests;
 
 namespace Borea.App.Tests.Views;
@@ -138,6 +140,36 @@ public sealed class ContentPagePreviewTests
     }
 
     [Fact]
+    public async Task TheSaveButton_WritesAPngOfTheTurnedView_InTheSizeOfThePanel()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview();
+        viewModel.VehiclePreviewEncoder = new AvaloniaPngEncoder();
+        await VehiclePreviewViewModelTests.OpenRoverAsync(viewModel);
+        viewModel.VehiclePreview!.Scene = PreviewTestScenes.StackedBoxes();
+
+        var seen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var (window, page, view) = await ShowAsync(harness, height: 1600);
+            var button = page.GetVisualDescendants().OfType<Button>().Single(candidate => Equals(candidate.Content, harness.Localization.PreviewSavePicture));
+            var first = await SaveAsync(viewModel, button);
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.ArrowRight, RawInputModifiers.None);
+            var turned = await SaveAsync(viewModel, button);
+            var panel = new PixelSize((int)Math.Ceiling(view.Bounds.Width), (int)Math.Ceiling(view.Bounds.Height));
+            using var picture = new Bitmap(new MemoryStream(turned));
+            var visible = button.IsEffectivelyVisible;
+            window.Close();
+            return (First: first, Turned: turned, Panel: panel, Picture: picture.PixelSize, Visible: visible);
+        });
+
+        Assert.True(seen.Visible);
+        Assert.Equal(seen.Panel, seen.Picture);
+        Assert.NotEqual(seen.First, seen.Turned);
+    }
+
+    [Fact]
     public async Task TheFacts_ShowOnThePage_WithTheCountsOfTheVehicle()
     {
         using var harness = await VehicleHarnessAsync();
@@ -159,6 +191,14 @@ public sealed class ContentPagePreviewTests
         Assert.Contains(localization.FormatPreviewFactParts(3), shown);
         Assert.Contains(localization.FormatPreviewFactStages(2), shown);
         Assert.Contains(localization.ShareSummaryNoMods, shown);
+    }
+
+    private static async Task<byte[]> SaveAsync(MainViewModel viewModel, Button button)
+    {
+        var window = new GameSaveShareTests.ArchiveWindow();
+        viewModel.WindowServices = window;
+        await ((IAsyncRelayCommand)button.Command!).ExecuteAsync(button.CommandParameter);
+        return window.Written.ToArray();
     }
 
     /// <summary>The page of Example Rover, whose preview builds an empty scene that the test then replaces with boxes.</summary>

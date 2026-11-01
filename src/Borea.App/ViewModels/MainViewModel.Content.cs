@@ -273,12 +273,31 @@ public partial class MainViewModel
                 encoder: VehiclePreviewEncoder,
                 stillStored: ShowPreviewStill,
                 autoFetchDelay: VehiclePreviewAutoFetchDelay,
-                autoFetch: !installing && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, latest.Release)));
+                autoFetch: !installing && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, latest.Release)),
+                savePicture: SaveVehiclePictureAsync);
         }
 
         VehiclePreview = next;
         Close(old);
         next?.Start();
+    }
+
+    /// <summary>Asks for a PNG file and lets <paramref name="write"/> fill it. A file that stops half way is deleted, and a toast says why.</summary>
+    private async Task SaveVehiclePictureAsync(string suggestedFileName, Func<Stream, Task> write)
+    {
+        if (WindowServices is not { } window)
+            return;
+
+        try
+        {
+            var file = await window.SaveFileAsync(Localization.PreviewSavePicture, suggestedFileName, "png", Localization.PreviewPictureFileType, write);
+            if (file is not null)
+                ShowSuccessToast(() => Localization.FormatListingSaved(file));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            ShowErrorToast(() => Localization.PreviewPictureFailed, exception.Message);
+        }
     }
 
     /// <summary>
