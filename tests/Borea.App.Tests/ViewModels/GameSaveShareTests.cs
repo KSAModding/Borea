@@ -410,7 +410,7 @@ public sealed class GameSaveShareTests
         await harness.ViewModel.ShareSchemaLoad!;
     }
 
-    private static string WriteItem(string kindFolder, string name, string gameFile, string xml)
+    internal static string WriteItem(string kindFolder, string name, string gameFile, string xml)
     {
         var folder = Directory.CreateDirectory(Path.Combine(kindFolder, name)).FullName;
         File.WriteAllText(Path.Combine(folder, "meta.toml"), $"name = \"{name}\"\nversion = \"v2026.10.19.5638\"\n");

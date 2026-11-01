@@ -22,6 +22,13 @@ public sealed class ShareHostShareTests
         } }
         """;
 
+    private const string TwoHosts = """
+        {
+          "ksamods": { "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/", "types": ["vehicle"] },
+          "another": { "kind": "share", "name": "another.example", "api": "https://another.example/api/share/v1/", "types": ["vehicle"] }
+        }
+        """;
+
     /// <summary>A host without GitHub storage (RFC 0104), which serves signed data files and has no pages.</summary>
     private const string DataHost = """
         { "ownhost": {
@@ -416,7 +423,7 @@ public sealed class ShareHostShareTests
     [Fact]
     public async Task HostError_ShowsItsMessage()
     {
-        var host = new FakeHost { UploadFailure = new ShareHostException(ShareHostFailure.Host, "ExampleRover belongs to another account.", "id_taken") };
+        var host = new FakeHost { UploadFailure = new ShareHostException(ShareHostFailure.Host, "ExampleRover belongs to another account.", "some_new_code") };
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
         var editor = await ShareAsync(harness);
         editor.Homepage = "https://example.test/rover";
@@ -463,13 +470,7 @@ public sealed class ShareHostShareTests
     [Fact]
     public async Task SeveralHosts_AreAChoiceWithTheFirstSelected_AndTheCheckNamesTheChosenOne()
     {
-        const string twoHosts = """
-            {
-              "ksamods": { "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/", "types": ["vehicle"] },
-              "another": { "kind": "share", "name": "another.example", "api": "https://another.example/api/share/v1/", "types": ["vehicle"] }
-            }
-            """;
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(twoHosts), respond: Serve(), shareHostClient: new FakeHost());
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(TwoHosts), respond: Serve(), shareHostClient: new FakeHost());
         var text = harness.Localization;
         var editor = await ShareAsync(harness);
 
@@ -930,13 +931,14 @@ public sealed class ShareHostShareTests
         host.DuringSignIn = () => signIn.Task;
         var publish = editor.PublishToShareHostCommand.ExecuteAsync(null);
         await codeShown.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.True(editor.CanCancelShareHost);
 
         signIn.SetException(new ShareHostException(ShareHostFailure.SignInRefused, "The sign-in code expired.", "expired_token"));
         await publish;
 
         Assert.Null(editor.ShareHostUserCode);
         Assert.Null(editor.ShareHostCodeText);
-        Assert.Equal(harness.Localization.ListingShareHostSignInRefused, editor.ShareHostError);
+        Assert.Equal(harness.Localization.FormatListingShareHostSignInRefused("ksamods.gg"), editor.ShareHostError);
         Assert.True(editor.CanPublishToShareHost);
     }
 
@@ -968,7 +970,7 @@ public sealed class ShareHostShareTests
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
         Assert.Equal((2, 2), (host.SignIns, host.Uploads.Count));
-        Assert.Equal(harness.Localization.ListingShareHostSignedOut, editor.ShareHostError);
+        Assert.Equal(harness.Localization.FormatListingShareHostSignedOut("ksamods.gg"), editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
         Assert.Null(editor.ShareHostProgress);
         Assert.Equal(1, host.SignOuts);
@@ -1030,6 +1032,355 @@ public sealed class ShareHostShareTests
         Assert.Equal(harness.Localization.FormatShareHostOne("own.example"), editor.ShareHostHeadingText);
     }
 
+    [Theory]
+    [InlineData("not_owner", true)]
+    [InlineData("too_large", true)]
+    [InlineData("type_not_accepted", true)]
+    [InlineData("invalid_archive", true)]
+    [InlineData("some_new_code", true)]
+    [InlineData("id_taken", false)]
+    [InlineData("version_taken", false)]
+    [InlineData("upload_expired", false)]
+    public async Task RefusalOfTheHost_ShowsItsTextTheMessageAndOneAction(string code, bool atUpload)
+    {
+        const string said = "Said by the host.";
+        var refusal = new ShareHostException(ShareHostFailure.Host, said, code);
+        var host = new FakeHost { UploadFailure = atUpload ? refusal : null, PublishFailure = atUpload ? null : refusal };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var text = harness.Localization;
+        var editor = await ShareWithFieldsAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        (string Text, string? Detail, string? Action) expected = code switch
+        {
+            "not_owner" => (text.FormatShareErrorNotOwner("ksamods.gg", "Example Rover"), said, text.FormatShareSignOut("ksamods.gg")),
+            "too_large" => (text.FormatShareErrorTooLarge("ksamods.gg"), said, null),
+            "type_not_accepted" => (text.FormatShareErrorNoVehicles("ksamods.gg"), said, null),
+            "invalid_archive" => (text.FormatListingShareHostChecksFailed("ksamods.gg"), said, null),
+            "id_taken" => (text.FormatShareErrorIdTaken("ExampleRover", "ksamods.gg"), said, text.ShareBackToDescription),
+            "version_taken" => (text.FormatShareErrorVersionTaken("Example Rover", "1.0.0", "1.1.0"), said, null),
+            "upload_expired" => (text.FormatShareErrorUploadGone("ksamods.gg"), said, text.FormatShareOpenHost("ksamods.gg")),
+            _ => (text.FormatListingShareHostSaid("ksamods.gg", said), null, null),
+        };
+        Assert.Equal(expected, (editor.ShareHostError, editor.ShareHostErrorDetail, editor.ShareErrorActionText));
+        Assert.Equal(code is "id_taken" or "version_taken", editor.HasShareUpload);
+        Assert.Equal(code == "version_taken", editor.IsEditingShareVersion);
+        Assert.Equal(code == "upload_expired" || atUpload, editor.ShowsShareCheckButton);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(30, 1)]
+    [InlineData(3700, 62)]
+    public async Task RateLimit_SaysHowLongToWait(int? seconds, int? minutes)
+    {
+        var refusal = new ShareHostException(ShareHostFailure.Host, "Too many.", "rate_limited") { RetryAfter = seconds is { } wait ? TimeSpan.FromSeconds(wait) : null };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost { UploadFailure = refusal });
+        var text = harness.Localization;
+        var editor = await ShareWithFieldsAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        var expected = minutes is { } rounded ? text.FormatShareErrorRateLimited("ksamods.gg", text.FormatDuration(TimeSpan.FromMinutes(rounded))) : text.FormatShareErrorRateLimitedLater("ksamods.gg");
+        Assert.Equal(expected, editor.ShareHostError);
+        Assert.Null(editor.ShareErrorActionText);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InvalidRequest_ShowsTheLinesOfItsFieldsWhenItHasThem(bool hasFields)
+    {
+        var refusal = new ShareHostException(ShareHostFailure.Host, "The version is wrong.", "invalid_request")
+        {
+            FieldErrors = hasFields ? new Dictionary<string, IReadOnlyList<string>> { ["version"] = ["Use three numbers.", "Use a higher one."], ["name"] = ["Use another name."] } : null,
+        };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost { PublishFailure = refusal });
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatListingShareHostSaid("ksamods.gg", "The version is wrong."), editor.ShareHostError);
+        Assert.Equal(hasFields ? "Use three numbers.\nUse a higher one.\nUse another name." : null, editor.ShareHostErrorDetail);
+    }
+
+    [Theory]
+    [InlineData(ShareHostFailure.NetworkError, false, false)]
+    [InlineData(ShareHostFailure.Unavailable, false, false)]
+    [InlineData(ShareHostFailure.UnexpectedResponse, false, false)]
+    [InlineData(ShareHostFailure.NetworkError, false, true)]
+    [InlineData(ShareHostFailure.Unavailable, false, true)]
+    [InlineData(ShareHostFailure.UnexpectedResponse, false, true)]
+    [InlineData(ShareHostFailure.Host, true, false)]
+    [InlineData(ShareHostFailure.Host, true, true)]
+    public async Task NoClearAnswer_AtPublishSaysThatASecondClickIsSafe_AndKeepsPublish(ShareHostFailure failure, bool isServerError, bool atPublish)
+    {
+        var lost = new ShareHostException(failure, "Server Error") { IsServerError = isServerError };
+        var host = new FakeHost { UploadFailure = atPublish ? null : lost, PublishFailure = atPublish ? lost : null };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var text = harness.Localization;
+        var editor = await ShareWithFieldsAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        var expected = atPublish
+            ? text.FormatShareErrorLostAnswer("ksamods.gg")
+            : failure switch
+            {
+                ShareHostFailure.NetworkError => text.FormatListingShareHostNetwork("ksamods.gg"),
+                ShareHostFailure.Unavailable => text.FormatShareErrorUnavailable("ksamods.gg"),
+                ShareHostFailure.Host => text.FormatListingShareHostSaid("ksamods.gg", "Server Error"),
+                _ => text.FormatListingShareHostUnexpected("ksamods.gg"),
+            };
+        Assert.Equal(expected, editor.ShareHostError);
+        Assert.Equal(isServerError && atPublish ? "Server Error" : null, editor.ShareHostErrorDetail);
+        Assert.Equal(atPublish ? text.FormatShareOpenHost("ksamods.gg") : null, editor.ShareErrorActionText);
+        Assert.Equal(atPublish, editor.CanPublishToShareHost);
+    }
+
+    [Fact]
+    public async Task UploadThatIsGone_OffersANewCheck_AndItsActionOpensTheSiteOfTheHost()
+    {
+        var opened = new ConcurrentQueue<string>();
+        var host = new FakeHost { PublishFailure = new ShareHostException(ShareHostFailure.Host, "It is gone.", "upload_expired") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        harness.ViewModel.OpenWithSystem = opened.Enqueue;
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.False(editor.HasShareUpload);
+        Assert.Empty(editor.ShareHostPassedChecks);
+        Assert.Null(editor.ShareHostProgress);
+        editor.RunShareErrorActionCommand.Execute(null);
+        Assert.Equal(["https://ksamods.gg/"], opened);
+    }
+
+    [Fact]
+    public async Task HostPageThatCannotOpen_KeepsTheTextOfTheErrorAndItsLink()
+    {
+        var host = new FakeHost { PublishFailure = new ShareHostException(ShareHostFailure.NetworkError, "No answer.") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        harness.ViewModel.OpenWithSystem = _ => throw new InvalidOperationException("No browser.");
+        var text = harness.Localization;
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        editor.RunShareErrorActionCommand.Execute(null);
+
+        Assert.Equal(text.FormatShareErrorLostAnswer("ksamods.gg"), editor.ShareHostError);
+        Assert.Equal(text.FormatListingShareHostOpenFailed("No browser."), editor.ShareHostErrorDetail);
+        Assert.Equal(text.FormatShareOpenHost("ksamods.gg"), editor.ShareErrorActionText);
+    }
+
+    [Fact]
+    public async Task PublishThatFailsACheck_DropsTheUpload_AndOffersANewCheck()
+    {
+        var refusal = new ShareHostException(ShareHostFailure.Host, "A check failed.", "invalid_archive") { Checks = [new ShareCheck("folder", false, "Taken by OtherRover.")] };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost { PublishFailure = refusal });
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatListingShareHostChecksFailed("ksamods.gg"), editor.ShareHostError);
+        Assert.Single(editor.ShareHostFailedChecks);
+        Assert.Null(editor.ShareChecksPassedText);
+        Assert.False(editor.HasShareUpload);
+        Assert.True(editor.ShowsShareCheckButton);
+        Assert.True(editor.ShowsShareRename);
+    }
+
+    [Fact]
+    public async Task HostThatTakesNoSaves_SaysSoForASave()
+    {
+        var host = new FakeHost { UploadFailure = new ShareHostException(ShareHostFailure.Host, "No saves.", "type_not_accepted") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var instance = await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        GameSaveShareTests.WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance), "Moon Base", "universe.xml", "<UniverseData><System><Id Id=\"Sol\" /></System></UniverseData>");
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.SavesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+        await editor.ShareHostsLoad;
+        FillRequiredFields(editor);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal(harness.Localization.FormatShareErrorNoSaves("ksamods.gg"), editor.ShareHostError);
+    }
+
+    [Fact]
+    public async Task NotOwner_SignsOutOfTheHostThatItNames_WhenAnotherHostIsSelected()
+    {
+        var host = new FakeHost { UploadFailure = new ShareHostException(ShareHostFailure.Host, "Not yours.", "not_owner") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(TwoHosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        var refused = editor.ShareHostRows[0].Host;
+        await editor.UploadToShareHostCommand.ExecuteAsync(editor.ShareHostRows[0]);
+
+        editor.SelectedShareHostRow = editor.ShareHostRows[1];
+
+        Assert.Equal(harness.Localization.FormatShareSignOut(refused.Name), editor.ShareErrorActionText);
+        editor.RunShareErrorActionCommand.Execute(null);
+        Assert.Equal(refused.Key, host.SignedOutOf);
+    }
+
+    [Fact]
+    public async Task NotOwner_DropsTheLocalEntry_AndTheSignOutLeadsToANewSignIn()
+    {
+        var host = new FakeHost { UploadFailure = new ShareHostException(ShareHostFailure.Host, "Your account does not own ExampleRover.", "not_owner") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "ExampleRover", "Example Rover", "1.0.0", null), null);
+        var editor = await ShareWithFieldsAsync(harness);
+        var row = Assert.Single(harness.ViewModel.VehiclesSection.Items);
+        Assert.NotNull(row.SharedOnText);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Empty(await harness.Services.SharedContent.ListAsync());
+        Assert.Null(row.SharedOnText);
+        Assert.Null(editor.ShareSignedInText);
+
+        editor.RunShareErrorActionCommand.Execute(null);
+
+        Assert.Equal(1, host.SignOuts);
+        Assert.Null(editor.ShareHostError);
+        Assert.Null(editor.ShareErrorActionText);
+
+        host.UploadFailure = null;
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal(2, host.SignIns);
+        Assert.True(editor.HasShareUpload);
+    }
+
+    [Fact]
+    public async Task SignOutLink_ShowsOnceSignedIn_AndDropsTheUpload()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var text = harness.Localization;
+        var editor = await ShareWithFieldsAsync(harness);
+        Assert.Null(editor.ShareSignedInText);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal((text.FormatShareSignedIn("ksamods.gg"), text.FormatShareSignOut("ksamods.gg")), (editor.ShareSignedInText, editor.ShareSignOutText));
+        Assert.True(editor.HasShareUpload);
+
+        editor.SignOutOfShareHostCommand.Execute(null);
+
+        Assert.Equal(1, host.SignOuts);
+        Assert.False(editor.HasShareUpload);
+        Assert.Null(editor.ShareSignedInText);
+    }
+
+    [Fact]
+    public async Task IdTaken_GoesBackToTheShortName_AndAnotherOneGoesOn()
+    {
+        var host = new FakeHost { PublishFailure = new ShareHostException(ShareHostFailure.Host, "It is taken.", "id_taken") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        editor.RunShareErrorActionCommand.Execute(null);
+
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.False(editor.HasShareUpload);
+        Assert.True(editor.IsShareMoreOptionsOpen);
+        Assert.Equal(harness.Localization.FormatShareIdHeld("ExampleRover"), editor.ShareIdError);
+        Assert.False(editor.CanContinueShare);
+
+        editor.Id = "MyRover";
+
+        Assert.Null(editor.ShareIdError);
+        Assert.True(editor.CanContinueShare);
+    }
+
+    [Fact]
+    public async Task WhileAPublishIsOut_CancelAndBackAreGone_ButAnUploadCanBeCancelled()
+    {
+        var arrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var answer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var host = new FakeHost
+        {
+            DuringSend = () =>
+            {
+                arrived.TrySetResult();
+                return answer.Task;
+            },
+        };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+
+        var upload = editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await arrived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.True(editor.CanCancelShareHost);
+        Assert.False(editor.IsSendingSharePublish);
+        answer.SetResult();
+        await upload;
+
+        answer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var publish = editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.False(editor.CanCancelShareHost);
+        Assert.True(editor.IsSendingSharePublish);
+        editor.OpenShareStep("describe");
+        Assert.Equal(ShareFlowStep.Publish, editor.ShareFlowStep);
+
+        answer.SetResult();
+        await publish;
+
+        Assert.False(editor.IsSendingSharePublish);
+        Assert.Null(editor.ShareHostError);
+    }
+
+    [Fact]
+    public async Task FolderThatIsGone_NamesTheItem_WithTheExceptionInTheDetails()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        Directory.Delete(Assert.Single(harness.ViewModel.VehiclesSection.Items).Entry.Path, recursive: true);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal(harness.Localization.FormatShareErrorFile("Example Rover"), editor.ShareHostError);
+        Assert.NotNull(editor.ShareHostFileDetail);
+        Assert.True(editor.HasShareDetails);
+        Assert.Empty(host.Uploads);
+        Assert.Null(editor.ShareHostProgress);
+    }
+
+    [Fact]
+    public async Task FileErrorAfterACancel_ShowsNothing()
+    {
+        ListingEditor? editor = null;
+        var host = new FakeHost
+        {
+            DuringSend = () =>
+            {
+                editor!.CancelShareHostCommand.Execute(null);
+                throw new IOException("The folder is gone.");
+            },
+        };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        editor = await ShareWithFieldsAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Null(editor.ShareHostError);
+        Assert.Null(editor.ShareHostFileDetail);
+        Assert.Null(editor.ShareHostProgress);
+    }
+
     /// <summary>A harness whose index lists the rover of the instance on a share host, so a share of it is a new version.</summary>
     internal static Task<ViewModelHarness> ListedRoverHarnessAsync() =>
         ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(vehicles: ListedRover), shareHostClient: new FakeHost());
@@ -1042,6 +1393,22 @@ public sealed class ShareHostShareTests
         var editor = harness.ViewModel.ListingEditor;
         await editor.ShareHostsLoad;
         return editor;
+    }
+
+    /// <summary>A share of a new listing that stands on the publish step.</summary>
+    private static async Task<ListingEditor> ShareWithFieldsAsync(ViewModelHarness harness)
+    {
+        var editor = await ShareAsync(harness);
+        FillRequiredFields(editor);
+        return editor;
+    }
+
+    private static void FillRequiredFields(ListingEditor editor)
+    {
+        editor.Authors = "Maxi";
+        editor.License = "CC-BY-4.0";
+        editor.Abstract = "A six-wheel rover for the Moon.";
+        editor.ContinueShareCommand.Execute(null);
     }
 
     /// <summary>Runs a click at the first moment the page takes one again, which is before the rename lists the instance again.</summary>
@@ -1094,7 +1461,9 @@ public sealed class ShareHostShareTests
 
         public ConcurrentQueue<Publish> Publishes { get; } = new();
 
-        public ShareHostException? UploadFailure { get; init; }
+        public ShareHostException? UploadFailure { get; set; }
+
+        public ShareHostException? PublishFailure { get; init; }
 
         public ShareUpload Upload { get; set; } = Checked;
 
@@ -1112,7 +1481,12 @@ public sealed class ShareHostShareTests
         /// <summary>Runs after the code shows and before the sign-in ends, for what the player does in that time.</summary>
         public Func<Task>? DuringSignIn { get; set; }
 
+        /// <summary>Runs after a request went out and before its answer.</summary>
+        public Func<Task>? DuringSend { get; init; }
+
         public int SignOuts { get; private set; }
+
+        public string? SignedOutOf { get; private set; }
 
         public bool IsSignedIn(ShareHost host) => _signedIn;
 
@@ -1129,25 +1503,29 @@ public sealed class ShareHostShareTests
         public void SignOut(ShareHost host)
         {
             SignOuts++;
+            SignedOutOf = host.Key;
             _signedIn = false;
         }
 
-        public Task<ShareUpload> UploadAsync(ShareHost host, Stream archive, string fileName, IReadOnlyList<ListingDependency> dependencies, string? listingId, CancellationToken cancellationToken = default)
+        public async Task<ShareUpload> UploadAsync(ShareHost host, Stream archive, string fileName, IReadOnlyList<ListingDependency> dependencies, string? listingId, CancellationToken cancellationToken = default)
         {
             Uploads.Enqueue(new Upload(fileName, archive.Length, dependencies, listingId));
 
             // The real client disposes the stream with its request, so a second send needs a new one.
             archive.Dispose();
-            if (RefuseToken() is { } refused)
-                return Task.FromException<ShareUpload>(refused);
+            if (DuringSend is { } during)
+                await during();
 
-            return UploadFailure is { } failure ? Task.FromException<ShareUpload>(failure) : Task.FromResult(Upload);
+            return (RefuseToken() ?? UploadFailure) is { } failure ? throw failure : Upload;
         }
 
-        public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
+        public async Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
         {
             Publishes.Enqueue(new Publish(uploadId, version, status, listing));
-            return RefuseToken() is { } refused ? Task.FromException<SharePublished>(refused) : Task.FromResult(new SharePublished(PublishedId, version, PullRequest, Page));
+            if (DuringSend is { } during)
+                await during();
+
+            return (RefuseToken() ?? PublishFailure) is { } failure ? throw failure : new SharePublished(PublishedId, version, PullRequest, Page);
         }
 
         private ShareHostException? RefuseToken()

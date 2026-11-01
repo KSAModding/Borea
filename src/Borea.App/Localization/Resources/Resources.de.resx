@@ -3721,7 +3721,7 @@
     <value>Wird veröffentlicht...</value>
   </data>
   <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
-    <value>Das Archiv ist {0} groß, und {1} nimmt höchstens {2} an. Es wurde nichts gesendet.</value>
+    <value>Deine Datei ist {0} groß, aber {1} nimmt höchstens {2} an. Es wurde nichts hochgeladen. Prüfe den Ordner auf große Dateien, die das Fahrzeug oder der Spielstand nicht braucht.</value>
   </data>
   <data name="ListingShareCheckPassedFormat" xml:space="preserve">
     <value>{0}: bestanden</value>
@@ -3756,17 +3756,74 @@
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>Der Share-Host nimmt die Anmeldung nicht mehr an. Teile erneut, um dich anzumelden.</value>
   </data>
+  <data name="ListingShareHostSignedOutFormat" xml:space="preserve">
+    <value>Deine Anmeldung bei {0} ist abgelaufen. Melde dich erneut an, um weiterzumachen.</value>
+  </data>
   <data name="ListingShareHostSignInRefused" xml:space="preserve">
     <value>Die Anmeldung wurde abgelehnt, oder ihr Code ist abgelaufen.</value>
+  </data>
+  <data name="ListingShareHostSignInRefusedFormat" xml:space="preserve">
+    <value>Du hast Borea auf {0} nicht bestätigt, oder der Code ist abgelaufen. Versuche es erneut.</value>
   </data>
   <data name="ListingShareHostNetwork" xml:space="preserve">
     <value>Der Share-Host war nicht erreichbar.</value>
   </data>
+  <data name="ListingShareHostNetworkFormat" xml:space="preserve">
+    <value>{0} war nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.</value>
+  </data>
   <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
-    <value>{0} hat so geantwortet, dass Borea es nicht versteht.</value>
+    <value>{0} hat eine Antwort gesendet, die Borea nicht lesen kann. Versuche es später erneut.</value>
   </data>
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}: {1}</value>
+  </data>
+  <data name="ShareOpenHostFormat" xml:space="preserve">
+    <value>{0} öffnen</value>
+  </data>
+  <data name="ShareSignedInFormat" xml:space="preserve">
+    <value>Auf {0} angemeldet. Nicht du?</value>
+  </data>
+  <data name="ShareSignOutFormat" xml:space="preserve">
+    <value>Von {0} abmelden</value>
+  </data>
+  <data name="ShareBackToDescription" xml:space="preserve">
+    <value>Zurück zur Beschreibung</value>
+  </data>
+  <data name="ShareErrorIdTakenFormat" xml:space="preserve">
+    <value>Der Kurzname {0} ist auf {1} schon vergeben, an eine Mod, ein Fahrzeug oder einen Spielstand. Gehe zurück und wähle einen anderen.</value>
+  </data>
+  <data name="ShareErrorVersionTakenFormat" xml:space="preserve">
+    <value>{0} hatte die Version {1} schon, auch wenn sie entfernt wurde. Gib eine höhere Version ein, zum Beispiel {2}.</value>
+  </data>
+  <data name="ShareErrorNotOwnerFormat" xml:space="preserve">
+    <value>Du bist bei {0} mit einem Konto angemeldet, dem {1} nicht gehört. Melde dich ab und mit dem Konto an, mit dem du es zuerst geteilt hast.</value>
+  </data>
+  <data name="ShareErrorRateLimitedFormat" xml:space="preserve">
+    <value>{0} bittet dich, vor dem nächsten Teilen zu warten. Versuche es in {1} erneut. Deine Eingaben bleiben erhalten.</value>
+  </data>
+  <data name="ShareErrorRateLimitedLaterFormat" xml:space="preserve">
+    <value>{0} bittet dich, vor dem nächsten Teilen zu warten. Versuche es später erneut. Deine Eingaben bleiben erhalten.</value>
+  </data>
+  <data name="ShareErrorUploadGoneFormat" xml:space="preserve">
+    <value>Der Upload liegt nicht mehr auf {0}. Vielleicht ist die Zeit abgelaufen, oder er ist schon veröffentlicht. Sieh auf der Seite von {0} nach und prüfe die Datei dann erneut.</value>
+  </data>
+  <data name="ShareErrorTooLargeFormat" xml:space="preserve">
+    <value>{0} meldet, dass diese Datei zu groß ist. Prüfe den Ordner auf große Dateien, die das Fahrzeug oder der Spielstand nicht braucht.</value>
+  </data>
+  <data name="ShareErrorNoVehiclesFormat" xml:space="preserve">
+    <value>{0} nimmt im Moment keine Fahrzeuge an.</value>
+  </data>
+  <data name="ShareErrorNoSavesFormat" xml:space="preserve">
+    <value>{0} nimmt im Moment keine Spielstände an.</value>
+  </data>
+  <data name="ShareErrorUnavailableFormat" xml:space="preserve">
+    <value>{0} hat gerade ein Problem. Auf deinem Computer hat sich nichts geändert. Versuche es später erneut.</value>
+  </data>
+  <data name="ShareErrorLostAnswerFormat" xml:space="preserve">
+    <value>Borea hat keine Antwort von {0} bekommen und weiß darum nicht, ob das veröffentlicht ist. Klicke erneut auf Veröffentlichen. Ein Upload kann nicht zweimal veröffentlicht werden.</value>
+  </data>
+  <data name="ShareErrorFileFormat" xml:space="preserve">
+    <value>Borea konnte die Datei von {0} nicht lesen oder schreiben. Prüfe, ob der Ordner noch da ist, und versuche es dann erneut.</value>
   </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>

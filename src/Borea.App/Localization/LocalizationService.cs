@@ -2153,6 +2153,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareRenameAndCheck => Resources.ShareRenameAndCheck;
 
+    public string ShareBackToDescription => Resources.ShareBackToDescription;
+
     public string ListingShareHeading => Resources.ListingShareHeading;
 
     public string ListingShareIntro => Resources.ListingShareIntro;
@@ -2192,12 +2194,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingShareHostVersion => Resources.ListingShareHostVersion;
 
     public string ListingShareHostPublish => Resources.ListingShareHostPublish;
-
-    public string ListingShareHostSignedOut => Resources.ListingShareHostSignedOut;
-
-    public string ListingShareHostSignInRefused => Resources.ListingShareHostSignInRefused;
-
-    public string ListingShareHostNetwork => Resources.ListingShareHostNetwork;
 
     public string ListingShareKindPart => Resources.ListingShareKindPart;
 
@@ -3911,6 +3907,60 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingShareHostUnexpected(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostUnexpectedFormat, host);
+
+    public string FormatListingShareHostSignedOut(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSignedOutFormat, host);
+
+    public string FormatListingShareHostSignInRefused(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSignInRefusedFormat, host);
+
+    public string FormatListingShareHostNetwork(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostNetworkFormat, host);
+
+    public string FormatShareOpenHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareOpenHostFormat, host);
+
+    public string FormatShareSignedIn(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSignedInFormat, host);
+
+    public string FormatShareSignOut(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSignOutFormat, host);
+
+    public string FormatShareErrorIdTaken(string id, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorIdTakenFormat, id, host);
+
+    public string FormatShareErrorVersionTaken(string name, string version, string example)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorVersionTakenFormat, name, version, example);
+
+    public string FormatShareErrorNotOwner(string host, string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorNotOwnerFormat, host, name);
+
+    public string FormatShareErrorRateLimited(string host, string duration)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorRateLimitedFormat, host, duration);
+
+    public string FormatShareErrorRateLimitedLater(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorRateLimitedLaterFormat, host);
+
+    public string FormatShareErrorUploadGone(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorUploadGoneFormat, host);
+
+    public string FormatShareErrorTooLarge(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorTooLargeFormat, host);
+
+    public string FormatShareErrorNoVehicles(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorNoVehiclesFormat, host);
+
+    public string FormatShareErrorNoSaves(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorNoSavesFormat, host);
+
+    public string FormatShareErrorUnavailable(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorUnavailableFormat, host);
+
+    public string FormatShareErrorLostAnswer(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorLostAnswerFormat, host);
+
+    public string FormatShareErrorFile(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorFileFormat, name);
 
     public string FormatListingShareHostSaid(string host, string message)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSaidFormat, host, message);

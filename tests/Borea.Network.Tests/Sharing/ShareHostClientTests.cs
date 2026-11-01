@@ -320,6 +320,41 @@ public sealed class ShareHostClientTests
             Assert.Equal(message, exception.Message);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PublishAsync_HostThatNeverAnswers_EndsAtTheLimit_AndACancelStaysACancel(bool cancelled)
+    {
+        _tokenAnswers.Enqueue(Json(TokenJson));
+        var http = FakeHttpMessageHandler.BuildClient(
+            async (request, token) =>
+            {
+                if (request.RequestUri!.AbsoluteUri.EndsWith("/publish", StringComparison.Ordinal))
+                    await Task.Delay(Timeout.InfiniteTimeSpan, token);
+
+                return await Answer(request);
+            },
+            out _);
+        var client = new ShareHostClient(http, _format, _time, _secrets) { PublishAnswerLimit = cancelled ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(1) };
+        await client.SignInAsync(Host);
+        using var cancel = new CancellationTokenSource();
+        if (cancelled)
+            cancel.Cancel();
+
+        // The wait stops short of the default timeout of HttpClient, which would also end the request.
+        var publish = client.PublishAsync(Host, "u42", "1.0.0", "stable", null, cancel.Token).WaitAsync(TimeSpan.FromSeconds(30));
+
+        if (cancelled)
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => publish);
+        }
+        else
+        {
+            var exception = await Assert.ThrowsAsync<ShareHostException>(() => publish);
+            Assert.Equal(ShareHostFailure.NetworkError, exception.Failure);
+        }
+    }
+
     [Fact]
     public async Task PublishAsync_NewVersionWithoutPullRequest_GivesTheRelease()
     {

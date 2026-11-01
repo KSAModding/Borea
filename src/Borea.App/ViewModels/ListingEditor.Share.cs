@@ -83,6 +83,7 @@ public sealed partial class ListingEditor
     {
         _share = null;
         _shareListing = null;
+        _refusedShareId = null;
         _savedArchive = null;
         _choseOtherLicense = false;
         _shareHosts = [];

@@ -43,6 +43,9 @@ public sealed partial class ListingEditor
     /// <summary>The listing of the shared item on a share host, which makes the share a new version of it, or null for a new listing.</summary>
     private (ContentIndexListing Listing, ReleaseHost Entry)? _shareListing;
 
+    /// <summary>The short name that the host refused at a publish, which the index can hold back only hours later.</summary>
+    private string? _refusedShareId;
+
     private bool _choseOtherLicense;
 
     [ObservableProperty]
@@ -96,8 +99,10 @@ public sealed partial class ListingEditor
     public string? ShareItemText => _share is { } share ? Localization.FormatShareItemIn(share.Content.Name, _owner.InstanceName(share.InstanceId)) : null;
 
     public string? ShareNewVersionText => _shareListing is { } shared
-        ? Localization.FormatShareNewVersionLine(shared.Listing.Authored?.Name ?? shared.Listing.Id, _shareHosts.FirstOrDefault(host => host.Key == shared.Entry.Host)?.Name ?? shared.Entry.Host)
+        ? Localization.FormatShareNewVersionLine(ShareListingName, _shareHosts.FirstOrDefault(host => host.Key == shared.Entry.Host)?.Name ?? shared.Entry.Host)
         : null;
+
+    private string ShareListingName => _shareListing is { } shared ? shared.Listing.Authored?.Name ?? shared.Listing.Id : Draft.Name;
 
     public bool ShowsPreviewCard => !IsShareStep || !IsNewVersionShare;
 
@@ -226,7 +231,7 @@ public sealed partial class ListingEditor
         if (!ModIds.IsValid(id))
             return Localization.ShareIdInvalid;
 
-        return _snapshot is { } snapshot && (ListingDependencyChoices.IsHeld(snapshot, id) || snapshot.Vehicles.Concat(snapshot.Saves).Any(listing => ModIds.Equals(listing.Id, id)))
+        return ModIds.Equals(id, _refusedShareId) || (_snapshot is { } snapshot && (ListingDependencyChoices.IsHeld(snapshot, id) || snapshot.Vehicles.Concat(snapshot.Saves).Any(listing => ModIds.Equals(listing.Id, id))))
             ? Localization.FormatShareIdHeld(id)
             : null;
     }
@@ -271,7 +276,7 @@ public sealed partial class ListingEditor
     /// <summary>A click on a row of the side panel, which goes back by the same rule as the Back button.</summary>
     internal void OpenShareStep(string key)
     {
-        if (key == "describe" && ShareFlowStep == ShareFlowStep.Publish)
+        if (key == "describe" && ShareFlowStep == ShareFlowStep.Publish && !IsSendingSharePublish)
             BackToShareDescribe();
     }
 
