@@ -70,12 +70,16 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     private bool _canContinueShare;
 
-    /// <summary>Why Next is disabled, except for an error outside the step, which <see cref="HasShareOtherFields"/> says.</summary>
+    /// <summary>Why Next is disabled, except for an error outside the step, which <see cref="ShareOtherFieldsText"/> says.</summary>
     [ObservableProperty]
     private string? _shareNextReason;
 
     [ObservableProperty]
     private bool _hasShareOtherFields;
+
+    /// <summary>Which fields outside the step stop the share, in the words of the full form.</summary>
+    [ObservableProperty]
+    private string? _shareOtherFieldsText;
 
     [ObservableProperty]
     private string? _shareIdError;
@@ -151,7 +155,12 @@ public sealed partial class ListingEditor
 
     private string ShareHostNameOf(ShareListing listing) => _shareHosts.FirstOrDefault(host => host.Key == listing.HostKey)?.Name ?? listing.HostName ?? listing.HostKey;
 
-    public bool ShowsPreviewCard => !IsShareStep || (!IsShareChoose && ShowsShareFields);
+    public bool ShowsPreviewCard => !IsShareStep || !IsShareChoose;
+
+    /// <summary>What the index holds for the listing of a new version on the steps, or null when it does not hold it yet. The full form previews what the player types, because that draft goes out.</summary>
+    private ModMetadata? ListedShareAuthored => IsShareStep && _share is { } share && _shareListing is { } listed
+        ? ShareListingsOf(share).FirstOrDefault(listing => ModIds.Equals(listing.Id, listed.Id))?.Authored
+        : null;
 
     public string PreviewHeading => !IsShareStep ? Localization.ListingPreview : IsSave ? Localization.SharePreviewSave : Localization.SharePreviewVehicle;
 
@@ -348,7 +357,7 @@ public sealed partial class ListingEditor
             ShareSentenceError = null;
             ShareLicenseError = null;
             ShareNextReason = null;
-            HasShareOtherFields = IsNewVersionShare && Errors.Any(issue => SectionOf(issue) == "dependencies");
+            ShowShareOtherFields(IsNewVersionShare ? Errors.Where(issue => SectionOf(issue) == "dependencies") : []);
             CanContinueShare = IsNewVersionShare && !HasShareOtherFields;
             return;
         }
@@ -376,12 +385,22 @@ public sealed partial class ListingEditor
         if (ShareLicenseError is not null)
             explained.Add("license");
         var names = explained.ToHashSet();
-        HasShareOtherFields = Errors.Any(issue => !IsCovered(issue, explained, names));
+        ShowShareOtherFields(Errors.Where(issue => !IsCovered(issue, explained, names)));
 
         ShareNextReason = missing.Count > 0
             ? Localization.FormatListingStillMissing(string.Join(", ", missing.Select(field => field.Label)))
             : ShareSentenceError ?? ShareIdError ?? ShareLicenseError;
         CanContinueShare = ShareNextReason is null && !HasShareOtherFields;
+    }
+
+    /// <summary>An issue without a label of its own takes the name of its section, and one without either leaves the general text.</summary>
+    internal void ShowShareOtherFields(IEnumerable<ListingIssue> issues)
+    {
+        var fields = issues.Select(issue => LabelOf(issue.Location) ?? Steps.FirstOrDefault(step => step.Key == SectionOf(issue))?.Name ?? string.Empty).Distinct().ToList();
+        ShareOtherFieldsText = fields.Count == 0 ? null
+            : fields.Contains(string.Empty) ? Localization.ShareOtherFields
+            : Localization.FormatShareFieldsToFix(string.Join(", ", fields));
+        HasShareOtherFields = fields.Count > 0;
     }
 
     private string? ShareIdProblem()
@@ -400,6 +419,13 @@ public sealed partial class ListingEditor
     partial void OnShareIdErrorChanged(string? value)
     {
         if (value is not null)
+            IsShareMoreOptionsOpen = true;
+    }
+
+    /// <summary>A field of More options must not stay hidden behind a disabled Next.</summary>
+    partial void OnHasShareOtherFieldsChanged(bool value)
+    {
+        if (value)
             IsShareMoreOptionsOpen = true;
     }
 
@@ -429,7 +455,7 @@ public sealed partial class ListingEditor
 
         ListingStepItem Row(string key, string name, ShareFlowStep step)
         {
-            var state = step < ShareFlowStep ? ListingStepState.Done : step == ShareFlowStep ? ListingStepState.Current : ListingStepState.ToDo;
+            var state = step < ShareFlowStep || IsShareDone ? ListingStepState.Done : step == ShareFlowStep ? ListingStepState.Current : ListingStepState.ToDo;
             return new ListingStepItem(key, name, state, string.Empty);
         }
     }

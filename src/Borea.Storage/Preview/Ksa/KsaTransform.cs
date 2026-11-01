@@ -117,7 +117,9 @@ internal readonly record struct KsaTransform(Vector3? Position, Vector3? Rotatio
     public KsaTransform Apply(KsaTransform other) =>
         new(other.Position ?? Position, other.Rotation ?? Rotation, other.Scale ?? Scale);
 
-    private static Vector3 ReadVector(XmlReader reader) =>
+    /// <summary>Reads the X, Y and Z attributes of the element that the reader is on.</summary>
+    /// <exception cref="FormatException">A component is not a number in the XML double format.</exception>
+    public static Vector3 ReadVector(XmlReader reader) =>
         new(ReadComponent(reader, KsaPartSchema.X), ReadComponent(reader, KsaPartSchema.Y), ReadComponent(reader, KsaPartSchema.Z));
 
     private static float ReadComponent(XmlReader reader, string name)

@@ -1341,8 +1341,17 @@ public sealed partial class DiscoverChoice(string value) : ObservableObject
 public sealed record GameVersionOption(string Text, int Revision);
 
 /// <summary>One author name on a row or a side panel, with the comma that follows it in a list of authors and the hint that tells what a click does.</summary>
-public sealed record AuthorLink(string Name, string Separator, ContentType Type, string Hint)
+/// <param name="RowSeparator">The comma before the name on the one line of a row, where a name that does not fit drops out with its comma.</param>
+/// <param name="RowHint">The hint with the whole list, because a row can drop names.</param>
+public sealed record AuthorLink(string Name, string Separator, string RowSeparator, ContentType Type, string Hint, string RowHint)
 {
-    internal static IReadOnlyList<AuthorLink> Of(IReadOnlyList<string> authors, ContentType type, LocalizationService localization) =>
-        [.. authors.Select((name, index) => new AuthorLink(name, index < authors.Count - 1 ? "," : string.Empty, type, localization.FormatDiscoverAuthorLink(name)))];
+    internal static IReadOnlyList<AuthorLink> Of(IReadOnlyList<string> authors, ContentType type, LocalizationService localization)
+    {
+        var everyAuthor = authors.Count > 1 ? "\n" + string.Join(", ", authors) : string.Empty;
+        return [.. authors.Select((name, index) =>
+        {
+            var hint = localization.FormatDiscoverAuthorLink(name);
+            return new AuthorLink(name, index < authors.Count - 1 ? "," : string.Empty, index > 0 ? ", " : string.Empty, type, hint, hint + everyAuthor);
+        })];
+    }
 }

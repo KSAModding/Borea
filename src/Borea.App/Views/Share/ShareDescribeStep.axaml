@@ -164,7 +164,7 @@
                 </Button>
             </StackPanel>
             <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareNextReason}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareNextReason, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            <TextBlock Classes="body-sm danger" Text="{Binding Localization.ShareOtherFields}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasShareOtherFields}" />
+            <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareOtherFieldsText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasShareOtherFields}" />
             <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.EditAllShareFieldsCommand}" IsVisible="{Binding !ListingEditor.IsAskingShareListing}">
                 <TextBlock Classes="action-md" Text="{Binding Localization.ShareEditAll}" />
             </Button>

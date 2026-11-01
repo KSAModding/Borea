@@ -139,7 +139,7 @@ Borea 的完整源代码位于本仓库中，你可以自行检查。
 
 1. 在**设置（Settings）**的**常规（General）**中，关闭**使用此 Borea 打开 borea:// 链接（Open borea:// links with this Borea）**，让 Borea 移除链接关联。
 2. 关闭 Borea，删除解压得到的文件夹；在 macOS 上则删除 `Borea.app`。
-3. 删除 Borea 自身的数据文件夹。其中保存了设置、缓存、日志和模组加载器；如果没有移动过内容库，还会包含实例和备份：
+3. 删除 Borea 自身的数据文件夹。其中保存了设置、缓存、日志和模组加载器；如果没有移动过内容库，还会包含实例、备份和保留的游戏构建：
    - Windows：`%LocalAppData%\Borea`
    - Linux：`~/.local/share/Borea`；如果设置了 `$XDG_DATA_HOME`，则为 `$XDG_DATA_HOME/Borea`
    - macOS：`~/Library/Application Support/Borea`
@@ -195,7 +195,7 @@ gh attestation verify <archive> --repo KSAModding/Borea \
 | `borea game version` | 输出已安装的构建版本，以及主服务器报告的当前公开构建版本。 |
 | `borea game check` | 检查游戏安装是否符合 Borea 对其结构和状态的预期。不符合时以退出码 1 退出。 |
 | `borea instance list` | 输出所有实例，并标记当前活动实例。 |
-| `borea instance show <instance>` | 输出某个实例、the game build it runs on、其模组所需的加载器及启动时使用的加载器版本、启动参数、上次游玩时间和游玩时长。 |
+| `borea instance show <instance>` | 输出某个实例、其运行的游戏构建版本、其模组所需的加载器及启动时使用的加载器版本、启动参数、上次游玩时间和游玩时长。 |
 | `borea instance create <name>` | 创建空实例。 |
 | `borea instance duplicate <instance> [--name <name>]` | 创建具有相同模组、版本和启用标记的实例。 |
 | `borea instance export <instance> [file]` | 将实例中的模组及其版本和启用标记写入模组列表。 |

@@ -29,10 +29,12 @@ public sealed partial class InstallRun : ObservableObject
     /// <summary>True while the running mod is past its download, so a stop waits until that mod is finished.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StopText))]
+    [NotifyPropertyChangedFor(nameof(IsPlanning))]
     private bool _isFinishingMod;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(TogglePauseCommand))]
+    [NotifyPropertyChangedFor(nameof(IsPlanning))]
     private bool _isDownloading;
 
     [ObservableProperty]
@@ -60,6 +62,9 @@ public sealed partial class InstallRun : ObservableObject
         : _localization.InstallStopping;
 
     public string PauseText => IsPaused ? _localization.InstallResume : _localization.InstallPause;
+
+    /// <summary>True until the first report, because every report sets downloading or finishing, so nothing can pause yet and no percent exists.</summary>
+    public bool IsPlanning => !IsDownloading && !IsFinishingMod;
 
     [RelayCommand(CanExecute = nameof(CanStop))]
     internal void Stop()

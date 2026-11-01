@@ -366,20 +366,25 @@ public sealed class DiscoverPageTests
             }
         });
 
-    [Fact]
-    public async Task CategoryTabs_StayOnOneLine_InGermanAt1000Px()
+    [Theory]
+    [InlineData("de", 860, 7)]
+    [InlineData("en", 860, 7)]
+    [InlineData("de", 1000, 16)]
+    public async Task CategoryTabs_StayOnOneLine_AndKeepTheirFullPaddingWhenTheyHaveRoom(string culture, double windowWidth, double padding)
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        Assert.True(harness.Localization.TrySetCulture("de"));
+        Assert.True(harness.Localization.TrySetCulture(culture));
 
-        var tabTops = await RenderAsync(harness, 1000, page =>
+        var tabs = await RenderAsync(harness, windowWidth, page =>
             page.GetVisualDescendants().OfType<Button>()
                 .Where(button => button.Classes.Contains("tab"))
-                .Select(button => Corner(button, page).Y)
+                .Select(button => (Corner(button, page).Y, button.Bounds.Height, button.Padding.Left))
                 .ToList());
 
-        Assert.Equal(5, tabTops.Count);
-        Assert.Single(tabTops.Distinct());
+        Assert.Equal(5, tabs.Count);
+        Assert.Single(tabs.Select(tab => tab.Y).Distinct());
+        Assert.Single(tabs.Select(tab => tab.Height).Distinct());
+        Assert.All(tabs, tab => Assert.Equal(padding, tab.Left));
     }
 
     private static GameVersionControls ReadGameVersionControls(MainViewModel viewModel, Control page)

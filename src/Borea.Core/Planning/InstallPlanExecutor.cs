@@ -38,7 +38,7 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
         var fresh = await _instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Instance '{plan.InstanceId}' no longer exists.");
         if (!plan.InstanceState.Matches(fresh))
-            throw new InvalidOperationException("The instance changed after Borea planned the operation.");
+            throw new PlannedInstanceChangedException("The instance changed after Borea planned the operation.");
 
         var expectedState = plan.InstanceState;
         var step = 0;
@@ -51,7 +51,7 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
             fresh = await _instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Instance '{plan.InstanceId}' no longer exists.");
             if (!expectedState.Matches(fresh))
-                throw new InvalidOperationException("The instance changed while Borea executed the operation.");
+                throw new PlannedInstanceChangedException("The instance changed while Borea executed the operation.");
 
             var current = fresh.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, operation.Release.ModId));
             try

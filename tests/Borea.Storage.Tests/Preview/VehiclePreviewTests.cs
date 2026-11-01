@@ -235,6 +235,40 @@ public sealed class VehiclePreviewTests : IDisposable
         Assert.Equal([new Vector3(2, 0, 0), new Vector3(0, 3, 0)], fetched.Vehicle.Draws.Select(draw => draw.Transform.Translation));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TheFuelLinksOfTheVehicleFile_ReachTheScene_AlsoWhenAMissingModResolvesASecondTime(bool missingMod)
+    {
+        const string vehicleXml = """
+            <VehicleSaveData Id="Rover">
+              <RootPartRef InstanceOf="Body" LocalInstanceId="1">
+                <PartRef InstanceOf="Body" LocalInstanceId="2"><Transform><Position X="3" /></Transform></PartRef>
+                <PartRef InstanceOf="Wing" LocalInstanceId="3" />
+              </RootPartRef>
+              <FuelLink PartA="1" PartB="2" />
+            </VehicleSaveData>
+            """;
+        var zip = Zip(("meta.toml", "name = \"Rover\""), ("vehicle.xml", vehicleXml));
+        CacheArchive(zip);
+        var release = Vehicle(zip, dependencies: missingMod ? ["Wings"] : null);
+        using var preview = Preview(offline: new FakeModRepository([Mod("Wings", Hash(_wingsZip), 4321)]));
+
+        var plan = await preview.PrepareAsync(release, null);
+        using var result = await preview.LoadAsync(plan, fetchVehicle: false, fetchMods: false);
+
+        Assert.True(result.IsReady);
+        Assert.Equal(missingMod ? PlaceholderReason.ModNotLoaded : PlaceholderReason.UnknownPart, Assert.Single(result.Vehicle.Placeholders).Reason);
+        Assert.Equal([new Vector3(0, 0, 0), new Vector3(3, 0, 0)], Assert.Single(result.Vehicle.HoseRoutes).Select(waypoint => waypoint.Position));
+    }
+
+    [Fact]
+    public void TheSceneFormat_IsNewerThanTheStillsWithoutFuelLines()
+    {
+        // A still that a build without fuel lines stored names format 1, and only a new scene key makes the next preview replace it.
+        Assert.InRange(VehiclePreview.FormatVersion, 2, int.MaxValue);
+    }
+
     [Fact]
     public async Task DisposingTheService_ReleasesThePins_ClosesTheZips_AndLaterCallsThrow()
     {

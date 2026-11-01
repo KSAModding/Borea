@@ -23,6 +23,9 @@ public sealed class PreviewSceneBuilder
     private static readonly Vector3 DefaultBaseColor = new(0.45f);
     private static readonly Vector3 UnknownHalfSize = new(0.5f);
 
+    /// <summary>The largest hose mesh that is decoded only to find its part of the atlas. The hose needs few vertices.</summary>
+    private const long MaxHoseMeshWeight = 65_536;
+
     private readonly PreviewTextureLoader _textures;
     private readonly PreviewMeshCache _meshes;
 
@@ -41,7 +44,8 @@ public sealed class PreviewSceneBuilder
     /// file, and each file is opened once and its container read once. When the draws have more triangles together
     /// than <see cref="PreviewLoadOptions.MaxTriangles"/>, the largest draws become <see cref="PreviewPlaceholderReason.Budget"/>
     /// boxes until the rest fit, and these meshes are not decoded. The distinct meshes that are left must also fit
-    /// <see cref="PreviewLoadOptions.MaxMeshBytes"/>, and the largest of them become boxes until they do.
+    /// <see cref="PreviewLoadOptions.MaxMeshBytes"/>, and the largest of them become boxes until they do. Each fuel line
+    /// becomes a draw of its own, with a mesh that <see cref="HoseMeshBuilder"/> makes in the vehicle frame.
     /// </summary>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     /// <exception cref="ObjectDisposedException">The source was disposed, which the caller treats as a cancellation.</exception>
@@ -368,10 +372,14 @@ public sealed class PreviewSceneBuilder
                 }
             }
 
-            ApplyTriangleBudget(vehicle, meshes, kept, placeholders, notices, options.MaxTriangles);
+            var hoseTriangles = HoseTriangleAllowance(vehicle, options);
+            ApplyTriangleBudget(vehicle, meshes, kept, placeholders, notices, options.MaxTriangles - hoseTriangles);
             ApplyMeshByteBudget(vehicle, meshes, kept, placeholders, notices, options.MaxMeshBytes);
 
             var needed = new HashSet<MeshState>(kept.Select(i => meshes[vehicle.Draws[i].Mesh]));
+            if (HoseMeshState(vehicle, meshes) is { Failed: false, Weight: <= MaxHoseMeshWeight } hoseMesh)
+                needed.Add(hoseMesh);
+
             foreach (var file in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -394,6 +402,7 @@ public sealed class PreviewSceneBuilder
                 }
             }
 
+            AddHoses(vehicle, meshes, materials, draws, hoseTriangles, notices, cancellationToken);
             return (new PreviewScene(draws, placeholders), notices);
         }
         finally
@@ -403,6 +412,60 @@ public sealed class PreviewSceneBuilder
                 file.Stream?.Dispose();
             }
         }
+    }
+
+    /// <summary>
+    /// The triangles that the budget keeps for the fuel lines, so they cannot push parts out for more than a tenth of
+    /// the budget, and a vehicle without fuel lines keeps all of it.
+    /// </summary>
+    private static int HoseTriangleAllowance(ResolvedVehicle vehicle, PreviewLoadOptions options) =>
+        (int)Math.Min(vehicle.HoseRoutes.Count * (long)HoseMeshBuilder.MaxTriangles, options.MaxTriangles / 10);
+
+    private static MeshState? HoseMeshState(ResolvedVehicle vehicle, MeshState[] meshes) =>
+        vehicle.HoseRoutes.Count > 0 && (uint)vehicle.HoseMesh < (uint)meshes.Length ? meshes[vehicle.HoseMesh] : null;
+
+    /// <summary>
+    /// Adds one draw for each fuel line that has a length. The hose wears its part of the texture atlas when the hose
+    /// mesh gives one and the material resolves, and has a plain color otherwise. A fuel line over the allowance is left
+    /// out with a notice, because a box would not look like a hose.
+    /// </summary>
+    private static void AddHoses(
+        ResolvedVehicle vehicle,
+        MeshState[] meshes,
+        Dictionary<(int Index, bool Glass), PreviewMaterial> materials,
+        List<PreviewDraw> draws,
+        int allowance,
+        List<PreviewNotice> notices,
+        CancellationToken cancellationToken)
+    {
+        if (vehicle.HoseRoutes.Count == 0)
+            return;
+
+        var patch = HoseMeshState(vehicle, meshes)?.Mesh is { } hoseMesh ? HoseUvPatch.Find(hoseMesh) : null;
+        var material = patch is not null && (uint)vehicle.HoseMaterial < (uint)vehicle.Materials.Count
+            ? MaterialFor(vehicle, new ResolvedDraw(vehicle.HoseMesh, vehicle.HoseMaterial, Matrix4x4.Identity, string.Empty, PreviewModelKind.Model), materials)
+            : PreviewMaterial.Flat(DefaultBaseColor);
+
+        var triangles = 0;
+        var leftOut = 0;
+        foreach (var route in vehicle.HoseRoutes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (HoseMeshBuilder.Build(route, patch) is not { } mesh)
+                continue;
+
+            if (triangles + mesh.TriangleCount > allowance)
+            {
+                leftOut++;
+                continue;
+            }
+
+            triangles += mesh.TriangleCount;
+            draws.Add(new PreviewDraw(mesh, material, Matrix4x4.Identity));
+        }
+
+        if (leftOut > 0)
+            notices.Add(new PreviewNotice(PreviewNoticeKind.Budget, "FuelLines", $"{leftOut} fuel lines are left out to stay inside the triangle budget."));
     }
 
     private static void OpenAndMeasure(FileJob file, IPreviewAssetSource source, List<PreviewNotice> notices)

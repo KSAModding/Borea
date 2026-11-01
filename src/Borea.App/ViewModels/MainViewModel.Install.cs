@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Composition;
@@ -189,7 +190,7 @@ public partial class MainViewModel
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
             var requested = await requestMods(instance);
-            var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, requested), null);
+            var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, requested), null, run.InstallStop.Token);
             var choices = InstallChoices.AreNeeded(plan) ? NewChoices(instanceId, requested, plan) : null;
             var wait = (plan.IsReady || choices is not null) && waitForConfirmation is not null && await waitForConfirmation(instance, plan);
 
@@ -203,14 +204,14 @@ public partial class MainViewModel
             {
                 row.Choices = choices;
                 HoldPlan(row, plan);
-                if (row is not IUpdateRow)
+                if (row is not ContentItem)
                     ReplanOnChange(row, choices, replanned => HoldPlan(row, replanned));
             }
             else if (!plan.IsReady)
             {
                 row.InstallError = Describe(plan.Conflicts.Concat(plan.UnresolvedChoices));
             }
-            else if (plan.Warnings.Count > 0 || wait)
+            else if ((plan.Warnings.Count > 0 && !IsEmptyUpdateAll(row, plan)) || wait)
             {
                 HoldPlan(row, plan);
             }
@@ -228,6 +229,13 @@ public partial class MainViewModel
             run.TaskItem.StoppedAfter = (exception.Completed, exception.Total);
             stopped = StoppedText(row, exception.Completed, exception.Total);
         }
+        catch (OperationCanceledException) when (!executed && run.InstallStop.IsRequested)
+        {
+            // the plan writes nothing, so a stop during it ends the run the way a stop before the first mod does
+            if (row is IUpdateRow update)
+                update.Changelogs = [];
+            stopped = StoppedText(row);
+        }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
             row.InstallError = InstallFailureText(exception);
@@ -240,6 +248,9 @@ public partial class MainViewModel
 
         return executed;
     }
+
+    /// <summary>"Update all" that changes no mod has nothing to confirm, also when the planner warns about a release that the instance keeps.</summary>
+    private static bool IsEmptyUpdateAll(IInstallRow row, InstallPlan plan) => row is UpdateAllItem && plan.Operations.Count == 0;
 
     private InstallPlanningRequest PlanningRequest(BoreaServices services, Instance instance, IReadOnlyList<RequestedMod> requested)
         => new(instance, requested, services.Mods, PlanningGameVersion(services, instance), services.GamePlatform.Current);
@@ -274,12 +285,12 @@ public partial class MainViewModel
     /// Plans with the user's choices and selects every recommendation the user has not seen yet,
     /// except one that blocks the plan, which starts deselected.
     /// </summary>
-    private static async Task<InstallPlan> PlanWithChoicesAsync(BoreaServices services, InstallPlanningRequest request, InstallChoices? choices)
+    private static async Task<InstallPlan> PlanWithChoicesAsync(BoreaServices services, InstallPlanningRequest request, InstallChoices? choices, CancellationToken cancellationToken = default)
     {
         var kept = choices?.SelectedRecommendations ?? new HashSet<string>();
         var deselected = new HashSet<string>(choices?.DeselectedRecommendations ?? new HashSet<string>(), StringComparer.Ordinal);
         request = request with { Alternatives = choices?.SelectedAlternatives };
-        var plan = await PlanWithRecommendationsAsync(services, request, kept, deselected);
+        var plan = await PlanWithRecommendationsAsync(services, request, kept, deselected, cancellationToken);
         if (plan.IsReady)
             return plan;
 
@@ -291,18 +302,18 @@ public partial class MainViewModel
             return plan;
 
         deselected.UnionWith(blocking);
-        var without = await PlanWithRecommendationsAsync(services, request, kept, deselected);
+        var without = await PlanWithRecommendationsAsync(services, request, kept, deselected, cancellationToken);
         return without.Conflicts.Count < plan.Conflicts.Count ? without : plan;
     }
 
     /// <summary>Repeats the plan until it names no recommendation that is neither selected nor deselected.</summary>
-    private static async Task<InstallPlan> PlanWithRecommendationsAsync(BoreaServices services, InstallPlanningRequest request, IReadOnlySet<string> kept, IReadOnlySet<string> deselected)
+    private static async Task<InstallPlan> PlanWithRecommendationsAsync(BoreaServices services, InstallPlanningRequest request, IReadOnlySet<string> kept, IReadOnlySet<string> deselected, CancellationToken cancellationToken)
     {
         var recommended = new HashSet<string>(kept, StringComparer.Ordinal);
         request = request with { Recommended = recommended };
         while (true)
         {
-            var plan = await services.InstallPlanner.PlanAsync(request);
+            var plan = await services.InstallPlanner.PlanAsync(request, cancellationToken);
             var added = false;
             foreach (var choice in plan.Choices.Where(choice => choice.Kind == PlanningChoiceKind.Recommendation && !deselected.Contains(choice.Key)))
                 added |= recommended.Add(choice.Key);
@@ -429,7 +440,7 @@ public partial class MainViewModel
             while (IsShown())
             {
                 var revision = choices.Revision;
-                var plan = await TryPlanAsync(choices);
+                var plan = await TryPlanAsync(row, choices);
                 if (revision != choices.Revision)
                     continue;
 
@@ -447,8 +458,8 @@ public partial class MainViewModel
     }
 
     /// <summary>Lets the plan of an earlier change end before Confirm plans, so that no plan outlives the install.</summary>
-    private static async Task WhenPlanningEndedAsync(InstallChoices choices)
-        => await choices.Planning.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+    private static async Task WhenPlanningEndedAsync(InstallChoices choices, CancellationToken cancellationToken = default)
+        => await choices.Planning.WaitAsync(cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 
     /// <summary>Plans again after Confirm when the user changed a choice while Confirm planned.</summary>
     private static void ReplanIfChanged(IPlanRow row, int? revision)
@@ -458,7 +469,7 @@ public partial class MainViewModel
     }
 
     /// <summary>Plans from the index that Borea holds, or returns null when that fails.</summary>
-    private async Task<InstallPlan?> TryPlanAsync(InstallChoices choices)
+    private async Task<InstallPlan?> TryPlanAsync(IPlanRow row, InstallChoices choices)
     {
         if (_services is not { } services)
             return null;
@@ -466,9 +477,19 @@ public partial class MainViewModel
         try
         {
             var instance = choices.NewInstance ?? await services.Instances.GetByIdAsync(choices.InstanceId);
-            return instance is null
-                ? null
-                : await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested) with { Repository = ChoicePlanMods(services) }, choices);
+            if (instance is null)
+                return null;
+
+            var request = PlanningRequest(services, instance, choices.Requested);
+            try
+            {
+                return await PlanWithChoicesAsync(services, request with { Repository = ChoicePlanMods(services) }, choices);
+            }
+            catch (NotSupportedException) when (row is UpdateAllItem)
+            {
+                // the list and the count of this row state the plan, and a mod from SpaceDock can only be read with a request
+                return await PlanWithChoicesAsync(services, request, choices);
+            }
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -510,6 +531,7 @@ public partial class MainViewModel
 
         var services = _services;
         var plan = row.PendingPlan;
+        row.InstallError = null;
         row.IsInstalling = true;
         var run = row.Run = StartInstallRun(StartInstallTask(row, plan?.InstanceId ?? row.Choices?.InstanceId));
         var executed = false;
@@ -521,9 +543,9 @@ public partial class MainViewModel
         {
             if (row.Choices is { } choices)
             {
-                await WhenPlanningEndedAsync(choices);
+                await WhenPlanningEndedAsync(choices, run.InstallStop.Token);
                 revision = choices.Revision;
-                plan = await ReplanAsync(services, row, choices, revision.Value);
+                plan = await ReplanAsync(services, row, choices, revision.Value, run.InstallStop.Token);
                 if (plan is null)
                     return false;
             }
@@ -542,6 +564,14 @@ public partial class MainViewModel
         {
             run.TaskItem.StoppedAfter = (exception.Completed, exception.Total);
             stopped = StoppedText(row, exception.Completed, exception.Total);
+        }
+        catch (OperationCanceledException) when (!executed && run.InstallStop.IsRequested)
+        {
+            // the plan writes nothing, so a stop during it ends the run the way a stop before the first mod does
+            CancelInstall(row);
+            if (row is IUpdateRow update)
+                update.Changelogs = [];
+            stopped = StoppedText(row);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -566,7 +596,7 @@ public partial class MainViewModel
     /// Plans again with the user's choices, or returns null and keeps the row waiting when a choice changed meanwhile,
     /// or when that plan asks something new, cannot run, has a new warning, or installs a mod that neither the row nor the choices named.
     /// </summary>
-    private async Task<InstallPlan?> ReplanAsync(BoreaServices services, IInstallRow row, InstallChoices choices, int revision)
+    private async Task<InstallPlan?> ReplanAsync(BoreaServices services, IInstallRow row, InstallChoices choices, int revision, CancellationToken cancellationToken)
     {
         var seen = row.PendingPlan ?? choices.ShownPlan;
         var shown = seen?.Warnings ?? [];
@@ -576,7 +606,7 @@ public partial class MainViewModel
             .ToHashSet(ModIds.Comparer);
         var instance = await services.Instances.GetByIdAsync(choices.InstanceId)
             ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
-        var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested), choices);
+        var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested), choices, cancellationToken);
         if (revision != choices.Revision)
             return null;
 
@@ -598,6 +628,7 @@ public partial class MainViewModel
             content.PendingContentPlan = null;
         row.PendingPlan = null;
         row.InstallWarning = null;
+        row.InstallError = null;
         row.Choices = null;
     }
 
@@ -638,9 +669,12 @@ public partial class MainViewModel
     /// failed too also names the folder that holds the previous files, which
     /// the message of the exception leaves out.
     /// </summary>
-    private string InstallFailureText(Exception exception) => exception is ModReplacementRecoveryException recovery
-        ? $"{recovery.Message} {Localization.FormatInstallRecoveryFolder(recovery.RecoveryDirectory)}"
-        : exception.Message;
+    private string InstallFailureText(Exception exception) => exception switch
+    {
+        ModReplacementRecoveryException recovery => $"{recovery.Message} {Localization.FormatInstallRecoveryFolder(recovery.RecoveryDirectory)}",
+        PlannedInstanceChangedException => Localization.ManualInstallsInstanceChanged,
+        _ => exception.Message,
+    };
 
     private static bool IsInstallFailure(Exception exception)
         => exception is HttpRequestException or IOException or InvalidOperationException or UnauthorizedAccessException
@@ -648,12 +682,12 @@ public partial class MainViewModel
 
     /// <summary>
     /// The messages after the name of their mod. A message about a recorded vehicle or save comes first and names the mod
-    /// itself, so it stays visible where a row shows only the start of the text.
+    /// itself, so it stays visible where a row shows only the start of the text. A stopped search belongs to no mod, so it has no name.
     /// </summary>
     private string Describe(IEnumerable<PlanningMessage> messages)
         => string.Join(" ", messages
             .OrderBy(message => !BreaksContent(message))
-            .Select(message => BreaksContent(message) ? PlanningText.Message(message) : $"{ContentName(message.ModId)}: {PlanningText.Message(message)}"));
+            .Select(message => BreaksContent(message) || message.Kind == PlanningMessageKind.SearchLimit ? PlanningText.Message(message) : $"{ContentName(message.ModId)}: {PlanningText.Message(message)}"));
 
     private static bool BreaksContent(PlanningMessage message) => message.Kind is PlanningMessageKind.BreaksVehicle or PlanningMessageKind.BreaksSave;
 }

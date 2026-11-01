@@ -64,11 +64,13 @@ public sealed partial class ListingEditor
 
     public bool IsComplete => MissingText is null && VisibleErrors.Count == 0 && VisibleNotes.Count == 0;
 
-    public string PreviewName => Name.Trim().Length > 0 ? Name.Trim() : Id.Trim().Length > 0 ? Id.Trim() : Localization.ListingPreviewName;
+    public string PreviewName => (IsShareStep ? _shareListing?.Name : null) ?? (Name.Trim().Length > 0 ? Name.Trim() : Id.Trim().Length > 0 ? Id.Trim() : Localization.ListingPreviewName);
 
-    public string? PreviewAuthors => Authors.Trim().Length > 0 ? Localization.FormatContentByAuthor(Authors.Trim()) : null;
+    public string? PreviewAuthors => (ListedShareAuthored is { Authors.Count: > 0 } listed ? string.Join(", ", listed.Authors) : Authors.Trim()) is { Length: > 0 } authors ? Localization.FormatContentByAuthor(authors) : null;
 
-    public string PreviewAbstract => Abstract.Trim().Length > 0 ? Abstract.Trim() : IsShareStep ? Localization.SharePreviewSentence : Localization.ListingPreviewAbstract;
+    /// <summary>On the steps a new version keeps the sentence of its listing, and a listing that the index does not hold yet has no sentence that Borea could show.</summary>
+    public string PreviewAbstract => IsShareStep && IsNewVersionShare ? ListedShareAuthored?.Abstract ?? ShareNewVersionText ?? string.Empty
+        : Abstract.Trim().Length > 0 ? Abstract.Trim() : IsShareStep ? Localization.SharePreviewSentence : Localization.ListingPreviewAbstract;
 
     public IReadOnlyList<string> PreviewTags =>
         CuratedTags.Where(chip => chip.IsSelected).Select(chip => chip.Name)
@@ -217,7 +219,7 @@ public sealed partial class ListingEditor
         };
     }
 
-    private string Line(ListingIssue issue) => LabelOf(issue.Location) is { } label ? $"{label}: {issue.Message}" : issue.Message;
+    private string Line(ListingIssue issue) => (LabelOf(issue.Location) ?? issue.Location) is { Length: > 0 } label ? $"{label}: {issue.Message}" : issue.Message;
 
     private string? LabelOf(string location)
     {
@@ -232,7 +234,6 @@ public sealed partial class ListingEditor
 
         return location switch
         {
-            "" => null,
             "id" => Localization.ListingId,
             "name" => Localization.ListingName,
             "authors" => Localization.ListingAuthors,
@@ -265,7 +266,7 @@ public sealed partial class ListingEditor
             "released_at" => Localization.ListingReleasedAt,
             "changelog" => Localization.ListingChangelog,
             "mods" => Localization.ListingMembers,
-            _ => location,
+            _ => null,
         };
     }
 

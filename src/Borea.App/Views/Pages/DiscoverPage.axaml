@@ -29,7 +29,16 @@
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
 
                     <!-- c/inner-nav-bar -->
-                    <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="24" Padding="6" Margin="0,16,0,0" HorizontalAlignment="Stretch">
+                    <Border Container.Name="discover-tabs" Container.Sizing="Width" Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="24" Padding="6" Margin="0,16,0,0" HorizontalAlignment="Stretch">
+                        <!-- a narrow page has no room for five tabs with their full padding, so they tighten and stay on one row, and the query stays here because on the page it would also watch every control of every row -->
+                        <Border.Styles>
+                            <ContainerQuery Name="discover-tabs" Query="max-width:520">
+                                <Style Selector="Button.tab">
+                                    <Setter Property="Padding" Value="7,8" />
+                                    <Setter Property="FontSize" Value="13" />
+                                </Style>
+                            </ContainerQuery>
+                        </Border.Styles>
                         <WrapPanel ItemSpacing="4" LineSpacing="6">
                             <Button Classes="tab" Classes.active="{Binding IsModsTab}" Content="{Binding Localization.DiscoverTabMods}" Command="{Binding ShowDiscoverModsCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsLoadersTab}" Content="{Binding Localization.DiscoverTabLoaders}" Command="{Binding ShowDiscoverLoadersCommand}" />

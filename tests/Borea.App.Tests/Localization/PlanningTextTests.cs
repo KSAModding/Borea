@@ -71,7 +71,7 @@ public sealed class PlanningTextTests : IDisposable
         var bounded = new ModDependency("library", ModDependencyKind.Required, ModVersion.Parse("1.0.0"), ModVersion.Parse("1.9.0"));
         var message = new PlanningMessage("library", PlanningMessageKind.BreaksSave) { Version = ModVersion.Parse("2.0.0"), Dependency = bounded, Value = "Career" };
 
-        Assert.Equal("The save Career needs library 1.0.0 - 1.9.0, so after this change the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.", Format("en", message));
+        Assert.Equal("The save Career needs library 1.0.0 - 1.9.0. After this change, the game does not load the vehicles that need it, and saving again loses them.", Format("en", message));
     }
 
     [Fact]
@@ -82,6 +82,16 @@ public sealed class PlanningTextTests : IDisposable
         Assert.Equal("This release supports game 2026.8.22.5348 or older.", Format("en", message));
         Assert.StartsWith("Diese Version unterst", Format("de", message));
         Assert.Contains(" die Spielversion 2026.8.22.5348 oder ", Format("de", message));
+    }
+
+    [Fact]
+    public void SearchLimit_NamesTheModsAndTheNextStep()
+    {
+        var message = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = 100_000, Value = "first, second" };
+
+        var english = Format("en", message);
+        Assert.Equal($"Borea stopped after {100_000.ToString("N0", CultureInfo.CurrentCulture)} combinations and found no plan for first, second. If you changed several mods at once, change fewer of them.", english);
+        Assert.Contains("first, second", Format("de", message));
     }
 
     [Fact]

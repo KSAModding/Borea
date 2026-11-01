@@ -8,6 +8,7 @@ using Borea.App.ViewModels;
 using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -79,6 +80,52 @@ public sealed class InstallStopTests
         var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
         var task = new TaskRegistry(localization, () => null, () => null, _ => Task.CompletedTask).Start(TaskKind.ModInstall, null, null, null, null, null, TaskState.Running);
         return (localization, new InstallRun(localization, task));
+    }
+
+    [Theory]
+    [InlineData(InstallPhase.Downloading)]
+    [InlineData(InstallPhase.Extracting)]
+    public void IsPlanning_EndsWithTheFirstReport(InstallPhase phase)
+    {
+        var (_, run) = NewRun();
+        Assert.True(run.IsPlanning);
+        var changed = new List<string?>();
+        run.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        run.Report(phase);
+
+        Assert.False(run.IsPlanning);
+        Assert.Contains(nameof(InstallRun.IsPlanning), changed);
+    }
+
+    [Fact]
+    public async Task Stop_DuringThePlan_EndsTheRunWithoutAnError()
+    {
+        var planning = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var harness = await ViewModelHarness.CreateAsync(wrapInstallPlanner: _ => new PlannerThatWaitsForTheStop(planning));
+        var (_, item) = await DiscoverRowAsync(harness);
+
+        var install = item.InstallCommand.ExecuteAsync(null);
+        await planning.Task.WaitAsync(Timeout);
+        item.Run!.StopCommand.Execute(null);
+        await install.WaitAsync(Timeout);
+
+        Assert.False(item.IsInstalling);
+        Assert.Null(item.InstallError);
+        Assert.Equal(harness.Localization.InstallStopped, item.ProgressStatus);
+        Assert.Equal(TaskState.Stopped, harness.ViewModel.Tasks.History[0].State);
+    }
+
+    [Fact]
+    public async Task PlanStoppedAtTheSearchLimit_ShowsTheMessageWithoutAModId()
+    {
+        var message = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = 100_000, Value = "AdvancedFlightComputer" };
+        using var harness = await ViewModelHarness.CreateAsync(wrapInstallPlanner: _ => new FixedPlanner(message));
+        var (_, item) = await DiscoverRowAsync(harness);
+
+        await item.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(PlanningText.Message(message), item.InstallError);
     }
 
     [Fact]
@@ -427,15 +474,37 @@ public sealed class InstallStopTests
     /// <summary>The Discover row of AdvancedFlightComputer, waiting for the confirmation of an unknown compatibility.</summary>
     private static async Task<(Instance Instance, DiscoverItem Item)> ConfirmingInstallAsync(ViewModelHarness harness)
     {
+        var (instance, item) = await DiscoverRowAsync(harness);
+        await item.InstallCommand.ExecuteAsync(null);
+        Assert.True(item.IsConfirmingInstall);
+        return (instance, item);
+    }
+
+    /// <summary>The Discover row of AdvancedFlightComputer, with a new instance active.</summary>
+    private static async Task<(Instance Instance, DiscoverItem Item)> DiscoverRowAsync(ViewModelHarness harness)
+    {
         var viewModel = harness.ViewModel;
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
-        var item = viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
-        await item.InstallCommand.ExecuteAsync(null);
-        Assert.True(item.IsConfirmingInstall);
-        return (instance, item);
+        return (instance, viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer"));
+    }
+
+    private sealed class PlannerThatWaitsForTheStop(TaskCompletionSource planning) : IInstallPlanner
+    {
+        public async Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
+        {
+            planning.TrySetResult();
+            await Task.Delay(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("A plan that waits for the stop never ends by itself.");
+        }
+    }
+
+    private sealed class FixedPlanner(PlanningMessage conflict) : IInstallPlanner
+    {
+        public Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], [], [], [], [conflict], []));
     }
 
     /// <summary>A harness with the Starter Pack, whose AdvancedFlightComputer download is served and whose MeasureTools download stalls.</summary>

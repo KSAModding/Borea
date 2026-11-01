@@ -41,6 +41,9 @@ public sealed partial class ListingEditor
     private CancellationTokenSource? _signInRun;
     private ShareErrorAction _shareErrorAction;
 
+    /// <summary>The version that the host refused at a publish, until the player changes it. The upload stays, because only the version has to change.</summary>
+    private string? _refusedShareVersion;
+
     /// <summary>The one way forward that an error of a host offers.</summary>
     private enum ShareErrorAction
     {
@@ -78,13 +81,14 @@ public sealed partial class ListingEditor
 
     public string? ShareCheckHintText => SelectedShareHostRow is { } row ? Localization.FormatShareCheckHint(row.Host.Name) : null;
 
-    public bool ShowsShareCheckButton => HasShareHosts && !HasShareUpload && !IsSharing;
+    /// <summary>A short name that the host refused comes back with the next check, so that error offers the step with the short name instead.</summary>
+    public bool ShowsShareCheckButton => HasShareHosts && !HasShareUpload && !IsSharing && _shareErrorAction != ShareErrorAction.BackToDescription;
 
     public ObservableCollection<string> ShareHostFailedChecks { get; } = [];
 
     public ObservableCollection<string> ShareHostPassedChecks { get; } = [];
 
-    public string? ShareChecksPassedText => _shareUpload is { Upload.Checks.Count: > 0 } shared ? Localization.FormatShareChecksPassed(shared.Upload.Checks.Count, shared.Host.Name) : null;
+    public string? ShareChecksPassedText => _refusedShareVersion is null && _shareUpload is { Upload.Checks.Count: > 0 } shared ? Localization.FormatShareChecksPassed(shared.Upload.Checks.Count, shared.Host.Name) : null;
 
     public bool HasShareDetails => ShareHostPassedChecks.Count > 0 || ShareHostListingText is not null || ShareHostFileDetail is not null;
 
@@ -121,7 +125,11 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     private string? _shareHostError;
 
-    /// <summary>What the host itself said, under the text of the App, because that text is in the language of the player and the message is not.</summary>
+    /// <summary>A check or a zip file stopped because the game runs. It stands apart from <see cref="ShareHostError"/>, because a refusal keeps its text, its link and its hold on Publish while the player waits for the game to close.</summary>
+    [ObservableProperty]
+    private bool _showsShareGameRunning;
+
+    /// <summary>What the host itself said when Borea has no text for it, under the text of the App, because that text is in the language of the player and the message is not.</summary>
     [ObservableProperty]
     private string? _shareHostErrorDetail;
 
@@ -191,7 +199,7 @@ public sealed partial class ListingEditor
 
     public string? ShareSignOutText => SignedInShareHost is { } host ? Localization.FormatShareSignOut(host.Name) : null;
 
-    public bool CanPublishToShareHost => _shareUpload is not null && IsShareVersionValid && !IsSharing;
+    public bool CanPublishToShareHost => _shareUpload is not null && _refusedShareVersion is null && IsShareVersionValid && !IsSharing;
 
     private bool IsShareVersionValid => ModVersion.TryParse(ShareHostVersion.Trim(), out _);
 
@@ -305,6 +313,7 @@ public sealed partial class ListingEditor
 
     private void RefreshShareErrorAction()
     {
+        OnPropertyChanged(nameof(ShowsShareCheckButton));
         OnPropertyChanged(nameof(ShareErrorActionText));
         OnPropertyChanged(nameof(ShareSignedInText));
         OnPropertyChanged(nameof(ShareSignOutText));
@@ -318,16 +327,29 @@ public sealed partial class ListingEditor
         RefreshShareErrorAction();
     }
 
+    /// <summary>Another version answers the refusal, so the step goes on with the checks that passed.</summary>
+    partial void OnShareHostVersionChanged(string value)
+    {
+        if (_refusedShareVersion is null || value.Trim() == _refusedShareVersion)
+            return;
+
+        _refusedShareVersion = null;
+        ShareHostError = null;
+        OnPropertyChanged(nameof(ShareChecksPassedText));
+    }
+
     /// <summary>Drops a running share and its result, because they belong to the item before.</summary>
     private void ForgetShareHostRun()
     {
         _shareHostRun?.Cancel();
         _shareHostRun = null;
         _shareUpload = null;
+        _refusedShareVersion = null;
         _sharePublished = null;
         _shareHostCode = null;
         ShareHostProgress = null;
         ShareHostError = null;
+        ShowsShareGameRunning = false;
         ShareHostFileDetail = null;
         ShareHostListingText = null;
         SharePullRequest = null;
@@ -359,7 +381,14 @@ public sealed partial class ListingEditor
         _checkedHost = host;
         if (Errors.Any(StopsTheUpload))
         {
-            ShareHostError = Localization.ShareOtherFields;
+            ShareHostError = ShareOtherFieldsText ?? Localization.ShareOtherFields;
+            return;
+        }
+
+        // The game can still write the file, and it gives no signal when it ends outside Borea, so the button of the step stays for the next try.
+        if (_owner.IsGameRunning(services))
+        {
+            ShowsShareGameRunning = true;
             return;
         }
 
@@ -517,7 +546,7 @@ public sealed partial class ListingEditor
         var listing = shared.ListingId is null ? Draft : null;
         if (listing is not null && !CanOpenPullRequest)
         {
-            ShareHostError = Localization.ShareOtherFields;
+            ShareHostError = ShareOtherFieldsText ?? Localization.ShareOtherFields;
             return;
         }
 
@@ -528,6 +557,7 @@ public sealed partial class ListingEditor
         _shareHostRun = cancel;
         _publishRun = cancel;
         ShareHostError = null;
+        ShowsShareGameRunning = false;
         try
         {
             var client = services.ShareHostClient;
@@ -701,8 +731,10 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareFolderCheckText));
     }
 
-    private string CheckText(ShareCheck check) => !check.Passed
-        ? Localization.FormatListingShareCheckFailed(check.Name, check.Message ?? string.Empty)
+    /// <summary>A failed check that Borea has a text for says only that text, and any other shows the message of the host, because check names may grow.</summary>
+    private string CheckText(ShareCheck check) => check is { Passed: false, Name: "folder" }
+        ? IsSave ? Localization.ShareFolderCheckSave : Localization.ShareFolderCheckVehicle
+        : !check.Passed ? Localization.FormatListingShareCheckFailed(check.Name, check.Message ?? string.Empty)
         : check.Message is { Length: > 0 } message ? Localization.FormatShareCheckDetail(check.Name, message) : Localization.FormatListingShareCheckPassed(check.Name);
 
     /// <summary>Shows a refused or failed request with its way forward.</summary>
@@ -732,11 +764,21 @@ public sealed partial class ListingEditor
         switch (exception.Error)
         {
             case "version_taken":
+                _refusedShareVersion = version;
                 IsEditingShareVersion = true;
+                RefreshShareRun();
                 break;
             case "id_taken":
                 _refusedShareId = Draft.Id;
+
+                // The id went out with the publish, and the upload cannot go on without another one.
+                _shareUpload = null;
+                RefreshShareRun();
                 Refresh();
+                break;
+            case "invalid_archive" when ShareHostFailedChecks.Count == 0:
+                // Borea has no text for what is wrong in the file, so the message stays one click away.
+                ShareHostFileDetail = exception.Message;
                 break;
             case "not_owner" when _owner.Services is { } services:
                 await services.SharedContent.RemoveAsync(share.Entry.Kind.ToContentType(), host.Key, share.Entry.FolderName);
@@ -746,8 +788,8 @@ public sealed partial class ListingEditor
     }
 
     /// <summary>
-    /// The text in the language of the player, the message of the host below it and the one action. A publish without a clear
-    /// answer can have gone through, so it has its own text, and Publish stays because an upload cannot publish twice.
+    /// The text in the language of the player, the message of the host when Borea has no text for its code, and the one action. A
+    /// publish without a clear answer can have gone through, so it has its own text, and Publish stays because an upload cannot publish twice.
     /// </summary>
     private (string Text, string? Detail, ShareErrorAction Action) ShareHostFailureText(ShareHost host, ShareHostException exception, string? version) => exception switch
     {
@@ -758,24 +800,24 @@ public sealed partial class ListingEditor
         { Failure: ShareHostFailure.NetworkError } => (Localization.FormatListingShareHostNetwork(host.Name), null, ShareErrorAction.None),
         { Failure: ShareHostFailure.Unavailable } => (Localization.FormatShareErrorUnavailable(host.Name), null, ShareErrorAction.None),
         { Failure: not ShareHostFailure.Host } => (Localization.FormatListingShareHostUnexpected(host.Name), null, ShareErrorAction.None),
-        { Error: "id_taken" } => (Localization.FormatShareErrorIdTaken(Draft.Id, host.Name), exception.Message, ShareErrorAction.BackToDescription),
+        { Error: "id_taken" } => (Localization.FormatShareErrorIdTaken(Draft.Id, host.Name), null, ShareErrorAction.BackToDescription),
         { Error: "version_taken" } when ModVersion.TryParse(version, out var taken) =>
-            (Localization.FormatShareErrorVersionTaken(ShareListingName, version!, new ModVersion(taken.Major, taken.Minor + 1, 0).ToString()), exception.Message, ShareErrorAction.None),
-        { Error: "not_owner" } => (Localization.FormatShareErrorNotOwner(host.Name, ShareListingName), exception.Message, ShareErrorAction.SignOut),
+            (Localization.FormatShareErrorVersionTaken(ShareListingName, version!, new ModVersion(taken.Major, taken.Minor + 1, 0).ToString()), null, ShareErrorAction.None),
+        { Error: "not_owner" } => (Localization.FormatShareErrorNotOwner(host.Name, ShareListingName), null, ShareErrorAction.SignOut),
 
         // FormatDuration rounds down, so a wait of some seconds would read as 0 minutes.
         { Error: "rate_limited", RetryAfter: { } wait } =>
-            (Localization.FormatShareErrorRateLimited(host.Name, Localization.FormatDuration(TimeSpan.FromMinutes(Math.Ceiling(wait.TotalMinutes)))), exception.Message, ShareErrorAction.None),
-        { Error: "rate_limited" } => (Localization.FormatShareErrorRateLimitedLater(host.Name), exception.Message, ShareErrorAction.None),
-        { Error: "upload_expired" } => (Localization.FormatShareErrorUploadGone(host.Name), exception.Message, ShareErrorAction.OpenHost),
-        { Error: "too_large" } => (Localization.FormatShareErrorTooLarge(host.Name), exception.Message, ShareErrorAction.None),
-        { Error: "type_not_accepted" } => (IsSave ? Localization.FormatShareErrorNoSaves(host.Name) : Localization.FormatShareErrorNoVehicles(host.Name), exception.Message, ShareErrorAction.None),
+            (Localization.FormatShareErrorRateLimited(host.Name, Localization.FormatDuration(TimeSpan.FromMinutes(Math.Ceiling(wait.TotalMinutes)))), null, ShareErrorAction.None),
+        { Error: "rate_limited" } => (Localization.FormatShareErrorRateLimitedLater(host.Name), null, ShareErrorAction.None),
+        { Error: "upload_expired" } => (Localization.FormatShareErrorUploadGone(host.Name), null, ShareErrorAction.OpenHost),
+        { Error: "too_large" } => (Localization.FormatShareErrorTooLarge(host.Name), null, ShareErrorAction.None),
+        { Error: "type_not_accepted" } => (IsSave ? Localization.FormatShareErrorNoSaves(host.Name) : Localization.FormatShareErrorNoVehicles(host.Name), null, ShareErrorAction.None),
         { Error: "invalid_request", FieldErrors.Count: > 0 } =>
             (Localization.FormatListingShareHostSaid(host.Name, exception.Message), string.Join('\n', exception.FieldErrors!.Values.SelectMany(lines => lines).Distinct()), ShareErrorAction.None),
 
-        // The failed checks already carry the messages of the host.
+        // The failed checks are already listed.
         _ when ShareHostFailedChecks.Count > 0 => (Localization.FormatListingShareHostChecksFailed(host.Name), null, ShareErrorAction.None),
-        { Error: "invalid_archive" } => (Localization.FormatListingShareHostChecksFailed(host.Name), exception.Message, ShareErrorAction.None),
+        { Error: "invalid_archive" } => (Localization.FormatListingShareHostChecksFailed(host.Name), null, ShareErrorAction.None),
         _ => (Localization.FormatListingShareHostSaid(host.Name, exception.Message), null, ShareErrorAction.None),
     };
 

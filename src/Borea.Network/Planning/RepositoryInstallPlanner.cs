@@ -27,43 +27,104 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         var channel = request.Channel ?? _channel;
         var roots = BuildRoots(request, out var initialConflicts);
         var domains = await BuildDomainsAsync(request, roots, channel, initialConflicts, cancellationToken).ConfigureAwait(false);
-        var ids = domains.Keys.OrderBy(value => value, ModIds.Comparer).ToList();
-        SearchResult? best = null;
-        var states = 0;
-        var truncated = false;
-        var assigned = new Dictionary<string, RequestedMod?>(ModIds.Comparer);
-
-        void Search(int index)
-        {
-            if (++states > SearchLimit) { truncated = true; return; }
-            if (index == ids.Count)
-            {
-                var result = Evaluate(request, channel, roots, domains, assigned, initialConflicts);
-                if (best is null || result.Score.CompareTo(best.Score) < 0) best = result;
-                return;
-            }
-            var id = ids[index];
-            foreach (var candidate in domains[id])
-            {
-                assigned[id] = candidate;
-                Search(index + 1);
-            }
-            assigned.Remove(id);
-        }
-
-        Search(0);
-        if (truncated)
-        {
-            var conflict = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = SearchLimit };
-            return new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], [], [], [], [conflict], []);
-        }
-        if (best is null)
-        {
-            var conflict = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = SearchLimit };
-            return new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], [], [], [], [conflict], []);
-        }
-        return ToPlan(request, best);
+        // a cached index answers at once, so without this the search of a large plan runs on the thread of the caller, which can be the UI thread
+        return await Task.Run(() => Plan(request, channel, roots, domains, initialConflicts, cancellationToken), cancellationToken).ConfigureAwait(false);
     }
+
+    private InstallPlan Plan(InstallPlanningRequest request, ReleaseChannel channel, Dictionary<string, RequestedMod> roots, Dictionary<string, IReadOnlyList<RequestedMod?>> domains, IReadOnlyList<PlanningMessage> initialConflicts, CancellationToken cancellationToken)
+    {
+        var chosen = new Dictionary<string, RequestedMod?>(ModIds.Comparer);
+        var states = 0;
+        foreach (var group in BuildGroups(request, domains))
+        {
+            var ids = group.Where(domains.ContainsKey).OrderBy(value => value, ModIds.Comparer).ToList();
+            if (ids.Count == 0) continue;
+
+            // the other groups stay out of these plans, because what they add is the same in every plan of this group
+            var groupRoots = ids.Where(roots.ContainsKey).ToDictionary(value => value, value => roots[value], ModIds.Comparer);
+            // only an optional or suggested entry reaches a group with no request and no installed mod, so no plan selects it, and every other plan of the group has more mods and no lower rank
+            if (groupRoots.Count == 0 && !request.Instance.Mods.Any(mod => group.Contains(mod.ModId)))
+            {
+                foreach (var id in ids) chosen[id] = null;
+                continue;
+            }
+
+            var assigned = new Dictionary<string, RequestedMod?>(ModIds.Comparer);
+            SearchResult? best = null;
+            var bestAssigned = assigned;
+            var hasNoOwnProblem = false;
+
+            void Search(int index, int age)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (++states > SearchLimit) return;
+                if (index == ids.Count)
+                {
+                    var result = Evaluate(request, channel, groupRoots, domains, assigned, initialConflicts);
+                    if (best is not null && result.Score.CompareTo(best.Score) >= 0) return;
+                    best = result;
+                    bestAssigned = new Dictionary<string, RequestedMod?>(assigned, ModIds.Comparer);
+                    hasNoOwnProblem = HasNoOwnProblem(result, group, initialConflicts);
+                    return;
+                }
+                var id = ids[index];
+                var candidates = domains[id];
+                var countsAge = groupRoots.TryGetValue(id, out var root) && !root.Exact;
+                for (var position = 0; position < candidates.Count; position++)
+                {
+                    var candidateAge = countsAge ? age + position : age;
+                    // no later leaf can win once it is older than a best plan that has no conflict or missing mod of this group, because those two rank above age
+                    if (hasNoOwnProblem && candidateAge > best!.Age) break;
+                    assigned[id] = candidates[position];
+                    Search(index + 1, candidateAge);
+                }
+                assigned.Remove(id);
+            }
+
+            Search(0, 0);
+            if (states > SearchLimit)
+            {
+                var conflict = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = SearchLimit, Value = string.Join(", ", groupRoots.Count > 0 ? ids.Where(groupRoots.ContainsKey) : ids) };
+                return new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], [], [], [], [conflict], []);
+            }
+            foreach (var pair in bestAssigned) chosen[pair.Key] = pair.Value;
+        }
+
+        var ordered = domains.Keys.OrderBy(value => value, ModIds.Comparer).ToDictionary(value => value, value => chosen[value], ModIds.Comparer);
+        return ToPlan(request, Evaluate(request, channel, roots, domains, ordered, initialConflicts));
+    }
+
+    /// <summary>
+    /// The mods that can change the score of each other, and the installed mods that speak about them. Every message of a plan belongs to one group,
+    /// and every rank of the score counts what adds up over the groups, so the best plan of each group together is the best plan of all,
+    /// and the sorted order inside a group keeps the first of equal plans. Optional and suggested mods do not link, because they change only the open choices.
+    /// A mod that is linked only through a mod that is already decided stays in the group, because an any_of entry reads every requested mod that requires its alternative.
+    /// </summary>
+    private static List<HashSet<string>> BuildGroups(InstallPlanningRequest request, Dictionary<string, IReadOnlyList<RequestedMod?>> domains)
+    {
+        var parents = new Dictionary<string, string>(ModIds.Comparer);
+        string Find(string id) => parents.TryGetValue(id, out var parent) ? parents[id] = Find(parent) : id;
+        void Link(string id, ModVersionMetadata release)
+        {
+            foreach (var target in release.Dependencies.Where(value => value.Kind is ModDependencyKind.Required or ModDependencyKind.Recommends or ModDependencyKind.Conflict).SelectMany(DependencyTargets))
+            {
+                var first = Find(id);
+                var second = Find(target);
+                if (!ModIds.Equals(first, second)) parents[first] = second;
+            }
+        }
+
+        foreach (var (id, candidates) in domains)
+            foreach (var candidate in candidates.OfType<RequestedMod>()) Link(id, candidate.Release);
+        foreach (var mod in request.Instance.Mods) Link(mod.ModId, mod.Metadata);
+
+        return domains.Keys.Concat(request.Instance.Mods.Select(value => value.ModId)).Distinct(ModIds.Comparer).GroupBy(Find, ModIds.Comparer).Select(group => group.ToHashSet(ModIds.Comparer)).ToList();
+    }
+
+    // the initial conflicts and the messages of other groups are the same in every plan of this group, so only the rest can get better
+    private static bool HasNoOwnProblem(SearchResult result, HashSet<string> group, IReadOnlyList<PlanningMessage> initialConflicts)
+        => !result.Conflicts.Any(value => group.Contains(value.ModId) && !initialConflicts.Contains(value))
+            && !result.Warnings.Any(value => group.Contains(value.ModId) && value.Kind is PlanningMessageKind.MissingForVehicle or PlanningMessageKind.MissingForSave);
 
     private static Dictionary<string, RequestedMod> BuildRoots(InstallPlanningRequest request, out List<PlanningMessage> conflicts)
     {
@@ -153,7 +214,8 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             ModIds.Comparer);
     }
 
-    private static IEnumerable<string> DependencyIds(ModVersionMetadata release) => release.Dependencies.SelectMany(value => value.IsAnyOf ? value.AnyOf.Select(item => item.ModId) : value.ModId is null ? [] : [value.ModId]);
+    private static IEnumerable<string> DependencyIds(ModVersionMetadata release) => release.Dependencies.SelectMany(DependencyTargets);
+    private static IEnumerable<string> DependencyTargets(ModDependency value) => value.IsAnyOf ? value.AnyOf.Select(item => item.ModId) : value.ModId is null ? [] : [value.ModId];
 
     private SearchResult Evaluate(InstallPlanningRequest request, ReleaseChannel channel, Dictionary<string, RequestedMod> roots, Dictionary<string, IReadOnlyList<RequestedMod?>> domains, Dictionary<string, RequestedMod?> assigned, IReadOnlyList<PlanningMessage> initialConflicts)
     {

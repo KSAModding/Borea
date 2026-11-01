@@ -135,6 +135,14 @@ public sealed partial class ListingEditor
         if (_share is not { } share)
             return;
 
+        // The publish step says it in place, and the full form has no line for it, so there the toast of the save says it.
+        if (IsShareStep && IsSharePublish)
+        {
+            ShowsShareGameRunning = _owner.Services is { } services && _owner.IsGameRunning(services);
+            if (ShowsShareGameRunning)
+                return;
+        }
+
         if (await _owner.SaveShareArchiveAsync(share) is { } saved && _share == share)
         {
             _savedArchive = saved;

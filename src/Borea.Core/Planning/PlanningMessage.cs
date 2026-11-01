@@ -77,7 +77,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
 
     public OsPlatform? Platform { get; init; }
 
-    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, the pinned mod a release needs, the code of the reason a required mod of a vehicle or save is missing, or the folder of a vehicle or save a plan breaks.</summary>
+    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, the pinned mod a release needs, the code of the reason a required mod of a vehicle or save is missing, the folder of a vehicle or save a plan breaks, or the mods at which a search stopped.</summary>
     public string? Value { get; init; }
 
     public int? Limit { get; init; }
@@ -149,7 +149,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.AlternativeChoice => $"Select one alternative for {Dependency}.",
         PlanningMessageKind.InvalidAlternative => $"'{Value}' is not an available alternative.",
         PlanningMessageKind.ForeignAlternativeUnknown or PlanningMessageKind.UnsatisfiedAlternative => Value ?? $"{Dependency}",
-        PlanningMessageKind.SearchLimit => $"Planning exceeded the deterministic limit of {Limit} candidate states.",
+        PlanningMessageKind.SearchLimit => $"Planning exceeded the deterministic limit of {Limit} candidate states for {Value}. If you changed several mods at once, change fewer of them.",
         PlanningMessageKind.RetractedPack => Value ?? "The selected pack version is retracted.",
         PlanningMessageKind.UnlistedPin => "The exact pinned release is not listed and cannot be installed by Borea.",
         PlanningMessageKind.MissingForVehicle => $"{Dependency} cannot be installed or enabled, so the game refuses the vehicle file.",

@@ -1975,7 +1975,7 @@
     <value>This barrel o' fun onboard be needin' {0}, but it ain't be onboard.</value>
   </data>
   <data name="InstallMessageSearchLimitFormat" xml:space="preserve">
-    <value>The Borea stopped after {0:N0} combinations and ain't found a plan.</value>
+    <value>The Borea stopped after {0:N0} combinations and ain't found a plan fer {1}. If ye changed several mods at once, change fewer o' them.</value>
   </data>
   <data name="InstallMessageRetractedPack" xml:space="preserve">
     <value>This pack version is retracted.</value>

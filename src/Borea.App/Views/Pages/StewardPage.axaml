@@ -5,6 +5,199 @@
              xmlns:steward="using:Borea.Core.Stewardship"
              x:Class="Borea.App.Views.Pages.StewardPage"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <!-- the marks of the Statistics tab are thin and take one hue from the accent, and their values stay in the text colors.
+             The second part of a two-part mark is a paler step of that hue, which each theme sets for its own surface. -->
+        <Style Selector="TextBlock.stat-value">
+            <Setter Property="FontSize" Value="32" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Border.stat-bar">
+            <Setter Property="Height" Value="6" />
+            <Setter Property="CornerRadius" Value="0,3,3,0" />
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Border.stat-segment">
+            <Setter Property="Height" Value="8" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Border.stat-swatch">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Border.stat-second">
+            <Setter Property="Background" Value="{StaticResource Brush.AccentMuted}" />
+        </Style>
+        <!-- a problem in a cell of the upkeep table -->
+        <Style Selector="Border.stat-mark">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="{StaticResource Brush.DangerSoft}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.stat-mark Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Danger}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <!-- styles set the place of a table or a list, so that a narrower tab can move it -->
+        <Style Selector=":is(Control).stat-right">
+            <Setter Property="Grid.Column" Value="2" />
+        </Style>
+        <Style Selector=":is(Control).stat-types">
+            <Setter Property="Grid.Column" Value="0" />
+        </Style>
+        <Style Selector=":is(Control).stat-hosts">
+            <Setter Property="Grid.Column" Value="2" />
+        </Style>
+        <Style Selector=":is(Control).stat-tags">
+            <Setter Property="Grid.Column" Value="4" />
+        </Style>
+        <Style Selector=":is(Control).stat-licenses">
+            <Setter Property="Grid.Column" Value="6" />
+        </Style>
+        <!-- two tables need more room than a small window gives, so they stack -->
+        <ContainerQuery Name="statistics" Query="max-width:800">
+            <Style Selector=":is(Control).stat-left">
+                <Setter Property="Grid.ColumnSpan" Value="3" />
+            </Style>
+            <Style Selector=":is(Control).stat-right">
+                <Setter Property="Grid.Column" Value="0" />
+                <Setter Property="Grid.ColumnSpan" Value="3" />
+                <Setter Property="Grid.Row" Value="1" />
+                <Setter Property="Margin" Value="0,24,0,0" />
+            </Style>
+        </ContainerQuery>
+        <!-- four small lists fit in one row only on a wide window, and otherwise form two rows of two, the shorter lists in the first row so that no long list faces an empty space -->
+        <ContainerQuery Name="statistics" Query="max-width:1100">
+            <Style Selector=":is(Control).stat-types">
+                <Setter Property="Grid.ColumnSpan" Value="3" />
+            </Style>
+            <Style Selector=":is(Control).stat-hosts">
+                <Setter Property="Grid.Column" Value="4" />
+                <Setter Property="Grid.ColumnSpan" Value="3" />
+            </Style>
+            <Style Selector=":is(Control).stat-tags">
+                <Setter Property="Grid.Column" Value="0" />
+                <Setter Property="Grid.ColumnSpan" Value="3" />
+                <Setter Property="Grid.Row" Value="1" />
+                <Setter Property="Margin" Value="0,24,0,0" />
+            </Style>
+            <Style Selector=":is(Control).stat-licenses">
+                <Setter Property="Grid.Column" Value="4" />
+                <Setter Property="Grid.ColumnSpan" Value="3" />
+                <Setter Property="Grid.Row" Value="1" />
+                <Setter Property="Margin" Value="0,24,0,0" />
+            </Style>
+        </ContainerQuery>
+    </UserControl.Styles>
+    <UserControl.Resources>
+        <!-- the name of a row of the Statistics tab, which opens its content page when it has one.
+             A long name trims and shows whole in the tooltip. -->
+        <DataTemplate x:Key="StatisticsRowName" x:DataType="vm:StewardStatisticsRow">
+            <Panel>
+                <Button Classes="plain" Command="{Binding OpenCommand}" HorizontalAlignment="Left" VerticalAlignment="Center" ToolTip.Tip="{Binding Name}" IsVisible="{Binding CanOpen}">
+                    <TextBlock Classes="body-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                </Button>
+                <TextBlock Classes="body-md secondary" Text="{Binding Name}" ToolTip.Tip="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding !CanOpen}" />
+            </Panel>
+        </DataTemplate>
+        <!-- the end of a long list, where the margin keeps the text on the left edge of the list and the hover pill goes past that edge -->
+        <DataTemplate x:Key="StatisticsShowAll" x:DataType="vm:StewardStatisticsList">
+            <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ToggleShowAllCommand}" IsVisible="{Binding CanShowAll}">
+                <TextBlock Classes="action-md" Text="{Binding ShowAllText}" />
+            </Button>
+        </DataTemplate>
+        <!-- a small ranked list: the title, then per row the name and the number, with the bar below them -->
+        <DataTemplate x:Key="StatisticsBarList" x:DataType="vm:StewardStatisticsList">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="label-md" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsNothing}" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}" />
+                <ItemsControl ItemsSource="{Binding ShownRows}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:StewardStatisticsBarRow">
+                            <Grid ColumnDefinitions="*,12,Auto" RowDefinitions="Auto,Auto">
+                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StatisticsRowName}" />
+                                <TextBlock Grid.Column="2" Classes="label-md" Text="{Binding Value}" VerticalAlignment="Center" />
+                                <views:ShareBarPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,4,0,0">
+                                    <Border Classes="stat-bar" views:ShareBarPanel.Share="{Binding Share}" />
+                                </views:ShareBarPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StatisticsShowAll}" />
+            </StackPanel>
+        </DataTemplate>
+        <!-- one of the two dependency tables, with the name above a bar of the required and the optional part and a right-aligned column for each.
+             The swatch in a column heading is the legend of the bar. -->
+        <DataTemplate x:Key="StatisticsDependencyTable" x:DataType="vm:StewardStatisticsList">
+            <StackPanel Spacing="8" Grid.IsSharedSizeScope="True">
+                <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="StatisticsRequired" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="StatisticsOptional" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Classes="label-md" Text="{Binding Title}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsEmpty}">
+                            <Border Classes="stat-swatch" />
+                            <TextBlock Classes="label-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsRequired}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsEmpty}">
+                            <Border Classes="stat-swatch stat-second" />
+                            <TextBlock Classes="label-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsOptional}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsNothing}" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}" />
+                <ItemsControl ItemsSource="{Binding ShownRows}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:StewardStatisticsDependencyRow">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="StatisticsRequired" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="StatisticsOptional" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="4">
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StatisticsRowName}" />
+                                    <views:ShareBarPanel>
+                                        <Border Classes="stat-bar" views:ShareBarPanel.Share="{Binding RequiredShare}" />
+                                        <Border Classes="stat-bar stat-second" views:ShareBarPanel.Share="{Binding OptionalShare}" />
+                                    </views:ShareBarPanel>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Classes="label-md" Classes.muted="{Binding Required.IsZero}" Text="{Binding Required.Text}" TextAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Classes="label-md" Classes.muted="{Binding Optional.IsZero}" Text="{Binding Optional.Text}" TextAlignment="Right" VerticalAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StatisticsShowAll}" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
     <!-- Steward tools: the tabs of the steward work in content-index and content-index-releases -->
     <ScrollViewer>
         <views:PageBodyPanel>
@@ -36,6 +229,7 @@
                             <Button Classes="tab quiet" Classes.active="{Binding IsReportsTab}" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardTabReports}" Command="{Binding ShowReportsCommand}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsStatusTab}" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardTabStatus}" Command="{Binding ShowStatusCommand}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsWatcherTab}" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardTabWatcher}" Command="{Binding ShowWatcherCommand}" />
+                            <Button Classes="tab quiet" Classes.active="{Binding IsStatisticsTab}" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardTabStatistics}" Command="{Binding ShowStatisticsCommand}" />
                         </StackPanel>
                     </Border>
 
@@ -412,6 +606,197 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                        </StackPanel>
+                    </Panel>
+
+                    <!-- Statistics: what the index holds, counted from the snapshot that Borea read, with the headline numbers first and then a card per subject, the most useful first -->
+                    <Panel IsVisible="{Binding IsStatisticsTab}">
+                        <StackPanel DataContext="{Binding Statistics}" x:DataType="vm:StewardStatisticsTab" Container.Name="statistics" Container.Sizing="Width">
+                            <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsHint}" TextWrapping="Wrap" Margin="0,16,0,0" />
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0" IsVisible="{Binding IsLoading}">
+                                <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                                <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsLoading}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <Panel Margin="0,16,0,0" IsVisible="{Binding Report, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <StackPanel DataContext="{Binding Report}" x:DataType="vm:StewardStatisticsReport" Spacing="8">
+                                    <!-- the headline numbers -->
+                                    <ItemsControl ItemsSource="{Binding Tiles}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Rows="1" ColumnSpacing="8" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:StewardStatisticsTile">
+                                                <Border Classes="card" Padding="16,12" ToolTip.Tip="{Binding Detail}">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Classes="stat-value" Classes.muted="{Binding !IsKnown}" Text="{Binding Value}" />
+                                                        <TextBlock Classes="body-sm secondary" Text="{Binding Label}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- the current build: the part of the mods that a release lets a player install on it, and the others -->
+                                    <Border Classes="card" Padding="24,16">
+                                        <StackPanel DataContext="{Binding BuildFit}" x:DataType="vm:StewardStatisticsBuildFit" Spacing="12">
+                                            <WrapPanel ItemSpacing="12" LineSpacing="4">
+                                                <TextBlock Classes="heading-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsCurrentBuild}" VerticalAlignment="Center" />
+                                                <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasBuild}">
+                                                    <TextBlock Text="{Binding Build}" />
+                                                </Border>
+                                            </WrapPanel>
+                                            <TextBlock Classes="body-md muted" Text="{Binding Summary}" TextWrapping="Wrap" />
+                                            <StackPanel Spacing="8" IsVisible="{Binding IsRated}">
+                                                <views:ShareBarPanel AutomationProperties.Name="{Binding Summary}">
+                                                    <Border Classes="stat-segment" views:ShareBarPanel.Share="{Binding NotBlocked.Share}" />
+                                                    <Border Classes="stat-segment stat-second" views:ShareBarPanel.Share="{Binding Blocked.Share}" />
+                                                </views:ShareBarPanel>
+                                                <WrapPanel ItemSpacing="24" LineSpacing="4">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Border Classes="stat-swatch" />
+                                                        <TextBlock Classes="heading-sm" Classes.muted="{Binding NotBlocked.Count.IsZero}" Text="{Binding NotBlocked.Count.Text}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsNotBlocked}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="label-md" Text="{Binding NotBlocked.Percent}" VerticalAlignment="Center" IsVisible="{Binding !NotBlocked.Count.IsZero}" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Border Classes="stat-swatch stat-second" />
+                                                        <TextBlock Classes="heading-sm" Classes.muted="{Binding Blocked.Count.IsZero}" Text="{Binding Blocked.Count.Text}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsBlocked}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="label-md" Text="{Binding Blocked.Percent}" VerticalAlignment="Center" IsVisible="{Binding !Blocked.Count.IsZero}" />
+                                                    </StackPanel>
+                                                </WrapPanel>
+                                            </StackPanel>
+                                            <StackPanel DataContext="{Binding BlockedMods}" x:DataType="vm:StewardStatisticsList" Spacing="8" IsVisible="{Binding !IsEmpty}">
+                                                <TextBlock Classes="label-md" Text="{Binding Title}" TextWrapping="Wrap" />
+                                                <ItemsControl ItemsSource="{Binding ShownRows}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel ItemSpacing="4" LineSpacing="4" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:StewardStatisticsRow">
+                                                            <Button Classes="chip-button chip-action" Command="{Binding OpenCommand}" ToolTip.Tip="{Binding Name}">
+                                                                <TextBlock MaxWidth="240" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StatisticsShowAll}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- dependencies: side by side where they fit -->
+                                    <Border Classes="card" Padding="24,16">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Classes="heading-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsDependencies}" />
+                                            <Grid ColumnDefinitions="*,32,*" RowDefinitions="Auto,Auto">
+                                                <ContentControl Classes="stat-left" Content="{Binding MostDependencies}" ContentTemplate="{StaticResource StatisticsDependencyTable}" />
+                                                <ContentControl Classes="stat-right" Content="{Binding MostDependedOn}" ContentTemplate="{StaticResource StatisticsDependencyTable}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- upkeep: a row per listing and a column per problem, with the count of each problem in its heading -->
+                                    <Border Classes="card" Padding="24,16">
+                                        <StackPanel DataContext="{Binding Upkeep}" x:DataType="vm:StewardStatisticsUpkeep" Spacing="12">
+                                            <TextBlock Classes="heading-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsUpkeep}" />
+                                            <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsUpkeepEmpty}" IsVisible="{Binding Rows.IsEmpty}" />
+                                            <StackPanel IsVisible="{Binding !Rows.IsEmpty}">
+                                                <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+                                                    <Grid ColumnDefinitions="*,2*">
+                                                        <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsListing}" VerticalAlignment="Bottom" />
+                                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <UniformGrid Rows="1" />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:StewardStatisticsUpkeepColumn">
+                                                                    <Grid RowDefinitions="*,Auto" Margin="4,0">
+                                                                        <TextBlock Classes="label-sm" Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" />
+                                                                        <TextBlock Grid.Row="1" Classes="heading-sm" Classes.muted="{Binding Count.IsZero}" Text="{Binding Count.Text}" TextAlignment="Center" Margin="0,4,0,0" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+                                                </Border>
+                                                <ItemsControl ItemsSource="{Binding Rows.ShownRows}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:StewardStatisticsUpkeepRow">
+                                                            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,0,0,1" MinHeight="32">
+                                                                <Grid ColumnDefinitions="*,2*">
+                                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StatisticsRowName}" VerticalAlignment="Center" />
+                                                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}" VerticalAlignment="Center">
+                                                                        <ItemsControl.ItemsPanel>
+                                                                            <ItemsPanelTemplate>
+                                                                                <UniformGrid Rows="1" />
+                                                                            </ItemsPanelTemplate>
+                                                                        </ItemsControl.ItemsPanel>
+                                                                        <ItemsControl.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:StewardStatisticsUpkeepCell">
+                                                                                <Panel>
+                                                                                    <Border Classes="stat-mark" ToolTip.Tip="{Binding Problem}" AutomationProperties.Name="{Binding Problem}" IsVisible="{Binding HasProblem}">
+                                                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                                                                    </Border>
+                                                                                </Panel>
+                                                                            </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <ContentControl Content="{Binding Rows}" ContentTemplate="{StaticResource StatisticsShowAll}" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- overview: small ranked lists, and the most downloaded listings across the width -->
+                                    <Border Classes="card" Padding="24,16">
+                                        <StackPanel Spacing="24">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Classes="heading-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsOverview}" />
+                                                <Grid ColumnDefinitions="*,24,*,24,*,24,*" RowDefinitions="Auto,Auto">
+                                                    <ContentControl Classes="stat-types" Content="{Binding Types}" ContentTemplate="{StaticResource StatisticsBarList}" />
+                                                    <ContentControl Classes="stat-hosts" Content="{Binding ReleaseHosts}" ContentTemplate="{StaticResource StatisticsBarList}" />
+                                                    <ContentControl Classes="stat-tags" Content="{Binding Tags}" ContentTemplate="{StaticResource StatisticsBarList}" />
+                                                    <ContentControl Classes="stat-licenses" Content="{Binding Licenses}" ContentTemplate="{StaticResource StatisticsBarList}" />
+                                                </Grid>
+                                            </StackPanel>
+                                            <StackPanel DataContext="{Binding MostDownloaded}" x:DataType="vm:StewardStatisticsList" Spacing="8">
+                                                <TextBlock Classes="label-md" Text="{Binding Title}" />
+                                                <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsNothing}" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}" />
+                                                <ItemsControl ItemsSource="{Binding ShownRows}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Spacing="4" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:StewardStatisticsBarRow">
+                                                            <Grid ColumnDefinitions="240,12,*,12,72" MinHeight="24">
+                                                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StatisticsRowName}" VerticalAlignment="Center" />
+                                                                <views:ShareBarPanel Grid.Column="2" VerticalAlignment="Center">
+                                                                    <Border Classes="stat-bar" views:ShareBarPanel.Share="{Binding Share}" />
+                                                                </views:ShareBarPanel>
+                                                                <TextBlock Grid.Column="4" Classes="label-md" Text="{Binding Value}" TextAlignment="Right" VerticalAlignment="Center" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Panel>
                         </StackPanel>
                     </Panel>
                 </StackPanel>
