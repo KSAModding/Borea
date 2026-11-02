@@ -225,15 +225,13 @@
                             <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingStartOver}" Command="{Binding ListingEditor.StartOverCommand}" IsVisible="{Binding !ListingEditor.IsSendingShare}" />
                         </Grid>
                         <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.IntroText}" TextWrapping="Wrap" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" MaxWidth="640" />
-                            </Grid.ColumnDefinitions>
+                        <!-- the steps take the whole width of the body, as the form does, so the side panel stands next to them and the title row ends where they end -->
+                        <Panel>
                             <share:ShareChooseStep x:Name="ChooseStep" IsVisible="{Binding ListingEditor.IsShareChoose}" />
                             <share:ShareDescribeStep IsVisible="{Binding ListingEditor.IsShareDescribe}" />
                             <share:SharePublishStep IsVisible="{Binding ListingEditor.IsSharePublish}" />
                             <share:ShareDoneStep IsVisible="{Binding ListingEditor.IsShareDone}" />
-                        </Grid>
+                        </Panel>
                     </StackPanel>
 
                     <!-- form -->
