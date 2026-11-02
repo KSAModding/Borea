@@ -100,13 +100,14 @@ public sealed class InstallChoicesTests
         var revision = choices.Revision;
 
         group.Options[0].IsSelected = true;
-        await ViewModelHarness.WaitUntilAsync(() => item.PendingPlan is not null);
+        await choices.Planning;
 
         Assert.Equal(revision + 1, choices.Revision);
         Assert.Equal(SizedText(harness, MeasureToolsSize + ArmorySize), item.ConfirmInstallText);
 
+        // a change plans only when the plan of the change before has ended, so the test waits for that task and not for the plan to show
         group.Options[1].IsSelected = true;
-        await ViewModelHarness.WaitUntilAsync(() => item.PendingPlan is not null);
+        await choices.Planning;
 
         Assert.Equal(revision + 2, choices.Revision);
         Assert.Equal(SizedText(harness, MeasureToolsSize + FlightComputerSize), item.ConfirmInstallText);
