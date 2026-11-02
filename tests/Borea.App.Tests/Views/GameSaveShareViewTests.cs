@@ -216,6 +216,30 @@ public sealed class GameSaveShareViewTests
     }
 
     [Fact]
+    public async Task ChooseStep_WithNoVehiclesAndNoDraftBehind_ShowsNoActionBar()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        await harness.ViewModel.ListingEditor.ShareChooseLoad;
+
+        var showsBar = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1000, Height = 700, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var found = page.GetVisualDescendants().OfType<ShareActionBar>().Single().IsEffectivelyVisible;
+            window.Close();
+            return Task.FromResult(found);
+        });
+
+        Assert.Equal(harness.Localization.ShareNoVehicles, harness.ViewModel.ListingEditor.ShareChooseEmptyText);
+        Assert.False(showsBar);
+    }
+
+    [Fact]
     public async Task PublishStep_KeepsThePublicNoticeRightAbovePublish_OutsideTheScroller()
     {
         using var harness = await ShareHostShareTests.PictureHarnessAsync(publish: false);

@@ -859,7 +859,7 @@
         </ScrollViewer>
 
         <!-- the actions of a share step line up with the cards above them, and the tab order reaches them after the step -->
-        <views:PageBodyPanel Grid.Row="1" HasSidePanel="{Binding !ListingEditor.IsStartStep}" HasTopMargin="False" HasBottomMargin="False" IsVisible="{Binding ListingEditor.IsShareStep}">
+        <views:PageBodyPanel Grid.Row="1" HasSidePanel="{Binding !ListingEditor.IsStartStep}" HasTopMargin="False" HasBottomMargin="False" IsVisible="{Binding ListingEditor.ShowsShareActionBar}">
             <share:ShareActionBar />
         </views:PageBodyPanel>
 
