@@ -274,6 +274,21 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task FindBySha256Async_AnyArchiveOfTheRelease_TakesThatArchive()
+    {
+        var linux = new DownloadInfo("https://example.test/mod-linux.zip", new string('C', 64), 512, "application/zip");
+        var release = Release("target-mod", "1.0.0", platformDownloads: new Dictionary<OsPlatform, PlatformDownload> { [OsPlatform.Linux] = new(linux, 1000) });
+        var snapshot = Snapshot(new ContentIndexListing("target-mod", TestFixtures.SampleModMetadata("target-mod", "index"), [release.ForPlatform(OsPlatform.Linux)], null));
+        var repository = new ContentIndexModRepository(new FakeFetcher(ContentIndexFetchResult.Downloaded), new FakeReader(snapshot), new TestPathProvider());
+
+        var universal = await repository.FindBySha256Async("target-mod", new string('A', 64));
+        var platform = await repository.FindBySha256Async("target-mod", new string('c', 64));
+
+        Assert.Equal<(string, long?)>(("https://example.test/mod.zip", 2048), (universal!.Download.Url, universal.InstallSizeBytes));
+        Assert.Equal<(string, long?)>((linux.Url, 1000), (platform!.Download.Url, platform.InstallSizeBytes));
+    }
+
+    [Fact]
     public async Task GetDiagnosticsAsync_ExposesUnknownModerationWarning()
     {
         var diagnostic = new ContentIndexDiagnostic(
@@ -394,7 +409,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         releases,
         delisted ? new IndexStatus(IndexStatusState.Delisted, "delisted") : null);
 
-    private static ModVersionMetadata Release(string modId, string version, bool yanked = false, bool gone = false, ContentType type = ContentType.Mod, ReleaseStatus status = ReleaseStatus.Stable) => new(
+    private static ModVersionMetadata Release(string modId, string version, bool yanked = false, bool gone = false, ContentType type = ContentType.Mod, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyDictionary<OsPlatform, PlatformDownload>? platformDownloads = null) => new(
         specVersion: 1,
         modId: modId,
         version: ModVersion.Parse(version),
@@ -414,7 +429,8 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         dependencies: Array.Empty<Borea.Core.Dependencies.ModDependency>(),
         yanked: yanked,
         yankedReason: yanked ? "Retracted." : null,
-        source: "index");
+        source: "index",
+        platformDownloads: platformDownloads);
 
     private sealed class FakeFetcher : IContentIndexFetcher
     {
