@@ -19,12 +19,12 @@ internal static partial class ReleaseAmendmentCheck
     private static readonly HashSet<string> TopLevel =
     [
         "spec_version", "id", "type", "version", "version_scheme", "release_status", "release_date", "game_min", "game_min_revision",
-        "game_max", "game_max_revision", "os", "download", "install_size", "install", "loader", "dependencies", "changelog",
+        "game_max", "game_max_revision", "os", "download", "install_size", "platform_downloads", "install", "loader", "dependencies", "changelog",
         "changelog_text", "listing", "yanked", "yanked_reason",
     ];
 
     private static readonly string[] Immutable =
-        ["spec_version", "id", "type", "version", "version_scheme", "release_status", "release_date", "download", "install_size", "install", "changelog", "listing"];
+        ["spec_version", "id", "type", "version", "version_scheme", "release_status", "release_date", "download", "install_size", "platform_downloads", "install", "changelog", "listing"];
 
     internal static readonly string[] OsValues = ["windows", "linux", "macos"];
     private static readonly string[] WatcherDownloadKeys = ["mirrors", "unavailable_since"];
@@ -98,21 +98,51 @@ internal static partial class ReleaseAmendmentCheck
                 continue;
 
             errors.Add($"'{key}' changed, and identity, the version, the download and the install data never change after publish");
-            if (key == "download" && WatcherKeysOnly(published[key], amended[key]) is { Length: > 0 } watched)
-                errors.Add($"the download differs only in {watched}, which the watcher writes on the default branch: rebase and run tools/amend.py again");
+            var watched = key switch
+            {
+                "download" => WatcherKeysOnly(published[key], amended[key], "download", WatcherDownloadKeys),
+                "platform_downloads" => WatcherPlatformKeysOnly(published[key], amended[key]),
+                _ => null,
+            };
+            if (watched is { Length: > 0 })
+            {
+                var what = key == "download" ? "the download differs" : "the platform downloads differ";
+                errors.Add($"{what} only in {watched}, which the watcher writes on the default branch: rebase and run tools/amend.py again");
+            }
         }
     }
 
-    private static string? WatcherKeysOnly(JsonNode? published, JsonNode? amended)
+    private static string? WatcherKeysOnly(JsonNode? published, JsonNode? amended, string where, string[] keys)
     {
         if (published is not JsonObject before || amended is not JsonObject after)
             return null;
 
-        JsonObject Rest(JsonObject download) => new(download.Where(member => !WatcherDownloadKeys.Contains(member.Key)).Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())));
+        JsonObject Rest(JsonObject download) => new(download.Where(member => !keys.Contains(member.Key)).Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())));
         if (!JsonNode.DeepEquals(Rest(before), Rest(after)))
             return null;
 
-        return string.Join(" and ", WatcherDownloadKeys.Where(key => !JsonNode.DeepEquals(before[key], after[key])).Select(key => $"'download.{key}'"));
+        return string.Join(" and ", keys.Where(key => !JsonNode.DeepEquals(before[key], after[key])).Select(key => $"'{where}.{key}'"));
+    }
+
+    /// <summary>The unavailable_since keys of the platform entries that differ, when nothing else in them does, because only the watcher writes them, as in the download.</summary>
+    private static string? WatcherPlatformKeysOnly(JsonNode? published, JsonNode? amended)
+    {
+        if (published is not JsonObject before || amended is not JsonObject after
+            || !before.Select(member => member.Key).ToHashSet().SetEquals(after.Select(member => member.Key)))
+        {
+            return null;
+        }
+
+        var found = new List<string>();
+        foreach (var (platform, entry) in before)
+        {
+            if (WatcherKeysOnly(entry, after[platform], $"platform_downloads.{platform}", ["unavailable_since"]) is not { } watched)
+                return null;
+            if (watched.Length > 0)
+                found.Add(watched);
+        }
+
+        return string.Join(" and ", found);
     }
 
     private static void CheckChangelogText(JsonObject published, JsonObject amended, List<string> errors)
