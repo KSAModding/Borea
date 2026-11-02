@@ -4,9 +4,9 @@
     "net10.0": {
       "BCnEncoder.Net": {
         "type": "Direct",
-        "requested": "[2.2.1, )",
-        "resolved": "2.2.1",
-        "contentHash": "tI5+/OQo0kciLqWrViRjpOH+IL3FjexYnoWZajiGV41g/EM9CGbWsxsPzBDmpoxNkrV9uox/EtIhCIi9chBSFw==",
+        "requested": "[2.3.0, )",
+        "resolved": "2.3.0",
+        "contentHash": "DJhHJiBJKXUXxlkkrv74ckzJb3wYxqIAZHjXD9G76kpsD0YyJOmqtNufHWEuJe0eH0tB1tCZn80/3JV2UVP7yQ==",
         "dependencies": {
           "CommunityToolkit.HighPerformance": "8.4.0"
         }
@@ -51,8 +51,8 @@
       },
       "Markdig": {
         "type": "Transitive",
-        "resolved": "1.5.0",
-        "contentHash": "oEm6N4PYFPUZiJ5e89993AE6hfC8EWRGD5M8nyoSJbwD4GgW818mjlQCk++SdTV4godaN50Ybcmm4j2Dp76oIQ=="
+        "resolved": "1.5.1",
+        "contentHash": "NtHwU5t5yKr6Gnylhs8/hlR0mOAftTFQURDz2ID8bkunxps1neOzKw0dYKKlwNuwiYIGLHjJTXK91f809Ko1ww=="
       },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
@@ -120,7 +120,7 @@
       "borea.core": {
         "type": "Project",
         "dependencies": {
-          "Markdig": "[1.5.0, )"
+          "Markdig": "[1.5.1, )"
         }
       },
       "borea.preview": {

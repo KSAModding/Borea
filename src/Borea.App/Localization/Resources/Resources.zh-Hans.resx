@@ -2031,6 +2031,9 @@
   <data name="ShareFolderNotXmlFormat" xml:space="preserve">
     <value>{0} 已损坏，Borea 无法读取。请在游戏中重新保存后重试。</value>
   </data>
+  <data name="ShareFolderUnknownLayoutFormat" xml:space="preserve">
+    <value>Borea 无法识别 {0} 的文件结构，因此无法确定它需要哪些资源。请在游戏中重新保存，或更新 Borea。</value>
+  </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>无法备份存档</value>
   </data>
@@ -3839,6 +3842,9 @@
   </data>
   <data name="ShareCoverMissing" xml:space="preserve">
     <value>Borea 无法为此载具生成封面。你可以使用自己的图片。</value>
+  </data>
+  <data name="ShareCoverNewerPartFormat" xml:space="preserve">
+    <value>此 KSA 构建使用较新的部件格式，因此 Borea 暂时不生成封面。你可以使用自己的图片。</value>
   </data>
   <data name="ShareCoverHint" xml:space="preserve">
     <value>Borea 根据你的载具生成的图片，用作其页面封面。发布时，图片也会公开。仅上传这张图片，不包含游戏部件或纹理文件。</value>
@@ -6191,6 +6197,9 @@
   </data>
   <data name="PreviewVehicleDamaged" xml:space="preserve">
     <value>Borea 无法读取载具文件，因此无法显示预览。</value>
+  </data>
+  <data name="PreviewNewerPartFormat" xml:space="preserve">
+    <value>此 KSA 构建使用较新的部件格式。3D 预览将在 Borea 下次更新中提供。</value>
   </data>
   <data name="PreviewFailedFormat" xml:space="preserve">
     <value>预览因错误而停止：{0}</value>
