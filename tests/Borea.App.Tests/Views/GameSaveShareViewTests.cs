@@ -216,6 +216,57 @@ public sealed class GameSaveShareViewTests
     }
 
     [Fact]
+    public async Task PublishStep_KeepsThePublicNoticeRightAbovePublish_OutsideTheScroller()
+    {
+        using var harness = await ShareHostShareTests.PictureHarnessAsync(publish: false);
+        var editor = harness.ViewModel.ListingEditor;
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.True(editor.HasShareUpload);
+
+        var (inScroller, notice, publish, height) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1000, Height = 600, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var scroller = page.FindControl<ScrollViewer>("PageScroller")!;
+            var text = page.GetVisualDescendants().OfType<TextBlock>().Single(text => text.IsEffectivelyVisible && text.Text == editor.SharePublicNoticeText);
+            var button = page.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && button.Command == editor.PublishToShareHostCommand);
+            var found = (scroller.IsVisualAncestorOf(text), BoundsIn(text, page), BoundsIn(button, page), page.Bounds.Height);
+            window.Close();
+            return Task.FromResult(found);
+        });
+
+        Assert.False(inScroller);
+        Assert.True(notice.Bottom <= publish.Top, $"The notice ends at {notice.Bottom}, below the top {publish.Top} of Publish.");
+        Assert.True(publish.Bottom <= height, $"Publish ends at {publish.Bottom}, below the page height {height}.");
+    }
+
+    [Fact]
+    public async Task DoneStep_KeepsOpenPageInViewAsItsMainAction()
+    {
+        using var harness = await ShareHostShareTests.PublishedHarnessAsync();
+        var editor = harness.ViewModel.ListingEditor;
+
+        var (inScroller, isMain, open, height) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1000, Height = 500, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var scroller = page.FindControl<ScrollViewer>("PageScroller")!;
+            var button = page.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && button.Command == editor.OpenShareDonePageCommand);
+            var found = (scroller.IsVisualAncestorOf(button), button.Classes.Contains("cta"), BoundsIn(button, page), page.Bounds.Height);
+            window.Close();
+            return Task.FromResult(found);
+        });
+
+        Assert.False(inScroller);
+        Assert.True(isMain);
+        Assert.True(open.Bottom <= height, $"Open page ends at {open.Bottom}, below the page height {height}.");
+    }
+
+    [Fact]
     public async Task ChooseStep_ShowsTheRowsWithTheirChipsAndTheNoteOfTheSelectedRow()
     {
         using var harness = await ViewModelHarness.CreateAsync();

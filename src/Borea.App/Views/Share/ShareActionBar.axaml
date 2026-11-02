@@ -43,6 +43,13 @@
 
             <!-- the check, the publish and their progress, with the code of a sign-in that one of them starts -->
             <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.IsSharePublish}">
+                <!-- the notice stays right above Publish, so the player cannot scroll it away before the click -->
+                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.HasShareUpload}">
+                    <TextBlock Classes="body-sm" Text="{Binding ListingEditor.SharePublicNoticeText}" TextWrapping="Wrap" />
+                    <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.OpenShareHostRulesCommand}" CommandParameter="{Binding ListingEditor.ShareUploadHost}" IsVisible="{Binding ListingEditor.ShareUploadRulesText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareUploadRulesText}" />
+                    </Button>
+                </StackPanel>
                 <WrapPanel ItemSpacing="8" LineSpacing="8">
                     <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareDescribeCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}" />
                     <Button Classes="cta" Command="{Binding ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding ListingEditor.SelectedShareHostRow}" IsVisible="{Binding ListingEditor.ShowsShareCheckButton}">

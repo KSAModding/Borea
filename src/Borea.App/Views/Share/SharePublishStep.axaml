@@ -193,38 +193,30 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- one row each, with one layout at every width -->
-                <Grid RowDefinitions="Auto,Auto">
-                    <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.HasShareUpload}">
-                        <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding !ListingEditor.IsEditingShareVersion}">
-                            <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareVersionLineText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                            <Button Grid.Column="2" Classes="link" VerticalAlignment="Center" Command="{Binding ListingEditor.EditShareVersionCommand}">
-                                <TextBlock Classes="action-md" Text="{Binding Localization.ShareChange}" />
-                            </Button>
-                        </Grid>
-                        <StackPanel Spacing="6" IsVisible="{Binding ListingEditor.IsEditingShareVersion}">
-                            <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostVersion}" />
-                            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareVersionHint}" TextWrapping="Wrap" />
-                            <TextBox Classes="field" Width="160" HorizontalAlignment="Left" Text="{Binding ListingEditor.ShareHostVersion}" PlaceholderText="1.0.0" AutomationProperties.Name="{Binding Localization.ListingShareHostVersion}" />
-                            <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareVersionError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareVersionError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                            <TextBlock Classes="heading-sm" Text="{Binding Localization.ContentChannelHeader}" Margin="0,10,0,0" />
-                            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareChannelHint}" TextWrapping="Wrap" />
-                            <ComboBox ItemsSource="{Binding ListingEditor.ShareStatusChoices}" SelectedItem="{Binding ListingEditor.SelectedShareStatus}" AutomationProperties.Name="{Binding Localization.ContentChannelHeader}" MinWidth="160">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ShareStatusChoice">
-                                        <TextBlock Text="{Binding Label}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </StackPanel>
-                    </StackPanel>
-                    <StackPanel Grid.Row="1" Spacing="4" Margin="0,16,0,0" IsVisible="{Binding ListingEditor.HasShareUpload}">
-                        <TextBlock Classes="body-sm" Text="{Binding ListingEditor.SharePublicNoticeText}" TextWrapping="Wrap" />
-                        <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.OpenShareHostRulesCommand}" CommandParameter="{Binding ListingEditor.ShareUploadHost}" IsVisible="{Binding ListingEditor.ShareUploadRulesText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareUploadRulesText}" />
+                <!-- the version and the channel, which the player can change here, and Publish in the bar names the version -->
+                <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.HasShareUpload}">
+                    <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding !ListingEditor.IsEditingShareVersion}">
+                        <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareVersionLineText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Classes="link" VerticalAlignment="Center" Command="{Binding ListingEditor.EditShareVersionCommand}">
+                            <TextBlock Classes="action-md" Text="{Binding Localization.ShareChange}" />
                         </Button>
+                    </Grid>
+                    <StackPanel Spacing="6" IsVisible="{Binding ListingEditor.IsEditingShareVersion}">
+                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingShareHostVersion}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareVersionHint}" TextWrapping="Wrap" />
+                        <TextBox Classes="field" Width="160" HorizontalAlignment="Left" Text="{Binding ListingEditor.ShareHostVersion}" PlaceholderText="1.0.0" AutomationProperties.Name="{Binding Localization.ListingShareHostVersion}" />
+                        <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareVersionError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareVersionError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ContentChannelHeader}" Margin="0,10,0,0" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareChannelHint}" TextWrapping="Wrap" />
+                        <ComboBox ItemsSource="{Binding ListingEditor.ShareStatusChoices}" SelectedItem="{Binding ListingEditor.SelectedShareStatus}" AutomationProperties.Name="{Binding Localization.ContentChannelHeader}" MinWidth="160">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ShareStatusChoice">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </StackPanel>
-                </Grid>
+                </StackPanel>
             </StackPanel>
         </Border>
 
