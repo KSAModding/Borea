@@ -104,7 +104,7 @@ public sealed partial class ListingEditor
             });
             var installRoot = AuthoredInstallRoot();
             var listingId = ModIds.IsValid(Draft.Id) ? Draft.Id : null;
-            var source = await services.ListingSources.ReadAsync(reference, installRoot, listingId, progress, cancel.Token);
+            var source = await services.ListingSources.ReadAsync(reference, installRoot, listingId, Empty(ReleasesTagPrefix), progress, cancel.Token);
             cancel.Token.ThrowIfCancellationRequested();
             if (source.Archive is { } archive && source.Host.Latest is { } latest)
             {

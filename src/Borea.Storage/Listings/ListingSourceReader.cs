@@ -31,12 +31,13 @@ public sealed partial class ListingSourceReader : IListingSourceReader
         ListingSourceReference source,
         string? installRoot = null,
         string? listingId = null,
+        string? tagPrefix = null,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var host = await _hosts.ReadAsync(source, listingId, cancellationToken).ConfigureAwait(false);
+        var host = await _hosts.ReadAsync(source, listingId, tagPrefix, cancellationToken).ConfigureAwait(false);
         if (host.Latest is not { } latest)
             return new ListingSource(host, null, null);
 

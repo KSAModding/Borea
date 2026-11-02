@@ -105,6 +105,42 @@ public sealed class ListingHostClientTests
     }
 
     [Theory]
+    [InlineData("kRPC-0.2.0.zip")]
+    [InlineData("krpc_0.2.0.zip")]
+    public async Task ReadAsync_TagPrefix_NamesTheArchiveAfterTheTagWithoutThePrefix(string named)
+    {
+        var releases = $$"""
+            [ { "tag_name": "ksa-v0.2.0", "draft": false, "published_at": "2026-09-08T00:00:00Z", "assets": [
+              { "name": "{{named}}", "state": "uploaded", "size": 1, "browser_download_url": "https://example.com/{{named}}" },
+              { "name": "Sources.zip", "state": "uploaded", "size": 1, "browser_download_url": "https://example.com/Sources.zip" }
+            ] } ]
+            """;
+        var client = ClientWithReleases(releases);
+
+        var latest = (await client.ReadAsync(new ListingSourceReference.GitHub("Owner", "KSA-MyMod"), "kRPC", "ksa-v")).Latest!;
+
+        Assert.Equal("ksa-v0.2.0", latest.Tag);
+        Assert.Equal("0.2.0", latest.Version);
+        Assert.Equal($"https://example.com/{named}", latest.DownloadUrl);
+    }
+
+    [Fact]
+    public async Task ReadAsync_TagPrefix_OffersOnlyTheReleasesThatStartWithIt()
+    {
+        const string releases = """
+            [ { "tag_name": "v9.0.0", "draft": false, "published_at": "2026-09-09T00:00:00Z", "assets": [] },
+              { "tag_name": "ksa-v0.2.0", "draft": false, "published_at": "2026-09-08T00:00:00Z", "assets": [] },
+              { "tag_name": "ksa-v0.1.0", "draft": false, "published_at": "2026-09-01T00:00:00Z", "assets": [] } ]
+            """;
+        var client = ClientWithReleases(releases);
+        var reference = new ListingSourceReference.GitHub("Owner", "KSA-MyMod");
+
+        Assert.Equal("v9.0.0", (await client.ReadAsync(reference)).Latest!.Tag);
+        Assert.Equal("ksa-v0.2.0", (await client.ReadAsync(reference, null, "ksa-v")).Latest!.Tag);
+        Assert.Null((await client.ReadAsync(reference, null, "other-")).Latest);
+    }
+
+    [Theory]
     [InlineData("0.5", "0.5.0")]
     [InlineData("v1-rc.1", "1.0.0-rc.1")]
     public async Task ReadAsync_ShortTag_IsTheReleaseWithItsVersionFilled(string tag, string version)

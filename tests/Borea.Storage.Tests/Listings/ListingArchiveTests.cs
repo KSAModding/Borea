@@ -237,11 +237,12 @@ public sealed class ListingArchiveTests : IDisposable
         var hosts = new FakeHosts(new ListingHostRelease("v1.0.0", "1.0.0", null, null, ["a.zip", "b.zip"]));
         var reader = new ListingSourceReader(hosts, new FakeModDownloader(), _folder, 1000);
 
-        var source = await reader.ReadAsync(new ListingSourceReference.GitHub("owner", "MyMod"), listingId: "MyMod");
+        var source = await reader.ReadAsync(new ListingSourceReference.GitHub("owner", "MyMod"), listingId: "MyMod", tagPrefix: "ksa-v");
 
         Assert.Contains("carries 2 archives", source.ArchiveProblem);
         Assert.True(source.ArchiveRejected);
         Assert.Equal("MyMod", hosts.ListingId);
+        Assert.Equal("ksa-v", hosts.TagPrefix);
     }
 
     [Fact]
@@ -306,9 +307,12 @@ public sealed class ListingArchiveTests : IDisposable
     {
         public string? ListingId { get; private set; }
 
-        public Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, CancellationToken cancellationToken = default)
+        public string? TagPrefix { get; private set; }
+
+        public Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, string? tagPrefix = null, CancellationToken cancellationToken = default)
         {
             ListingId = listingId;
+            TagPrefix = tagPrefix;
             return Task.FromResult(new ListingHostFacts(source, name, null, null, [], [], new ListingReleases("owner/MyMod", null), latest));
         }
     }
