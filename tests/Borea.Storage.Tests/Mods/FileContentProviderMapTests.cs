@@ -93,6 +93,35 @@ public sealed class FileContentProviderMapTests : IDisposable
         Assert.Equal([Path.Combine(folder, "Broken.xml"), Path.Combine(folder, "Missing.xml")], providers.UnreadableFiles);
     }
 
+    [Theory]
+    [InlineData("Part", "", true)]
+    [InlineData("Part", " Modify=\"Replace\"", true)]
+    [InlineData("Part", " Modify=\"Patch\"", false)]
+    [InlineData("Part", " Modify=\"Extend\"", false)]
+    [InlineData("Part", " Modify=\"Remove\"", false)]
+    [InlineData("Part", " Modify=\"PatchIfExists\"", false)]
+    [InlineData("Part", " Modify=\"ReplaceIfExists\"", false)]
+    [InlineData("Part", " Modify=\"RemoveIfExists\"", false)]
+    [InlineData("SubPart", " Modify=\"Patch\"", false)]
+    [InlineData("SubPart", " Modify=\"Replace\"", true)]
+    [InlineData("Character", " Modify=\"Patch\"", false)]
+    [InlineData("Character", " Modify=\"Replace\"", true)]
+    [InlineData("TerrestrialBody", " Modify=\"Patch\"", false)]
+    [InlineData("TerrestrialBody", " Modify=\"Replace\"", true)]
+    [InlineData("TerrestrialBody", "", true)]
+    [InlineData("Part", " Modify=\"patch\"", false)]
+    [InlineData("Part", " Modify=\"\"", true)]
+    [InlineData("Part", " Modify=\"Merge\"", true)]
+    public async Task ReadAsync_ModifyAttribute_DefinesUnlessItOnlyChangesTheAsset(string element, string modify, bool defined)
+    {
+        Manifest(("Core", true), ("Patcher", true));
+        Mod(_paths.GetInstanceModsFolder(_instanceId), "Patcher", $"<{element} Id=\"Thing\"{modify} />");
+
+        var patcher = (await _map.ReadAsync(_instanceId)).Mods[1];
+
+        Assert.Equal(defined ? ["Thing"] : [], patcher.Defines.Select(id => id.Id));
+    }
+
     private void Manifest(params (string Id, bool Enabled)[] entries) =>
         Write(_paths.GetInstanceManifestPath(_instanceId), string.Concat(entries.Select(entry => $"[[mods]]\nid = \"{entry.Id}\"\nenabled = {(entry.Enabled ? "true" : "false")}\n")));
 

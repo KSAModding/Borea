@@ -26,6 +26,12 @@ public sealed class FileContentProviderMap : IContentProviderMap
     /// <summary>The phases SubstanceTemplate.Create makes, one per child element present.</summary>
     private static readonly Dictionary<string, string> Phases = new(StringComparer.Ordinal) { ["Solid"] = "(s)", ["Liquid"] = "(l)", ["Gas"] = "(g)" };
 
+    /// <summary>The Modify values that only change an asset that another mod or the game defines.</summary>
+    private static readonly HashSet<string> ChangeOnly = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Patch", "Extend", "Remove", "PatchIfExists", "ReplaceIfExists", "RemoveIfExists",
+    };
+
     private static readonly XmlReaderSettings Settings = new()
     {
         DtdProcessing = DtdProcessing.Prohibit,
@@ -118,6 +124,13 @@ public sealed class FileContentProviderMap : IContentProviderMap
         table.TryGetValue(key, out var value) && value is TomlArray array ? array.OfType<string>() : [];
 
     /// <summary>
+    /// An element defines its asset unless its Modify attribute names a change of an asset that is defined somewhere else.
+    /// Replace defines the asset because it replaces the whole asset, and an unknown value counts as a definition too,
+    /// because an extra dependency in a share is safer than a missing one.
+    /// </summary>
+    private static bool DefinesAsset(string? modify) => modify is null || !ChangeOnly.Contains(modify);
+
+    /// <summary>
     /// Reads the ids that the direct children of the root define, and the id of the root of a system file.
     /// LoadFromLibrary in a system file is a reference to a body of an asset file, not a definition.
     /// </summary>
@@ -142,13 +155,14 @@ public sealed class FileContentProviderMap : IContentProviderMap
                 {
                     var element = reader.LocalName;
                     var id = reader.GetAttribute("Id");
+                    var isDefinition = DefinesAsset(reader.GetAttribute("Modify"));
                     substance = element == "Substance" ? id : null;
                     if (!system && element is "Part" or "SubPart")
-                        found.Add(ContentIdKind.Part, id);
+                        found.Add(ContentIdKind.Part, isDefinition ? id : null);
                     else if (!system && element == "Character")
-                        found.Add(ContentIdKind.Character, id);
+                        found.Add(ContentIdKind.Character, isDefinition ? id : null);
                     else if (BodyElements.Contains(element))
-                        found.Add(ContentIdKind.Body, id);
+                        found.Add(ContentIdKind.Body, isDefinition ? id : null);
                 }
                 else if (reader.Depth == 2 && !string.IsNullOrWhiteSpace(substance) && Phases.TryGetValue(reader.LocalName, out var phase))
                 {
