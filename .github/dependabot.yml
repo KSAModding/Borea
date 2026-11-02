@@ -1,15 +1,31 @@
 version: 2
+# Every ecosystem runs daily, so that a security fix waits one day for a pull request and not a week.
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+    groups:
+      # A day with several action releases gives one pull request.
+      actions:
+        patterns: ["*"]
 
+  # This also updates the local tools in .config/dotnet-tools.json.
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     groups:
       # Minor and patch bumps as one pull request instead of one each.
       minor-and-patch:
         update-types: ["minor", "patch"]
+
+  # The published app carries the .NET runtime of the SDK that global.json names.
+  - package-ecosystem: "dotnet-sdk"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    ignore:
+      # The next .NET major is a decision of its own and not a patch.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
