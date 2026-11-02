@@ -47,6 +47,9 @@ public sealed class WineDriveMap
     /// <summary>The host folder of each drive, by its lowercase letter.</summary>
     public IReadOnlyDictionary<char, string> Drives { get; }
 
+    /// <summary>How the host compares paths, so two Windows paths below a drive that differ only in case name two folders on Linux.</summary>
+    public StringComparison HostComparison => _hostComparison;
+
     public static bool IsDrivePath(string? path) =>
         path is { Length: >= 3 } && char.IsAsciiLetter(path[0]) && path[1] == ':' && path[2] is '\\' or '/';
 
