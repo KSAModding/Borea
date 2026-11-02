@@ -284,6 +284,7 @@ public partial class MainViewModel
             var snapshot = await services.IndexSnapshots.GetSnapshotAsync();
             TagVocabulary = snapshot.Tags;
             _gameReleases = GameReleaseList.From(snapshot.GameVersions);
+            _shareHosts = snapshot.ShareHosts;
 
             // the download counts and the first release dates sit next to a listing in the snapshot, not inside it
             var listingEntries = new Dictionary<string, ContentIndexListing>(ModIds.Comparer);

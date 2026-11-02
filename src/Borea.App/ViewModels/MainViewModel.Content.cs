@@ -638,6 +638,12 @@ public partial class MainViewModel
         _ => char.ToUpperInvariant(key[0]) + key[1..],
     };
 
+    /// <summary>The share hosts of the snapshot that Discover reads, whose names the download counts of a share host show.</summary>
+    private IReadOnlyList<ShareHost> _shareHosts = [];
+
+    /// <summary>The name of a download host key, which is the name of the share host for a key of the snapshot hosts, such as ksamods.gg.</summary>
+    internal string DownloadHostText(string key) => _shareHosts.FirstOrDefault(host => host.Key == key)?.Name ?? DownloadHostName(key);
+
     private void FillLinks(ObservableCollection<ContentLink> links, IReadOnlyDictionary<string, string> source)
     {
         links.Clear();
@@ -934,7 +940,7 @@ public sealed partial class VersionItem : ObservableObject, IContentPlanRow
 
     /// <summary>The exact count of each host, for example "GitHub 49, SpaceDock 9", or null when the index reports none.</summary>
     public string? DownloadsToolTip => _downloads is { } counts
-        ? string.Join(", ", counts.Hosts.Select(host => $"{MainViewModel.DownloadHostName(host.Key)} {host.Value.ToString("N0", CultureInfo.CurrentCulture)}"))
+        ? string.Join(", ", counts.Hosts.Select(host => $"{_owner.DownloadHostText(host.Key)} {host.Value.ToString("N0", CultureInfo.CurrentCulture)}"))
         : null;
 
     [ObservableProperty]
