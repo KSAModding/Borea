@@ -465,6 +465,39 @@ public sealed class ShareHostClientTests
         Assert.True(string.IsNullOrEmpty(sent.Body));
     }
 
+    [Fact]
+    public async Task ReportInstallAsync_SignedIn_PostsToTheListingWithoutTokenOrBody()
+    {
+        HttpMethod? method = null;
+        _apiAnswer = request =>
+        {
+            method = request.Method;
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        };
+        var client = await SignedInAsync();
+
+        await client.ReportInstallAsync(Host, "vehicle", "ExampleRover");
+
+        Assert.Equal(HttpMethod.Post, method);
+        var sent = _sent.Last();
+        Assert.Equal(Api + "listings/vehicle/ExampleRover/downloads", sent.Url);
+        Assert.Null(sent.Body);
+        Assert.Null(sent.Authorization);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound, ShareHostFailure.NotOffered)]
+    [InlineData(HttpStatusCode.TooManyRequests, ShareHostFailure.Host)]
+    public async Task ReportInstallAsync_NotA2xx_ThrowsWithTheStatus(HttpStatusCode status, ShareHostFailure expected)
+    {
+        _apiAnswer = _ => Json("""{"message":"Too Many Attempts."}""", status);
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => Client().ReportInstallAsync(Host, "save", "ExampleSave"));
+
+        Assert.Equal(expected, exception.Failure);
+        Assert.Equal($"ksamods.gg answered the install report with {(int)status}.", exception.Message);
+    }
+
     [Theory]
     [InlineData("""{"id":"ExampleRover","taken_down":false}""")]
     [InlineData("""{"id":"ExampleRover"}""")]

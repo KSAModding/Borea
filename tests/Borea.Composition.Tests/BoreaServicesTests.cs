@@ -13,6 +13,7 @@ using Borea.Storage.Launch;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Core.Updates;
+using Borea.Core.UserContent;
 using Borea.Network.GitHub;
 using Borea.Network.Index;
 using Borea.Network.Listings;
@@ -106,6 +107,51 @@ public sealed class BoreaServicesTests : IDisposable
         await SaveAsync(new BoreaSettings(game));
         var handler = new RefusingHandler();
         using var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ReleaseListRepository([]), new NoCandidates(), isGameProcessRunning: () => false);
+        var sha256 = await CacheRoverArchiveAsync(services);
+
+        var plan = await services.VehiclePreview.PrepareAsync(PreviewVehicle(sha256, "Wings"), null);
+
+        Assert.True(plan.State == Borea.Core.Preview.VehiclePreviewPlanState.CanBuildLocally, plan.Message);
+        Assert.Equal("Wings", Assert.Single(plan.MissingMods).ModId);
+        Assert.Equal(0, handler.Requests);
+    }
+
+    [Fact]
+    public async Task UserContentInstaller_VehicleOfAShareHostFromThePreviewCache_ReportsTheInstallOnce()
+    {
+        var handler = new InstallReportHandler();
+        var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ReleaseListRepository([]), new NoCandidates(), isGameProcessRunning: () => false);
+        var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath);
+        var indexPath = services.Paths.GetIndexPath();
+        Directory.CreateDirectory(Path.GetDirectoryName(indexPath)!);
+        await File.WriteAllTextAsync(indexPath, "{" + KsamodsHost + snapshot.TrimStart()[1..]);
+        var sha256 = await CacheRoverArchiveAsync(services);
+        var instance = (await services.Instances.CreateAsync("Vehicles", InstanceSource.Custom.Value)).Instance;
+        var vehicle = new ModVersionMetadata(1, "Rover", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.10.19.5638", 5638, new DownloadInfo("https://ksamods.gg/share/files/vehicle/Rover/1.0.0", sha256, 1, "application/zip"), null, [], ContentType.Vehicle, install: new InstallInfo(null, derived: false, folder: "Rover"));
+
+        var result = await services.UserContentInstaller.InstallAsync(instance.InstanceId, vehicle, name: null);
+        services.Dispose();
+
+        Assert.Equal(UserContentOutcome.Installed, result.Outcome);
+        Assert.Equal(["POST https://ksamods.gg/api/share/v1/listings/vehicle/Rover/downloads"], handler.Requests);
+    }
+
+    private const string KsamodsHost = """
+        "hosts": {
+            "ksamods": {
+                "kind": "share",
+                "name": "ksamods.gg",
+                "api": "https://ksamods.gg/api/share/v1/",
+                "data": "https://data.ksamods.example/",
+                "downloads": ["https://ksamods.gg/share/files/"],
+                "types": ["vehicle", "save"]
+            }
+        },
+        """;
+
+    /// <summary>Puts a vehicle archive into the preview cache, as a preview leaves it, and gives its SHA-256.</summary>
+    private static async Task<string> CacheRoverArchiveAsync(BoreaServices services)
+    {
         byte[] zip;
         using (var buffer = new MemoryStream())
         {
@@ -124,12 +170,31 @@ public sealed class BoreaServicesTests : IDisposable
         var cached = Path.Combine(services.Paths.GetPreviewCacheFolder(), "archives", sha256 + ".zip");
         Directory.CreateDirectory(Path.GetDirectoryName(cached)!);
         await File.WriteAllBytesAsync(cached, zip);
+        return sha256;
+    }
 
-        var plan = await services.VehiclePreview.PrepareAsync(PreviewVehicle(sha256, "Wings"), null);
+    /// <summary>Answers each install report with 204 and fails every other request, so a download from the network shows up too.</summary>
+    private sealed class InstallReportHandler : HttpMessageHandler
+    {
+        private readonly List<string> _requests = [];
 
-        Assert.True(plan.State == Borea.Core.Preview.VehiclePreviewPlanState.CanBuildLocally, plan.Message);
-        Assert.Equal("Wings", Assert.Single(plan.MissingMods).ModId);
-        Assert.Equal(0, handler.Requests);
+        public IReadOnlyList<string> Requests
+        {
+            get
+            {
+                lock (_requests)
+                    return [.. _requests];
+            }
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            lock (_requests)
+                _requests.Add($"{request.Method} {request.RequestUri!.AbsoluteUri}");
+            return request.Method == HttpMethod.Post
+                ? Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent))
+                : throw new HttpRequestException($"The test serves no {request.RequestUri}.");
+        }
     }
 
     private static ModVersionMetadata PreviewVehicle(string sha256, params string[] dependencies) =>
