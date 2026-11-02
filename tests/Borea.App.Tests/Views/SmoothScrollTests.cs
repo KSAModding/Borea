@@ -198,6 +198,47 @@ public sealed class SmoothScrollTests
         Assert.Equal(seen.Before, seen.Page);
     }
 
+    /// <summary>
+    /// The list of a short combo box cannot move, so the walk from the wheel goes past its viewer up to the root of
+    /// the popup. The walk is checked with a step limit before the wheel is raised, because a walk that goes round
+    /// would hang the test run.
+    /// </summary>
+    [Fact]
+    public async Task TheWheelOverAShortOpenComboBox_EndsItsWalkAtThePopup_AndLeavesThePageBehindItAlone()
+    {
+        const int StepLimit = 200;
+        var seen = await HeadlessApp.RunAsync(async () =>
+        {
+            var box = new ComboBox { ItemsSource = new[] { "MIT", "Apache-2.0", "Other" }, Width = 120 };
+            var page = new ScrollViewer { Content = new StackPanel { Children = { box, new Border { Height = 5000 } } } };
+            var window = new Window { Width = 400, Height = 300, Content = page };
+            window.Show();
+            window.UpdateLayout();
+            page.Offset = new Vector(0, 200);
+            var before = page.Offset.Y;
+
+            box.IsDropDownOpen = true;
+            await HeadlessApp.FramesAsync();
+            var item = box.GetVisualDescendants().OfType<Popup>().Single().Child!.GetVisualDescendants().OfType<ComboBoxItem>().First();
+            var text = item.GetVisualDescendants().OfType<TextBlock>().First();
+            var walk = SmoothScroll.WayUp(text, page).Take(StepLimit).ToList();
+            if (walk.Count < StepLimit)
+            {
+                var topLevel = TopLevel.GetTopLevel(item)!;
+                topLevel.MouseWheel(item.TranslatePoint(new Point(10, item.Bounds.Height / 2), topLevel)!.Value, new Vector(0, 3));
+                await HeadlessApp.FramesAsync();
+            }
+
+            var result = (Steps: walk.Count, EndsAtThePopup: walk[^1] is OverlayPopupHost or PopupRoot, Before: before, Page: page.Offset.Y);
+            window.Close();
+            return result;
+        });
+
+        Assert.True(seen.Steps < StepLimit, "The walk from the wheel must end instead of going round.");
+        Assert.True(seen.EndsAtThePopup, "The walk must end at the root of the popup, which the page does not hold.");
+        Assert.Equal(seen.Before, seen.Page);
+    }
+
     [Fact]
     public async Task TheWheelOverAnOpenMenu_LeavesThePageBehindItAlone()
     {

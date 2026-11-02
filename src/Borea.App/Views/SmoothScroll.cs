@@ -1,10 +1,10 @@
 using System;
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 
@@ -106,15 +106,26 @@ public static class SmoothScroll
     }
 
     /// <summary>
-    /// True when the wheel is not for this viewer: it is over a viewer inside it that can move that way, over a
-    /// combo box that is focused or open, which uses the wheel to change or scroll its selection, or over a control
-    /// that <see cref="OwnsWheelProperty"/> marks. A viewer inside that cannot move, such as the one in a single line
-    /// text box, leaves the wheel to this viewer.
+    /// True when the wheel is not for this viewer: it is over a popup or a window that this viewer does not hold,
+    /// over a viewer inside it that can move that way, over a combo box that is focused or open, which uses the wheel
+    /// to change or scroll its selection, or over a control that <see cref="OwnsWheelProperty"/> marks. A viewer
+    /// inside that cannot move, such as the one in a single line text box, leaves the wheel to this viewer.
     /// </summary>
+    /// <remarks>
+    /// A popup, such as the list of an open combo box, routes its wheel through the control that opened it, so the
+    /// wheel reaches the viewers around that control too. The visual parents of the popup end at its own root and not
+    /// at those viewers, which is how the walk tells that the wheel belongs to the popup.
+    /// </remarks>
     private static bool WheelBelongsToAnother(ScrollViewer viewer, PointerWheelEventArgs args)
     {
-        for (var node = args.Source as Visual; node is not null && node != viewer; node = ParentOf(node))
+        foreach (var node in WayUp(args.Source as Visual, viewer))
         {
+            if (node == viewer)
+                return false;
+
+            if (IsRoot(node))
+                return true;
+
             if (node is ScrollViewer inner
                 && Clamp(inner, inner.Offset - ReadDelta(inner, args) * Notch) != Clamp(inner, inner.Offset))
                 return true;
@@ -126,11 +137,35 @@ public static class SmoothScroll
                 return true;
         }
 
-        return false;
+        return true;
     }
 
-    private static Visual? ParentOf(Visual node) =>
-        node.GetVisualParent() ?? (node as ILogical)?.LogicalParent as Visual;
+    /// <summary>
+    /// The visuals from <paramref name="source"/> up through its visual parents, which end at
+    /// <paramref name="viewer"/>, at the root of a popup or a window, or where the parents end.
+    /// </summary>
+    /// <remarks>
+    /// The walk never takes a logical parent, because Avalonia puts a host around every window and popup root whose
+    /// logical parent is that root again, so a walk that takes the logical parent where the visual one ends goes
+    /// round between the two for ever. It also ends at a visual that it passed before.
+    /// </remarks>
+    internal static IEnumerable<Visual> WayUp(Visual? source, Visual viewer)
+    {
+        var passed = new HashSet<Visual>();
+        for (var node = source; node is not null && passed.Add(node); node = node.GetVisualParent())
+        {
+            yield return node;
+            if (node == viewer || IsRoot(node))
+                yield break;
+        }
+    }
+
+    /// <summary>
+    /// Whether the visual is the root of a window or a popup. A popup in its own window has a
+    /// <see cref="PopupRoot"/>, which is a <see cref="TopLevel"/>, and a popup in the overlay layer of a window has an
+    /// <see cref="OverlayPopupHost"/>.
+    /// </summary>
+    private static bool IsRoot(Visual node) => node is TopLevel or OverlayPopupHost;
 
     private static Vector ReadDelta(ScrollViewer viewer, PointerWheelEventArgs args)
     {
