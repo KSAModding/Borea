@@ -264,6 +264,9 @@ internal sealed class CliServices : IDisposable
         };
     }
 
+    /// <summary>Waits a short time for the install reports of the graph, because the process ends right after the command.</summary>
+    public Task WaitForInstallReportsAsync() => Graph is BoreaServices graph ? graph.WaitForInstallReportsAsync() : Task.CompletedTask;
+
     public void Dispose()
     {
         AdditionalDisposable?.Dispose();

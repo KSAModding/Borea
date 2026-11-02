@@ -85,6 +85,23 @@ public sealed class InstallReportingUserContentInstallerTests
         Assert.Equal(["Could not report the install of Rover 1.0.0 to ksamods.gg: ksamods.gg answered the install report with 429."], _log.Messages);
     }
 
+    [Fact]
+    public async Task WaitForReports_ReportStillOnItsWay_ReturnsAtOnceAndEndsWithTheReport()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _client.Gate = gate.Task;
+        var installer = Installer();
+        await installer.InstallAsync(Guid.Empty, Release(ContentType.Vehicle, HostFiles + "vehicle/Rover/1.0.0"), null);
+
+        var wait = installer.WaitForReportsAsync(TimeSpan.FromMinutes(1));
+        var endedBeforeTheReport = wait.IsCompleted;
+        gate.SetResult();
+        await wait;
+
+        Assert.False(endedBeforeTheReport);
+        Assert.Single(_client.Reports);
+    }
+
     private InstallReportingUserContentInstaller Installer() => new(_inner, new FixedHosts([Host]), _client, _log);
 
     private static ModVersionMetadata Release(ContentType type, string url) =>

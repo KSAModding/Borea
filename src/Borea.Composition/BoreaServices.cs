@@ -758,11 +758,12 @@ public sealed class BoreaServices : IDisposable
         return http;
     }
 
+    /// <summary>Waits a short time for the install reports that are still on their way. Call it before <see cref="Dispose"/>.</summary>
+    public Task WaitForInstallReportsAsync()
+        => UserContentInstaller is InstallReportingUserContentInstaller reporting ? reporting.WaitForReportsAsync(InstallReportLimit) : Task.CompletedTask;
+
     public void Dispose()
     {
-        if (UserContentInstaller is InstallReportingUserContentInstaller reporting)
-            reporting.WaitForReports(InstallReportLimit);
-
         if (Launcher is IDisposable disposable)
             disposable.Dispose();
 

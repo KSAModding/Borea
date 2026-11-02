@@ -68,10 +68,10 @@ public sealed class InstallReportingUserContentInstaller : IUserContentInstaller
         => _inner.RemoveAsync(instanceId, installed, discardChanges, cancellationToken);
 
     /// <summary>
-    /// Waits up to <paramref name="limit"/> for the reports that are still on their way. The command line ends its process right
-    /// after it closes the services, which would drop such a report.
+    /// Completes when the reports that are still on their way have ended, or after <paramref name="limit"/>. A close waits for it,
+    /// because the end of the process would drop such a report, and the wait blocks no thread, so a window stays responsive.
     /// </summary>
-    public void WaitForReports(TimeSpan limit) => Reports.Wait(limit);
+    public Task WaitForReportsAsync(TimeSpan limit) => Task.WhenAny(Reports, Task.Delay(limit));
 
     private void StartReport(ModVersionMetadata release)
     {

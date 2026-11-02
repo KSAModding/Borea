@@ -72,6 +72,7 @@ internal static class CommandRunner
             finally
             {
                 WriteStaleIndexWarning(services.IndexRefresh.Status, error);
+                await services.WaitForInstallReportsAsync().ConfigureAwait(false);
             }
         }
     }

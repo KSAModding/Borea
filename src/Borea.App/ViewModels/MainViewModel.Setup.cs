@@ -707,6 +707,7 @@ public partial class MainViewModel
         ClearVehiclePreview();
         _ = PreviewStills.Stop();
         _stillAttempts.Clear();
+        await previous.WaitForInstallReportsAsync();
         previous.Dispose();
         OnPropertyChanged(nameof(SelectedReleaseChannel));
         OnPropertyChanged(nameof(UseSharedModStore));

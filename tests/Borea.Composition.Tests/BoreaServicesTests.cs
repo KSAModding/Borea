@@ -130,6 +130,7 @@ public sealed class BoreaServicesTests : IDisposable
         var vehicle = new ModVersionMetadata(1, "Rover", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.10.19.5638", 5638, new DownloadInfo("https://ksamods.gg/share/files/vehicle/Rover/1.0.0", sha256, 1, "application/zip"), null, [], ContentType.Vehicle, install: new InstallInfo(null, derived: false, folder: "Rover"));
 
         var result = await services.UserContentInstaller.InstallAsync(instance.InstanceId, vehicle, name: null);
+        await services.WaitForInstallReportsAsync();
         services.Dispose();
 
         Assert.Equal(UserContentOutcome.Installed, result.Outcome);

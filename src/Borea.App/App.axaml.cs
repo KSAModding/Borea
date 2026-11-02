@@ -53,6 +53,9 @@ public partial class App : Application
 
     private MainViewModel? _viewModel;
 
+    /// <summary>The services the window uses now, which a setting change can rebuild after Main built <see cref="Services"/>.</summary>
+    internal BoreaServices? CurrentServices => _viewModel?.Services ?? Services;
+
     public App()
     {
         Localization = new LocalizationService();
