@@ -55,12 +55,13 @@ public interface IShareHostClient
     Task TakeDownReleaseAsync(ShareHost host, string type, string id, string version, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Tells the host that a player installed a release of the listing, so that the host can count the download. The request sends no
-    /// token and no body, and the host counts each player once a day by itself. A host need not offer it, and then it answers with a 404.
+    /// Tells the host that a player installed a release of the listing, so that the host can count the download for that version. The
+    /// request sends no token, and the host counts each player once a day by itself. A host need not offer it, and then it answers with a 404.
     /// </summary>
     /// <param name="type">vehicle or save.</param>
+    /// <param name="version">The version that the player installed or updated to.</param>
     /// <exception cref="ShareHostException">The host answered with anything but a 2xx, or it could not be reached.</exception>
-    Task ReportInstallAsync(ShareHost host, string type, string id, CancellationToken cancellationToken = default);
+    Task ReportInstallAsync(ShareHost host, string type, string id, string version, CancellationToken cancellationToken = default);
 }
 
 /// <param name="Id">The upload id, which the publish names.</param>
