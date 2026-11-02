@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using Borea.Core.Game;
 using Borea.Core.Mods;
@@ -14,6 +13,11 @@ namespace Borea.Storage.Paths;
 /// </summary>
 public sealed class GamePathProvider : IGamePathProvider
 {
+    internal const string InstancesFolderName = "Instances";
+    internal const string BackupsFolderName = "Backups";
+    internal const string StaticModFilesFolderName = "Static Mod Files";
+    internal const string GameBuildsFolderName = "Game Builds";
+
     private readonly string _boreaRoot;
     private readonly string? _gameDirectory;
     private readonly IReadOnlyDictionary<string, string> _loaderDirectories;
@@ -61,11 +65,11 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetImageCacheFolder() => Path.Combine(_boreaRoot, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_boreaRoot, "GamePatchNotes");
     public string GetPreviewCacheFolder() => Path.Combine(_boreaRoot, "PreviewCache", "v1");
-    public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
-    public string GetStaticModFilesRoot() => Path.Combine(_libraryFolder, "Static Mod Files");
+    public string GetInstancesRoot() => Path.Combine(_libraryFolder, InstancesFolderName);
+    public string GetStaticModFilesRoot() => Path.Combine(_libraryFolder, StaticModFilesFolderName);
 
     // only the numbers name the folder, so a suffix in a hand-edited instance.toml cannot put a separator into the path
-    public string GetGameBuildsRoot() => Path.Combine(_libraryFolder, "Game Builds");
+    public string GetGameBuildsRoot() => Path.Combine(_libraryFolder, GameBuildsFolderName);
 
     public string GetGameBuildFolder(GameVersion version)
         => Path.Combine(GetGameBuildsRoot(), string.Create(CultureInfo.InvariantCulture, $"{version.Year}.{version.Month}.{version.BuildNumber}.{version.Revision}"));
@@ -90,6 +94,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetActiveInstancePointerPath() => Path.Combine(_boreaRoot, "active-instance.toml");
     public string GetModFavoritesPath() => Path.Combine(_boreaRoot, "mod-favorites.toml");
     public string GetModPackFavoritesPath() => Path.Combine(_boreaRoot, "modpack-favorites.toml");
+    public string GetSharedContentPath() => Path.Combine(_boreaRoot, "shared-content.toml");
     public string GetBoreaSettingsPath() => Path.Combine(_boreaRoot, "borea-settings.toml");
     public string GetAppPreferencesPath() => Path.Combine(_boreaRoot, "app-preferences.json");
     public string GetTaskHistoryPath() => Path.Combine(_boreaRoot, "task-history.json");
@@ -97,7 +102,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetSecretsFolder() => Path.Combine(_boreaRoot, "Secrets");
     public string GetLogsFolder() => Path.Combine(_boreaRoot, "Logs");
     public string GetLanguagesFolder() => Path.Combine(_boreaRoot, "Languages");
-    public string GetBackupsRoot() => Path.Combine(_libraryFolder, "Backups");
+    public string GetBackupsRoot() => Path.Combine(_libraryFolder, BackupsFolderName);
     public string? GetGameDirectoryPath() => _gameDirectory;
     public string GetSharedProfileRoot() => _sharedProfileRoot;
 

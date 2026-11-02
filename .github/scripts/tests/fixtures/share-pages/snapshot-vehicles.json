@@ -1,0 +1,64 @@
+{
+  "snapshot_version": 1,
+  "vehicles": [
+    {
+      "id": "ExampleRover",
+      "published_at": "2026-10-11T16:41:04Z",
+      "updated_at": "2026-10-20T12:00:00Z",
+      "authored": {
+        "spec_version": 1,
+        "id": "ExampleRover",
+        "type": "vehicle",
+        "name": "Example Rover",
+        "authors": ["Kitten"],
+        "abstract": "A six-wheel rover for the Moon.",
+        "description": "## Driving\n\nDrives on the **Moon**.",
+        "license": "CC-BY-4.0",
+        "tags": ["rover", "gameplay"],
+        "links": { "homepage": "https://share.example.org/vehicles/ExampleRover" },
+        "images": {
+          "icon": {
+            "url": "https://example.org/afc/icon.png",
+            "sha256": "EDA52096DF4E16FEDB674DD8B90BACD8B1C1077CC1EBA673A2F16D8471290BBD",
+            "width": 256,
+            "height": 256,
+            "size": 2329
+          }
+        }
+      },
+      "releases": [
+        {
+          "id": "ExampleRover",
+          "type": "vehicle",
+          "version": "1.1.0",
+          "release_status": "stable",
+          "release_date": "2026-10-20T12:00:00Z",
+          "game_min": "2026.9.4.5400",
+          "game_min_revision": 5400,
+          "download": { "url": "https://share.example.org/files/rover.zip", "sha256": "1111111111111111111111111111111111111111111111111111111111111111", "size": 2048, "content_type": "application/zip" }
+        }
+      ]
+    },
+    {
+      "id": "OldRover",
+      "authored": {
+        "spec_version": 1,
+        "id": "OldRover",
+        "type": "vehicle",
+        "name": "Old Rover",
+        "status": "deprecated",
+        "superseded_by": "exampleROVER"
+      },
+      "releases": []
+    },
+    {
+      "id": "GoneRover",
+      "index_status": { "state": "delisted" }
+    },
+    {
+      "id": "MisplacedMod",
+      "authored": { "spec_version": 1, "id": "MisplacedMod", "type": "mod", "name": "Misplaced Mod" },
+      "releases": []
+    }
+  ]
+}

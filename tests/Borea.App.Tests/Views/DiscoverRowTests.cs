@@ -1,7 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
+using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.App.Views.Pages;
 
@@ -28,6 +30,37 @@ public sealed class DiscoverRowTests
         Assert.False(layout.Trimmed);
         Assert.Equal(1, layout.QuestionLines);
         Assert.Equal(layout.PanelRight, layout.ButtonsRight, 1);
+    }
+
+    [Fact]
+    public async Task AuthorThatDoesNotFit_DropsOutWithItsComma_AndTheTooltipNamesEveryAuthor()
+    {
+        const string first = "Felix Kater";
+        const string second = "Dot Ramirez with a very long name that takes the whole line";
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => snapshot.Replace("\"Laurens\"", $"\"{first}\", \"{second}\"", StringComparison.Ordinal));
+        Assert.True(harness.Localization.TrySetCulture("de"));
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+
+        var (shown, hint) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new DiscoverPage { DataContext = harness.ViewModel };
+            Grid.SetColumn(page, 1);
+            var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{PageBodyPanel.NavigationRailWidth},*"), Children = { page } };
+            var window = new Window { Width = 860, Height = 832, Content = body, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+
+            var links = page.GetVisualDescendants().OfType<Button>().Where(button => button.CommandParameter is AuthorLink { Name: first or second }).ToList();
+            var line = links[0].GetVisualAncestors().OfType<ItemsControl>().First();
+            var inLine = links.Where(link => link.TranslatePoint(new Point(0, 0), line)!.Value.Y < line.Bounds.Height);
+            var result = (inLine.Select(link => string.Concat(link.GetVisualDescendants().OfType<TextBlock>().Single().Inlines!.OfType<Run>().Select(run => run.Text))).ToList(), ToolTip.GetTip(links[0]));
+
+            window.Close();
+            return Task.FromResult(result);
+        });
+
+        Assert.Equal([first], shown);
+        Assert.Equal(harness.Localization.FormatDiscoverAuthorLink(first) + $"\n{first}, {second}", hint);
     }
 
     /// <summary>

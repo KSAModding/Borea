@@ -64,15 +64,14 @@ public partial class MainViewModel
     public ObservableCollection<DiscoverCategory> SelectedCategories { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsNothingSharedYet))]
     private bool _isDiscoverLoading;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsNothingSharedYet))]
     private string? _discoverError;
 
-    /// <summary>
-    /// Which tab of the inner nav bar is selected. The vehicle and save tabs
-    /// stay disabled until those content types have listings.
-    /// </summary>
+    /// <summary>Which tab of the inner nav bar is selected.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsModsTab))]
     [NotifyPropertyChangedFor(nameof(IsLoadersTab))]
@@ -98,10 +97,29 @@ public partial class MainViewModel
     /// <summary>The panel for mod authors asks for a mod, so the vehicle and save tabs leave it out.</summary>
     public bool ShowsModAuthors => !DiscoverType.IsVehicleOrSave();
 
-    /// <summary>Whether the snapshot lists a vehicle, which enables the Vehicles tab.</summary>
-    public bool HasDiscoverVehicles => _listings.Any(item => item.Type == ContentType.Vehicle);
+    /// <summary>The tab of vehicles or saves offers a share only while the schema in use accepts its type.</summary>
+    public bool ShowsDiscoverShare => DiscoverType switch
+    {
+        ContentType.Vehicle => VehiclesSection.CanShare,
+        ContentType.Save => SavesSection.CanShare,
+        _ => false,
+    };
 
-    public bool HasDiscoverSaves => _listings.Any(item => item.Type == ContentType.Save);
+    public string DiscoverShareHeading => IsSavesTab ? Localization.DiscoverShareSaveHeading : Localization.DiscoverShareVehicleHeading;
+
+    public string DiscoverShareText => IsSavesTab ? Localization.DiscoverShareSaveText : Localization.DiscoverShareVehicleText;
+
+    public string DiscoverShareAction => IsSavesTab ? Localization.DiscoverShareSave : Localization.DiscoverShareVehicle;
+
+    /// <summary>Whether the tab of vehicles or saves has no listing in an index that the last refresh reached, because an older copy cannot say that nothing is shared.</summary>
+    public bool ShowsNothingSharedYet => DiscoverType.IsVehicleOrSave() && DiscoverTotal == 0 && !IsDiscoverLoading && DiscoverError is null && !IsIndexUnreachable && !IsIndexStale;
+
+    public string DiscoverNothingSharedText => IsSavesTab ? Localization.DiscoverNoSaves : Localization.DiscoverNoVehicles;
+
+    public string DiscoverNothingSharedHint => IsSavesTab ? Localization.DiscoverNoSavesHint : Localization.DiscoverNoVehiclesHint;
+
+    /// <summary>The tab has listings and shows none, which only a search or a filter can cause.</summary>
+    public bool ShowsClearSearchAndFilters => !HasDiscoverItems && DiscoverTotal > 0;
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -165,7 +183,7 @@ public partial class MainViewModel
 
     public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenses.Count > 0 || (ShowsCategories && SelectedCategories.Count > 0) || HasGameVersionRange;
 
-    /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
+    /// <summary>The Sort by choice of every tab except Loaders, the saved one until the menu or a link on Home changes it.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
 
     public string DiscoverSortText => DiscoverSort switch
@@ -191,15 +209,23 @@ public partial class MainViewModel
     }
 
     /// <summary>The placeholder of the search field, which names what the tab holds once the listings are loaded.</summary>
-    public string DiscoverSearchPlaceholderText
-        => DiscoverTotalText is { } totalText ? Localization.FormatDiscoverSearchCount(totalText) : Localization.DiscoverSearchPlaceholder;
+    public string DiscoverSearchPlaceholderText => DiscoverTotalText is { } totalText
+        ? Localization.FormatDiscoverSearchCount(totalText)
+        : DiscoverType switch
+        {
+            ContentType.Vehicle => Localization.DiscoverSearchVehicles,
+            ContentType.Save => Localization.DiscoverSearchSaves,
+            _ => Localization.DiscoverSearchPlaceholder,
+        };
+
+    private int DiscoverTotal => IsModpacksTab ? _packs.Count : _listings.Count(item => item.Type == DiscoverType);
 
     /// <summary>How many entries the tab holds, such as "3 mods", or null when it holds none.</summary>
     private string? DiscoverTotalText
     {
         get
         {
-            var total = IsModpacksTab ? _packs.Count : _listings.Count(item => item.Type == DiscoverType);
+            var total = DiscoverTotal;
             if (total == 0)
                 return null;
 
@@ -289,8 +315,6 @@ public partial class MainViewModel
         UpdateIndexRefreshStatus();
         RefreshInstalledFlags();
         ApplyDiscoverFilters();
-        OnPropertyChanged(nameof(HasDiscoverVehicles));
-        OnPropertyChanged(nameof(HasDiscoverSaves));
     }
 
     private void ApplyDiscoverFilters()
@@ -338,6 +362,14 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasDiscoverItems));
         OnPropertyChanged(nameof(DiscoverCountText));
         OnPropertyChanged(nameof(DiscoverSearchPlaceholderText));
+        OnPropertyChanged(nameof(ShowsNothingSharedYet));
+        OnPropertyChanged(nameof(DiscoverNothingSharedText));
+        OnPropertyChanged(nameof(DiscoverNothingSharedHint));
+        OnPropertyChanged(nameof(ShowsClearSearchAndFilters));
+        OnPropertyChanged(nameof(ShowsDiscoverShare));
+        OnPropertyChanged(nameof(DiscoverShareHeading));
+        OnPropertyChanged(nameof(DiscoverShareText));
+        OnPropertyChanged(nameof(DiscoverShareAction));
     }
 
     /// <summary>The state whose chip a row of the list leaves out, or null when every row shows its chip.</summary>
@@ -457,6 +489,7 @@ public partial class MainViewModel
         }
         foreach (var release in _contentReleases)
             release.RefreshInstalled(ActiveInstance);
+        RefreshInstalledWhereNotices();
         elsewhereChanged |= RefreshPackInstalledFlags();
         RefreshContentDependencies();
 
@@ -466,7 +499,12 @@ public partial class MainViewModel
             ApplyDiscoverFilters();
     }
 
-    partial void OnDiscoverTypeChanged(ContentType value) => ApplyDiscoverFilters();
+    partial void OnDiscoverTypeChanged(ContentType value)
+    {
+        ApplyDiscoverFilters();
+        if (value.IsVehicleOrSave())
+            StartShareSchemaLoad();
+    }
 
     partial void OnSearchTextChanged(string value) => ApplyDiscoverFilters();
 
@@ -510,9 +548,11 @@ public partial class MainViewModel
             item.UpdatedAt = latest?.ReleaseDate;
             item.LatestInChannel = latest;
 
-            // only a lookup of a stored file, so Discover never fetches, reads parts or plans for a vehicle
-            item.PreviewStillPath = item.Type == ContentType.Vehicle ? _services.PreviewThumbnails.TryGetPath(latest?.Download.Sha256, previewBuild) : null;
+            // only a lookup of a stored file, because listing a vehicle fetches nothing, reads no part and plans nothing
+            ShowStoredStill(item, _services.PreviewThumbnails, previewBuild);
         }
+
+        RefreshPreviewStills();
 
         // the Required by and Conflicts with cards read the releases set here, and a page without a release in the channel has nothing else that refreshes it
         RefreshContentDependencies();
@@ -548,7 +588,7 @@ public partial class MainViewModel
         if (_services is not { } services)
             return;
 
-        var path = services.PreviewThumbnails.TryGetPath(vehicleSha256, PreviewStillBuild(services));
+        var build = PreviewStillBuild(services);
         foreach (var item in _listings)
         {
             if (item.Type != ContentType.Vehicle || !string.Equals(item.LatestInChannel?.Download.Sha256, vehicleSha256, StringComparison.OrdinalIgnoreCase))
@@ -556,7 +596,13 @@ public partial class MainViewModel
 
             // a new still has the path of the old one, so the row lets go of the old bitmap first
             item.PreviewStillPath = null;
-            item.PreviewStillPath = path;
+            ShowStoredStill(item, services.PreviewThumbnails, build);
+        }
+
+        foreach (var tile in _newVehicles.Items.Where(tile => string.Equals(tile.VehicleSha256, vehicleSha256, StringComparison.OrdinalIgnoreCase) && tile.Icon is null))
+        {
+            tile.StillPath = null;
+            tile.StillPath = services.PreviewThumbnails.TryGetPath(vehicleSha256, build);
         }
     }
 
@@ -629,8 +675,20 @@ public partial class MainViewModel
             return;
 
         SelectedAuthor = link.Name;
-        DiscoverType = link.Type;
+        OpenDiscoverTab(link.Type);
+    }
+
+    internal void OpenDiscoverTab(ContentType type)
+    {
+        DiscoverType = type;
         SetMainWindowDiscover();
+    }
+
+    /// <summary>Shows a tab in the order of a Home group. The saved Sort by choice stays, because only the menu on Discover changes it.</summary>
+    internal void OpenDiscoverTab(ContentType type, DiscoverSortOrder order)
+    {
+        ShowDiscoverSort(order);
+        OpenDiscoverTab(type);
     }
 
     [RelayCommand]
@@ -680,13 +738,18 @@ public partial class MainViewModel
     [RelayCommand]
     private void SelectDiscoverSort(DiscoverSortOrder order)
     {
-        if (order == DiscoverSort)
+        if (order == DiscoverSort && order == _appPreferences.DiscoverSortOrder)
             return;
 
+        ShowDiscoverSort(order);
+        QueuePreferenceSave(preferences => preferences.WithDiscoverSortOrder(order));
+    }
+
+    private void ShowDiscoverSort(DiscoverSortOrder order)
+    {
         _discoverSort = order;
         OnPropertyChanged(nameof(DiscoverSort));
         OnPropertyChanged(nameof(DiscoverSortText));
-        QueuePreferenceSave(preferences => preferences.WithDiscoverSortOrder(order));
         ApplyDiscoverFilters();
     }
 
@@ -724,6 +787,13 @@ public partial class MainViewModel
         SelectedCategories.Clear();
         OnPropertyChanged(nameof(HasDiscoverFilters));
         ApplyDiscoverFilters();
+    }
+
+    [RelayCommand]
+    private void ClearDiscoverSearchAndFilters()
+    {
+        SearchText = string.Empty;
+        ClearDiscoverFilters();
     }
 
     /// <summary>
@@ -827,6 +897,12 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     public ContentType Type => _listing.Type;
 
+    public bool IsVehicle => Type == ContentType.Vehicle;
+
+    public bool IsSave => Type == ContentType.Save;
+
+    public bool IsVehicleOrSave => Type.IsVehicleOrSave();
+
     /// <summary>The curated tags in the words and order of the vocabulary, then the free-form tags.</summary>
     public IReadOnlyList<string> AllTags { get; private set; }
 
@@ -855,7 +931,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     /// ">= min" or "min - max", as the compatibility chip shows it. A vehicle or save states no range of
     /// its own, so it shows the game build its file was saved in.
     /// </summary>
-    public string GameVersionText => _listing.GameMax is null ? $">= {GameMin}" : $"{GameMin} - {_listing.GameMax}";
+    public string GameVersionText => MainViewModel.GameBoundsText(GameMin, _listing.GameMax);
 
     // A vehicle or save may author only game_max, and then its release gives the lower bound.
     private string? GameMin => _listing.GameMin ?? LatestInChannel?.GameMin;
@@ -873,11 +949,27 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     public ListingImage? Icon { get; }
 
     /// <summary>
-    /// The still of the last complete preview of a vehicle, which the row shows in place of the icon. Null for other
+    /// The still of a vehicle without an icon, which the page of the vehicle stored or the row drew. Null for other
     /// content and when no still is stored for the latest release and the installed game build.
     /// </summary>
     [ObservableProperty]
     private string? _previewStillPath;
+
+    /// <summary>True when the still was drawn while mods that the vehicle needs were missing, so it shows boxes.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PreviewStillNote))]
+    private bool _previewStillMissingMods;
+
+    public string? PreviewStillNote => PreviewStillMissingMods ? _owner.Localization.DiscoverStillMissingMods : null;
+
+    /// <summary>A listing icon always wins, so only a vehicle without one shows a still.</summary>
+    internal bool HasDrawnStill => IsVehicle && Images?.Icon is null;
+
+    /// <summary>Says that the row came near the window or moved in it, so the queue can draw its still.</summary>
+    internal void ShowNearWindow(bool inView) => _owner.PreviewStills.Show(this, inView);
+
+    /// <summary>Says that the row left the window, so its draw stops.</summary>
+    internal void HideFromWindow() => _owner.PreviewStills.Hide(this);
 
     public string? IconAttribution => Icon?.Attribution;
 
@@ -1016,6 +1108,13 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     public bool HasInstallStepsNotice => InstallStepsNotice.Count > 0;
 
+    public string? InstalledPlayText => _owner.InstalledPlayText(ModId);
+
+    /// <summary>This row while it offers Play, which builds the button, or null.</summary>
+    public DiscoverItem? InstalledPlayRow => InstalledPlayText is null ? null : this;
+
+    public bool CanPlayInstalled => _owner.CanPlayInstalled(ModId);
+
     /// <summary>The install steps of the listing, for the Description tab.</summary>
     public StepList? InstallSteps => MainViewModel.Steps(_owner.Localization.ContentInstallSteps, _listing.Install?.Steps);
 
@@ -1144,6 +1243,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(DownloadsText));
         OnPropertyChanged(nameof(DownloadsExactText));
+        OnPropertyChanged(nameof(PreviewStillNote));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
         OnPropertyChanged(nameof(UpdatedText));
@@ -1153,6 +1253,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
         OnPropertyChanged(nameof(AddedModsToolTip));
         OnPropertyChanged(nameof(PlanSteps));
         OnPropertyChanged(nameof(InstallStepsNotice));
+        OnPropertyChanged(nameof(InstalledPlayText));
         OnPropertyChanged(nameof(InstallSteps));
         OnPropertyChanged(nameof(UninstallSteps));
         OnPropertyChanged(nameof(RemoveSteps));
@@ -1166,6 +1267,9 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     {
         OnPropertyChanged(nameof(InstallStepsNotice));
         OnPropertyChanged(nameof(HasInstallStepsNotice));
+        OnPropertyChanged(nameof(InstalledPlayText));
+        OnPropertyChanged(nameof(InstalledPlayRow));
+        OnPropertyChanged(nameof(CanPlayInstalled));
     }
 
     internal void ShowLinkRequest(Func<string>? request)
@@ -1206,6 +1310,9 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     [RelayCommand]
     private void DismissInstallStepsNotice() => _owner.DismissInstallStepsNotice(ModId);
+
+    [RelayCommand]
+    private Task PlayInstalledAsync() => _owner.PlayInstalledAsync(ModId);
 
     [RelayCommand(CanExecute = nameof(CanRemove))]
     private void BeginRemove()
@@ -1271,8 +1378,17 @@ public sealed partial class DiscoverChoice(string value) : ObservableObject
 public sealed record GameVersionOption(string Text, int Revision);
 
 /// <summary>One author name on a row or a side panel, with the comma that follows it in a list of authors and the hint that tells what a click does.</summary>
-public sealed record AuthorLink(string Name, string Separator, ContentType Type, string Hint)
+/// <param name="RowSeparator">The comma before the name on the one line of a row, where a name that does not fit drops out with its comma.</param>
+/// <param name="RowHint">The hint with the whole list, because a row can drop names.</param>
+public sealed record AuthorLink(string Name, string Separator, string RowSeparator, ContentType Type, string Hint, string RowHint)
 {
-    internal static IReadOnlyList<AuthorLink> Of(IReadOnlyList<string> authors, ContentType type, LocalizationService localization) =>
-        [.. authors.Select((name, index) => new AuthorLink(name, index < authors.Count - 1 ? "," : string.Empty, type, localization.FormatDiscoverAuthorLink(name)))];
+    internal static IReadOnlyList<AuthorLink> Of(IReadOnlyList<string> authors, ContentType type, LocalizationService localization)
+    {
+        var everyAuthor = authors.Count > 1 ? "\n" + string.Join(", ", authors) : string.Empty;
+        return [.. authors.Select((name, index) =>
+        {
+            var hint = localization.FormatDiscoverAuthorLink(name);
+            return new AuthorLink(name, index < authors.Count - 1 ? "," : string.Empty, index > 0 ? ", " : string.Empty, type, hint, hint + everyAuthor);
+        })];
+    }
 }

@@ -239,6 +239,31 @@ public sealed class ContentIndexReaderTests : IDisposable
         Assert.Equal(["vehicle"], own.Types);
         Assert.Null(own.MaxBytesFor("vehicle"));
         Assert.Equal("https://own.example/", own.Page.AbsoluteUri);
+        Assert.Equal("https://data.own.example/share/", own.Data!.AbsoluteUri);
+        Assert.Equal(["https://cdn.own.example/"], own.Downloads.Select(prefix => prefix.AbsoluteUri));
+        Assert.True(own.KeepsNoDownloadCount);
+        Assert.False(storage.KeepsNoDownloadCount);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Hosts_ADownloadPrefixThatIsNotAnHttpsBaseUrl_IsLeftOut()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: $$"""
+            "hosts": {
+                "ownhost": {
+                    "kind": "share",
+                    "api": "https://own.example/api",
+                    "data": "https://data.own.example/share/",
+                    "downloads": ["http://cdn.own.example/", "https://cdn.own.example/files", 7],
+                    "types": ["vehicle"]
+                }
+            },
+            """));
+
+        var host = Assert.Single((await _reader.ReadAsync()).ShareHosts);
+
+        Assert.Empty(host.Downloads);
+        Assert.False(host.KeepsNoDownloadCount);
     }
 
     [Theory]
@@ -286,10 +311,11 @@ public sealed class ContentIndexReaderTests : IDisposable
         Assert.Empty(result.Diagnostics);
     }
 
-    [Fact]
-    public async Task ReadAsync_InvalidGameVersions_KeepsUsableListingAndAddsDiagnostic()
+    [Theory]
+    [InlineData("""{ "spec_version": 1, "source": "master-server", "versions": ["invalid"] }""")]
+    [InlineData("""{ "spec_version": 1, "source": "master-server", "versions": ["2026.9.7.5402", "2026.8.19.5261"] }""")]
+    public async Task ReadAsync_InvalidOrUnorderedGameVersions_KeepsUsableListingAndAddsDiagnostic(string gameVersions)
     {
-        var gameVersions = """{ "spec_version": 1, "source": "master-server", "versions": ["invalid"] }""";
         await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), gameVersions));
 
         var result = await _reader.ReadAsync();
@@ -299,19 +325,6 @@ public sealed class ContentIndexReaderTests : IDisposable
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ContentIndexDiagnosticScope.GameVersions, diagnostic.Scope);
         Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
-    }
-
-    [Fact]
-    public async Task ReadAsync_UnorderedGameVersions_KeepsUsableListingAndAddsDiagnostic()
-    {
-        var gameVersions = """{ "spec_version": 1, "source": "master-server", "versions": ["2026.9.7.5402", "2026.8.19.5261"] }""";
-        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), gameVersions));
-
-        var result = await _reader.ReadAsync();
-
-        Assert.Single(result.Listings);
-        Assert.Null(result.GameVersions);
-        Assert.Equal(ContentIndexDiagnosticScope.GameVersions, Assert.Single(result.Diagnostics).Scope);
     }
 
     [Theory]

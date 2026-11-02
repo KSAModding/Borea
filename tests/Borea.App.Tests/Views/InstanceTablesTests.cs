@@ -46,6 +46,18 @@ public sealed class InstanceTablesTests
         return harness;
     }
 
+    /// <summary>Two empty instances, Main and the active Second, on the page of the one named.</summary>
+    private static async Task<ViewModelHarness> TwoEmptyInstancesAsync(string open)
+    {
+        var harness = await ViewModelHarness.CreateAsync();
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var second = (await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(second.InstanceId);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.Instances.Single(instance => instance.Name == open).OpenCommand.ExecuteAsync(null);
+        return harness;
+    }
+
     /// <summary>The bordered table around the visible text, or null when the text stands on its own.</summary>
     private static Border? TableAround(Control page, string text)
         => page.GetVisualDescendants().OfType<TextBlock>()
@@ -93,23 +105,65 @@ public sealed class InstanceTablesTests
     }
 
     [Fact]
+    public async Task RecordedVehicle_TheUpdateButtonStandsInTheListingLine_AndAPlanShowsNoButtonWithoutARun()
+    {
+        using var harness = await UserContentViewModelTests.VehicleHarnessAsync();
+        await UserContentViewModelTests.ActiveInstanceWithRoverAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+
+        var (inListingLine, iconButtons, indeterminate) = await OnInstancePageAsync(harness, 860, page =>
+        {
+            var button = page.GetVisualDescendants().OfType<Button>().Single(candidate => candidate.Command == row.UpdateCommand);
+            var inLine = button.IsEffectivelyVisible && button.Classes.Contains("icon") && button.GetVisualAncestors().OfType<WrapPanel>().Any();
+            var newer = page.GetVisualDescendants().OfType<TextBlock>().Single(text => text.DataContext == row && text.Text == row.NewerText);
+            var saidNewerBefore = newer.IsEffectivelyVisible;
+            row.IsInstalling = true;
+            page.UpdateLayout();
+            var icons = page.GetVisualDescendants().OfType<Button>().Count(candidate => candidate.IsEffectivelyVisible && candidate.DataContext == row && candidate.Classes.Contains("icon"));
+            return (inLine && saidNewerBefore && !newer.IsEffectivelyVisible, icons, page.GetVisualDescendants().OfType<ProgressBar>().Single(bar => bar.IsEffectivelyVisible && bar.DataContext == row).IsIndeterminate);
+        });
+
+        Assert.True(inListingLine);
+        Assert.Equal(0, iconButtons);
+        Assert.True(indeterminate);
+    }
+
+    [Fact]
     public async Task NoContent_OnAnInactiveInstance_OffersNoWayToDiscover()
     {
-        using var harness = await ViewModelHarness.CreateAsync();
-        var viewModel = harness.ViewModel;
+        using var harness = await TwoEmptyInstancesAsync(open: "Main");
         var localization = harness.Localization;
-        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
-        var second = (await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value)).Instance;
-        await harness.Services.Instances.SetActiveInstanceAsync(second.InstanceId);
-        await viewModel.LoadAsync();
-        var main = viewModel.Instances.Single(instance => instance.Name == "Main");
-        Assert.False(main.IsActive);
-        await main.OpenCommand.ExecuteAsync(null);
+        Assert.False(harness.ViewModel.SelectedInstance!.IsActive);
 
         var buttons = await OnInstancePageAsync(harness, 1280, page =>
             TableAround(page, localization.InstanceEmptyContent)!.GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible));
 
         Assert.Equal(0, buttons);
+    }
+
+    [Theory]
+    [InlineData("Second", true)]
+    [InlineData("Main", false)]
+    public async Task NoVehiclesOrSaves_OnlyTheActiveInstanceOffersFind_AndEveryInstanceOffersOpenFolder(string open, bool offersFind)
+    {
+        using var harness = await TwoEmptyInstancesAsync(open);
+        var viewModel = harness.ViewModel;
+
+        var tables = await OnInstancePageAsync(harness, 860, page => new[] { viewModel.VehiclesSection, viewModel.SavesSection }.Select(section =>
+        {
+            var table = TableAround(page, section.EmptyText)!;
+            var buttons = table.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).ToList();
+            return (section, Commands: buttons.Select(button => button.Command).ToList(), Fits: buttons.All(button => Holds(table, button)));
+        }).ToList());
+
+        Assert.All(tables, table =>
+        {
+            Assert.Equal(offersFind, table.Commands.Contains(table.section.FindOnDiscoverCommand));
+            Assert.Contains(table.section.OpenFolderCommand, table.Commands);
+            Assert.True(table.Fits);
+        });
     }
 
     private static async Task<ViewModelHarness> ManagedModAndFoldersAsync(params string[] folders)

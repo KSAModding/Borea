@@ -165,7 +165,7 @@
                             <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding SelectedPack.PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!SelectedPack.PlanSteps.Count, FallbackValue={x:False}}" />
                             <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.IsConfirmingInstall}">
                                 <TextBlock Classes="body-sm" Text="{Binding SelectedPack.LinkRequestText}" IsVisible="{Binding SelectedPack.LinkRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding SelectedPack.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding SelectedPack.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <Button Classes="link" Command="{Binding SelectedPack.ChooseContentNameCommand}" IsVisible="{Binding SelectedPack.CanChooseContentName, FallbackValue={x:False}}" VerticalAlignment="Center">
                                     <TextBlock Classes="action-md" Text="{Binding Localization.PackContentChooseName}" />
                                 </Button>
@@ -411,7 +411,7 @@
                                                         <ItemsControl ItemsSource="{Binding PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!PlanSteps.Count}" />
                                                         <WrapPanel ItemSpacing="8" LineSpacing="8">
                                                             <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                                            <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                            <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                                             <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmChangeCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelChangeCommand}" />
                                                         </WrapPanel>

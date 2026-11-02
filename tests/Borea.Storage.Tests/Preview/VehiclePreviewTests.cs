@@ -7,6 +7,7 @@ using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.Preview;
+using Borea.Core.Sharing;
 using Borea.Storage.Files;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
@@ -30,7 +31,7 @@ public sealed class VehiclePreviewTests : IDisposable
 
     private const string Rover = """
         <VehicleSaveData Id="Rover">
-          <RootPartRef InstanceOf="Body" LocalInstanceId="1">
+          <RootPartRef InstanceOf="Body" LocalInstanceId="1" Sequence="1">
             <Transform><Position X="2" /></Transform>
             <PartRef InstanceOf="Wing" LocalInstanceId="2"><Transform><Position Y="3" /></Transform></PartRef>
           </RootPartRef>
@@ -62,6 +63,23 @@ public sealed class VehiclePreviewTests : IDisposable
     }
 
     [Fact]
+    public async Task AFetchFromAShareHost_UsesItsOwnDownloader_OnceForAVersion_AndTheVehicleThenBuildsLocally()
+    {
+        var zip = VehicleZip();
+        var release = Vehicle(zip, size: zip.Length);
+        var shareFiles = new FakeModDownloader { Bytes = zip };
+        using var preview = Preview(shareFiles: shareFiles);
+        var host = new ShareHost("files", "files.example", new Uri("https://files.example/api/"), ["vehicle"], new Dictionary<string, long>());
+
+        await preview.FetchFromShareHostAsync(release, host);
+        await preview.FetchFromShareHostAsync(release, host);
+
+        Assert.Single(shareFiles.ArchivePaths);
+        Assert.Empty(_downloader.ArchivePaths);
+        Assert.Equal(VehiclePreviewPlanState.CanBuildLocally, (await preview.PrepareAsync(release, null)).State);
+    }
+
+    [Fact]
     public async Task ACachedVehicle_BuildsWithoutADownload_ReusesTheCatalog_ClosesItsZip_AndOnlyMaintenanceSweeps()
     {
         var zip = VehicleZip();
@@ -84,6 +102,7 @@ public sealed class VehiclePreviewTests : IDisposable
         var first = await preview.LoadAsync(plan, fetchVehicle: false, fetchMods: false, new Recorder(stages));
         Assert.True(first.IsReady);
         Assert.Equal([VehiclePreviewStage.ReadingParts, VehiclePreviewStage.Done], stages);
+        Assert.Equal((2, 1), (first.Vehicle.PartCount, first.Vehicle.StageCount));
         var body = Assert.Single(first.Vehicle.Draws);
         Assert.Equal(("BodyMesh", new Vector3(2, 0, 0)), (first.Vehicle.Meshes[body.Mesh].Name, body.Transform.Translation));
         Assert.Equal((PlaceholderReason.UnknownPart, "Wing"), (Assert.Single(first.Vehicle.Placeholders).Reason, first.Vehicle.Placeholders[0].MissingId));
@@ -347,6 +366,38 @@ public sealed class VehiclePreviewTests : IDisposable
         Assert.Empty(_downloader.ArchivePaths);
     }
 
+    [Fact]
+    public async Task AVehicleFolder_UsesTheModsThatTheGameLoadsInTheInstance_AndNoNetwork()
+    {
+        var folder = Path.Combine(_root, "Vehicles", "Rover");
+        Write(Path.Combine(folder, "vehicle.xml"), Rover);
+        var wings = Path.Combine(_paths.GetInstanceModsFolder(_targetId), "Wings");
+        Write(Path.Combine(wings, "mod.toml"), "name = \"Wings\"\nassets = [\"Wings.xml\"]\n");
+        Write(Path.Combine(wings, "Wings.xml"), Assets("""<Part Id="Wing"><PartModel Id="m"><Mesh Id="BodyMesh" /></PartModel></Part>"""));
+        using var preview = Preview(instances: new MemoryInstanceRepository(Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, [], false)));
+
+        Write(_paths.GetInstanceManifestPath(_targetId), "[[mods]]\nid = \"Wings\"\nenabled = false\n");
+        using (var disabled = await preview.LoadFolderAsync(folder, _targetId))
+        {
+            Assert.True(disabled.IsReady);
+            Assert.Equal("Wing", Assert.Single(disabled.Vehicle.Placeholders).MissingId);
+        }
+
+        Write(_paths.GetInstanceManifestPath(_targetId), "[[mods]]\nid = \"Wings\"\nenabled = true\n");
+        using (var enabled = await preview.LoadFolderAsync(folder, _targetId))
+        {
+            Assert.True(enabled.IsReady);
+            Assert.Empty(enabled.Vehicle.Placeholders);
+            Assert.Equal(2, enabled.Vehicle.Draws.Count);
+        }
+
+        Assert.Empty(_downloader.ArchivePaths);
+        using var unknown = await preview.LoadFolderAsync(folder, Guid.NewGuid());
+        Assert.Equal(VehiclePreviewLoadState.Failed, unknown.State);
+        using var noVehicle = await preview.LoadFolderAsync(Path.Combine(_root, "Vehicles", "Gone"), _targetId);
+        Assert.Equal(VehiclePreviewLoadState.VehicleDamaged, noVehicle.State);
+    }
+
     private Instance Keeping(GameVersion build)
     {
         var instance = Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, [], false);
@@ -360,7 +411,8 @@ public sealed class VehiclePreviewTests : IDisposable
         PreviewArchiveCache? archives = null,
         IInstalledGameVersionProvider? gameVersion = null,
         IInstanceRepository? instances = null,
-        IInstallPlanner? planner = null)
+        IInstallPlanner? planner = null,
+        IModDownloader? shareFiles = null)
     {
         paths ??= _paths;
         return new VehiclePreview(
@@ -377,7 +429,8 @@ public sealed class VehiclePreviewTests : IDisposable
             _downloader,
             new PlentyOfSpace(),
             new RecordingLog(),
-            new PreviewThumbnailCache(paths, new RecordingLog()));
+            new PreviewThumbnailCache(paths, new RecordingLog()),
+            shareFiles is null ? null : _ => shareFiles);
     }
 
     private static byte[] VehicleZip() => Zip(("meta.toml", "name = \"Rover\""), ("vehicle.xml", Rover));

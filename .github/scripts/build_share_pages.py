@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Builds the landing site with one share page per listing of the content index.
 
-The output is a copy of site/ plus mod/<id>/index.html for every mod and mod loader and
+The output is a copy of site/ plus mod/<id>/index.html for every mod and mod loader,
+vehicle/<id>/index.html for every vehicle, save/<id>/index.html for every save and
 pack/<id>/index.html for every pack, id in its authored casing.
 Authors write most of the snapshot, so every value is checked before use and escaped when written.
 Icons are fetched, verified against their records and served from the site itself.
@@ -31,6 +32,8 @@ SNAPSHOT_URL = "https://ksamodding.github.io/content-index-releases/v1/index.jso
 SITE_URL = "https://ksamodding.github.io/Borea/"
 SNAPSHOT_VERSION = 1
 FETCH_ATTEMPTS = 3
+# The page kind, the file next to the main document and the root key of its array, as ContentIndexTypeFiles in Borea.Core.
+TYPE_FILES = (("vehicle", "snapshot-vehicles.json", "vehicles"), ("save", "snapshot-saves.json", "saves"))
 
 # ModIds.IsValid in Borea.Core.
 ID_PATTERN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?$")
@@ -40,7 +43,7 @@ CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 # The same, but a description keeps its line breaks and its tabs.
 BLOCK_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 
-TYPE_LABELS = {"mod": "Mod", "mod-loader": "Mod loader", "modpack": "Modpack"}
+TYPE_LABELS = {"mod": "Mod", "mod-loader": "Mod loader", "modpack": "Modpack", "vehicle": "Vehicle", "save": "Save"}
 # The order and names of the links on the content page of the App.
 LINK_LABELS = {
     "forums": "Forum",
@@ -136,6 +139,8 @@ class Page:
     notices: list[Notice] = field(default_factory=list)
     images: dict[str, dict] = field(default_factory=dict)
     icon: tuple[str, int, int] | None = None
+    # The name and the address of the site that a vehicle or save comes from. None on a mod or pack page.
+    source: tuple[str, str] | None = None
 
 
 def valid_id(value) -> bool:
@@ -466,18 +471,19 @@ class Snapshot:
     def __init__(self, document: dict):
         self.listings = [entry for entry in document.get("listings") or [] if isinstance(entry, dict)]
         self.packs = [entry for entry in document.get("packs") or [] if isinstance(entry, dict)]
+        self.type_entries = {kind: [entry for entry in document.get(key) or [] if isinstance(entry, dict)]
+                             for kind, _, key in TYPE_FILES}
         versions = (document.get("game_versions") or {}).get("versions") if isinstance(document.get("game_versions"), dict) else None
         self.game_versions = {}
         for version in versions if isinstance(versions, list) else []:
             if isinstance(version, str) and version.rsplit(".", 1)[-1].isdecimal():
                 self.game_versions.setdefault(int(version.rsplit(".", 1)[-1]), version)
-        self.names = {}
+        # A successor is of the same type as what it replaces, and a page links it inside its own kind.
+        self.names = {kind: names_of(entries) for kind, entries in (("mod", self.listings), *self.type_entries.items())}
         self.entries = {}
         for entry in self.listings:
-            if valid_id(entry.get("id")) and isinstance(entry.get("authored"), dict):
-                self.names.setdefault(entry["id"].lower(), (entry["id"], text(entry["authored"].get("name")) or entry["id"]))
-                if state_of(entry) != "delisted":
-                    self.entries.setdefault(entry["id"].lower(), entry)
+            if valid_id(entry.get("id")) and isinstance(entry.get("authored"), dict) and state_of(entry) != "delisted":
+                self.entries.setdefault(entry["id"].lower(), entry)
         curated = document["tags"].get("mod") if isinstance(document.get("tags"), dict) else None
         self.curated_tags = []
         for tag in curated if isinstance(curated, list) else []:
@@ -491,12 +497,25 @@ class Snapshot:
             return self.game_versions[revision]
         return text(fallback)
 
-    def display_tags(self, tags) -> list[str]:
-        """The curated tags of a listing under their vocabulary name and in its order, then the other tags the author wrote in their shown form."""
+    def display_tags(self, tags, kind: str = "mod") -> list[str]:
+        """The curated tags of a listing under their vocabulary name and in its order, then the other tags the author wrote in their shown form.
+
+        The vocabulary holds mods and packs only, as CuratedTagVocabulary.GetTags in Borea.Core.
+        """
         written = [name for name in (text(tag) for tag in tags) if name] if isinstance(tags, list) else []
         chosen = {name.lower() for name in written}
-        known = {key for key, _ in self.curated_tags}
-        return [name for key, name in self.curated_tags if key in chosen] + [display_tag(name) for name in written if name.lower() not in known]
+        curated = self.curated_tags if kind in ("mod", "pack") else []
+        known = {key for key, _ in curated}
+        return [name for key, name in curated if key in chosen] + [display_tag(name) for name in written if name.lower() not in known]
+
+
+def names_of(entries: list[dict]) -> dict[str, tuple[str, str]]:
+    """The id in its authored casing and the name of every entry with a document, by the id in lower case."""
+    names: dict[str, tuple[str, str]] = {}
+    for entry in entries:
+        if valid_id(entry.get("id")) and isinstance(entry.get("authored"), dict):
+            names.setdefault(entry["id"].lower(), (entry["id"], text(entry["authored"].get("name")) or entry["id"]))
+    return names
 
 
 def display_tag(tag: str) -> str:
@@ -521,6 +540,12 @@ def links_of(authored: dict) -> list[tuple[str, str]]:
         found.append((rank, LINK_LABELS.get(known) or label[0].upper() + label[1:], url))
     found.sort(key=lambda link: link[0])
     return [(label, url) for _, label, url in found]
+
+
+def source_of(links: list[tuple[str, str]]) -> tuple[str, str] | None:
+    """The host name and the address of the homepage link, which a share host sets to its page of the listing (RFC 0094)."""
+    url = next((url for label, url in links if label == LINK_LABELS["homepage"]), None)
+    return (urllib.parse.urlsplit(url).hostname, url) if url else None
 
 
 def authors_of(authored: dict) -> list[str]:
@@ -598,7 +623,7 @@ def newer_text(page: Page) -> str | None:
     return f"{count_text}: {', '.join(page.newer)}."
 
 
-def listing_page(entry: dict, snapshot: Snapshot) -> Page:
+def listing_page(entry: dict, snapshot: Snapshot, kind: str = "mod") -> Page:
     authored = entry["authored"]
     releases = entry.get("releases") if isinstance(entry.get("releases"), list) else []
     release = newest_release(releases)
@@ -612,8 +637,9 @@ def listing_page(entry: dict, snapshot: Snapshot) -> Page:
     channel = text(release.get("release_status")) if release else None
     downloads = entry.get("downloads")
 
+    links = links_of(authored)
     page = Page(
-        kind="mod",
+        kind=kind,
         id=entry["id"],
         name=text(authored.get("name")) or entry["id"],
         type_label=TYPE_LABELS.get(text(authored.get("type")), "Mod"),
@@ -627,16 +653,17 @@ def listing_page(entry: dict, snapshot: Snapshot) -> Page:
         game=game,
         downloads=count(downloads.get("total")) if isinstance(downloads, dict) else None,
         mod_count=None,
-        tags=snapshot.display_tags(authored.get("tags")),
-        links=links_of(authored),
+        tags=snapshot.display_tags(authored.get("tags"), kind),
+        links=links,
         images=image_records(authored),
+        source=None if kind == "mod" else source_of(links),
     )
     notice = status_notice(entry)
     if notice:
         page.notices.append(notice)
     if authored.get("status") == "deprecated":
         successor = authored.get("superseded_by")
-        known = snapshot.names.get(successor.lower()) if valid_id(successor) else None
+        known = snapshot.names[kind].get(successor.lower()) if valid_id(successor) else None
         if known:
             page.notices.append(Notice("Deprecated by its author. Its successor is", (known[1], f"../{known[0]}/")))
         elif valid_id(successor):
@@ -689,7 +716,7 @@ def pack_page(entry: dict, snapshot: Snapshot) -> Page | None:
 
 
 def icon_record(entry: dict, kind: str):
-    if kind == "mod":
+    if kind != "pack":
         authored = entry.get("authored")
     else:
         versions = [version for version in entry.get("versions") or [] if isinstance(version, dict) and isinstance(version.get("authored"), dict)]
@@ -814,10 +841,12 @@ def members_html(page: Page) -> str:
 def actions_html(page: Page, root: str) -> str:
     """The buttons under the header, and the line that sends a reader on a phone or a tablet to a computer.
 
-    Copy link stays hidden until copy-list.js finds a clipboard.
+    Copy link stays hidden until copy-list.js finds a clipboard. A vehicle or save opens through a mod link, because
+    every listing shares one id namespace and a Borea that knows the vehicles finds it under that link.
     """
+    opens = "pack" if page.kind == "pack" else "mod"
     return ('        <div class="actions">\n'
-            f'          <a class="button desktop-only" href="borea://{page.kind}/{page.id}">Open in Borea</a>\n'
+            f'          <a class="button desktop-only" href="borea://{opens}/{page.id}">Open in Borea</a>\n'
             f'          <a class="button secondary desktop-only" href="borea://install/{page.id}">Install with Borea</a>\n'
             '          <button class="button handheld-only" type="button" data-copy-link hidden>Copy link</button>\n'
             f'          <a class="button secondary" href="{root}#download">Get Borea</a>\n'
@@ -875,6 +904,8 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
         facts.append(("Downloads", f"{page.downloads:,}"))
     if page.license:
         facts.append(("License", escape(page.license)))
+    if page.source:
+        facts.append(("Source", f'<a href="{escape(page.source[1])}" rel="nofollow noopener">{escape(page.source[0])}</a>'))
     fact_rows = "".join(f"            <dt>{name}</dt><dd>{value}</dd>\n" for name, value in facts)
 
     links = ""
@@ -962,10 +993,16 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
 """
 
 
+def has_document(entry: dict, kind: str) -> bool:
+    """Whether a listing entry can be a page. A type file holds only its own type, the way SnapshotParser in Borea.Storage reads it."""
+    authored = entry.get("authored")
+    return isinstance(authored, dict) and (kind == "mod" or authored.get("type") == kind)
+
+
 def pages_of(snapshot: Snapshot) -> list[tuple[Page, dict]]:
     """Every page to write. Tombstones, invalid ids and ids that repeat in another casing are left out."""
     pages = []
-    for kind, entries in (("mod", snapshot.listings), ("pack", snapshot.packs)):
+    for kind, entries in (("mod", snapshot.listings), *snapshot.type_entries.items(), ("pack", snapshot.packs)):
         seen = set()
         for entry in entries:
             identifier = entry.get("id")
@@ -978,10 +1015,10 @@ def pages_of(snapshot: Snapshot) -> list[tuple[Page, dict]]:
             seen.add(identifier.lower())
             if state_of(entry) == "delisted":
                 continue
-            if kind == "mod":
-                page = listing_page(entry, snapshot) if isinstance(entry.get("authored"), dict) else None
-            else:
+            if kind == "pack":
                 page = pack_page(entry, snapshot)
+            else:
+                page = listing_page(entry, snapshot, kind) if has_document(entry, kind) else None
             if page is not None:
                 pages.append((page, entry))
     return pages
@@ -1009,20 +1046,45 @@ def build(document, site_dir: Path, out_dir: Path, icons: Icons, site_url: str =
     return written
 
 
-def load_snapshot(source: str, attempts: int = FETCH_ATTEMPTS, wait: float = 5.0):
-    """The parsed snapshot from a URL or a file. Raises when it cannot be read, so nothing is deployed."""
+def load_snapshot(source: str, attempts: int = FETCH_ATTEMPTS, wait: float = 5.0, optional: bool = False):
+    """The parsed snapshot from a URL or a file. Raises when it cannot be read, so nothing is deployed.
+
+    With `optional` a file that is not there gives None.
+    """
     if not source.startswith("https://"):
-        return json.loads(Path(source).read_text(encoding="utf-8"))
+        path = Path(source)
+        return None if optional and not path.exists() else json.loads(path.read_text(encoding="utf-8"))
     request = urllib.request.Request(source, headers={"User-Agent": listing_icons.USER_AGENT})
     for attempt in range(1, attempts + 1):
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 return json.loads(response.read().decode("utf-8"))
         except (urllib.error.URLError, OSError, ValueError) as error:
+            if optional and isinstance(error, urllib.error.HTTPError) and error.code == 404:
+                return None
             if attempt == attempts:
                 raise RuntimeError(f"the snapshot could not be read from {source}: {error}") from error
             time.sleep(wait * attempt)
     raise AssertionError("unreachable")
+
+
+def load_document(source: str, attempts: int = FETCH_ATTEMPTS, wait: float = 5.0):
+    """The main document with the entries of the type files next to it, under the root keys of those files.
+
+    A type file that is not there is empty, and a broken one raises, so nothing is deployed.
+    """
+    document = load_snapshot(source, attempts, wait)
+    if not isinstance(document, dict):
+        return document
+    for _, file_name, key in TYPE_FILES:
+        address = urllib.parse.urljoin(source, file_name) if source.startswith("https://") else str(Path(source).with_name(file_name))
+        part = load_snapshot(address, attempts, wait, optional=True)
+        if part is None:
+            continue
+        if not isinstance(part, dict) or part.get("snapshot_version") != SNAPSHOT_VERSION or not isinstance(part.get(key), list):
+            raise ValueError(f"{file_name} is not snapshot_version {SNAPSHOT_VERSION} with a {key} array")
+        document[key] = part[key]
+    return document
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -1034,7 +1096,7 @@ def main(arguments: list[str] | None = None) -> int:
     parser.add_argument("--site-url", default=SITE_URL, help="the address the site is served from")
     options = parser.parse_args(arguments)
 
-    document = load_snapshot(options.snapshot)
+    document = load_document(options.snapshot)
     count_written = build(document, options.site, options.out, Icons(options.out, options.icon_cache), options.site_url)
     print(f"share pages: wrote {count_written} pages into {options.out}")
     return 0

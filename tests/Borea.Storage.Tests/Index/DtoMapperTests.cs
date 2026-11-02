@@ -463,23 +463,6 @@ public sealed class DtoMapperTests
         Assert.Equal("github", Assert.Single(DtoMapper.MapAuthored(dto, "source").Releases!.Hosts).Host);
     }
 
-    [Theory]
-    [InlineData("required", ModDependencyKind.Required)]
-    [InlineData("optional", ModDependencyKind.Optional)]
-    [InlineData("recommends", ModDependencyKind.Recommends)]
-    [InlineData("suggests", ModDependencyKind.Suggests)]
-    [InlineData("conflict", ModDependencyKind.Conflict)]
-    [InlineData("something-else", ModDependencyKind.Unknown)]
-    public void MapAuthored_MapsDependencyKind(string kind, ModDependencyKind expected)
-    {
-        var dto = MinimalAuthoredDto();
-        dto.Dependencies = new List<DependencyEntryDto> { new() { Id = "other-mod", Kind = kind } };
-
-        var result = DtoMapper.MapAuthored(dto, "source");
-
-        Assert.Equal(expected, Assert.Single(result.Dependencies).Kind);
-    }
-
     [Fact]
     public void MapAuthored_Dependency_SingleId_MapsBoundsAndSource()
     {

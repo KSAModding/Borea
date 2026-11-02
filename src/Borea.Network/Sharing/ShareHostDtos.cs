@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Borea.Network.Sharing;
@@ -17,6 +18,14 @@ internal static class ShareHostApi
 
     public const string PublishPath = "publish";
 
+    public const string ListingsPath = "listings";
+
+    public const string ImagesPath = "images";
+
+    public const string ReleasesPath = "releases";
+
+    public const string TakeDownPath = "take-down";
+
     /// <summary>The kept secret says which kind of token it holds, because a host may give no refresh token.</summary>
     public const string RefreshPrefix = "refresh:";
 
@@ -27,6 +36,8 @@ internal static class ShareHostApi
 internal static class ShareHostJson
 {
     public const string Archive = "archive";
+
+    public const string Image = "image";
 
     public const string Dependencies = "dependencies";
 
@@ -50,6 +61,9 @@ internal static class ShareHostJson
 
     public const string Tags = "tags";
 
+    /// <summary>The text of a member that takes any JSON value, or null when it holds anything else.</summary>
+    public static string? Text(JsonElement value) => value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
     public sealed class DeviceCode
     {
         [JsonPropertyName("device_code")]
@@ -60,6 +74,10 @@ internal static class ShareHostJson
 
         [JsonPropertyName("verification_uri")]
         public string? VerificationUri { get; set; }
+
+        // This takes any JSON value, because a bad value must not stop a sign-in that the plain page can finish.
+        [JsonPropertyName("verification_uri_complete")]
+        public JsonElement VerificationUriComplete { get; set; }
 
         [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
@@ -112,14 +130,34 @@ internal static class ShareHostJson
 
     public sealed class Published
     {
+        // A 2xx is a release that is live, so these take any JSON value, and a malformed one costs only itself.
         [JsonPropertyName("id")]
-        public string? Id { get; set; }
+        public JsonElement Id { get; set; }
 
         [JsonPropertyName("version")]
-        public string? Version { get; set; }
+        public JsonElement Version { get; set; }
 
         [JsonPropertyName("pull_request")]
-        public string? PullRequest { get; set; }
+        public JsonElement PullRequest { get; set; }
+
+        [JsonPropertyName("page")]
+        public JsonElement Page { get; set; }
+    }
+
+    public sealed class ListingChanged
+    {
+        // A 2xx is a change that the host took, so these take any JSON value, and a malformed one costs only itself.
+        [JsonPropertyName("pull_request")]
+        public JsonElement PullRequest { get; set; }
+
+        [JsonPropertyName("page")]
+        public JsonElement Page { get; set; }
+    }
+
+    public sealed class TakenDown
+    {
+        [JsonPropertyName("taken_down")]
+        public bool Value { get; set; }
     }
 
     public sealed class Error
@@ -129,5 +167,15 @@ internal static class ShareHostJson
 
         [JsonPropertyName("message")]
         public string? Message { get; set; }
+
+        // These three take any JSON value, so a malformed one costs neither the message nor the others.
+        [JsonPropertyName("checks")]
+        public JsonElement Checks { get; set; }
+
+        [JsonPropertyName("retry_after")]
+        public JsonElement RetryAfter { get; set; }
+
+        [JsonPropertyName("errors")]
+        public JsonElement FieldErrors { get; set; }
     }
 }

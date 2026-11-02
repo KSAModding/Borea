@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -12,6 +13,82 @@ namespace Borea.App.Tests.ViewModels;
 
 public sealed class DiscoverViewModelTests
 {
+    [Theory]
+    [InlineData(ContentType.Vehicle)]
+    [InlineData(ContentType.Save)]
+    public async Task ShareEntry_OpensTheFirstStepOnTheTypeOfTheTab(ContentType type)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.OpenDiscoverTab(type);
+
+        await viewModel.ShareFromDiscoverCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowListing);
+        Assert.True(viewModel.ListingEditor.IsShareChoose);
+        Assert.Equal(type == ContentType.Vehicle, viewModel.ListingEditor.IsShareChooseVehicle);
+    }
+
+    [Fact]
+    public async Task ShareFlow_AsTheFirstPage_StartsTheSchemaLoad_AndShowsItsStepBeforeTheSchemaAnswers()
+    {
+        var answer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var harness = await ViewModelHarness.CreateAsync(respond: request => GameSaveShareTests.HeldSchema(request, answer.Task));
+        var editor = harness.ViewModel.ListingEditor;
+
+        var flow = harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Save);
+
+        Assert.NotNull(harness.ViewModel.ShareSchemaLoad);
+        Assert.True(editor.IsShareStep);
+        Assert.True(editor.IsShareChooseSave);
+        answer.SetResult();
+        await flow;
+        Assert.True(editor.IsShareChoose);
+    }
+
+    [Fact]
+    public async Task ListingPage_WhenItsOwnSchemaLoadChangesTheGate_TellsTheEntries()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: GameSaveShareTests.Gated);
+        var viewModel = harness.ViewModel;
+        var heard = new ConcurrentQueue<string?>();
+        viewModel.PropertyChanged += (_, args) => heard.Enqueue(args.PropertyName);
+        viewModel.VehiclesSection.PropertyChanged += (_, args) => heard.Enqueue(args.PropertyName);
+
+        await viewModel.OpenListingAsync();
+
+        Assert.Null(viewModel.ShareSchemaLoad);
+        Assert.False(viewModel.VehiclesSection.CanShare);
+        Assert.Contains(nameof(MainViewModel.ShowsDiscoverShare), heard);
+        Assert.Contains(nameof(GameSaveSection.CanShare), heard);
+    }
+
+    [Fact]
+    public async Task SharingTab_LoadsTheSchemaOnce_AndTheLastChangeHidesTheEntryOfARefusedType()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: GameSaveShareTests.Gated);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.False(viewModel.ShowsDiscoverShare);
+        Assert.Null(viewModel.ShareSchemaLoad);
+
+        var heard = new ConcurrentQueue<bool>();
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(MainViewModel.ShowsDiscoverShare))
+                heard.Enqueue(viewModel.ShowsDiscoverShare);
+        };
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var load = viewModel.ShareSchemaLoad;
+        await load!;
+        var last = heard.Last();
+        viewModel.ShowDiscoverSavesCommand.Execute(null);
+
+        Assert.False(last);
+        Assert.Same(load, viewModel.ShareSchemaLoad);
+    }
+
     [Fact]
     public async Task Load_ListsOnlyTheContentIndex()
     {
@@ -72,16 +149,16 @@ public sealed class DiscoverViewModelTests
         card.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
         var rowAge = afc.UpdatedText;
         var published = afc.PublishedText;
-        var cardAge = card.UpdatedText;
+        var cardAge = card.FactText;
 
         harness.Localization.TrySetCulture("de");
 
         Assert.Contains(nameof(DiscoverItem.UpdatedText), changed);
         Assert.Contains(nameof(DiscoverItem.PublishedText), changed);
-        Assert.Contains(nameof(RecentItem.UpdatedText), changed);
+        Assert.Contains(nameof(RecentItem.FactText), changed);
         Assert.NotEqual(rowAge, afc.UpdatedText);
         Assert.NotEqual(published, afc.PublishedText);
-        Assert.NotEqual(cardAge, card.UpdatedText);
+        Assert.NotEqual(cardAge, card.FactText);
     }
 
     private static readonly DateTimeOffset SnapshotUpdatedAt = new(2026, 9, 14, 0, 0, 0, TimeSpan.Zero);
@@ -492,6 +569,29 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task ClearSearchAndFilters_IsOfferedWhenOnlyTheyHideTheListings_AndClearsBoth()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.False(viewModel.ShowsClearSearchAndFilters);
+
+        viewModel.SearchText = "no listing has this name";
+        Assert.True(viewModel.ShowsClearSearchAndFilters);
+
+        viewModel.ToggleLicenseCommand.Execute("GPL-3.0");
+        viewModel.ClearDiscoverSearchAndFiltersCommand.Execute(null);
+
+        Assert.Equal(string.Empty, viewModel.SearchText);
+        Assert.False(viewModel.HasDiscoverFilters);
+        Assert.Equal(3, viewModel.DiscoverItems.Count);
+        Assert.False(viewModel.ShowsClearSearchAndFilters);
+
+        viewModel.ToggleLicenseCommand.Execute("GPL-3.0");
+        Assert.True(viewModel.ShowsClearSearchAndFilters);
+    }
+
+    [Fact]
     public async Task Count_InGerman_UsesTheGermanWords()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -631,13 +731,24 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task Install_Warning_StartsWithTheNameOfTheMod()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var (_, item) = await ActivateMainAndFindTheAfcRowAsync(harness);
+
+        await item.InstallCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Advanced Flight Computer: ", item.InstallWarning, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Install_WarningCancelled_InstallsNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var (instance, item) = await ActivateMainAndFindTheAfcRowAsync(harness);
 
         await item.InstallCommand.ExecuteAsync(null);
-        Assert.Contains("AdvancedFlightComputer", item.InstallWarning);
+        Assert.NotNull(item.InstallWarning);
         Assert.NotNull(item.PendingPlan);
 
         item.CancelInstallCommand.Execute(null);

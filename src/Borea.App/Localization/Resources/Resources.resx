@@ -118,7 +118,7 @@
     <value>Load images from author hosts</value>
   </data>
   <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
-    <value>Each image request tells the author's host your IP address.</value>
+    <value>Each image request tells the author's host your IP address. Off, Borea also downloads no vehicle file by itself for a picture or a 3D preview.</value>
   </data>
   <data name="SettingsLibraryFolderLabel" xml:space="preserve">
     <value>Library folder</value>
@@ -1611,6 +1611,21 @@
   <data name="HomeDiscoverMods" xml:space="preserve">
     <value>Discover mods</value>
   </data>
+  <data name="HomeDiscoverVehicles" xml:space="preserve">
+    <value>Discover vehicles</value>
+  </data>
+  <data name="HomeNewMods" xml:space="preserve">
+    <value>New mods</value>
+  </data>
+  <data name="HomeNewVehicles" xml:space="preserve">
+    <value>New vehicles</value>
+  </data>
+  <data name="HomeMostDownloaded" xml:space="preserve">
+    <value>Most downloaded</value>
+  </data>
+  <data name="HomeListedOnFormat" xml:space="preserve">
+    <value>On Discover since {0}</value>
+  </data>
   <data name="HomeNoGameVersion" xml:space="preserve">
     <value>Game not set up</value>
   </data>
@@ -2005,16 +2020,16 @@
     <value>Could not share {0}</value>
   </data>
   <data name="ShareFolderFileMissingFormat" xml:space="preserve">
-    <value>The folder has no {0}.</value>
+    <value>The folder is incomplete, because {0} is missing. Save it again in the game, then try again.</value>
   </data>
   <data name="ShareFolderNotTomlFormat" xml:space="preserve">
-    <value>{0} is not TOML.</value>
+    <value>{0} is damaged, so Borea cannot read it. Save it again in the game, then try again.</value>
   </data>
   <data name="ShareFolderNoNameFormat" xml:space="preserve">
-    <value>{0} has no name.</value>
+    <value>{0} has no name, so the game cannot list it. Save it again in the game, then try again.</value>
   </data>
   <data name="ShareFolderNotXmlFormat" xml:space="preserve">
-    <value>{0} is not well-formed XML.</value>
+    <value>{0} is damaged, so Borea cannot read it. Save it again in the game, then try again.</value>
   </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Could not back up the saves</value>
@@ -2121,6 +2136,12 @@
   <data name="GameSaveNoSaves" xml:space="preserve">
     <value>No saves in this instance yet</value>
   </data>
+  <data name="GameSaveFindVehicles" xml:space="preserve">
+    <value>Find vehicles</value>
+  </data>
+  <data name="GameSaveFindSaves" xml:space="preserve">
+    <value>Find saves</value>
+  </data>
   <data name="GameSaveUpdatedFormat" xml:space="preserve">
     <value>Updated {0}</value>
   </data>
@@ -2129,6 +2150,9 @@
   </data>
   <data name="GameSaveChangedSinceInstall" xml:space="preserve">
     <value>Changed since install</value>
+  </data>
+  <data name="GameSaveViewPage" xml:space="preserve">
+    <value>View page</value>
   </data>
   <data name="GameSaveBuildFormat" xml:space="preserve">
     <value>Made with game build {0}</value>
@@ -2142,8 +2166,17 @@
   <data name="GameSaveShare" xml:space="preserve">
     <value>Share</value>
   </data>
+  <data name="GameSaveShareTip" xml:space="preserve">
+    <value>Put it online so other players can download it.</value>
+  </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
-    <value>The game no longer accepts the name "{0}", and the index checks names the same way. Rename the item to a name that follows the rules below, then share it.</value>
+    <value>The game does not accept the name "{0}" any more, and a name that the game does not accept cannot be shared. Choose a name that follows the rules below.</value>
+  </data>
+  <data name="GameSaveRenameContinue" xml:space="preserve">
+    <value>Save and continue</value>
+  </data>
+  <data name="GameSaveRenameChooseAnother" xml:space="preserve">
+    <value>Choose another name.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>Backed up {0} to {1}.</value>
@@ -2171,6 +2204,9 @@
   </data>
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Delete it? Borea moves the folder into the Backups folder, and Restore brings it back.</value>
+  </data>
+  <data name="ChangedFilesMoreFormat" xml:space="preserve">
+    <value>{0} and {1} more</value>
   </data>
   <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
     <value>You changed {0} since Borea installed it: {1}. Delete it anyway? Borea moves the folder into the Backups folder, and Restore brings it back.</value>
@@ -2400,6 +2436,33 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} stays because {1} requires it.</value>
   </data>
+  <data name="ContentRemoveUpdateRunning" xml:space="preserve">
+    <value>An update of this instance is running. Try again when it has finished.</value>
+  </data>
+  <data name="ConflictTitle" xml:space="preserve">
+    <value>These mods do not work together</value>
+  </data>
+  <data name="ConflictWhy" xml:space="preserve">
+    <value>Borea does not put mods that do not work together into one instance, so it stopped and changed nothing.</value>
+  </data>
+  <data name="ConflictAgain" xml:space="preserve">
+    <value>After each step Borea checks again, and a conflict that is still there comes up here again.</value>
+  </data>
+  <data name="ConflictDeclaredFormat" xml:space="preserve">
+    <value>{0} says that it does not work together with {1}.</value>
+  </data>
+  <data name="ConflictRemoveFormat" xml:space="preserve">
+    <value>Remove {0} and continue</value>
+  </data>
+  <data name="ConflictOpenPageFormat" xml:space="preserve">
+    <value>Open the page of {0}</value>
+  </data>
+  <data name="ConflictVersionUnknownFormat" xml:space="preserve">
+    <value>Borea did not install {0} and cannot read its version, so it cannot tell whether the two work together.</value>
+  </data>
+  <data name="ConflictPackMemberFormat" xml:space="preserve">
+    <value>{0} belongs to the modpack of this instance, so Borea does not remove it.</value>
+  </data>
   <data name="ContentNeededByVehicleFormat" xml:space="preserve">
     <value>The vehicle {0} needs this mod, so the game refuses that vehicle.</value>
   </data>
@@ -2511,6 +2574,12 @@
   <data name="DiscoverSearchPlaceholder" xml:space="preserve">
     <value>Search mods...</value>
   </data>
+  <data name="DiscoverSearchVehicles" xml:space="preserve">
+    <value>Search vehicles...</value>
+  </data>
+  <data name="DiscoverSearchSaves" xml:space="preserve">
+    <value>Search saves...</value>
+  </data>
   <data name="DiscoverSearchCountFormat" xml:space="preserve">
     <value>Search {0}</value>
   </data>
@@ -2522,6 +2591,9 @@
   </data>
   <data name="DiscoverFavoritesOnly" xml:space="preserve">
     <value>Only favorites</value>
+  </data>
+  <data name="DiscoverStillMissingMods" xml:space="preserve">
+    <value>Mods missing</value>
   </data>
   <data name="DiscoverFavorite" xml:space="preserve">
     <value>In your favorites</value>
@@ -2606,6 +2678,21 @@
   </data>
   <data name="DiscoverEmpty" xml:space="preserve">
     <value>No content matches.</value>
+  </data>
+  <data name="DiscoverClearSearchAndFilters" xml:space="preserve">
+    <value>Clear search and filters</value>
+  </data>
+  <data name="DiscoverNoVehicles" xml:space="preserve">
+    <value>No vehicles are shared yet.</value>
+  </data>
+  <data name="DiscoverNoVehiclesHint" xml:space="preserve">
+    <value>Be the first. Share a vehicle that you built, and it shows up here after some hours.</value>
+  </data>
+  <data name="DiscoverNoSaves" xml:space="preserve">
+    <value>No saves are shared yet.</value>
+  </data>
+  <data name="DiscoverNoSavesHint" xml:space="preserve">
+    <value>Be the first. Share a save that you want others to play, and it shows up here after some hours.</value>
   </data>
   <data name="DiscoverCountModOne" xml:space="preserve">
     <value>1 mod</value>
@@ -2767,10 +2854,37 @@
     <value>For mod authors</value>
   </data>
   <data name="DiscoverForModAuthorsText" xml:space="preserve">
-    <value>Borea writes and checks the file that lists your mod in the content index, for a new listing or a change to a listed mod.</value>
+    <value>Borea writes and checks the file that lists your mod in Discover, for a new mod or a change to a listed mod.</value>
+  </data>
+  <data name="DiscoverShareVehicleHeading" xml:space="preserve">
+    <value>Made one yourself?</value>
+  </data>
+  <data name="DiscoverShareVehicleText" xml:space="preserve">
+    <value>Pick a vehicle from your instances, add a few words and publish it. Other players can then add it from here.</value>
+  </data>
+  <data name="DiscoverShareVehicle" xml:space="preserve">
+    <value>Share your vehicle</value>
+  </data>
+  <data name="DiscoverShareSaveHeading" xml:space="preserve">
+    <value>A save worth sharing?</value>
+  </data>
+  <data name="DiscoverShareSaveText" xml:space="preserve">
+    <value>Put a save from one of your instances online, so other players find it here.</value>
+  </data>
+  <data name="DiscoverShareSave" xml:space="preserve">
+    <value>Share your save</value>
   </data>
   <data name="ListingIntro" xml:space="preserve">
     <value>Borea writes the file that lists your mod in the content index, and checks it before you open the pull request.</value>
+  </data>
+  <data name="ListingShareCardTitle" xml:space="preserve">
+    <value>Share a vehicle or save</value>
+  </data>
+  <data name="ListingShareCardText" xml:space="preserve">
+    <value>Put a vehicle or save that you made on a sharing site, so every player can find it in Discover.</value>
+  </data>
+  <data name="ListingShareCardAction" xml:space="preserve">
+    <value>Choose what to share</value>
   </data>
   <data name="ListingNewTitle" xml:space="preserve">
     <value>New listing</value>
@@ -2815,7 +2929,7 @@
     <value>Your mod</value>
   </data>
   <data name="ListingNoListedMatch" xml:space="preserve">
-    <value>No listed mod matches.</value>
+    <value>No mod in Discover matches.</value>
   </data>
   <data name="ListingNoListedVehicleMatch" xml:space="preserve">
     <value>No listed vehicle matches.</value>
@@ -3199,7 +3313,7 @@
     <value>Sets the oldest version to the newest stable release of the mod.</value>
   </data>
   <data name="ListingDependencyNotListedFormat" xml:space="preserve">
-    <value>{0} is not listed in the index, so players cannot install it.</value>
+    <value>{0} is not in Discover, so players cannot install it.</value>
   </data>
   <data name="ListingSearchDependencies" xml:space="preserve">
     <value>Search by name, id or author</value>
@@ -3453,6 +3567,414 @@
   <data name="ListingSaveFailed" xml:space="preserve">
     <value>The listing file could not be saved.</value>
   </data>
+  <data name="ShareFlowTitle" xml:space="preserve">
+    <value>Share a vehicle or save</value>
+  </data>
+  <data name="ShareFlowIntro" xml:space="preserve">
+    <value>Sharing puts your vehicle or save on a sharing site and in Discover, where every Borea player can find it.</value>
+  </data>
+  <data name="ShareStepChoose" xml:space="preserve">
+    <value>Choose</value>
+  </data>
+  <data name="ShareChooseHeading" xml:space="preserve">
+    <value>What do you want to share?</value>
+  </data>
+  <data name="ShareChooseHint" xml:space="preserve">
+    <value>Borea lists the vehicles and saves of all your instances. Pick one.</value>
+  </data>
+  <data name="ShareSaveHoldsAll" xml:space="preserve">
+    <value>A save holds your whole game, with every vehicle in it.</value>
+  </data>
+  <data name="ShareChooseLoading" xml:space="preserve">
+    <value>Reading your instances...</value>
+  </data>
+  <data name="ShareChooseFirst" xml:space="preserve">
+    <value>Choose a vehicle or a save first.</value>
+  </data>
+  <data name="ShareGameRunning" xml:space="preserve">
+    <value>The game is running. Close it, then continue, so Borea reads complete files.</value>
+  </data>
+  <data name="ShareGameRunningPublish" xml:space="preserve">
+    <value>The game is running. Close it, then try again, so Borea reads complete files.</value>
+  </data>
+  <data name="ShareNoInstance" xml:space="preserve">
+    <value>Vehicles and saves live in an instance, and you have none yet.</value>
+  </data>
+  <data name="ShareNoVehicles" xml:space="preserve">
+    <value>You have no vehicles to share yet. Build one in the game and save it, then come back.</value>
+  </data>
+  <data name="ShareNoSaves" xml:space="preserve">
+    <value>You have no saves to share yet. Start a game and save it, then come back.</value>
+  </data>
+  <data name="ShareProfileVehicles" xml:space="preserve">
+    <value>Your game profile has vehicles from playing without Borea. Copy them into an instance first.</value>
+  </data>
+  <data name="ShareProfileSaves" xml:space="preserve">
+    <value>Your game profile has saves from playing without Borea. Copy them into an instance first.</value>
+  </data>
+  <data name="SharePickFromFormat" xml:space="preserve">
+    <value>From {0}</value>
+  </data>
+  <data name="ShareNeedsNewName" xml:space="preserve">
+    <value>Needs a new name</value>
+  </data>
+  <data name="ShareUnchangedCopyFormat" xml:space="preserve">
+    <value>You installed {0} from Discover and have not changed it, so there is nothing of yours to share.</value>
+  </data>
+  <data name="ShareChangedVehicleFormat" xml:space="preserve">
+    <value>This vehicle came from {0}. Share it only if you made it, or if the author allows it.</value>
+  </data>
+  <data name="ShareChangedSaveFormat" xml:space="preserve">
+    <value>This save came from {0}. Share it only if you made it, or if the author allows it.</value>
+  </data>
+  <data name="ShareNoBuild" xml:space="preserve">
+    <value>The file does not say which game build wrote it, so the sharing site would refuse it. Load it in the game and save it again.</value>
+  </data>
+  <data name="ShareAnother" xml:space="preserve">
+    <value>Share another</value>
+  </data>
+  <data name="ShareStepDescribe" xml:space="preserve">
+    <value>Describe</value>
+  </data>
+  <data name="ShareNext" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="SharePreviewVehicle" xml:space="preserve">
+    <value>Your vehicle</value>
+  </data>
+  <data name="SharePreviewSave" xml:space="preserve">
+    <value>Your save</value>
+  </data>
+  <data name="SharePreviewSentence" xml:space="preserve">
+    <value>Your sentence shows here, in lists and search.</value>
+  </data>
+  <data name="ShareItemInFormat" xml:space="preserve">
+    <value>{0} in {1}</value>
+  </data>
+  <data name="ShareLooksLikeFormat" xml:space="preserve">
+    <value>This looks like {0} on {1}.</value>
+  </data>
+  <data name="ShareVersionOnlineFormat" xml:space="preserve">
+    <value>Version {0} is online.</value>
+  </data>
+  <data name="ShareAsNewVersionFormat" xml:space="preserve">
+    <value>Share as a new version of {0}</value>
+  </data>
+  <data name="ShareIsDifferentVehicle" xml:space="preserve">
+    <value>This is a different vehicle</value>
+  </data>
+  <data name="ShareIsDifferentSave" xml:space="preserve">
+    <value>This is a different save</value>
+  </data>
+  <data name="ShareNewVersionLineFormat" xml:space="preserve">
+    <value>New version of {0} on {1}. The description stays as it is.</value>
+  </data>
+  <data name="ShareDescribeVehicle" xml:space="preserve">
+    <value>Describe your vehicle</value>
+  </data>
+  <data name="ShareDescribeSave" xml:space="preserve">
+    <value>Describe your save</value>
+  </data>
+  <data name="ShareNameHint" xml:space="preserve">
+    <value>The name from the game. Players see it in Discover.</value>
+  </data>
+  <data name="ShareYourName" xml:space="preserve">
+    <value>Your name</value>
+  </data>
+  <data name="ShareYourNameHint" xml:space="preserve">
+    <value>Shown as the author. Use the name people should know you by. Separate several names with commas.</value>
+  </data>
+  <data name="ShareOneSentence" xml:space="preserve">
+    <value>In one sentence</value>
+  </data>
+  <data name="ShareOneSentenceHint" xml:space="preserve">
+    <value>What is it? Players read this in the list.</value>
+  </data>
+  <data name="ShareSentenceVehicleExample" xml:space="preserve">
+    <value>A six-wheel rover for the Moon.</value>
+  </data>
+  <data name="ShareSentenceSaveExample" xml:space="preserve">
+    <value>A Moon base with three landers, ready to fly.</value>
+  </data>
+  <data name="ShareSentenceTooLongFormat" xml:space="preserve">
+    <value>One sentence can have at most {1} characters. This one has {0}.</value>
+  </data>
+  <data name="ShareLicenseHint" xml:space="preserve">
+    <value>This says what other players may do with it. You cannot take it back for copies that players already have.</value>
+  </data>
+  <data name="ShareLicenseInvalid" xml:space="preserve">
+    <value>Borea does not know this license. Use its short name, for example MIT.</value>
+  </data>
+  <data name="ShareLicensePlaceholder" xml:space="preserve">
+    <value>Choose a license</value>
+  </data>
+  <data name="ShareLicenseCcBy" xml:space="preserve">
+    <value>Everyone, if they name you (CC BY 4.0)</value>
+  </data>
+  <data name="ShareLicenseCc0" xml:space="preserve">
+    <value>Everyone, without conditions (CC0)</value>
+  </data>
+  <data name="ShareLicenseCcBySa" xml:space="preserve">
+    <value>Everyone, if they name you and share changes the same way (CC BY-SA 4.0)</value>
+  </data>
+  <data name="ShareLicenseCcByNc" xml:space="preserve">
+    <value>Everyone, if they name you, but not for business (CC BY-NC 4.0)</value>
+  </data>
+  <data name="ShareLicenseOther" xml:space="preserve">
+    <value>Another license...</value>
+  </data>
+  <data name="ShareMoreOptions" xml:space="preserve">
+    <value>More options</value>
+  </data>
+  <data name="ShareShortName" xml:space="preserve">
+    <value>Short name</value>
+  </data>
+  <data name="ShareShortNameHint" xml:space="preserve">
+    <value>Used in the web address of the page. It cannot change later, and it does not change the name in the game.</value>
+  </data>
+  <data name="ShareIdEmpty" xml:space="preserve">
+    <value>Borea could not make a short name from this name. Type letters or digits, for example KittenRover.</value>
+  </data>
+  <data name="ShareIdHeldFormat" xml:space="preserve">
+    <value>Another vehicle, save or mod already uses the short name {0}. It cannot change later, so choose one now.</value>
+  </data>
+  <data name="ShareIdInvalid" xml:space="preserve">
+    <value>A short name has letters and digits, also . _ - between them, and at most 64 characters. Some names, such as Core, are reserved.</value>
+  </data>
+  <data name="ShareDescriptionHint" xml:space="preserve">
+    <value>Optional. A longer text for the page. You can format it with Markdown, for example **bold** or - lists.</value>
+  </data>
+  <data name="ShareMissingName" xml:space="preserve">
+    <value>a name</value>
+  </data>
+  <data name="ShareMissingAuthor" xml:space="preserve">
+    <value>your name</value>
+  </data>
+  <data name="ShareMissingSentence" xml:space="preserve">
+    <value>one sentence</value>
+  </data>
+  <data name="ShareMissingLicense" xml:space="preserve">
+    <value>a license</value>
+  </data>
+  <data name="ShareMissingId" xml:space="preserve">
+    <value>a short name</value>
+  </data>
+  <data name="ShareModsHeading" xml:space="preserve">
+    <value>Mods it needs</value>
+  </data>
+  <data name="ShareModsVehicleHint" xml:space="preserve">
+    <value>Players who add your vehicle get these mods too.</value>
+  </data>
+  <data name="ShareModsSaveHint" xml:space="preserve">
+    <value>Players who add your save get these mods too. Without them the game drops the vehicles that need them.</value>
+  </data>
+  <data name="ShareModVersionFormat" xml:space="preserve">
+    <value>Version {0} or newer</value>
+  </data>
+  <data name="ShareModChangedKind" xml:space="preserve">
+    <value>You changed this mod under all fields, so players may not get it.</value>
+  </data>
+  <data name="ShareModProblem" xml:space="preserve">
+    <value>Fix this mod under all fields, or remove it.</value>
+  </data>
+  <data name="ShareModsNone" xml:space="preserve">
+    <value>It uses only parts of the game.</value>
+  </data>
+  <data name="ShareAddMod" xml:space="preserve">
+    <value>Add a mod</value>
+  </data>
+  <data name="SharePicturesHeading" xml:space="preserve">
+    <value>Pictures</value>
+  </data>
+  <data name="SharePicturesHintFormat" xml:space="preserve">
+    <value>Optional. Add up to {0} pictures, as PNG, JPEG or WebP files of at most {1} each. The first is the cover. They become public when you publish.</value>
+  </data>
+  <data name="SharePicturesNewVersionHintFormat" xml:space="preserve">
+    <value>Optional. These join the pictures that the page already has, and a page shows at most {0}. Use PNG, JPEG or WebP files of at most {1} each. They become public when you publish.</value>
+  </data>
+  <data name="SharePictureAdd" xml:space="preserve">
+    <value>Add a picture</value>
+  </data>
+  <data name="SharePictureCover" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="SharePictureTooLargeFormat" xml:space="preserve">
+    <value>{0} is larger than {1}.</value>
+  </data>
+  <data name="SharePictureNotImageFormat" xml:space="preserve">
+    <value>{0} is not a PNG, JPEG or WebP picture that Borea can read.</value>
+  </data>
+  <data name="SharePictureAnimatedFormat" xml:space="preserve">
+    <value>{0} is animated, and a page shows only still pictures.</value>
+  </data>
+  <data name="SharePictureUnreadable" xml:space="preserve">
+    <value>Borea could not read this file.</value>
+  </data>
+  <data name="ShareSummaryPicturesFormat" xml:space="preserve">
+    <value>Pictures: {0}. They go up right after the publish.</value>
+  </data>
+  <data name="SharePicturesSendingFormat" xml:space="preserve">
+    <value>Adding picture {0} of {1}...</value>
+  </data>
+  <data name="SharePicturesSent" xml:space="preserve">
+    <value>Your pictures are on the page. Discover shows them within some hours.</value>
+  </data>
+  <data name="SharePicturesMissingFormat" xml:space="preserve">
+    <value>Still open: {0} of {1} pictures. What you published stays online, and you can try again.</value>
+  </data>
+  <data name="SharePictureLostAnswerFormat" xml:space="preserve">
+    <value>Borea got no answer from {0}, so this picture may already be on the page. Check the page before you try again.</value>
+  </data>
+  <data name="SharePictureNotOwnerFormat" xml:space="preserve">
+    <value>{0} does not let this account add pictures to {1}. Check the page on {0}.</value>
+  </data>
+  <data name="SharePicturesNotOfferedFormat" xml:space="preserve">
+    <value>{0} does not take pictures, so Borea did not add them. Everything else is published.</value>
+  </data>
+  <data name="SharePictureTooLargeOnHostFormat" xml:space="preserve">
+    <value>{0} says that this picture is too large.</value>
+  </data>
+  <data name="ShareCoverDrawing" xml:space="preserve">
+    <value>Borea is drawing a picture of your vehicle...</value>
+  </data>
+  <data name="ShareCoverMissing" xml:space="preserve">
+    <value>Borea could not draw a cover for this vehicle. You can use your own picture.</value>
+  </data>
+  <data name="ShareCoverHint" xml:space="preserve">
+    <value>A picture that Borea drew from your vehicle, as the cover of its page. It becomes public when you publish. Only this picture goes up, with no parts or textures of the game.</value>
+  </data>
+  <data name="ShareCoverOwn" xml:space="preserve">
+    <value>Use my own picture</value>
+  </data>
+  <data name="ShareCoverLeaveOut" xml:space="preserve">
+    <value>Leave it out</value>
+  </data>
+  <data name="ShareCoverLeftOut" xml:space="preserve">
+    <value>The page starts without a cover.</value>
+  </data>
+  <data name="ShareCoverUseDrawn" xml:space="preserve">
+    <value>Use the picture that Borea drew</value>
+  </data>
+  <data name="ShareCoverRowName" xml:space="preserve">
+    <value>Picture that Borea drew</value>
+  </data>
+  <data name="ShareOtherFields" xml:space="preserve">
+    <value>Some fields outside this step need a fix.</value>
+  </data>
+  <data name="ShareFieldsToFixFormat" xml:space="preserve">
+    <value>Fix this first: {0}.</value>
+  </data>
+  <data name="ShareEditAll" xml:space="preserve">
+    <value>Edit all fields</value>
+  </data>
+  <data name="ShareBackToSteps" xml:space="preserve">
+    <value>Back to the share steps</value>
+  </data>
+  <data name="ShareEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="ShareChange" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="ShareSummaryModsFormat" xml:space="preserve">
+    <value>Mods it needs: {0}</value>
+  </data>
+  <data name="ShareSummaryNoMods" xml:space="preserve">
+    <value>Needs no mods</value>
+  </data>
+  <data name="ShareNeedsBuildFormat" xml:space="preserve">
+    <value>Players need KSA {0} or newer for this version.</value>
+  </data>
+  <data name="ShareHostChoiceHeading" xml:space="preserve">
+    <value>Where do you want to publish it?</value>
+  </data>
+  <data name="ShareHostOneFormat" xml:space="preserve">
+    <value>Publish on {0}</value>
+  </data>
+  <data name="ShareHostLimitVehicleFormat" xml:space="preserve">
+    <value>Up to {0} for a vehicle</value>
+  </data>
+  <data name="ShareHostLimitSaveFormat" xml:space="preserve">
+    <value>Up to {0} for a save</value>
+  </data>
+  <data name="ShareHostRulesFormat" xml:space="preserve">
+    <value>Rules of {0}</value>
+  </data>
+  <data name="ShareNoHostVehicle" xml:space="preserve">
+    <value>Borea found no sharing site that takes vehicles right now. Check your connection and try again.</value>
+  </data>
+  <data name="ShareNoHostSave" xml:space="preserve">
+    <value>Borea found no sharing site that takes saves right now. Check your connection and try again.</value>
+  </data>
+  <data name="ShareCheckOnHostFormat" xml:space="preserve">
+    <value>Check with {0}</value>
+  </data>
+  <data name="ShareCheckHintFormat" xml:space="preserve">
+    <value>Nothing is published yet. {0} checks the file first.</value>
+  </data>
+  <data name="ShareSaveZipInstead" xml:space="preserve">
+    <value>Save a zip file instead</value>
+  </data>
+  <data name="ShareSaveZipInsteadHint" xml:space="preserve">
+    <value>Nothing is published. Nobody can find it in Discover.</value>
+  </data>
+  <data name="ShareWaitingForApproval" xml:space="preserve">
+    <value>Waiting for you to approve in the browser...</value>
+  </data>
+  <data name="ShareSignInFormat" xml:space="preserve">
+    <value>A page of {0} opens in your browser. Sign in there if it asks, check that it shows this code, and approve.</value>
+  </data>
+  <data name="ShareOpenPageAgain" xml:space="preserve">
+    <value>Open the page again</value>
+  </data>
+  <data name="ShareCopyCode" xml:space="preserve">
+    <value>Copy code</value>
+  </data>
+  <data name="ShareCodeWarningFormat" xml:space="preserve">
+    <value>Use this code only on {0}. If another page asks for it, close that page.</value>
+  </data>
+  <data name="ShareChecksPassedFormat" xml:space="preserve">
+    <value>All {0} checks of {1} passed.</value>
+  </data>
+  <data name="ShareCheckDetailFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="ShareDetailsListingFormat" xml:space="preserve">
+    <value>This is what {0} stores about your file.</value>
+  </data>
+  <data name="ShareVersionLineFormat" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="ShareVersionHint" xml:space="preserve">
+    <value>Three numbers, such as 1.0.0. A higher number tells players that it is newer.</value>
+  </data>
+  <data name="ShareVersionInvalid" xml:space="preserve">
+    <value>A version has three numbers, such as 1.0.0.</value>
+  </data>
+  <data name="ShareChannelHint" xml:space="preserve">
+    <value>Most players only get stable versions. Choose testing to let testers try it first.</value>
+  </data>
+  <data name="SharePublicNoticeFormat" xml:space="preserve">
+    <value>Publishing is public. Anyone can download this version, and its history stays public. Borea cannot remove it later. {0} takes content down on request.</value>
+  </data>
+  <data name="SharePublishVersionFormat" xml:space="preserve">
+    <value>Publish version {0}</value>
+  </data>
+  <data name="ShareFolderCheckVehicle" xml:space="preserve">
+    <value>Another vehicle already installs under this name. Rename yours, then check again.</value>
+  </data>
+  <data name="ShareFolderCheckSave" xml:space="preserve">
+    <value>Another save already installs under this name. Rename yours, then check again.</value>
+  </data>
+  <data name="ShareFolderTakenVehicleFormat" xml:space="preserve">
+    <value>A vehicle named {0} is already in Discover, and players could not tell them apart. Rename yours to share it.</value>
+  </data>
+  <data name="ShareFolderTakenSaveFormat" xml:space="preserve">
+    <value>A save named {0} is already in Discover, and players could not tell them apart. Rename yours to share it.</value>
+  </data>
+  <data name="ShareRenameAndCheck" xml:space="preserve">
+    <value>Rename and check again</value>
+  </data>
   <data name="ListingShareHeading" xml:space="preserve">
     <value>What you share</value>
   </data>
@@ -3481,22 +4003,25 @@
     <value>Borea read the file and proposed one required dependency for each mod of this instance that defines a part, substance, character or body that the file names. Check the list: remove what the file does not need, and add a mod that only changes how parts behave as recommends.</value>
   </data>
   <data name="ListingShareArchiveHeading" xml:space="preserve">
-    <value>Save the archive</value>
+    <value>Share without a sharing site</value>
+  </data>
+  <data name="ListingShareArchiveIntro" xml:space="preserve">
+    <value>For authors who host the file themselves. You upload the zip file as a release in your own GitHub repository and list it in the index yourself.</value>
   </data>
   <data name="ListingShareArchiveHint" xml:space="preserve">
-    <value>Attach the saved archive to a release of your own, and name that release under Releases.</value>
+    <value>Attach the zip file to a release in your own repository, and enter that release under Releases.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
-    <value>The game does not write these files, so a mod did. Add the mod that writes them as a dependency:</value>
+    <value>The game does not write these files, so a mod did. Add the mod that writes them:</value>
   </data>
   <data name="ListingShareSaveArchive" xml:space="preserve">
-    <value>Save archive</value>
+    <value>Save zip file</value>
   </data>
   <data name="ListingShareArchiveFileType" xml:space="preserve">
     <value>Zip archive</value>
   </data>
   <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
-    <value>Saved {0}. SHA-256 {1}, {2} bytes.</value>
+    <value>Saved {0} ({2}). Checksum (SHA-256): {1}</value>
   </data>
   <data name="ListingShareHostHint" xml:space="preserve">
     <value>A share host keeps the archive and opens the listing pull request for you. You sign in with the account that the host offers, and the host checks the archive before anything is published.</value>
@@ -3508,7 +4033,7 @@
     <value>Share on {0}</value>
   </data>
   <data name="ListingShareHostWriting" xml:space="preserve">
-    <value>Writing the archive...</value>
+    <value>Preparing your file...</value>
   </data>
   <data name="ListingShareHostSigningInFormat" xml:space="preserve">
     <value>Waiting for the sign-in on {0}...</value>
@@ -3519,14 +4044,20 @@
   <data name="ListingShareHostCopyCode" xml:space="preserve">
     <value>Copy the code and open the page</value>
   </data>
+  <data name="ListingShareHostOpenFailedFormat" xml:space="preserve">
+    <value>The page could not be opened: {0}</value>
+  </data>
   <data name="ListingShareHostUploading" xml:space="preserve">
     <value>Uploading, and the host checks the archive...</value>
+  </data>
+  <data name="ListingShareHostUploadingFormat" xml:space="preserve">
+    <value>Uploading the file, and {0} checks it...</value>
   </data>
   <data name="ListingShareHostPublishing" xml:space="preserve">
     <value>Publishing...</value>
   </data>
   <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
-    <value>The archive is {0}, and {1} takes at most {2}. Nothing was sent.</value>
+    <value>Your file is {0}, but {1} accepts at most {2}. Nothing was uploaded. Check the folder for large files that the vehicle or save does not need.</value>
   </data>
   <data name="ListingShareCheckPassedFormat" xml:space="preserve">
     <value>{0}: passed</value>
@@ -3536,6 +4067,9 @@
   </data>
   <data name="ListingShareHostChecksFailed" xml:space="preserve">
     <value>Fix what the host found, then share again.</value>
+  </data>
+  <data name="ListingShareHostChecksFailedFormat" xml:space="preserve">
+    <value>{0} found a problem with your file. Nothing was published.</value>
   </data>
   <data name="ListingShareHostListing" xml:space="preserve">
     <value>The listing text that the host shows</value>
@@ -3558,17 +4092,170 @@
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>The share host no longer takes the sign-in. Share again to sign in.</value>
   </data>
+  <data name="ListingShareHostSignedOutFormat" xml:space="preserve">
+    <value>Your sign-in on {0} ended. Sign in again to go on.</value>
+  </data>
   <data name="ListingShareHostSignInRefused" xml:space="preserve">
     <value>The sign-in was refused, or its code expired.</value>
+  </data>
+  <data name="ListingShareHostSignInRefusedFormat" xml:space="preserve">
+    <value>You did not approve Borea on {0}, or the code ran out of time. Try again.</value>
   </data>
   <data name="ListingShareHostNetwork" xml:space="preserve">
     <value>The share host could not be reached.</value>
   </data>
+  <data name="ListingShareHostNetworkFormat" xml:space="preserve">
+    <value>{0} could not be reached. Check your connection and try again.</value>
+  </data>
   <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
-    <value>{0} answered in a way that Borea does not understand.</value>
+    <value>{0} sent an answer that Borea cannot read. Try again later.</value>
   </data>
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}: {1}</value>
+  </data>
+  <data name="ShareOpenHostFormat" xml:space="preserve">
+    <value>Open {0}</value>
+  </data>
+  <data name="ShareManageHeading" xml:space="preserve">
+    <value>You shared this</value>
+  </data>
+  <data name="ShareManageDoneHint" xml:space="preserve">
+    <value>You can change the page or take down a version later.</value>
+  </data>
+  <data name="ShareManageChange" xml:space="preserve">
+    <value>Change the page</value>
+  </data>
+  <data name="ShareManageTakeDown" xml:space="preserve">
+    <value>Take down a version</value>
+  </data>
+  <data name="ShareManageOnHostFormat" xml:space="preserve">
+    <value>Manage it on {0}</value>
+  </data>
+  <data name="ShareManageChangeTitleFormat" xml:space="preserve">
+    <value>Change the page of {0}</value>
+  </data>
+  <data name="ShareManageChangeHint" xml:space="preserve">
+    <value>Your change goes to Discover as a request. A field that you do not change stays as it is.</value>
+  </data>
+  <data name="ShareManageNoChange" xml:space="preserve">
+    <value>Nothing is changed yet.</value>
+  </data>
+  <data name="ShareManageSend" xml:space="preserve">
+    <value>Send the change</value>
+  </data>
+  <data name="ShareManageSendingFormat" xml:space="preserve">
+    <value>Sending the change to {0}...</value>
+  </data>
+  <data name="ShareManageSentFormat" xml:space="preserve">
+    <value>{0} has your change. It shows up in Discover after its request went through, and this can take some hours. You do not need to do anything.</value>
+  </data>
+  <data name="ShareManageSentLaterFormat" xml:space="preserve">
+    <value>{0} has your change. It shows up in Discover later, because {0} could not send the request yet and tries again by itself. You do not need to do anything.</value>
+  </data>
+  <data name="ShareManageNotOfferedFormat" xml:space="preserve">
+    <value>{0} does not offer this in Borea. Use the link below to do it on {0}.</value>
+  </data>
+  <data name="ShareTakeDownTitleFormat" xml:space="preserve">
+    <value>Take down a version of {0}</value>
+  </data>
+  <data name="ShareTakeDownChoose" xml:space="preserve">
+    <value>Choose the version to take down.</value>
+  </data>
+  <data name="ShareTakeDownPlaceholder" xml:space="preserve">
+    <value>Choose a version</value>
+  </data>
+  <data name="ShareTakeDownButton" xml:space="preserve">
+    <value>Take down</value>
+  </data>
+  <data name="ShareTakeDownNoVersion" xml:space="preserve">
+    <value>Borea knows no version to take down. Use the link below.</value>
+  </data>
+  <data name="ShareTakeDownWarningFormat" xml:space="preserve">
+    <value>This takes down version {0} of {1} on {2}. Its file and its copy on the Internet Archive are deleted. You cannot undo this, and the version number {0} can never be used again. The download can keep working for up to 10 minutes.</value>
+  </data>
+  <data name="ShareTakeDownVersionFormat" xml:space="preserve">
+    <value>Take down version {0}</value>
+  </data>
+  <data name="ShareTakingDownFormat" xml:space="preserve">
+    <value>Taking down version {0}...</value>
+  </data>
+  <data name="ShareTakenDownFormat" xml:space="preserve">
+    <value>Version {0} is taken down. Its download can keep working for up to 10 minutes, and it leaves Discover within some hours.</value>
+  </data>
+  <data name="ShareTakenDownHeadingFormat" xml:space="preserve">
+    <value>Version {1} of {0} is taken down</value>
+  </data>
+  <data name="ShareTakeDownLostAnswerFormat" xml:space="preserve">
+    <value>Borea got no answer from {0}, so it does not know whether version {1} is taken down. Check the page on {0}.</value>
+  </data>
+  <data name="ShareDoneHeadingFormat" xml:space="preserve">
+    <value>{0} is published</value>
+  </data>
+  <data name="ShareDoneNow" xml:space="preserve">
+    <value>Everyone can download it now.</value>
+  </data>
+  <data name="ShareOpenPage" xml:space="preserve">
+    <value>Open page</value>
+  </data>
+  <data name="ShareDoneNewListing" xml:space="preserve">
+    <value>It shows up in Discover by itself, and this can take some hours. You do not need to do anything.</value>
+  </data>
+  <data name="ShareDoneNewListingLaterFormat" xml:space="preserve">
+    <value>It shows up in Discover later, because {0} could not send it there yet and tries again by itself. You do not need to do anything.</value>
+  </data>
+  <data name="ShareDoneNewVersion" xml:space="preserve">
+    <value>The new version shows up in Discover within some hours. You do not need to do anything.</value>
+  </data>
+  <data name="ShareTechnicalDetails" xml:space="preserve">
+    <value>Technical details</value>
+  </data>
+  <data name="ShareShowRequest" xml:space="preserve">
+    <value>Show the request on GitHub</value>
+  </data>
+  <data name="ShareSignedInFormat" xml:space="preserve">
+    <value>Signed in on {0}. Not you?</value>
+  </data>
+  <data name="ShareSignOutFormat" xml:space="preserve">
+    <value>Sign out of {0}</value>
+  </data>
+  <data name="ShareBackToDescription" xml:space="preserve">
+    <value>Back to the description</value>
+  </data>
+  <data name="ShareErrorIdTakenFormat" xml:space="preserve">
+    <value>The short name {0} is already used on {1}, by a mod, a vehicle or a save. Go back and choose another one.</value>
+  </data>
+  <data name="ShareErrorVersionTakenFormat" xml:space="preserve">
+    <value>{0} already had version {1}, also if it was taken down. Enter a higher version, for example {2}.</value>
+  </data>
+  <data name="ShareErrorNotOwnerFormat" xml:space="preserve">
+    <value>You are signed in to {0} with an account that does not own {1}. Sign out and sign in with the account you first shared it with.</value>
+  </data>
+  <data name="ShareErrorRateLimitedFormat" xml:space="preserve">
+    <value>{0} asks you to wait before the next share. Try again in {1}. Your entries stay.</value>
+  </data>
+  <data name="ShareErrorRateLimitedLaterFormat" xml:space="preserve">
+    <value>{0} asks you to wait before the next share. Try again later. Your entries stay.</value>
+  </data>
+  <data name="ShareErrorUploadGoneFormat" xml:space="preserve">
+    <value>The upload is no longer on {0}. It may have run out of time, or it is already published. Check the page on {0}, then check the file again.</value>
+  </data>
+  <data name="ShareErrorTooLargeFormat" xml:space="preserve">
+    <value>{0} says that this file is too large. Check the folder for large files that the vehicle or save does not need.</value>
+  </data>
+  <data name="ShareErrorNoVehiclesFormat" xml:space="preserve">
+    <value>{0} does not take vehicles at the moment.</value>
+  </data>
+  <data name="ShareErrorNoSavesFormat" xml:space="preserve">
+    <value>{0} does not take saves at the moment.</value>
+  </data>
+  <data name="ShareErrorUnavailableFormat" xml:space="preserve">
+    <value>{0} has a problem right now. Nothing changed on your computer. Try again later.</value>
+  </data>
+  <data name="ShareErrorLostAnswerFormat" xml:space="preserve">
+    <value>Borea got no answer from {0}, so it does not know whether this is published. Click Publish again. An upload cannot publish twice.</value>
+  </data>
+  <data name="ShareErrorFileFormat" xml:space="preserve">
+    <value>Borea could not read or write the file of {0}. Check that its folder is still there, then try again.</value>
   </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
@@ -3589,7 +4276,7 @@
     <value>star system</value>
   </data>
   <data name="ListingShareNotProvidedFormat" xml:space="preserve">
-    <value>No mod of this instance defines {0}.</value>
+    <value>Borea could not find a mod that gives {0}. Players without that mod may not be able to load it. Add the mod if you know it.</value>
   </data>
   <data name="ListingShareDisabledProviderFormat" xml:space="preserve">
     <value>{0} defines {1}, but this instance does not load it, so Borea added no entry.</value>
@@ -3848,6 +4535,27 @@
   </data>
   <data name="InstallStepsDismiss" xml:space="preserve">
     <value>Dismiss</value>
+  </data>
+  <data name="InstalledWhereFormat" xml:space="preserve">
+    <value>Where to find {0}</value>
+  </data>
+  <data name="InstalledStartFormat" xml:space="preserve">
+    <value>Start the game from {0}.</value>
+  </data>
+  <data name="InstalledVehicleMenu" xml:space="preserve">
+    <value>Press Esc and choose LAUNCH VEHICLE.</value>
+  </data>
+  <data name="InstalledVehiclePickFormat" xml:space="preserve">
+    <value>Pick {0} under Vehicle Save.</value>
+  </data>
+  <data name="InstalledSaveMenu" xml:space="preserve">
+    <value>Press Esc and choose SAVE/LOAD.</value>
+  </data>
+  <data name="InstalledSavePickFormat" xml:space="preserve">
+    <value>Double-click {0}. The game asks once before it loads the save.</value>
+  </data>
+  <data name="InstalledPlayFormat" xml:space="preserve">
+    <value>Play {0}</value>
   </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Release {0} has the status {1}, which your release channel does not offer.</value>
@@ -5553,6 +6261,30 @@
   <data name="PreviewResetView" xml:space="preserve">
     <value>Reset view</value>
   </data>
+  <data name="PreviewSavePicture" xml:space="preserve">
+    <value>Save picture</value>
+  </data>
+  <data name="PreviewSavePictureTip" xml:space="preserve">
+    <value>Saves this view as a PNG file on your computer. Nothing is uploaded.</value>
+  </data>
+  <data name="PreviewPictureFileType" xml:space="preserve">
+    <value>PNG picture</value>
+  </data>
+  <data name="PreviewPictureFailed" xml:space="preserve">
+    <value>The picture could not be saved.</value>
+  </data>
+  <data name="PreviewFactPartsFormat" xml:space="preserve">
+    <value>Parts: {0}</value>
+  </data>
+  <data name="PreviewFactStagesFormat" xml:space="preserve">
+    <value>Stages: {0}</value>
+  </data>
+  <data name="PreviewExpandView" xml:space="preserve">
+    <value>Expand view</value>
+  </data>
+  <data name="PreviewCollapseView" xml:space="preserve">
+    <value>Shrink view</value>
+  </data>
   <data name="PreviewAttribution" xml:space="preserve">
     <value>Parts are drawn from your own KSA install. Borea does not ship game files.</value>
   </data>
@@ -5616,6 +6348,9 @@
   <data name="UpdateAllTitleNoCountFormat" xml:space="preserve">
     <value>Update the mods in {0}</value>
   </data>
+  <data name="UpdateAllTitleWithRecordedFormat" xml:space="preserve">
+    <value>Update the mods, vehicles and saves in {0}</value>
+  </data>
   <data name="UpdateAllConfirmFormat" xml:space="preserve">
     <value>Update {0} mods</value>
   </data>
@@ -5633,6 +6368,9 @@
   </data>
   <data name="UpdateAllListHint" xml:space="preserve">
     <value>Select a mod to read what changed.</value>
+  </data>
+  <data name="UpdateAllRecordedHeading" xml:space="preserve">
+    <value>Vehicles and saves update after the mods. One that needs your answer waits on its row.</value>
   </data>
   <data name="UpdateAllNew" xml:space="preserve">
     <value>New</value>

@@ -111,6 +111,9 @@ public partial class MainViewModel
                 HoldPackUpdate(item, pending, result);
                 item.ReopenContentName = AskContentName(result.Content, item.ContentNames, () => UpdatePackAsync(item));
             }
+
+            if (stopped is null && result.Plan is { } planned)
+                await ShowConflictsAsync(planned, () => RetryRow(item, item.InstanceId) is { } shown ? UpdatePackAsync(shown) : Task.CompletedTask);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -158,7 +161,7 @@ public partial class MainViewModel
             choices.BlockedText = result.CanRun ? null : BlockedText(result);
     }
 
-    private static string BlockedText(ModPackUpdateResult result)
+    private string BlockedText(ModPackUpdateResult result)
         => result.Plan is { } plan ? Describe(plan.Conflicts.Concat(plan.UnresolvedChoices)) : Describe(result.Warnings);
 
     /// <summary>Runs the update the notice holds, unless the plan with its choices asks something new, cannot run, or has a new warning.</summary>

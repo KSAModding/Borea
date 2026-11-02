@@ -1,0 +1,28 @@
+{
+  "snapshot_version": 1,
+  "saves": [
+    {
+      "id": "CampaignSave",
+      "authored": {
+        "spec_version": 1,
+        "id": "CampaignSave",
+        "type": "save",
+        "name": "Moon Campaign",
+        "authors": ["Kitten"],
+        "abstract": "A Moon base with three landers, ready to fly.",
+        "license": "CC0-1.0"
+      },
+      "releases": [
+        {
+          "id": "CampaignSave",
+          "type": "save",
+          "version": "1.0.0",
+          "release_status": "stable",
+          "release_date": "2026-10-21T12:00:00Z",
+          "game_min": "2026.9.4.5400",
+          "game_min_revision": 5400
+        }
+      ]
+    }
+  ]
+}

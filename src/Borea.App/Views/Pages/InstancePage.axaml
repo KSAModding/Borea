@@ -4,6 +4,19 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.InstancePage"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <!-- these are style setters, because a value set on the row itself would win over the marked state. The bottom border of a marked row takes 1 px of its padding, so the rows below stay in place -->
+        <Style Selector="Border.game-save-row">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="BorderThickness" Value="0,1,0,0" />
+            <Setter Property="Padding" Value="16,8" />
+        </Style>
+        <Style Selector="Border.game-save-row.marked">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="BorderThickness" Value="0,1,0,1" />
+            <Setter Property="Padding" Value="16,8,16,7" />
+        </Style>
+    </UserControl.Styles>
     <UserControl.Resources>
         <!-- c/table-versions of one content group -->
         <DataTemplate x:Key="ContentGroupTable" x:DataType="vm:ContentGroup">
@@ -37,7 +50,7 @@
                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ManualInstallsChecking}" IsVisible="{Binding IsChecking}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding ReplaceWarningText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <Panel Grid.Column="3" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -73,7 +86,7 @@
 
         <!-- one vehicle or save. The columns after the name share their widths with the other rows of both tables -->
         <DataTemplate x:Key="GameSaveRow" x:DataType="vm:GameSaveItem">
-            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+            <Border Classes="game-save-row" Classes.marked="{Binding IsMarked}" Tag="{Binding}">
                 <Grid RowDefinitions="Auto,Auto">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="48" />
@@ -92,13 +105,28 @@
                     </Border>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
                         <TextBlock Classes="heading-sm" Text="{Binding Name}" ToolTip.Tip="{Binding FolderName}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedText}" ToolTip.Tip="{Binding UpdatedText}" TextTrimming="CharacterEllipsis" />
-                        <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding HasRecord}">
+                        <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedDateText}" ToolTip.Tip="{Binding UpdatedText}" TextWrapping="NoWrap" />
+                        <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding ShowsListingLine}">
                             <Button Classes="link" Margin="-8,0,0,0" Command="{Binding OpenPageCommand}" IsVisible="{Binding ListingName, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingName}">
-                                <TextBlock Classes="action-md" Text="{Binding ListingName}" />
+                                <TextBlock Classes="action-md" Text="{Binding ListingLinkText}" />
                             </Button>
-                            <TextBlock Classes="body-sm secondary" Text="{Binding InstalledVersionText}" VerticalAlignment="Center" />
-                            <TextBlock Classes="body-sm secondary" Text="{Binding NewerText}" VerticalAlignment="Center" IsVisible="{Binding NewerText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding InstalledVersionText}" VerticalAlignment="Center" IsVisible="{Binding HasRecord}" />
+                            <Border Classes="chip muted" VerticalAlignment="Center" IsVisible="{Binding SharedOnText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SharedOnText}" AutomationProperties.Name="{Binding SharedOnText}">
+                                <TextBlock Text="{Binding SharedOnText}" />
+                            </Border>
+                            <!-- the newer version stays named in this line, and the download replaces it with the progress below the row -->
+                            <TextBlock Classes="body-sm secondary" Text="{Binding NewerText}" VerticalAlignment="Center">
+                                <TextBlock.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="NewerText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                        <Binding Path="!IsInstalling" />
+                                    </MultiBinding>
+                                </TextBlock.IsVisible>
+                            </TextBlock>
+                            <!-- the same small button as the update of a mod row, and its tooltip names the version. It stays in this line, because in the shared actions column its width would come out of the name of every row -->
+                            <Button Classes="icon" VerticalAlignment="Center" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanChangeContent}" ToolTip.Tip="{Binding UpdateText}" AutomationProperties.Name="{Binding UpdateText}">
+                                <Path Classes="icon" Data="{StaticResource Icon.ArrowsLeftRight}" />
+                            </Button>
                             <Border Classes="chip untested" VerticalAlignment="Center" IsVisible="{Binding IsChanged}" ToolTip.Tip="{Binding ChangedFilesText}">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <Ellipse />
@@ -107,10 +135,9 @@
                             </Border>
                         </WrapPanel>
                         <TextBlock Classes="body-sm danger" Text="{Binding DeleteConfirmText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingDelete}" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" TextWrapping="Wrap" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextWrapping="Wrap" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding ReplaceText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
                     </StackPanel>
                     <Border Grid.Column="3" Classes="chip untested" Margin="24,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding IsOlderBuild}" ToolTip.Tip="{Binding OlderBuildText}">
@@ -124,11 +151,25 @@
                         <TextBlock Classes="label-md" Text="{Binding BuildText}" MaxWidth="160" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     </StackPanel>
                     <TextBlock Grid.Column="5" Classes="label-md" Margin="24,0,0,0" Text="{Binding SizeText}" VerticalAlignment="Center" />
-                    <Panel Grid.Column="6" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                            <!-- a plan has no run yet, so it shows no progress and nothing to pause or stop -->
+                            <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" IsIndeterminate="{Binding Run, Converter={x:Static ObjectConverters.IsNull}}" Foreground="{StaticResource Brush.Accent}" />
+                            <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:False}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
+                                <Panel>
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
+                                    <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
+                                </Panel>
+                            </Button>
+                            <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:False}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            </Button>
+                            <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                        </StackPanel>
+                        <Button Classes="text" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShare}" Command="{Binding ShareCommand}" IsVisible="{Binding ShowsShareButton}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShareTip}" />
                         <Button Classes="icon" IsVisible="{Binding IsIdle}" AutomationProperties.Name="{Binding Name}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                    <MenuItem Header="{Binding UpdateText}" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveBackUp}" Command="{Binding BackUpCommand}" />
                                     <!-- only once the index accepts the type, see GameSaveSection.CanShare -->
@@ -140,9 +181,10 @@
                             </Button.Flyout>
                             <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
                         </Button>
-                    </Panel>
+                    </StackPanel>
                     <!-- the copy target and the confirmations open below the row, so they do not make the shared columns of every row wider -->
-                    <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="5" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="5" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="body-sm secondary" Margin="0,4,0,0" Text="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ProgressStatus}" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <ContentControl Margin="0,4,0,0" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <StackPanel Spacing="4" Margin="0,4,0,0" IsVisible="{Binding IsChoosingTarget}">
                             <TextBlock Classes="body-sm secondary" Text="{Binding CopyNoteText}" TextWrapping="Wrap" IsVisible="{Binding CopyNoteText, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -155,7 +197,7 @@
                             </ComboBox>
                         </StackPanel>
                         <Panel Grid.Column="1" Margin="0,4,0,0" VerticalAlignment="Bottom">
-                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingInstall}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingInstall}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanChangeContent}">
                                 <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" />
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                             </StackPanel>
@@ -320,9 +362,14 @@
                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCopyFromProfileCommand}" />
                         </StackPanel>
                     </StackPanel>
-                    <Grid ColumnDefinitions="*,16,Auto" Margin="16,12" IsVisible="{Binding !HasItems}">
-                        <TextBlock Classes="body-md muted" Text="{Binding EmptyText}" VerticalAlignment="Center" />
-                        <Button Grid.Column="2" Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                    <Grid ColumnDefinitions="*,16,Auto,4,Auto" Margin="16,12" IsVisible="{Binding !HasItems}">
+                        <TextBlock Classes="body-md muted" Text="{Binding EmptyText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Classes="link" Command="{Binding FindOnDiscoverCommand}" VerticalAlignment="Center" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectedInstance.IsActive, FallbackValue={x:False}}">
+                            <TextBlock Classes="action-md" Text="{Binding FindText}" />
+                        </Button>
+                        <Button Grid.Column="4" Classes="link" Command="{Binding OpenFolderCommand}" VerticalAlignment="Center">
+                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" />
+                        </Button>
                     </Grid>
                     <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource GameSaveRow}" />
                 </StackPanel>

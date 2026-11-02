@@ -481,6 +481,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetActiveInstancePointerPath() => throw new NotSupportedException();
         public string GetModFavoritesPath() => throw new NotSupportedException();
         public string GetModPackFavoritesPath() => throw new NotSupportedException();
+        public string GetSharedContentPath() => throw new NotSupportedException();
         public string GetBoreaSettingsPath() => throw new NotSupportedException();
         public string GetBackupsRoot() => throw new NotSupportedException();
         public string GetLogsFolder() => throw new NotSupportedException();

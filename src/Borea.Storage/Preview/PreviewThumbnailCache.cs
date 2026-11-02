@@ -56,6 +56,22 @@ public sealed class PreviewThumbnailCache : IPreviewThumbnails
         return File.Exists(path) ? path : null;
     }
 
+    public string? TryGetSceneKey(string? vehicleSha256, string? gameBuild)
+    {
+        if (Name(vehicleSha256, gameBuild) is not { } name)
+            return null;
+
+        try
+        {
+            var key = new FileInfo(Path.Combine(_folder, name + KeyExtension));
+            return key.Exists && key.Length <= MaxSceneKeyLength ? File.ReadAllText(key.FullName, Encoding.ASCII) : null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     public bool NeedsUpdate(string? vehicleSha256, string? gameBuild, string? sceneKey)
     {
         if (Name(vehicleSha256, gameBuild) is not { } name || !IsSceneKey(sceneKey))

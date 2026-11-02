@@ -444,6 +444,16 @@
         <Style Selector="Border.thumbnail > views|PreviewStillView > views|ListingImageView">
             <Setter Property="CornerRadius" Value="7.5" />
         </Style>
+        <!-- the note sits on a dark strip, because the still under it can be any color -->
+        <Style Selector="views|PreviewStillView > Border.still-note-strip">
+            <Setter Property="Background" Value="#CC000000" />
+            <Setter Property="Padding" Value="4,3" />
+        </Style>
+        <Style Selector="views|PreviewStillView > Border.still-note-strip > TextBlock.still-note">
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
         <Style Selector="Border.chip">
             <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
             <Setter Property="BorderThickness" Value="1" />
@@ -843,6 +853,10 @@
             <Setter Property="CornerRadius" Value="100" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <!-- every state of a selected row, because the stock theme gives each of them its own blue -->
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
         </Style>
         <Style Selector="Button.link:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />

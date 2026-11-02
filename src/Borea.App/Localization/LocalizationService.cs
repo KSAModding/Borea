@@ -1496,6 +1496,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeDiscoverMods => Resources.HomeDiscoverMods;
 
+    public string HomeDiscoverVehicles => Resources.HomeDiscoverVehicles;
+
+    public string HomeNewMods => Resources.HomeNewMods;
+
+    public string HomeNewVehicles => Resources.HomeNewVehicles;
+
+    public string HomeMostDownloaded => Resources.HomeMostDownloaded;
+
+    public string FormatHomeListedOn(string date)
+        => string.Format(CultureInfo.CurrentCulture, Resources.HomeListedOnFormat, date);
+
     public string HomeNoGameVersion => Resources.HomeNoGameVersion;
 
     public string HomeSetupNotSaved => Resources.HomeSetupNotSaved;
@@ -1636,13 +1647,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveNoSaves => Resources.GameSaveNoSaves;
 
+    public string GameSaveFindVehicles => Resources.GameSaveFindVehicles;
+
+    public string GameSaveFindSaves => Resources.GameSaveFindSaves;
+
     public string GameSaveOlderBuild => Resources.GameSaveOlderBuild;
 
     public string GameSaveChangedSinceInstall => Resources.GameSaveChangedSinceInstall;
 
+    public string GameSaveViewPage => Resources.GameSaveViewPage;
+
     public string GameSaveBackUp => Resources.GameSaveBackUp;
 
     public string GameSaveShare => Resources.GameSaveShare;
+
+    public string GameSaveShareTip => Resources.GameSaveShareTip;
 
     public string GameSaveCopyToInstance => Resources.GameSaveCopyToInstance;
 
@@ -1657,6 +1676,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string GameSaveDeleteConfirm => Resources.GameSaveDeleteConfirm;
 
     public string GameSaveRenameSaveTitle => Resources.GameSaveRenameSaveTitle;
+
+    public string GameSaveRenameContinue => Resources.GameSaveRenameContinue;
+
+    public string GameSaveRenameChooseAnother => Resources.GameSaveRenameChooseAnother;
 
     public string GameSaveRenameVehicleTitle => Resources.GameSaveRenameVehicleTitle;
 
@@ -1743,6 +1766,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatContentRemoveChanged(string name, string files)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveChangedFormat, name, files);
+
+    public string FormatChangedFilesMore(string files, int more)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ChangedFilesMoreFormat, files, more);
 
     public string FormatGameSaveDeleteChanged(string name, string files)
         => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveDeleteChangedFormat, name, files);
@@ -1840,6 +1866,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverSearchPlaceholder => Resources.DiscoverSearchPlaceholder;
 
+    public string DiscoverSearchVehicles => Resources.DiscoverSearchVehicles;
+
+    public string DiscoverSearchSaves => Resources.DiscoverSearchSaves;
+
     public string FormatDiscoverSearchCount(string count)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverSearchCountFormat, count);
 
@@ -1848,6 +1878,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverHideIncompatible => Resources.DiscoverHideIncompatible;
 
     public string DiscoverFavoritesOnly => Resources.DiscoverFavoritesOnly;
+
+    public string DiscoverStillMissingMods => Resources.DiscoverStillMissingMods;
 
     public string DiscoverFavorite => Resources.DiscoverFavorite;
 
@@ -1905,6 +1937,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverEmpty => Resources.DiscoverEmpty;
 
+    public string DiscoverClearSearchAndFilters => Resources.DiscoverClearSearchAndFilters;
+
+    public string DiscoverNoVehicles => Resources.DiscoverNoVehicles;
+
+    public string DiscoverNoVehiclesHint => Resources.DiscoverNoVehiclesHint;
+
+    public string DiscoverNoSaves => Resources.DiscoverNoSaves;
+
+    public string DiscoverNoSavesHint => Resources.DiscoverNoSavesHint;
+
     public string DiscoverLoading => Resources.DiscoverLoading;
 
     public string DiscoverIndexRetry => Resources.DiscoverIndexRetry;
@@ -1953,7 +1995,25 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverForModAuthorsText => Resources.DiscoverForModAuthorsText;
 
+    public string DiscoverShareVehicleHeading => Resources.DiscoverShareVehicleHeading;
+
+    public string DiscoverShareVehicleText => Resources.DiscoverShareVehicleText;
+
+    public string DiscoverShareVehicle => Resources.DiscoverShareVehicle;
+
+    public string DiscoverShareSaveHeading => Resources.DiscoverShareSaveHeading;
+
+    public string DiscoverShareSaveText => Resources.DiscoverShareSaveText;
+
+    public string DiscoverShareSave => Resources.DiscoverShareSave;
+
     public string ListingIntro => Resources.ListingIntro;
+
+    public string ListingShareCardTitle => Resources.ListingShareCardTitle;
+
+    public string ListingShareCardText => Resources.ListingShareCardText;
+
+    public string ListingShareCardAction => Resources.ListingShareCardAction;
 
     public string ListingNewTitle => Resources.ListingNewTitle;
 
@@ -2073,6 +2133,228 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingGameMinFromArchiveHint => Resources.ListingGameMinFromArchiveHint;
 
+    public string ShareFlowTitle => Resources.ShareFlowTitle;
+
+    public string ShareFlowIntro => Resources.ShareFlowIntro;
+
+    public string ShareStepChoose => Resources.ShareStepChoose;
+
+    public string ShareChooseHeading => Resources.ShareChooseHeading;
+
+    public string ShareChooseHint => Resources.ShareChooseHint;
+
+    public string ShareSaveHoldsAll => Resources.ShareSaveHoldsAll;
+
+    public string ShareChooseLoading => Resources.ShareChooseLoading;
+
+    public string ShareChooseFirst => Resources.ShareChooseFirst;
+
+    public string ShareGameRunning => Resources.ShareGameRunning;
+
+    public string ShareGameRunningPublish => Resources.ShareGameRunningPublish;
+
+    public string ShareNoInstance => Resources.ShareNoInstance;
+
+    public string ShareNoVehicles => Resources.ShareNoVehicles;
+
+    public string ShareNoSaves => Resources.ShareNoSaves;
+
+    public string ShareProfileVehicles => Resources.ShareProfileVehicles;
+
+    public string ShareProfileSaves => Resources.ShareProfileSaves;
+
+    public string ShareNeedsNewName => Resources.ShareNeedsNewName;
+
+    public string ShareNoBuild => Resources.ShareNoBuild;
+
+    public string ShareAnother => Resources.ShareAnother;
+
+    public string ShareStepDescribe => Resources.ShareStepDescribe;
+
+    public string ShareNext => Resources.ShareNext;
+
+    public string SharePreviewVehicle => Resources.SharePreviewVehicle;
+
+    public string SharePreviewSave => Resources.SharePreviewSave;
+
+    public string SharePreviewSentence => Resources.SharePreviewSentence;
+
+    public string ShareDescribeVehicle => Resources.ShareDescribeVehicle;
+
+    public string ShareDescribeSave => Resources.ShareDescribeSave;
+
+    public string ShareNameHint => Resources.ShareNameHint;
+
+    public string ShareYourName => Resources.ShareYourName;
+
+    public string ShareYourNameHint => Resources.ShareYourNameHint;
+
+    public string ShareOneSentence => Resources.ShareOneSentence;
+
+    public string ShareOneSentenceHint => Resources.ShareOneSentenceHint;
+
+    public string ShareSentenceVehicleExample => Resources.ShareSentenceVehicleExample;
+
+    public string ShareSentenceSaveExample => Resources.ShareSentenceSaveExample;
+
+    public string ShareLicenseHint => Resources.ShareLicenseHint;
+
+    public string ShareLicenseInvalid => Resources.ShareLicenseInvalid;
+
+    public string ShareLicensePlaceholder => Resources.ShareLicensePlaceholder;
+
+    public string ShareLicenseCcBy => Resources.ShareLicenseCcBy;
+
+    public string ShareLicenseCc0 => Resources.ShareLicenseCc0;
+
+    public string ShareLicenseCcBySa => Resources.ShareLicenseCcBySa;
+
+    public string ShareLicenseCcByNc => Resources.ShareLicenseCcByNc;
+
+    public string ShareLicenseOther => Resources.ShareLicenseOther;
+
+    public string ShareMoreOptions => Resources.ShareMoreOptions;
+
+    public string ShareShortName => Resources.ShareShortName;
+
+    public string ShareShortNameHint => Resources.ShareShortNameHint;
+
+    public string ShareIdEmpty => Resources.ShareIdEmpty;
+
+    public string ShareIdInvalid => Resources.ShareIdInvalid;
+
+    public string ShareDescriptionHint => Resources.ShareDescriptionHint;
+
+    public string ShareMissingName => Resources.ShareMissingName;
+
+    public string ShareMissingAuthor => Resources.ShareMissingAuthor;
+
+    public string ShareMissingSentence => Resources.ShareMissingSentence;
+
+    public string ShareMissingLicense => Resources.ShareMissingLicense;
+
+    public string ShareMissingId => Resources.ShareMissingId;
+
+    public string ShareModsHeading => Resources.ShareModsHeading;
+
+    public string ShareModsVehicleHint => Resources.ShareModsVehicleHint;
+
+    public string ShareModsSaveHint => Resources.ShareModsSaveHint;
+
+    public string ShareModChangedKind => Resources.ShareModChangedKind;
+
+    public string ShareModProblem => Resources.ShareModProblem;
+
+    public string ShareModsNone => Resources.ShareModsNone;
+
+    public string ShareAddMod => Resources.ShareAddMod;
+
+    public string SharePicturesHeading => Resources.SharePicturesHeading;
+
+    public string SharePictureAdd => Resources.SharePictureAdd;
+
+    public string SharePictureCover => Resources.SharePictureCover;
+
+    public string SharePictureUnreadable => Resources.SharePictureUnreadable;
+
+    public string SharePicturesSent => Resources.SharePicturesSent;
+
+    public string ShareCoverDrawing => Resources.ShareCoverDrawing;
+
+    public string ShareCoverMissing => Resources.ShareCoverMissing;
+
+    public string ShareCoverHint => Resources.ShareCoverHint;
+
+    public string ShareCoverOwn => Resources.ShareCoverOwn;
+
+    public string ShareCoverLeaveOut => Resources.ShareCoverLeaveOut;
+
+    public string ShareCoverLeftOut => Resources.ShareCoverLeftOut;
+
+    public string ShareCoverUseDrawn => Resources.ShareCoverUseDrawn;
+
+    public string ShareCoverRowName => Resources.ShareCoverRowName;
+
+    public string ShareOtherFields => Resources.ShareOtherFields;
+
+    public string ShareEditAll => Resources.ShareEditAll;
+
+    public string ShareBackToSteps => Resources.ShareBackToSteps;
+
+    public string ShareEdit => Resources.ShareEdit;
+
+    public string ShareChange => Resources.ShareChange;
+
+    public string ShareSummaryNoMods => Resources.ShareSummaryNoMods;
+
+    public string ShareHostChoiceHeading => Resources.ShareHostChoiceHeading;
+
+    public string ShareNoHostVehicle => Resources.ShareNoHostVehicle;
+
+    public string ShareNoHostSave => Resources.ShareNoHostSave;
+
+    public string ShareSaveZipInstead => Resources.ShareSaveZipInstead;
+
+    public string ShareSaveZipInsteadHint => Resources.ShareSaveZipInsteadHint;
+
+    public string ShareWaitingForApproval => Resources.ShareWaitingForApproval;
+
+    public string ShareOpenPageAgain => Resources.ShareOpenPageAgain;
+
+    public string ShareCopyCode => Resources.ShareCopyCode;
+
+    public string ShareManageHeading => Resources.ShareManageHeading;
+
+    public string ShareManageDoneHint => Resources.ShareManageDoneHint;
+
+    public string ShareManageChange => Resources.ShareManageChange;
+
+    public string ShareManageTakeDown => Resources.ShareManageTakeDown;
+
+    public string ShareManageChangeHint => Resources.ShareManageChangeHint;
+
+    public string ShareManageNoChange => Resources.ShareManageNoChange;
+
+    public string ShareManageSend => Resources.ShareManageSend;
+
+    public string ShareTakeDownChoose => Resources.ShareTakeDownChoose;
+
+    public string ShareTakeDownPlaceholder => Resources.ShareTakeDownPlaceholder;
+
+    public string ShareTakeDownButton => Resources.ShareTakeDownButton;
+
+    public string ShareTakeDownNoVersion => Resources.ShareTakeDownNoVersion;
+
+    public string ShareDoneNow => Resources.ShareDoneNow;
+
+    public string ShareOpenPage => Resources.ShareOpenPage;
+
+    public string ShareDoneNewListing => Resources.ShareDoneNewListing;
+
+    public string ShareDoneNewVersion => Resources.ShareDoneNewVersion;
+
+    public string ShareTechnicalDetails => Resources.ShareTechnicalDetails;
+
+    public string ShareShowRequest => Resources.ShareShowRequest;
+
+    public string ShareVersionHint => Resources.ShareVersionHint;
+
+    public string ShareVersionInvalid => Resources.ShareVersionInvalid;
+
+    public string ShareChannelHint => Resources.ShareChannelHint;
+
+    public string ShareIsDifferentVehicle => Resources.ShareIsDifferentVehicle;
+
+    public string ShareIsDifferentSave => Resources.ShareIsDifferentSave;
+
+    public string ShareFolderCheckVehicle => Resources.ShareFolderCheckVehicle;
+
+    public string ShareFolderCheckSave => Resources.ShareFolderCheckSave;
+
+    public string ShareRenameAndCheck => Resources.ShareRenameAndCheck;
+
+    public string ShareBackToDescription => Resources.ShareBackToDescription;
+
     public string ListingShareHeading => Resources.ListingShareHeading;
 
     public string ListingShareIntro => Resources.ListingShareIntro;
@@ -2093,6 +2375,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingShareArchiveHeading => Resources.ListingShareArchiveHeading;
 
+    public string ListingShareArchiveIntro => Resources.ListingShareArchiveIntro;
+
     public string ListingShareArchiveHint => Resources.ListingShareArchiveHint;
 
     public string ListingShareExtraFiles => Resources.ListingShareExtraFiles;
@@ -2101,33 +2385,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingShareArchiveFileType => Resources.ListingShareArchiveFileType;
 
-    public string ListingShareHostHint => Resources.ListingShareHostHint;
-
-    public string ListingShareHostHeading => Resources.ListingShareHostHeading;
-
     public string ListingShareHostWriting => Resources.ListingShareHostWriting;
 
     public string ListingShareHostCopyCode => Resources.ListingShareHostCopyCode;
 
-    public string ListingShareHostUploading => Resources.ListingShareHostUploading;
-
     public string ListingShareHostPublishing => Resources.ListingShareHostPublishing;
-
-    public string ListingShareHostChecksFailed => Resources.ListingShareHostChecksFailed;
-
-    public string ListingShareHostListing => Resources.ListingShareHostListing;
 
     public string ListingShareHostVersion => Resources.ListingShareHostVersion;
 
-    public string ListingShareHostStatus => Resources.ListingShareHostStatus;
-
     public string ListingShareHostPublish => Resources.ListingShareHostPublish;
-
-    public string ListingShareHostSignedOut => Resources.ListingShareHostSignedOut;
-
-    public string ListingShareHostSignInRefused => Resources.ListingShareHostSignInRefused;
-
-    public string ListingShareHostNetwork => Resources.ListingShareHostNetwork;
 
     public string ListingShareKindPart => Resources.ListingShareKindPart;
 
@@ -2454,6 +2720,25 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallStepsDismiss => Resources.InstallStepsDismiss;
 
+    public string FormatInstalledWhere(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledWhereFormat, name);
+
+    public string FormatInstalledStart(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledStartFormat, instance);
+
+    public string InstalledVehicleMenu => Resources.InstalledVehicleMenu;
+
+    public string FormatInstalledVehiclePick(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledVehiclePickFormat, name);
+
+    public string InstalledSaveMenu => Resources.InstalledSaveMenu;
+
+    public string FormatInstalledSavePick(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledSavePickFormat, name);
+
+    public string FormatInstalledPlay(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstalledPlayFormat, instance);
+
     public string InstallChoicesRecommended => Resources.InstallChoicesRecommended;
 
     public string InstallChoicesSuggested => Resources.InstallChoicesSuggested;
@@ -2472,6 +2757,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatUpdateAllTitleNoCount(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleNoCountFormat, instanceName);
 
+    public string FormatUpdateAllTitleWithRecorded(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateAllTitleWithRecordedFormat, instanceName);
+
     public string FormatUpdateAllConfirm(int count)
         => count == 1
             ? Resources.UpdateAllConfirmOne
@@ -2485,6 +2773,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string UpdateAllListHeading => Resources.UpdateAllListHeading;
 
     public string UpdateAllListHint => Resources.UpdateAllListHint;
+
+    public string UpdateAllRecordedHeading => Resources.UpdateAllRecordedHeading;
 
     public string UpdateAllNew => Resources.UpdateAllNew;
 
@@ -2932,6 +3222,24 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string PreviewStageLoadingTextures => Resources.PreviewStageLoadingTextures;
 
     public string PreviewResetView => Resources.PreviewResetView;
+
+    public string PreviewSavePicture => Resources.PreviewSavePicture;
+
+    public string PreviewSavePictureTip => Resources.PreviewSavePictureTip;
+
+    public string PreviewPictureFileType => Resources.PreviewPictureFileType;
+
+    public string PreviewPictureFailed => Resources.PreviewPictureFailed;
+
+    public string FormatPreviewFactParts(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewFactPartsFormat, count);
+
+    public string FormatPreviewFactStages(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PreviewFactStagesFormat, count);
+
+    public string PreviewExpandView => Resources.PreviewExpandView;
+
+    public string PreviewCollapseView => Resources.PreviewCollapseView;
 
     public string PreviewAttribution => Resources.PreviewAttribution;
 
@@ -3790,14 +4098,104 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingSaved(string fileName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingSavedFormat, fileName);
 
-    public string FormatListingShareArchiveSaved(string fileName, string sha256, long size)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareArchiveSavedFormat, fileName, sha256, size);
-
-    public string FormatListingShareOnHost(string host)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOnHostFormat, host);
+    public string FormatListingShareArchiveSaved(string fileName, string sha256, string sizeText)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareArchiveSavedFormat, fileName, sha256, sizeText);
 
     public string FormatListingShareHostSigningIn(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSigningInFormat, host);
+
+    public string FormatListingShareHostUploading(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostUploadingFormat, host);
+
+    public string FormatListingShareHostChecksFailed(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostChecksFailedFormat, host);
+
+    public string FormatListingShareHostOpenFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostOpenFailedFormat, reason);
+
+    public string FormatShareSummaryMods(string mods)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSummaryModsFormat, mods);
+
+    public string FormatSharePicturesHint(int count, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesHintFormat, count, size);
+
+    public string FormatSharePicturesNewVersionHint(int count, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesNewVersionHintFormat, count, size);
+
+    public string FormatSharePictureTooLarge(string name, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureTooLargeFormat, name, size);
+
+    public string FormatSharePictureNotImage(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureNotImageFormat, name);
+
+    public string FormatSharePictureAnimated(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureAnimatedFormat, name);
+
+    public string FormatShareSummaryPictures(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSummaryPicturesFormat, count);
+
+    public string FormatSharePicturesSending(int position, int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesSendingFormat, position, count);
+
+    public string FormatSharePicturesMissing(int missing, int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesMissingFormat, missing, count);
+
+    public string FormatSharePictureLostAnswer(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureLostAnswerFormat, host);
+
+    public string FormatSharePictureNotOwner(string host, string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureNotOwnerFormat, host, name);
+
+    public string FormatSharePicturesNotOffered(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePicturesNotOfferedFormat, host);
+
+    public string FormatSharePictureTooLargeOnHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePictureTooLargeOnHostFormat, host);
+
+    public string FormatShareNeedsBuild(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareNeedsBuildFormat, build);
+
+    public string FormatShareHostOne(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareHostOneFormat, host);
+
+    public string FormatShareHostLimitVehicle(string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareHostLimitVehicleFormat, size);
+
+    public string FormatShareHostLimitSave(string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareHostLimitSaveFormat, size);
+
+    public string FormatShareHostRules(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareHostRulesFormat, host);
+
+    public string FormatShareCheckOnHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareCheckOnHostFormat, host);
+
+    public string FormatShareCheckHint(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareCheckHintFormat, host);
+
+    public string FormatShareSignIn(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSignInFormat, host);
+
+    public string FormatShareCodeWarning(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareCodeWarningFormat, host);
+
+    public string FormatShareChecksPassed(int count, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareChecksPassedFormat, count, host);
+
+    public string FormatShareCheckDetail(string check, string message)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareCheckDetailFormat, check, message);
+
+    public string FormatShareDetailsListing(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareDetailsListingFormat, host);
+
+    public string FormatShareVersionLine(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareVersionLineFormat, version);
+
+    public string FormatSharePublicNotice(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePublicNoticeFormat, host);
+
+    public string FormatSharePublishVersion(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePublishVersionFormat, version);
 
     public string FormatListingShareHostCode(string page)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostCodeFormat, page);
@@ -3811,14 +4209,119 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingShareCheckFailed(string check, string message)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareCheckFailedFormat, check, message);
 
-    public string FormatListingShareHostPublished(string id, string version)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostPublishedFormat, id, version);
-
-    public string FormatListingShareHostReleased(string id, string version)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostReleasedFormat, id, version);
-
     public string FormatListingShareHostUnexpected(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostUnexpectedFormat, host);
+
+    public string FormatListingShareHostSignedOut(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSignedOutFormat, host);
+
+    public string FormatListingShareHostSignInRefused(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSignInRefusedFormat, host);
+
+    public string FormatListingShareHostNetwork(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostNetworkFormat, host);
+
+    public string FormatShareOpenHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareOpenHostFormat, host);
+
+    public string FormatShareManageOnHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageOnHostFormat, host);
+
+    public string FormatShareManageChangeTitle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageChangeTitleFormat, name);
+
+    public string FormatShareManageSending(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageSendingFormat, host);
+
+    public string FormatShareManageSent(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageSentFormat, host);
+
+    public string FormatShareManageSentLater(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageSentLaterFormat, host);
+
+    public string FormatShareManageNotOffered(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageNotOfferedFormat, host);
+
+    public string FormatShareTakeDownTitle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakeDownTitleFormat, name);
+
+    public string FormatShareTakeDownWarning(string version, string name, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakeDownWarningFormat, version, name, host);
+
+    public string FormatShareTakeDownVersion(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakeDownVersionFormat, version);
+
+    public string FormatShareTakingDown(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakingDownFormat, version);
+
+    public string FormatShareTakenDown(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakenDownFormat, version);
+
+    public string FormatShareTakenDownHeading(string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakenDownHeadingFormat, name, version);
+
+    public string FormatShareTakeDownLostAnswer(string host, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareTakeDownLostAnswerFormat, host, version);
+
+    public string FormatShareDoneHeading(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareDoneHeadingFormat, name);
+
+    public string FormatShareDoneNewListingLater(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareDoneNewListingLaterFormat, host);
+
+    public string FormatShareSignedIn(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSignedInFormat, host);
+
+    public string FormatShareSignOut(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSignOutFormat, host);
+
+    public string FormatShareErrorIdTaken(string id, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorIdTakenFormat, id, host);
+
+    public string FormatShareErrorVersionTaken(string name, string version, string example)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorVersionTakenFormat, name, version, example);
+
+    public string FormatShareErrorNotOwner(string host, string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorNotOwnerFormat, host, name);
+
+    public string FormatShareErrorRateLimited(string host, string duration)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorRateLimitedFormat, host, duration);
+
+    public string FormatShareErrorRateLimitedLater(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorRateLimitedLaterFormat, host);
+
+    public string FormatShareErrorUploadGone(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorUploadGoneFormat, host);
+
+    public string FormatShareErrorTooLarge(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorTooLargeFormat, host);
+
+    public string FormatShareErrorNoVehicles(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorNoVehiclesFormat, host);
+
+    public string FormatShareErrorNoSaves(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorNoSavesFormat, host);
+
+    public string FormatShareErrorUnavailable(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorUnavailableFormat, host);
+
+    public string FormatShareErrorLostAnswer(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorLostAnswerFormat, host);
+
+    public string FormatSharePickFrom(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharePickFromFormat, name);
+
+    public string FormatShareUnchangedCopy(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareUnchangedCopyFormat, name);
+
+    public string FormatShareChangedVehicle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareChangedVehicleFormat, name);
+
+    public string FormatShareChangedSave(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareChangedSaveFormat, name);
+
+    public string FormatShareErrorFile(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorFileFormat, name);
 
     public string FormatListingShareHostSaid(string host, string message)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSaidFormat, host, message);
@@ -4391,6 +4894,29 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentRemoveRequired(string modId, string dependents)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveRequiredFormat, modId, dependents);
 
+    public string ContentRemoveUpdateRunning => Resources.ContentRemoveUpdateRunning;
+
+    public string ConflictTitle => Resources.ConflictTitle;
+
+    public string ConflictWhy => Resources.ConflictWhy;
+
+    public string ConflictAgain => Resources.ConflictAgain;
+
+    public string FormatConflictDeclared(string declarer, string other)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictDeclaredFormat, declarer, other);
+
+    public string FormatConflictRemove(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictRemoveFormat, name);
+
+    public string FormatConflictOpenPage(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictOpenPageFormat, name);
+
+    public string FormatConflictVersionUnknown(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictVersionUnknownFormat, name);
+
+    public string FormatConflictPackMember(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ConflictPackMemberFormat, name);
+
     public string FormatContentNeededByVehicle(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentNeededByVehicleFormat, folder);
 
@@ -4428,8 +4954,41 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingStepFix(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingStepFixFormat, count);
 
+    public string FormatShareItemIn(string item, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareItemInFormat, item, instance);
+
+    public string FormatShareModVersion(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareModVersionFormat, version);
+
+    public string FormatShareLooksLike(string listing, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareLooksLikeFormat, listing, host);
+
+    public string FormatShareVersionOnline(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareVersionOnlineFormat, version);
+
+    public string FormatShareAsNewVersion(string listing)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareAsNewVersionFormat, listing);
+
+    public string FormatShareFolderTakenVehicle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderTakenVehicleFormat, name);
+
+    public string FormatShareFolderTakenSave(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderTakenSaveFormat, name);
+
+    public string FormatShareNewVersionLine(string listing, string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareNewVersionLineFormat, listing, host);
+
+    public string FormatShareSentenceTooLong(int length, int limit)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareSentenceTooLongFormat, length, limit);
+
+    public string FormatShareIdHeld(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareIdHeldFormat, id);
+
     public string FormatListingStillMissing(string names)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingStillMissingFormat, names);
+
+    public string FormatShareFieldsToFix(string fields)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFieldsToFixFormat, fields);
 
     public string FormatListingDependencyNumber(int number)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingDependencyNumberFormat, number);

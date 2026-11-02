@@ -32,6 +32,12 @@ public partial class MainViewModel
     internal BoreaServices? Services => _services;
 
     [RelayCommand]
+    private Task ListYourModAsync()
+    {
+        ListingEditor.LeaveShareStepWithNoShare();
+        return OpenListingAsync();
+    }
+
     internal Task OpenListingAsync()
     {
         LeaveContentPage();

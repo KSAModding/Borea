@@ -68,6 +68,7 @@ public sealed class InstanceColumnsViewTests
         var items = viewModel.ContentGroups.SelectMany(group => group.Items).ToList();
         var saves = viewModel.VehiclesSection.Items.Concat(viewModel.SavesSection.Items).ToList();
         var save = saves.Single(item => item.Name == "Earth Launch 1");
+        Assert.Contains(saves, item => item.ShowsShareButton);
         switch (state)
         {
             case RowState.Installing:

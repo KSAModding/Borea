@@ -49,7 +49,7 @@ public sealed partial class ToastService : ObservableObject
     private static bool HasToast(TaskItem task) => task switch
     {
         { State: TaskState.Finished, Kind: TaskKind.IndexRefresh } => false,
-        { State: TaskState.Finished, Kind: TaskKind.Update or TaskKind.UpdateAll, ModCount: 0 } => false,
+        { State: TaskState.Finished, Kind: TaskKind.Update or TaskKind.UpdateAll, ModCount: 0, NewVersion: null } => false,
         { State: TaskState.Stopped, Kind: TaskKind.ModListImport or TaskKind.ManualReplace } => false,
         { State: not TaskState.Failed, Kind: TaskKind.BoreaUpdate } => false,
         _ => true,
@@ -57,6 +57,10 @@ public sealed partial class ToastService : ObservableObject
 
     private void Show(TaskItem task)
     {
+        // the dialog already says why a plan stopped, and a toast under it would repeat that
+        if (task.State == TaskState.Failed && _owner.IsConflictOpen)
+            return;
+
         if (HasToast(task))
             Show(new ToastItem(this, task));
     }
@@ -108,7 +112,7 @@ public sealed partial class ToastService : ObservableObject
     internal Task OpenInstanceAsync(ToastItem toast)
     {
         Close(toast);
-        return toast.TaskItem?.InstanceId is { } instanceId ? _owner.OpenInstanceByIdAsync(instanceId) : Task.CompletedTask;
+        return toast.TaskItem is { InstanceId: { } instanceId, ContentId: var contentId } ? _owner.OpenInstanceByIdAsync(instanceId, contentId) : Task.CompletedTask;
     }
 
     internal void ShowDetails(ToastItem toast)

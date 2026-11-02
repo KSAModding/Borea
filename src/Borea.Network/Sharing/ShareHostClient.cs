@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Borea.Core.GitHub;
+using Borea.Core.Index;
 using Borea.Core.Listings;
 using Borea.Core.Secrets;
 using Borea.Core.Sharing;
@@ -28,6 +29,13 @@ public sealed class ShareHostClient : IShareHostClient
     private static readonly TimeSpan DefaultLifetime = TimeSpan.FromMinutes(15);
 
     private static readonly TimeSpan SlowDownStep = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// How long a publish waits for its answer. The timeout of the HTTP client is long because of large uploads, and a publish
+    /// offers no Cancel, so a silent host would otherwise hold the player for that time. A publish that ends here counts as a
+    /// request with no answer, and the player can send it again because an upload cannot publish twice.
+    /// </summary>
+    internal TimeSpan PublishAnswerLimit { get; init; } = TimeSpan.FromMinutes(2);
 
     private readonly HttpClient _http;
     private readonly IListingFormat _format;
@@ -152,8 +160,7 @@ public sealed class ShareHostClient : IShareHostClient
         if (upload?.Id is not { Length: > 0 } id)
             throw Unexpected(host, reply);
 
-        var checks = upload.Checks?.Where(check => check.Name is { Length: > 0 }).Select(check => new ShareCheck(check.Name!, check.Passed, check.Message)).ToList() ?? [];
-        return new ShareUpload(id, checks, upload.Version, upload.Listing);
+        return new ShareUpload(id, ToChecks(upload.Checks ?? []), upload.Version, upload.Listing);
     }
 
     public async Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, ListingDraft? listing, CancellationToken cancellationToken = default)
@@ -175,26 +182,110 @@ public sealed class ShareHostClient : IShareHostClient
         }
 
         using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
-        var reply = await SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, cancellationToken).ConfigureAwait(false);
-        var published = Parse<ShareHostJson.Published>(reply.Body);
-
-        if (published?.Id is not { Length: > 0 } id || published.Version is not { Length: > 0 } released)
-            throw Unexpected(host, reply);
-
-        // Borea opens this page in the browser, and the host opens every listing pull request on GitHub.
-        Uri? pullRequest = null;
-        if (published.PullRequest is not null
-            && (!Uri.TryCreate(published.PullRequest, UriKind.Absolute, out pullRequest)
-                || pullRequest.Scheme != Uri.UriSchemeHttps
-                || !string.Equals(pullRequest.Host, "github.com", StringComparison.OrdinalIgnoreCase)))
-        {
-            throw Unexpected(host, reply);
-        }
-
-        return new SharePublished(id, released, pullRequest);
+        var reply = await WithAnswerLimitAsync(token => SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, token), cancellationToken).ConfigureAwait(false);
+        var published = Parse<ShareHostJson.Published>(reply.Body) ?? new ShareHostJson.Published();
+        return new SharePublished(
+            ShareHostJson.Text(published.Id) is { Length: > 0 } id ? id : listing?.Id,
+            ShareHostJson.Text(published.Version) is { Length: > 0 } released ? released : version,
+            PullRequestLink(published.PullRequest),
+            host.PageOnHost(ShareHostJson.Text(published.Page)));
     }
 
-    /// <summary>Signs in with the kept token. A refresh token that the host refuses is deleted.</summary>
+    public async Task<ShareListingChanged> ChangeListingAsync(ShareHost host, string type, string id, ShareListingChange change, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentNullException.ThrowIfNull(change);
+        var body = new JsonObject();
+        if (change.Name is { } name)
+            body[ShareHostJson.Name] = name;
+        if (change.Abstract is { } sentence)
+            body[ShareHostJson.Abstract] = sentence;
+        if (change.Description is { } description)
+            body[ShareHostJson.Description] = description;
+        if (change.License is { } license)
+            body[ShareHostJson.License] = license;
+        if (change.Tags is { } tags)
+            body[ShareHostJson.Tags] = new JsonArray([.. tags.Select(tag => JsonValue.Create(tag))]);
+
+        using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
+        var reply = await SendOptionalAsync(host, HttpMethod.Patch, ListingPath(type, id), content, cancellationToken).ConfigureAwait(false);
+        var changed = Parse<ShareHostJson.ListingChanged>(reply.Body) ?? new ShareHostJson.ListingChanged();
+        return new ShareListingChanged(PullRequestLink(changed.PullRequest), host.PageOnHost(ShareHostJson.Text(changed.Page)));
+    }
+
+    public async Task TakeDownReleaseAsync(ShareHost host, string type, string id, string version, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentException.ThrowIfNullOrEmpty(version);
+        var path = $"{ListingPath(type, id)}/{ShareHostApi.ReleasesPath}/{Uri.EscapeDataString(version)}/{ShareHostApi.TakeDownPath}";
+        var reply = await SendOptionalAsync(host, HttpMethod.Post, path, content: null, cancellationToken).ConfigureAwait(false);
+
+        // The player is told that the version is gone, so any other answer must not read as a success.
+        if (Parse<ShareHostJson.TakenDown>(reply.Body) is not { Value: true })
+            throw Unexpected(host, reply);
+    }
+
+    private static string ListingPath(string type, string id) =>
+        $"{ShareHostApi.ListingsPath}/{Uri.EscapeDataString(type)}/{Uri.EscapeDataString(id)}";
+
+    /// <summary>A request that a host need not offer. A 404 with the code of a missing listing or version comes from the request itself, and any other 404 means that the host does not have it.</summary>
+    private async Task<Reply> SendOptionalAsync(ShareHost host, HttpMethod method, string path, HttpContent? content, CancellationToken cancellationToken)
+    {
+        var reply = await WithAnswerLimitAsync(token => ExchangeAsync(host, method, path, content, token), cancellationToken).ConfigureAwait(false);
+        if (reply.Status == HttpStatusCode.NotFound && Parse<ShareHostJson.Error>(reply.Body)?.Code is not ("not_owner" or "invalid_request"))
+            throw new ShareHostException(ShareHostFailure.NotOffered, $"{host.Name} does not offer this request.");
+
+        return (int)reply.Status is < 200 or > 299 ? throw Refused(host, reply) : reply;
+    }
+
+    /// <summary>Ends a send at <see cref="PublishAnswerLimit"/>, which then counts as a request with no answer.</summary>
+    private async Task<Reply> WithAnswerLimitAsync(Func<CancellationToken, Task<Reply>> send, CancellationToken cancellationToken)
+    {
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        limit.CancelAfter(PublishAnswerLimit);
+        try
+        {
+            return await send(limit.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw Network();
+        }
+    }
+
+    /// <summary>The answer lists the pictures of the listing, and Borea does not read it, because a 2xx already says that the host took this one.</summary>
+    public async Task UploadImageAsync(ShareHost host, string listingType, string listingId, ReadOnlyMemory<byte> image, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentException.ThrowIfNullOrEmpty(listingType);
+        ArgumentException.ThrowIfNullOrEmpty(listingId);
+        var (mediaType, extension) = ContentImageBytes.Inspect(image.Span)?.Format switch
+        {
+            "PNG" => ("image/png", "png"),
+            "JPEG" => ("image/jpeg", "jpg"),
+            _ => ("image/webp", "webp"),
+        };
+        using var content = new MultipartFormDataContent();
+        var file = new ReadOnlyMemoryContent(image);
+        file.Headers.ContentType = new MediaTypeHeaderValue(mediaType);
+
+        // The name of the file on the computer of the player stays there, because the host names its copy itself.
+        content.Add(file, ShareHostJson.Image, $"{ShareHostJson.Image}.{extension}");
+        var path = $"{ShareHostApi.ListingsPath}/{Uri.EscapeDataString(listingType)}/{Uri.EscapeDataString(listingId)}/{ShareHostApi.ImagesPath}";
+        await SendAsync(host, HttpMethod.Post, path, content, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Borea opens this page in the browser, and the host opens every listing pull request on GitHub.</summary>
+    private static Uri? PullRequestLink(JsonElement value) =>
+        Https(ShareHostJson.Text(value)) is { } link && string.Equals(link.Host, "github.com", StringComparison.OrdinalIgnoreCase) ? link : null;
+
+    private static Uri? Https(string? address) =>
+        Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps ? uri : null;
+
+    /// <summary>
+    /// Signs in with the kept token. A refresh token is deleted only on invalid_grant, because a busy host also answers with
+    /// an OAuth error, and the token still works after that.
+    /// </summary>
     private async Task<bool> ResumeAsync(ShareHost host, CancellationToken cancellationToken)
     {
         if (_secrets is not { } secrets)
@@ -225,17 +316,17 @@ public sealed class ShareHostClient : IShareHostClient
             return false;
         }
 
-        KeyValuePair<string, string>[] refresh = [new("grant_type", "refresh_token"), new("refresh_token", kept[ShareHostApi.RefreshPrefix.Length..]), new("client_id", ShareHostApi.ClientId)];
+        var keptRefresh = kept[ShareHostApi.RefreshPrefix.Length..];
+        KeyValuePair<string, string>[] refresh = [new("grant_type", "refresh_token"), new("refresh_token", keptRefresh), new("client_id", ShareHostApi.ClientId)];
         var reply = await PostFormAsync(host, ShareHostApi.TokenPath, refresh, cancellationToken).ConfigureAwait(false);
         var answer = reply is null ? null : Parse<ShareHostJson.Token>(reply.Body);
         if (reply?.Status == HttpStatusCode.OK && answer?.AccessToken is { Length: > 0 } token)
         {
-            Enter(host, token, answer.RefreshToken, keep: true);
+            Enter(host, token, answer.RefreshToken is { Length: > 0 } rotated ? rotated : keptRefresh, keep: true);
             return true;
         }
 
-        // A busy or failing host keeps the token for the next start.
-        if (answer?.Error is not null)
+        if (answer?.Error == "invalid_grant")
             Forget(host);
         return false;
     }
@@ -253,6 +344,12 @@ public sealed class ShareHostClient : IShareHostClient
 
     private void Forget(ShareHost host) => RunSecret(secrets => secrets.Delete(SecretName(host)));
 
+    private void ForgetKeptAccessToken(ShareHost host) => RunSecret(secrets =>
+    {
+        if (secrets.Read(SecretName(host))?.StartsWith(ShareHostApi.AccessPrefix, StringComparison.Ordinal) == true)
+            secrets.Delete(SecretName(host));
+    });
+
     // A store that fails only costs the next start a new sign-in.
     private void RunSecret(Action<ISecretStore> work)
     {
@@ -269,6 +366,13 @@ public sealed class ShareHostClient : IShareHostClient
     }
 
     private async Task<Reply> SendAsync(ShareHost host, HttpMethod method, string path, HttpContent content, CancellationToken cancellationToken)
+    {
+        var reply = await ExchangeAsync(host, method, path, content, cancellationToken).ConfigureAwait(false);
+        return (int)reply.Status is < 200 or > 299 ? throw Refused(host, reply) : reply;
+    }
+
+    /// <summary>Sends with the token of the host and gives any answer but a refused token, which drops the token.</summary>
+    private async Task<Reply> ExchangeAsync(ShareHost host, HttpMethod method, string path, HttpContent? content, CancellationToken cancellationToken)
     {
         string token;
         lock (_tokens)
@@ -290,12 +394,10 @@ public sealed class ShareHostClient : IShareHostClient
                     _tokens.Remove(TokenKey(host));
             }
 
-            Forget(host);
+            // A kept refresh token can outlive the access token, so the next sign-in tries it before it asks for a code.
+            ForgetKeptAccessToken(host);
             throw new ShareHostException(ShareHostFailure.SignedOut, $"{host.Name} no longer takes the sign-in.");
         }
-
-        if ((int)reply.Status is < 200 or > 299)
-            throw Refused(host, reply);
 
         return reply;
     }
@@ -347,23 +449,63 @@ public sealed class ShareHostClient : IShareHostClient
 
     // A verification page outside the host would send the player somewhere the host does not control.
     private static GitHubDeviceCode? ToDeviceCode(ShareHost host, ShareHostJson.DeviceCode code) =>
-        !string.IsNullOrWhiteSpace(code.UserCode)
-        && Uri.TryCreate(code.VerificationUri, UriKind.Absolute, out var page)
-        && page.Scheme == Uri.UriSchemeHttps
-        && string.Equals(page.Host, host.Api.Host, StringComparison.OrdinalIgnoreCase)
-            ? new GitHubDeviceCode(code.UserCode, page.AbsoluteUri)
+        !string.IsNullOrWhiteSpace(code.UserCode) && OnApiHost(host, code.VerificationUri) is { } page
+            ? new GitHubDeviceCode(code.UserCode, page.AbsoluteUri, OnApiHost(host, ShareHostJson.Text(code.VerificationUriComplete))?.AbsoluteUri)
             : null;
+
+    private static Uri? OnApiHost(ShareHost host, string? address) =>
+        Https(address) is { } page && string.Equals(page.Host, host.Api.Host, StringComparison.OrdinalIgnoreCase) ? page : null;
 
     private static ShareHostException Refused(ShareHost host, Reply reply) =>
         Parse<ShareHostJson.Error>(reply.Body) is { Message.Length: > 0 } error
             ? new ShareHostException(ShareHostFailure.Host, error.Message, error.Code)
-            : Unexpected(host, reply);
+            {
+                Checks = ReadChecks(error.Checks),
+                RetryAfter = error.RetryAfter.ValueKind == JsonValueKind.Number && error.RetryAfter.TryGetInt32(out var seconds) && seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
+                FieldErrors = ReadFieldErrors(error.FieldErrors),
+                IsServerError = (int)reply.Status >= 500,
+                IsNotFound = reply.Status == HttpStatusCode.NotFound,
+            }
+            : Unexpected(host, reply, isNotFound: reply.Status == HttpStatusCode.NotFound);
+
+    private static IReadOnlyList<ShareCheck>? ReadChecks(JsonElement checks) =>
+        checks.ValueKind == JsonValueKind.Array && Parse<List<ShareHostJson.Check>>(checks.GetRawText()) is { } list ? ToChecks(list) : null;
+
+    // A JSON null in the list reads as a null entry, which OfType leaves out.
+    private static List<ShareCheck> ToChecks(List<ShareHostJson.Check> checks) =>
+        [.. checks.OfType<ShareHostJson.Check>().Where(check => check.Name is { Length: > 0 }).Select(check => new ShareCheck(check.Name!, check.Passed, check.Message))];
+
+    /// <summary>Takes a string or a list of strings for each field and skips anything else, because the API names no exact shape.</summary>
+    private static Dictionary<string, IReadOnlyList<string>>? ReadFieldErrors(JsonElement errors)
+    {
+        if (errors.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var fields = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (var field in errors.EnumerateObject())
+        {
+            List<string> lines = field.Value.ValueKind switch
+            {
+                JsonValueKind.String => [field.Value.GetString()!],
+                JsonValueKind.Array => [.. field.Value.EnumerateArray().Where(line => line.ValueKind == JsonValueKind.String).Select(line => line.GetString()!)],
+                _ => [],
+            };
+            if (lines.Count > 0)
+                fields[field.Name] = lines;
+        }
+
+        return fields;
+    }
 
     private static ShareHostException SignInError(ShareHost host, string error, string? description) =>
         new(ShareHostFailure.Host, description ?? $"{host.Name} refused the sign-in with {error}.", error);
 
-    private static ShareHostException Unexpected(ShareHost host, Reply reply) =>
-        new(ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.");
+    /// <param name="isNotFound">Only a request of the upload API passes this, because a 404 of the sign-in says nothing about the request that it interrupted.</param>
+    private static ShareHostException Unexpected(ShareHost host, Reply reply, bool isNotFound = false) =>
+        new((int)reply.Status >= 500 ? ShareHostFailure.Unavailable : ShareHostFailure.UnexpectedResponse, $"{host.Name} answered with {(int)reply.Status} and no answer of the upload API.")
+        {
+            IsNotFound = isNotFound,
+        };
 
     private static ShareHostException Network() => new(ShareHostFailure.NetworkError, "The share host could not be reached.");
 

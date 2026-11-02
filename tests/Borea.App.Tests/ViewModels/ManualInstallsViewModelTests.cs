@@ -197,6 +197,28 @@ public sealed class ManualInstallsViewModelTests
     }
 
     [Fact]
+    public async Task Replace_AnInstalledModDeclaresAConflict_ShowsTheModalAndPlansAgainAfterTheRemoval()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ConflictDialogTests.Declares("MeasureTools", "KSArmory"));
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        var folder = WriteForeignMod(harness, instance, "KSArmory");
+        await OpenAsync(harness, "Main");
+        var row = viewModel.ManualInstallItems.Single();
+        await row.BeginReplaceCommand.ExecuteAsync(null);
+
+        await row.ConfirmReplaceCommand.ExecuteAsync(null);
+
+        var conflict = Assert.Single(viewModel.ConflictDialog!.Rows);
+        Assert.Equal(harness.Localization.FormatConflictDeclared(viewModel.ContentName("MeasureTools"), viewModel.ContentName("KSArmory")), conflict.Text);
+
+        await conflict.RemoveCommand.ExecuteAsync(null);
+
+        Assert.True(Directory.Exists(folder));
+        Assert.True(viewModel.ManualInstallItems.Single().PendingPlan is { IsReady: true });
+    }
+
+    [Fact]
     public async Task Replace_FirstTime_AsksBeforeAnythingIsDeleted()
     {
         using var harness = await ViewModelHarness.CreateAsync();

@@ -74,6 +74,7 @@ internal static class KsaPartSchema
     public const string VehicleSaveData = "VehicleSaveData";
     public const string RootPartRef = "RootPartRef";
     public const string PartRef = "PartRef";
+    public const string Sequence = "Sequence";
 
     public const string FuelLink = "FuelLink";
     public const string PartA = "PartA";

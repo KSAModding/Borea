@@ -25,6 +25,9 @@ public enum ListingStep
 
     /// <summary>Edit the fields, with the checks and the file beside them.</summary>
     Form = 1,
+
+    /// <summary>The steps of a shared vehicle or save, which <see cref="ShareFlowStep"/> says.</summary>
+    Share = 2,
 }
 
 /// <summary>
@@ -61,12 +64,14 @@ public sealed partial class ListingEditor : ObservableObject
     private LocalizationService Localization => _owner.Localization;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsStartStep), nameof(IsFormStep))]
+    [NotifyPropertyChangedFor(nameof(IsStartStep), nameof(IsFormStep), nameof(IsShareStep), nameof(IntroText))]
     private ListingStep _step;
 
     public bool IsStartStep => Step == ListingStep.Start;
 
     public bool IsFormStep => Step == ListingStep.Form;
+
+    public bool IsShareStep => Step == ListingStep.Share;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReadSourceCommand))]
@@ -303,6 +308,7 @@ public sealed partial class ListingEditor : ObservableObject
         if (_owner.Services is not { } services)
             return;
 
+        var hadIndex = _snapshot is not null;
         try
         {
             _snapshot = await services.IndexSnapshots.GetSnapshotAsync();
@@ -329,7 +335,24 @@ public sealed partial class ListingEditor : ObservableObject
             catch (Exception exception) when (exception is IOException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException)
             {
             }
+
+            _owner.RefreshShareGate();
         }
+
+        // A share that started while the index could not be read finds its listing and its hosts once the index is there, and a published share has nothing left to find.
+        if (!hadIndex && _snapshot is not null && _share is { } share && !IsShareDone)
+        {
+            if (_shareListing is null)
+                LookUpShareListing(share);
+
+            RefreshShare();
+            StartShareHosts();
+        }
+
+        // An entry may still be reading the rows, and two readings at once would fill one list.
+        await ShareChooseLoad;
+        if (IsShareStep && IsShareChoose)
+            await ReloadShareChooseAsync();
 
         Refresh();
     }
@@ -740,7 +763,7 @@ public sealed partial class ListingEditor : ObservableObject
         Refresh();
     }
 
-    private static string[] FreeTagEntries(string text) => text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    internal static string[] FreeTagEntries(string text) => text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     /// <summary>Builds the draft from the fields, writes the file and runs the checks.</summary>
     internal void Refresh()
@@ -756,7 +779,13 @@ public sealed partial class ListingEditor : ObservableObject
 
         var document = draft.ToDocument();
         DocumentText = services.ListingFormat.Write(document, _listedText);
-        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, HasFixedId ? _base.Id : null, CheckedArchive, _share?.Content.Name));
+
+        // A new version sends no document from the steps, while the full form can open a pull request for a new file, so only the steps count the listing as its own id.
+        var listedId = (IsShareStep ? _shareListing?.Id : null) ?? (HasFixedId ? _base.Id : null);
+
+        // The steps say this in the language of the player when the item is chosen, so only the full form gets the note in English.
+        var installFolder = IsShareStep ? null : _share?.Content.Name;
+        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, listedId, CheckedArchive, installFolder));
         if (UncheckedArchiveIssue() is { } archiveIssue)
             pageIssues.Add(archiveIssue);
         var issues = InPinOrder(pageIssues.Concat(result.Issues).Distinct());
@@ -774,6 +803,7 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(HasNotes));
         OnPropertyChanged(nameof(CanOpenPullRequest));
         RefreshOverview(issues);
+        RefreshShareGate();
         foreach (var row in DeclaredDependencies)
             row.RefreshText();
         OnPropertyChanged(nameof(CanPublish));
@@ -811,6 +841,7 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(DependenciesHint));
         OnPropertyChanged(nameof(ShareHostText));
         RefreshShare();
+        RefreshShareChooseText();
         // the proposal keeps its value, so its setter does not raise the text again
         OnPropertyChanged(nameof(GameMinProposalText));
         OnPropertyChanged(nameof(MemberSearchText));
@@ -937,7 +968,11 @@ public sealed partial class ListingEditor : ObservableObject
 
     partial void OnDescriptionChanged(string value) => Refresh();
 
-    partial void OnLicenseChanged(string value) => Refresh();
+    partial void OnLicenseChanged(string value)
+    {
+        RefreshLicenseChoice();
+        Refresh();
+    }
 
     partial void OnForumsChanged(string value)
     {

@@ -125,7 +125,7 @@ public partial class MainViewModel
         if (listing is not null)
         {
             await OpenContentAsync(listing);
-            if (link.Kind == BoreaLinkKind.Install && listing.Type == ContentType.Mod)
+            if (link.Kind == BoreaLinkKind.Install && (listing.Type == ContentType.Mod || listing.Type.IsVehicleOrSave()))
                 await PrepareLinkInstallAsync(services, listing, link.Version);
         }
         else if (pack is not null)
@@ -140,7 +140,7 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>Mods and packs share one id namespace, so a mod link that names a pack still finds it.</summary>
+    /// <summary>Every listing and pack shares one id namespace, so a mod link that names a vehicle, a save or a pack still finds it.</summary>
     internal (DiscoverItem? Listing, PackItem? Pack) FindIndexContent(string id)
         => (_listings.FirstOrDefault(item => item.Source == "index" && ModIds.Equals(item.ModId, id)),
             _packs.FirstOrDefault(pack => pack.Metadata.Source == "index" && ModIds.Equals(pack.PackId, id)));
@@ -156,7 +156,7 @@ public partial class MainViewModel
         ModVersionMetadata? exact = null;
         Func<string>? note = null;
         if (requested is { } version)
-            (exact, note) = await RequestedReleaseAsync(services, row.ModId, version);
+            (exact, note) = await RequestedReleaseAsync(services, row, version);
 
         if (instance.InstalledVersionOf(row.ModId) is { } installed && (exact is null || exact.Version == installed))
         {
@@ -164,23 +164,39 @@ public partial class MainViewModel
             return;
         }
 
-        var chosen = exact;
-        await PlanInstallAsync(
-            row,
-            async () => chosen ??= await services.ContentIndex.GetLatestReleaseInChannelAsync(row.ModId, services.Settings.ReleaseChannel),
-            exact?.Version,
-            confirm: true);
+        Func<string> Request(ModVersionMetadata release) => () => WithNote(note, Localization.FormatLinkInstall($"{row.Name} {release.Version}", instance.Name));
 
-        if (row.IsConfirmingInstall && chosen is { } release)
-            row.ShowLinkRequest(() => WithNote(note, Localization.FormatLinkInstall($"{row.Name} {release.Version}", instance.Name)));
-        else if (note is not null)
+        if (row.Type.IsVehicleOrSave())
+        {
+            // the name modal can stand between this plan and its wait, so the request travels with the plan
+            if ((exact ?? row.LatestInChannel ?? await services.UserContent.GetLatestReleaseAsync(row.ModId, services.Settings.ReleaseChannel)) is { } item)
+                await PlanContentAsync(row, instance.InstanceId, item, whenHeld: () => row.ShowLinkRequest(Request(item)));
+            else
+                row.InstallError = Localization.DiscoverNoRelease;
+        }
+        else
+        {
+            var chosen = exact;
+            await PlanInstallAsync(
+                row,
+                async () => chosen ??= await services.ContentIndex.GetLatestReleaseInChannelAsync(row.ModId, services.Settings.ReleaseChannel),
+                exact?.Version,
+                confirm: true);
+
+            if (row.IsConfirmingInstall && chosen is { } release)
+                row.ShowLinkRequest(Request(release));
+        }
+
+        if (!row.IsConfirmingInstall && note is not null)
             Toasts.ShowMessage(ToastKind.Error, note);
     }
 
-    private async Task<(ModVersionMetadata? Release, Func<string>? Note)> RequestedReleaseAsync(BoreaServices services, string modId, ModVersion version)
+    private async Task<(ModVersionMetadata? Release, Func<string>? Note)> RequestedReleaseAsync(BoreaServices services, DiscoverItem row, ModVersion version)
     {
         var text = version.ToString();
-        var release = await services.ContentIndex.GetReleaseAsync(modId, version);
+        var release = row.Type.IsVehicleOrSave()
+            ? await services.UserContent.GetReleaseAsync(row.ModId, version)
+            : await services.ContentIndex.GetReleaseAsync(row.ModId, version);
         if (release is null)
             return (null, () => Localization.FormatLinkVersionMissing(text));
 

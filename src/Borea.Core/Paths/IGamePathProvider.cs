@@ -40,9 +40,6 @@ public interface IGamePathProvider
     /// </summary>
     string GetPreviewCacheFolder();
 
-    /// <summary>
-    /// Root of all Borea instance storage
-    /// </summary>
     string GetInstancesRoot();
 
     /// <summary>
@@ -90,6 +87,11 @@ public interface IGamePathProvider
     string GetModFavoritesPath();
 
     string GetModPackFavoritesPath();
+
+    /// <summary>
+    /// Path to the record of what the player shared on a share host, one file for the whole computer.
+    /// </summary>
+    string GetSharedContentPath();
 
     /// <summary>
     /// Path to Borea's own settings.toml (game/StarMap install locations).

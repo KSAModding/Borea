@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
@@ -207,8 +208,8 @@ public partial class MainViewModel
     private string? _vehiclePreviewTarget;
 
     /// <summary>
-    /// The loads of the previews that closed. A closed preview stops at its next check, so until then it can still hold
-    /// a file open below the folders of the library.
+    /// The loads of the previews that closed and the covers of a share. A closed preview stops at its next check, so
+    /// until then it can still hold a file open below the folders of the library.
     /// </summary>
     private Task _closedVehiclePreviewLoads = Task.CompletedTask;
 
@@ -231,8 +232,9 @@ public partial class MainViewModel
     /// <summary>
     /// Completes when no preview reads a file, also not one that closed. Windows does not move or delete a folder while
     /// a file below it is open, so anything that moves or deletes the mods, the vehicles or the kept builds waits for it.
+    /// A still that Discover draws reads the same files and can wait, so it stops and its row asks again later.
     /// </summary>
-    internal Task WhenVehiclePreviewReadsEndedAsync() => Chain(_closedVehiclePreviewLoads, WhenVehiclePreviewLoadedAsync());
+    internal Task WhenVehiclePreviewReadsEndedAsync() => Chain(Chain(_closedVehiclePreviewLoads, WhenVehiclePreviewLoadedAsync()), PreviewStills.Stop());
 
     /// <summary>
     /// The instance whose files the preview reads. A page opened from an instance reads that instance, where the
@@ -245,8 +247,8 @@ public partial class MainViewModel
     /// old one, which stops its work and drops a result that arrives later. Any other page gets none. A busy preview
     /// of the same release and target stays, so a page that is read again, such as after an index refresh, does not
     /// send a second download. Every fetch raises the public download count of the host (RFC 0052), so a new preview
-    /// waits for a click after the player cancelled the same release or its fetch failed, and while an install of it
-    /// plans, waits for the player's confirmation or runs, because that install downloads the archive itself. A preview
+    /// waits for a click while the setting holds back the author hosts, after the player cancelled the same release or
+    /// its fetch failed, and while an install of it plans, waits for the player's confirmation or runs, because that install downloads the archive itself. A preview
     /// that still waits out its delay then makes way for one that waits for the click.
     /// </summary>
     private void RefreshVehiclePreview()
@@ -273,12 +275,31 @@ public partial class MainViewModel
                 encoder: VehiclePreviewEncoder,
                 stillStored: ShowPreviewStill,
                 autoFetchDelay: VehiclePreviewAutoFetchDelay,
-                autoFetch: !installing && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, latest.Release)));
+                autoFetch: LoadImagesFromAuthorHosts && !installing && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, latest.Release)),
+                savePicture: SaveVehiclePictureAsync);
         }
 
         VehiclePreview = next;
         Close(old);
         next?.Start();
+    }
+
+    /// <summary>Asks for a PNG file and lets <paramref name="write"/> fill it. A file that stops half way is deleted, and a toast says why.</summary>
+    private async Task SaveVehiclePictureAsync(string suggestedFileName, Func<Stream, Task> write)
+    {
+        if (WindowServices is not { } window)
+            return;
+
+        try
+        {
+            var file = await window.SaveFileAsync(Localization.PreviewSavePicture, suggestedFileName, "png", Localization.PreviewPictureFileType, write);
+            if (file is not null)
+                ShowSuccessToast(() => Localization.FormatListingSaved(file));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            ShowErrorToast(() => Localization.PreviewPictureFailed, exception.Message);
+        }
     }
 
     /// <summary>
@@ -341,6 +362,19 @@ public partial class MainViewModel
             .. instance.Mods.Select(mod => $"{mod.ModId}@{mod.Version}"),
             .. instance.Content.Select(record => $"{record.ListingId}@{record.Metadata.Version}"),
         ]);
+
+    /// <summary>
+    /// Draws the cover that a share offers, or gives null when it cannot. It reads the same folders as a preview, so whatever moves them waits for it too.
+    /// </summary>
+    internal async Task<byte[]?> DrawShareCoverAsync(GameSaveShareStart share, CancellationToken token)
+    {
+        if (_services is not { } services || IsChangingLibraryFolder || VehiclePreviewEncoder is not { } encoder)
+            return null;
+
+        var draw = VehicleCoverPicture.DrawAsync(VehiclePreviewServiceOf(services), VehiclePreviewBuilderOf(), encoder, share.Entry.Path, share.InstanceId, token);
+        _closedVehiclePreviewLoads = Chain(_closedVehiclePreviewLoads, draw);
+        return await draw;
+    }
 
     private void ClearVehiclePreview()
     {
@@ -481,6 +515,7 @@ public partial class MainViewModel
         VersionFilter = OptionFor(SavedReleaseChannel);
 
         _contentShareHost = null;
+        ForgetContentOwner();
         FillLinks(ContentLinks, item.Links);
         OnPropertyChanged(nameof(HasContentLinks));
 
@@ -572,6 +607,7 @@ public partial class MainViewModel
             ContentLinks.Add(link);
         OnPropertyChanged(nameof(HasContentLinks));
         OnPropertyChanged(nameof(ContentShareHostText));
+        await ShowContentOwnerAsync(item, host);
     }
 
     // the order and names of the detail panel in #8; unknown keys follow with a capital first letter
@@ -716,7 +752,7 @@ public partial class MainViewModel
             ContentDetailError = error;
     }
 
-    private Task CopyShareLinkAsync(string? url)
+    internal Task CopyShareLinkAsync(string? url)
         => url is null ? Task.CompletedTask : CopyTextAsync(() => Task.FromResult(url), () => url, () => Localization.ContentLinkCopied);
 
     /// <param name="name">What the failure toast says could not be copied.</param>

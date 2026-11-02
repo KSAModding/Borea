@@ -352,6 +352,8 @@ internal sealed class ViewModelHarness : IDisposable
             ("LinkRegistrationDone", viewModel.WhenLinkRegistrationDoneAsync()),
             ("TasksSaved", viewModel.Tasks.WhenSavedAsync()),
             ("VehiclePreviewReadsEnded", viewModel.WhenVehiclePreviewReadsEndedAsync()),
+            ("ShareRowsRead", viewModel.ListingEditor.ShareChooseLoad),
+            ("ShareRowCompared", viewModel.ListingEditor.ShareRowCompare),
         ];
 
         foreach (var item in work)

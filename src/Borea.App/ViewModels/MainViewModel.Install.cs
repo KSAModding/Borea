@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Composition;
 using Borea.Core.Game;
-using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -151,7 +150,8 @@ public partial class MainViewModel
                 var release = await findRelease() ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
                 return [new RequestedMod(release, InstallReason.Manual, exactVersion is not null)];
             },
-            (_, plan) => Task.FromResult(confirm || AddedMods(plan, null).Any() || InstallStepsOf(plan).Count > 0));
+            (_, plan) => Task.FromResult(confirm || AddedMods(plan, null).Any() || InstallStepsOf(plan).Count > 0),
+            () => PlanInstallAsync(row, findRelease, exactVersion, target, confirm));
 
         if (executed)
             await ReloadInstancesAsync();
@@ -162,7 +162,8 @@ public partial class MainViewModel
     /// warnings or choices, unless <paramref name="waitForConfirmation"/> holds it.
     /// Returns whether the executor ran, so the caller reloads the instances.
     /// </summary>
-    private async Task<bool> PlanAndExecuteAsync(IInstallRow row, Guid instanceId, Func<Instance, Task<IReadOnlyList<RequestedMod>>> requestMods, Func<Instance, InstallPlan, Task<bool>>? waitForConfirmation = null)
+    /// <param name="again">Plans the same change again, for the conflict modal.</param>
+    private async Task<bool> PlanAndExecuteAsync(IInstallRow row, Guid instanceId, Func<Instance, Task<IReadOnlyList<RequestedMod>>> requestMods, Func<Instance, InstallPlan, Task<bool>>? waitForConfirmation = null, Func<Task>? again = null)
     {
         if (_services is null || row.IsInstalling)
             return false;
@@ -206,10 +207,12 @@ public partial class MainViewModel
                 HoldPlan(row, plan);
                 if (row is not ContentItem)
                     ReplanOnChange(row, choices, replanned => HoldPlan(row, replanned));
+                await ShowConflictsAsync(plan, again);
             }
             else if (!plan.IsReady)
             {
                 row.InstallError = Describe(plan.Conflicts.Concat(plan.UnresolvedChoices));
+                await ShowConflictsAsync(plan, again);
             }
             else if ((plan.Warnings.Count > 0 && !IsEmptyUpdateAll(row, plan)) || wait)
             {
@@ -410,7 +413,7 @@ public partial class MainViewModel
     }
 
     /// <summary>What stops a plan whose choices are shown, without the open alternatives that the choices already show.</summary>
-    private static string? BlockedText(InstallPlan plan)
+    private string? BlockedText(InstallPlan plan)
     {
         var messages = plan.Conflicts.Concat(plan.UnresolvedChoices.Where(message => message.Kind != PlanningMessageKind.AlternativeChoice)).ToList();
         return messages.Count > 0 ? Describe(messages) : null;
@@ -681,16 +684,13 @@ public partial class MainViewModel
             or DownloadFailedException or NotSupportedException or TaskCanceledException or ModReplacementRecoveryException;
 
     /// <summary>
-    /// The planner's messages on one line, each named by its mod.
+    /// The messages after the name of their mod. A message about a recorded vehicle or save comes first and names the mod
+    /// itself, so it stays visible where a row shows only the start of the text. A stopped search belongs to no mod, so it has no name.
     /// </summary>
-    /// <summary>
-    /// The messages after the id of their mod. A message about a recorded vehicle or save comes first and names the mod
-    /// itself, so it stays visible where a row shows only the start of the text. A stopped search belongs to no mod, so it has no id.
-    /// </summary>
-    private static string Describe(IEnumerable<PlanningMessage> messages)
+    private string Describe(IEnumerable<PlanningMessage> messages)
         => string.Join(" ", messages
             .OrderBy(message => !BreaksContent(message))
-            .Select(message => BreaksContent(message) || message.Kind == PlanningMessageKind.SearchLimit ? PlanningText.Message(message) : $"{message.ModId}: {PlanningText.Message(message)}"));
+            .Select(message => BreaksContent(message) || message.Kind == PlanningMessageKind.SearchLimit ? PlanningText.Message(message) : $"{ContentName(message.ModId)}: {PlanningText.Message(message)}"));
 
     private static bool BreaksContent(PlanningMessage message) => message.Kind is PlanningMessageKind.BreaksVehicle or PlanningMessageKind.BreaksSave;
 }

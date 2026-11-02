@@ -163,6 +163,21 @@
         <StackPanel Spacing="8" />
     </ItemsPanelTemplate>
 
+    <!-- the Play button under the steps of a new vehicle or save, built only for a row that shows them, because every control of a row costs each time the list shows the row -->
+    <DataTemplate x:Key="InstalledPlayButton" x:DataType="vm:DiscoverItem">
+        <StackPanel Spacing="4">
+            <Button Classes="cta with-icon" HorizontalAlignment="Left" Command="{Binding PlayInstalledCommand}" IsEnabled="{Binding CanPlayInstalled}" ToolTip.Tip="{Binding InstalledPlayText}">
+                <!-- a dock panel gives the name the width that is left, so it trims inside the button -->
+                <DockPanel>
+                    <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" DockPanel.Dock="Left" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <TextBlock Classes="action-lg" Text="{Binding InstalledPlayText}" MaxWidth="320" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </DockPanel>
+            </Button>
+            <!-- the launch line shows on Home, in the Library and on the instance page, and this button is on none of them -->
+            <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).LaunchMessage}" TextWrapping="Wrap" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).IsLaunching}" />
+        </StackPanel>
+    </DataTemplate>
+
     <!-- the body of one row of c/table-versions, which the row shows inside its button or, without a page, on its own.
          The columns after the name share their widths with the other rows of the page, so each column starts at the same place in every row -->
     <DataTemplate x:Key="ContentRowBody" x:DataType="vm:ContentItem">
@@ -207,7 +222,7 @@
                     <TextBlock Classes="body-sm secondary" Text="{Binding ManageNotInstalledText}" TextWrapping="Wrap" IsVisible="{Binding ManageNotInstalledText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding PackVersionText}" TextWrapping="Wrap" IsVisible="{Binding PackVersionText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsConfirmingUpdate}" />
+                    <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingUpdate}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
                 <!-- a mod of the pack that the player detached, which the row menu attaches again -->
@@ -342,16 +357,33 @@
         <WrapPanel ItemSpacing="4" />
     </ItemsPanelTemplate>
 
+    <!-- an author name on the one line of a row, whose comma stands before the name, so a name that drops out takes its comma along and the tooltip keeps the whole list -->
+    <DataTemplate x:Key="RowAuthorLink" x:DataType="vm:AuthorLink">
+        <Button Classes="plain" VerticalAlignment="Center" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).FilterByAuthorCommand}" CommandParameter="{Binding}" ToolTip.Tip="{Binding RowHint}" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RowHint}">
+            <TextBlock Classes="body-sm secondary" TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding RowSeparator}" Foreground="{StaticResource Brush.TextSecondary}" /><Run Text="{Binding Name}" />
+            </TextBlock>
+        </Button>
+    </DataTemplate>
+
+    <ItemsPanelTemplate x:Key="RowAuthorLinksPanel">
+        <WrapPanel />
+    </ItemsPanelTemplate>
+
     <!-- c/content-row on Discover -->
     <DataTemplate x:Key="DiscoverRow" x:DataType="vm:DiscoverItem">
         <Button Classes="plain card-button" views:RowButton.IgnoresDisabled="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
             <Border Classes="card" Padding="12">
                 <Grid ColumnDefinitions="100,16,*" MinHeight="100">
                     <Border Classes="thumbnail" Width="100" Height="100">
-                        <!-- a vehicle shows the still of its last complete preview, and every other row shows its icon -->
-                        <views:PreviewStillView StillPath="{Binding PreviewStillPath}" Background="{StaticResource Brush.Surface}">
+                        <!-- a vehicle without an icon shows its still, and every other row shows its icon -->
+                        <views:PreviewStillView StillPath="{Binding PreviewStillPath}" Note="{Binding PreviewStillNote}" Background="{StaticResource Brush.Surface}">
                             <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
-                                <Path Classes="icon size-32" Data="{StaticResource Icon.PuzzlePiece}" />
+                                <Panel>
+                                    <Path Classes="icon size-32" Data="{StaticResource Icon.PuzzlePiece}" IsVisible="{Binding !IsVehicleOrSave}" />
+                                    <Path Classes="icon size-32" Data="{StaticResource Icon.Cylinder}" IsVisible="{Binding IsVehicle}" />
+                                    <Path Classes="icon size-32" Data="{StaticResource Icon.Planet}" IsVisible="{Binding IsSave}" />
+                                </Panel>
                             </views:ListingImageView>
                         </views:PreviewStillView>
                     </Border>
@@ -364,7 +396,7 @@
                                     <DockPanel Margin="8,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorBefore}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" Margin="0,0,3,0" VerticalAlignment="Center" />
                                         <!-- one line of 16 px, so an author that does not fit on it drops out whole -->
-                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource AuthorLink}" ItemsPanel="{StaticResource AuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
+                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource RowAuthorLink}" ItemsPanel="{StaticResource RowAuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
                                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorAfter}" TextTrimming="CharacterEllipsis" Margin="3,0,0,0" VerticalAlignment="Center" />
                                     </DockPanel>
                                 </DockPanel>
@@ -436,23 +468,24 @@
                                 <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </Grid>
                             <ItemsControl Margin="0,0,4,8" ItemsSource="{Binding PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!PlanSteps.Count}" />
-                            <!-- as the remove question: the buttons take the next line when the texts need the width -->
-                            <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                            <!-- the texts take the whole width, because a warning can be long, and the buttons keep their own row -->
+                            <StackPanel Spacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
+                                <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
+                                <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8">
                                     <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
-                                </StackPanel>
-                            </WrapPanel>
+                                </WrapPanel>
+                            </StackPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
-                            <!-- what the author still asks for after an install, until the player dismisses it -->
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding HasInstallStepsNotice}">
+                            <!-- what the author still asks for after an install and where a new vehicle or save is in the game, until the player dismisses it -->
+                            <StackPanel Spacing="8" Margin="0,0,4,8" IsVisible="{Binding HasInstallStepsNotice}">
                                 <ItemsControl ItemsSource="{Binding InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
-                                <Button Grid.Column="1" Classes="text" VerticalAlignment="Top" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallStepsDismiss}" Command="{Binding DismissInstallStepsNoticeCommand}" />
-                            </Grid>
+                                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                    <ContentControl Content="{Binding InstalledPlayRow}" ContentTemplate="{StaticResource InstalledPlayButton}" />
+                                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallStepsDismiss}" Command="{Binding DismissInstallStepsNoticeCommand}" />
+                                </WrapPanel>
+                            </StackPanel>
                         </StackPanel>
                         <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
                             <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
@@ -500,7 +533,7 @@
                                     <DockPanel Margin="8,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorBefore}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" Margin="0,0,3,0" VerticalAlignment="Center" />
                                         <!-- one line of 16 px, so an author that does not fit on it drops out whole -->
-                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource AuthorLink}" ItemsPanel="{StaticResource AuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
+                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource RowAuthorLink}" ItemsPanel="{StaticResource RowAuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
                                         <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorAfter}" TextTrimming="CharacterEllipsis" Margin="3,0,0,0" VerticalAlignment="Center" />
                                     </DockPanel>
                                 </DockPanel>
@@ -554,16 +587,17 @@
                                 <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </Grid>
                             <ItemsControl Margin="0,0,4,8" ItemsSource="{Binding PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!PlanSteps.Count}" />
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
-                                <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <!-- as the confirmation of a mod row: the warning takes the whole width, and the buttons keep their own row -->
+                            <StackPanel Spacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
+                                <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
+                                <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8">
                                     <Button Classes="link" Command="{Binding ChooseContentNameCommand}" IsVisible="{Binding CanChooseContentName}" VerticalAlignment="Center">
                                         <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackContentChooseName}" />
                                     </Button>
                                     <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
-                                </StackPanel>
-                            </Grid>
+                                </WrapPanel>
+                            </StackPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
                             <TextBlock Classes="body-sm secondary" Text="{Binding InstallNote}" ToolTip.Tip="{Binding InstallNote}" IsVisible="{Binding InstallNote, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
                             <!-- what the authors of the members still ask for after an install, until the player dismisses it -->
@@ -592,5 +626,52 @@
                 </Grid>
             </Border>
         </Button>
+    </DataTemplate>
+    <!-- the search over the listed mods that adds an entry, on the full form of a listing and on the share steps -->
+    <DataTemplate x:Key="ListingDependencySearch" x:DataType="vm:MainViewModel">
+        <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,8,Auto">
+                <TextBox Classes="field search" Text="{Binding ListingEditor.DependencyQuery}" PlaceholderText="{Binding Localization.DiscoverSearchPlaceholder}" AutomationProperties.Name="{Binding Localization.ListingSearchDependencies}">
+                    <TextBox.InnerLeftContent>
+                        <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingAddMember}" Command="{Binding ListingEditor.AddListedDependencyCommand}" />
+            </Grid>
+            <ListBox ItemsSource="{Binding ListingEditor.DependencyMatches}" SelectedItem="{Binding ListingEditor.SelectedDependencyMatch}" MaxHeight="240" AutomationProperties.Name="{Binding Localization.ListingSearchDependencies}" IsVisible="{Binding !!ListingEditor.DependencyMatches.Count}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ListedListing">
+                        <Grid ColumnDefinitions="*,16,Auto">
+                            <StackPanel Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsLoader}">
+                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeModLoader}" />
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding AuthorsText}" MaxWidth="240" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedMatch}" IsVisible="{Binding ListingEditor.HasNoDependencyMatch}" />
+        </StackPanel>
+    </DataTemplate>
+    <!-- over a shown scene of a vehicle: the stage while the textures or the mods load, or why a later step stopped, in the panel of the page and in the expanded view -->
+    <DataTemplate x:Key="VehiclePreviewStatus" x:DataType="vm:VehiclePreviewViewModel">
+        <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="12,4" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+            <Border.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="HasScene" />
+                    <Binding Path="StatusText" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                </MultiBinding>
+            </Border.IsVisible>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Classes="body-sm secondary" Text="{Binding StatusText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+            </StackPanel>
+        </Border>
     </DataTemplate>
 </ResourceDictionary>

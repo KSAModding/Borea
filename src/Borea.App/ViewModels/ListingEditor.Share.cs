@@ -11,7 +11,10 @@ using CommunityToolkit.Mvvm.Input;
 namespace Borea.App.ViewModels;
 
 /// <summary>A vehicle or a save that the player shares from the instance page, with what Borea read from it.</summary>
-internal sealed record GameSaveShareStart(Guid InstanceId, GameSaveEntry Entry, GameFolderContent Content, ContentShare Proposal);
+/// <param name="LastAuthor">The authors and license of the player's last new listing, which a share starts with, or null.</param>
+/// <param name="SharedEntry">What this computer last published from the folder, or null.</param>
+/// <param name="InstalledListingId">The listing that the item was installed from, or null.</param>
+internal sealed record GameSaveShareStart(Guid InstanceId, GameSaveEntry Entry, GameFolderContent Content, ContentShare Proposal, SharedContentAuthor? LastAuthor, SharedContentEntry? SharedEntry = null, string? InstalledListingId = null);
 
 /// <summary>
 /// A new vehicle or save listing (RFC 0085): the editor starts with the dependencies Borea proposes, shows what it could not map,
@@ -34,7 +37,7 @@ public sealed partial class ListingEditor
 
     public bool IsSave => Type == ListingFolders.SaveType;
 
-    public string IntroText => IsVehicleOrSave ? Localization.ListingShareIntro : Localization.ListingIntro;
+    public string IntroText => IsShareStep ? Localization.ShareFlowIntro : IsVehicleOrSave ? Localization.ListingShareIntro : Localization.ListingIntro;
 
     public string IdHint => IsVehicleOrSave ? Localization.ListingShareIdHint : Localization.ListingIdHint;
 
@@ -50,10 +53,10 @@ public sealed partial class ListingEditor
     public bool HasShareExtraFiles => ShareExtraFiles.Count > 0;
 
     public string? ShareArchiveText => _savedArchive is { } saved
-        ? Localization.FormatListingShareArchiveSaved(saved.File, saved.Archive.Sha256, saved.Archive.Size)
+        ? Localization.FormatListingShareArchiveSaved(saved.File, saved.Archive.Sha256, MainViewModel.SizeText(saved.Archive.Size))
         : null;
 
-    /// <summary>Opens a new document of the type, named after meta.toml, with the proposed dependencies. It carries no game_min, which the index takes from the archive.</summary>
+    /// <summary>Opens the share steps on a new document of the type, named after meta.toml, with the proposed dependencies. It carries no game_min, which the index takes from the archive.</summary>
     internal void StartShare(GameSaveShareStart share)
     {
         StartOver();
@@ -65,9 +68,14 @@ public sealed partial class ListingEditor
             Type = share.Entry.Kind == GameSaveKind.Vehicle ? ListingFolders.VehicleType : ListingFolders.SaveType,
             Id = ListingShareId.From(share.Content.Name),
             Name = share.Content.Name,
+            Authors = share.LastAuthor?.Authors ?? [],
+            License = share.LastAuthor?.License ?? string.Empty,
             Dependencies = share.Proposal.Dependencies,
         });
         _share = share;
+        ShareFlowStep = ShareFlowStep.Describe;
+        Step = ListingStep.Share;
+        LookUpShareListing(share);
         RefreshShare();
         StartShareHosts();
         Refresh();
@@ -76,8 +84,20 @@ public sealed partial class ListingEditor
     private void ForgetShare()
     {
         _share = null;
+        _shareListing = null;
+        _askedShareListing = null;
+        _declinedShareListings.Clear();
+        _refusedShareId = null;
         _savedArchive = null;
+        _choseOtherLicense = false;
+        HasFormBehindShareChoose = false;
+        _shareHosts = [];
+        _hasReadShareHosts = false;
+        ShareHostStatus = "stable";
+        ShareIdError = null;
+        IsShareMoreOptionsOpen = false;
         ForgetShareHostRun();
+        ForgetSharePictures();
         RefreshShare();
     }
 
@@ -90,7 +110,25 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareArchiveText));
         OnPropertyChanged(nameof(ShareStatusChoices));
         OnPropertyChanged(nameof(SelectedShareStatus));
+        OnPropertyChanged(nameof(IsNewVersionShare));
+        OnPropertyChanged(nameof(IsAskingShareListing));
+        OnPropertyChanged(nameof(ShowsShareFields));
+        OnPropertyChanged(nameof(ShowsPreviewCard));
+        OnPropertyChanged(nameof(ShareLooksLikeText));
+        OnPropertyChanged(nameof(ShareVersionOnlineText));
+        OnPropertyChanged(nameof(ShareAsNewVersionText));
+        OnPropertyChanged(nameof(ShareIsDifferentText));
+        OnPropertyChanged(nameof(ShareDescribeHeading));
+        OnPropertyChanged(nameof(ShareSentenceExample));
+        OnPropertyChanged(nameof(ShareModsHint));
+        OnPropertyChanged(nameof(ShareItemText));
+        OnPropertyChanged(nameof(ShareNewVersionText));
+        OnPropertyChanged(nameof(ShareLicenseChoices));
+        RefreshLicenseChoice();
+        RefreshShareSteps();
+        RefreshShareSummary();
         RefreshShareHostRows();
+        RefreshSharePictures();
     }
 
     [RelayCommand]
@@ -98,6 +136,14 @@ public sealed partial class ListingEditor
     {
         if (_share is not { } share)
             return;
+
+        // The publish step says it in place, and the full form has no line for it, so there the toast of the save says it.
+        if (IsShareStep && IsSharePublish)
+        {
+            ShowsShareGameRunning = _owner.Services is { } services && _owner.IsGameRunning(services);
+            if (ShowsShareGameRunning)
+                return;
+        }
 
         if (await _owner.SaveShareArchiveAsync(share) is { } saved && _share == share)
         {

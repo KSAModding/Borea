@@ -16,6 +16,24 @@
                 <Setter Property="IsVisible" Value="False" />
             </Style>
         </ContainerQuery>
+        <Style Selector="StackPanel.content-tabs">
+            <Setter Property="Spacing" Value="16" />
+        </Style>
+        <!-- three tabs in a long language need the room of their gaps and padding, so a narrow page keeps a margin at the edge of the strip -->
+        <ContainerQuery Name="page-body" Query="max-width:520">
+            <Style Selector="StackPanel.content-tabs">
+                <Setter Property="Spacing" Value="4" />
+            </Style>
+            <Style Selector="StackPanel.content-tabs > Button.tab">
+                <Setter Property="Padding" Value="12,8" />
+            </Style>
+        </ContainerQuery>
+        <!-- a card of the 3D view narrower than the three labeled buttons need -->
+        <ContainerQuery Name="page-body" Query="max-width:540">
+            <Style Selector="TextBlock.hide-compact">
+                <Setter Property="IsVisible" Value="False" />
+            </Style>
+        </ContainerQuery>
         <!-- a listing without any count gets no Downloads column, so the table shows no column of empty cells -->
         <Style Selector="Border.versions-table.no-downloads TextBlock.downloads">
             <Setter Property="IsVisible" Value="False" />
@@ -104,7 +122,11 @@
                     <views:ContentHeaderPanel Margin="0,24,0,0">
                         <Border Classes="thumbnail" Width="170" Height="170">
                             <views:ListingImageView Image="{Binding SelectedContent.Icon}" Background="{StaticResource Brush.Surface}">
-                                <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
+                                <Panel>
+                                    <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" IsVisible="{Binding !SelectedContent.IsVehicleOrSave, FallbackValue={x:False}}" />
+                                    <Path Classes="icon" Data="{StaticResource Icon.Cylinder}" RenderTransform="scale(2.5)" StrokeThickness="0.8" IsVisible="{Binding SelectedContent.IsVehicle, FallbackValue={x:False}}" />
+                                    <Path Classes="icon" Data="{StaticResource Icon.Planet}" RenderTransform="scale(2.5)" StrokeThickness="0.8" IsVisible="{Binding SelectedContent.IsSave, FallbackValue={x:False}}" />
+                                </Panel>
                             </views:ListingImageView>
                         </Border>
                         <StackPanel Spacing="4">
@@ -115,7 +137,7 @@
                             <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingInstall}">
                                 <TextBlock Classes="body-sm" Text="{Binding SelectedContent.LinkRequestText}" IsVisible="{Binding SelectedContent.LinkRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.AddedModsText}" ToolTip.Tip="{Binding SelectedContent.AddedModsToolTip}" IsVisible="{Binding SelectedContent.AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.InstallWarning}" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding SelectedContent.InstallWarning}" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <Button Classes="text primary" Content="{Binding SelectedContent.ConfirmInstallText}" Command="{Binding SelectedContent.ConfirmInstallCommand}" IsEnabled="{Binding SelectedContent.Choices.IsComplete, FallbackValue={x:True}}" />
                                 <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelInstallCommand}" />
                             </WrapPanel>
@@ -137,16 +159,26 @@
                                 <TextBlock Classes="label-md" Text="{Binding SelectedContent.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </WrapPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                            <!-- what the author still asks for after an install, until the player dismisses it -->
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
+                            <!-- what the author still asks for after an install and where a new vehicle or save is in the game, until the player dismisses it -->
+                            <StackPanel Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
                                 <ItemsControl ItemsSource="{Binding SelectedContent.InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
-                                <Button Grid.Column="1" Classes="text" VerticalAlignment="Top" Content="{Binding Localization.InstallStepsDismiss}" Command="{Binding SelectedContent.DismissInstallStepsNoticeCommand}" />
-                            </Grid>
+                                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                    <ContentControl Content="{Binding SelectedContent.InstalledPlayRow}" ContentTemplate="{StaticResource InstalledPlayButton}" />
+                                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.InstallStepsDismiss}" Command="{Binding SelectedContent.DismissInstallStepsNoticeCommand}" />
+                                </WrapPanel>
+                            </StackPanel>
                         </StackPanel>
                         <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Top">
                             <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
                             <Panel VerticalAlignment="Center" IsVisible="{Binding CanActOnSelectedContent}">
-                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" IsEnabled="{Binding CanAddToActiveInstance}" ToolTip.Tip="{Binding AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding AddToText}">
+                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsEnabled="{Binding CanAddToActiveInstance}" ToolTip.Tip="{Binding AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding AddToText}">
+                                    <!-- the confirmation holds the action while it is open, so the page does not show Add twice -->
+                                    <Button.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="SelectedContent.CanInstall" />
+                                            <Binding Path="!SelectedContent.IsConfirmingInstall" />
+                                        </MultiBinding>
+                                    </Button.IsVisible>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
                                         <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
@@ -284,7 +316,7 @@
 
                     <!-- c/inner-nav-bar -->
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
-                        <StackPanel Orientation="Horizontal" Spacing="16">
+                        <StackPanel Classes="content-tabs" Orientation="Horizontal">
                             <Button Classes="tab quiet" Classes.active="{Binding IsDescriptionTab}" Content="{Binding Localization.ContentTabDescription}" Command="{Binding ShowContentDescriptionCommand}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsDependenciesTab}" Content="{Binding ContentDependenciesTabText}" Command="{Binding ShowContentDependenciesCommand}" IsVisible="{Binding HasContentDependenciesTab}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowContentVersionsCommand}" />
@@ -298,7 +330,8 @@
                                 <StackPanel Spacing="8">
                                     <Border Classes="card" Padding="0" views:RoundedClip.IsEnabled="True">
                                         <views:AspectRatioPanel>
-                                            <preview:VehiclePreviewView Scene="{Binding Scene}" ResetCount="{Binding ResetCount}" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
+                                            <!-- Pose comes after Scene, because a new scene frames the vehicle again and would otherwise wipe the pose that was set first. The panel hides while the expanded view shows -->
+                                            <preview:VehiclePreviewView x:Name="PreviewView" Scene="{Binding Scene}" Pose="{Binding Pose, Mode=TwoWay}" ResetCount="{Binding ResetCount}" IsVisible="{Binding !IsExpanded}" Background="{StaticResource Brush.Surface}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewPanelName}" />
                                             <!-- before there is a scene: what the preview needs, and the click that starts it -->
                                             <StackPanel Spacing="12" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasScene}">
                                                 <TextBlock Classes="body-md secondary" Text="{Binding StatusText}" TextWrapping="Wrap" TextAlignment="Center" IsVisible="{Binding StatusText, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -310,9 +343,29 @@
                                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
                                                 </WrapPanel>
                                             </StackPanel>
-                                            <Button Classes="text" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" IsVisible="{Binding HasScene}" />
+                                            <!-- below a medium page the three buttons show only their icons, because the German labels do not fit a card of that width -->
+                                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasScene}">
+                                                <Button Classes="text" Command="{Binding SavePictureCommand}" CommandParameter="{Binding #PreviewView}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePictureTip}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePicture}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Image}" Stroke="{StaticResource Brush.Text}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="hide-compact" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewSavePicture}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Classes="text" Command="{Binding ExpandCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewExpandView}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewExpandView}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowsOut}" Stroke="{StaticResource Brush.Text}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="hide-compact" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewExpandView}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Classes="text" Command="{Binding ResetViewCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowCounterClockwise}" Stroke="{StaticResource Brush.Text}" VerticalAlignment="Center" />
+                                                        <TextBlock Classes="hide-compact" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
                                             <!-- the camera controls, in a flyout so that they never cover the scene until the player asks for them -->
-                                            <Button Classes="info" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding HasScene}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}">
+                                            <Button Classes="info" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding HasScene}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}">
                                                 <Button.Flyout>
                                                     <Flyout Placement="BottomEdgeAlignedLeft">
                                                         <!-- one column with a fixed largest width, so the chips wrap inside the scroll viewer of the flyout instead of making it scroll sideways -->
@@ -352,21 +405,22 @@
                                                     </Flyout>
                                                 </Button.Flyout>
                                             </Button>
-                                            <!-- over a shown scene: the stage while the textures or the mods load, or why a later step stopped -->
-                                            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="12,4" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Bottom">
-                                                <Border.IsVisible>
-                                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                        <Binding Path="HasScene" />
-                                                        <Binding Path="StatusText" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                                                    </MultiBinding>
-                                                </Border.IsVisible>
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <TextBlock Classes="body-sm secondary" Text="{Binding StatusText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
-                                                </StackPanel>
-                                            </Border>
+                                            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource VehiclePreviewStatus}" />
                                         </views:AspectRatioPanel>
                                     </Border>
+                                    <!-- the facts of the vehicle, one block that binds only to Facts, so a layout of the page can move it as a whole -->
+                                    <ItemsControl ItemsSource="{Binding Facts}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel ItemSpacing="4" LineSpacing="4" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <Border Classes="chip"><TextBlock Text="{Binding}" /></Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                     <!-- the mods the vehicle needs that are not on this computer, and the click that loads their parts -->
                                     <Border Classes="card" Padding="16,12" IsVisible="{Binding HasMissingMods}">
                                         <StackPanel Spacing="8">
@@ -600,7 +654,7 @@
                                                         <ItemsControl ItemsSource="{Binding PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!PlanSteps.Count}" />
                                                         <WrapPanel ItemSpacing="8" LineSpacing="8">
                                                             <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                                            <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                            <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                                             <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                                         </WrapPanel>
@@ -695,6 +749,31 @@
                                 <TextBlock Text="{Binding Localization.ContentCopyLink}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                    </StackPanel>
+                    <!-- only for a listing that the record of a share says the player owns -->
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding CanManageContent}" />
+                    <StackPanel Spacing="10" IsVisible="{Binding CanManageContent}">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ShareManageHeading}" />
+                        <StackPanel Spacing="6">
+                            <Button Classes="filter" Command="{Binding ChangeContentOnHostCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Pencil}" />
+                                    <TextBlock Text="{Binding Localization.ShareManageChange}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="filter" Command="{Binding TakeDownContentVersionCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
+                                    <TextBlock Text="{Binding Localization.ShareManageTakeDown}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="filter" Command="{Binding OpenContentManagePageCommand}" IsVisible="{Binding ContentManageOnHostText, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.ControlTypeOverride="Hyperlink">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.LinkSimple}" />
+                                    <TextBlock Text="{Binding ContentManageOnHostText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasContentTags}" />
                     <StackPanel Spacing="10" IsVisible="{Binding HasContentTags}">

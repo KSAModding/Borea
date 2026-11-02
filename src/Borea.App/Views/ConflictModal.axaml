@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.ConflictModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: a plan stopped because two mods do not work together -->
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" MaxWidth="640" HorizontalAlignment="Stretch" Margin="104,32,24,32" DataContext="{Binding ConflictDialog}" x:DataType="vm:ConflictDialog">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.ConflictTitle}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CloseCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="36,16,24,24">
+                    <Button Classes="text tall" Content="{Binding Localization.ModalClose}" Command="{Binding CloseCommand}" VerticalAlignment="Center" />
+                </StackPanel>
+                <ScrollViewer>
+                    <StackPanel Margin="36,32,24,16" Spacing="24">
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="body-md secondary" Text="{Binding Localization.ConflictWhy}" TextWrapping="Wrap" />
+                            <TextBlock Classes="body-md secondary" Text="{Binding Localization.ConflictAgain}" TextWrapping="Wrap" IsVisible="{Binding ShowsAgainNote}" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Rows}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="24" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ConflictRow">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Classes="body-md" Text="{Binding Text}" TextWrapping="Wrap" />
+                                        <TextBlock Classes="body-md secondary" Text="{Binding ReasonText}" TextWrapping="Wrap" IsVisible="{Binding ReasonText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding RemoveCommand}" IsVisible="{Binding ShowsPrimaryRemove}">
+                                            <TextBlock Classes="action-lg" Text="{Binding RemoveText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Button>
+                                        <Button Classes="text tall" HorizontalAlignment="Left" Content="{Binding RemoveText}" Command="{Binding RemoveCommand}" IsVisible="{Binding ShowsSecondaryRemove}" />
+                                        <Button Classes="text" HorizontalAlignment="Left" Content="{Binding OpenPageText}" Command="{Binding OpenPageCommand}" IsVisible="{Binding CanOpenPage}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Panel>
+</UserControl>

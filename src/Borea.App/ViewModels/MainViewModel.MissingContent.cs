@@ -150,6 +150,7 @@ public partial class MainViewModel
             if (!plan.IsReady)
             {
                 row.InstallError = Describe(plan.Conflicts.Concat(plan.UnresolvedChoices));
+                await ShowConflictsAsync(plan, () => RetryRow(row, instanceId) is { } shown ? InstallMissingAgainAsync(shown, instanceId, modIds) : Task.CompletedTask);
             }
             else if (plan.Warnings.Count > 0)
             {

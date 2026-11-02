@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 using Borea.Core.Sharing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -22,6 +24,12 @@ public partial class MainViewModel
     private GameSaveSection? _vehiclesSection;
     private GameSaveSection? _savesSection;
     private IReadOnlyList<GameSaveSection> _sectionsWithProfileItems = [];
+
+    /// <summary>What a share does after the rename it asked for. A cancelled rename drops it, and a refused one keeps the modal open.</summary>
+    private Func<GameSaveEntry, Task>? _afterShareRename;
+
+    /// <summary>The name that a share cannot keep, because a host refused it or a listing in the index installs under it. A rename from the row has none, because the name of the list can still repair meta.toml there.</summary>
+    private string? _nameTheShareCannotKeep;
 
     public GameSaveSection VehiclesSection => _vehiclesSection ??= new GameSaveSection(this, GameSaveKind.Vehicle);
 
@@ -41,12 +49,17 @@ public partial class MainViewModel
         await LoadGameSavesAsync(VehiclesSection);
         await LoadGameSavesAsync(SavesSection);
         await RefreshInstanceStartsEmptyAsync();
+        StartShareSchemaLoad();
+    }
+
+    /// <summary>The one load of the newest schema in a session, whose types decide whether Share shows. Null until an instance page, the tab of vehicles or saves, or a share opens.</summary>
+    internal Task? ShareSchemaLoad { get; private set; }
+
+    private void StartShareSchemaLoad()
+    {
         if (ShareSchemaLoad is null && _services is { } services && services.ListingValidator.SchemaOrigin != ListingSchemaOrigin.Downloaded)
             ShareSchemaLoad = LoadShareSchemaAsync(services);
     }
-
-    /// <summary>The one load of the newest schema in a session, whose types decide whether Share shows. Null until an instance page opens.</summary>
-    internal Task? ShareSchemaLoad { get; private set; }
 
     /// <summary>
     /// Share shows only for a type that the index accepts, so it appears once the index lifts the rollout gate of the type,
@@ -62,21 +75,111 @@ public partial class MainViewModel
         {
         }
 
-        VehiclesSection.RefreshShare();
-        SavesSection.RefreshShare();
+        RefreshShareGate();
     }
 
+    /// <summary>Tells every entry of a share that the schema in use may have changed.</summary>
+    internal void RefreshShareGate()
+    {
+        VehiclesSection.RefreshShare();
+        SavesSection.RefreshShare();
+        OnPropertyChanged(nameof(ShowsDiscoverShare));
+    }
+
+    /// <summary>
+    /// A click on an item. A row with an install record goes to the list, because the note there says whose it is.
+    /// The records are read here, because a row of the instance page shows its record only after the index answered.
+    /// </summary>
     internal async Task ShareGameSaveAsync(GameSaveItem item)
+    {
+        item.CloseEdits();
+        var type = item.Entry.Kind.ToContentType();
+        var record = RecordOfFolder(await InstalledContentOfAsync(item.InstanceId), type, item.FolderName);
+        if (record is not null && !ListingEditor.IsSharing)
+            await OpenShareChooseOnAsync(item);
+        else
+            await GoOnWithShareAsync(item);
+    }
+
+    /// <summary>
+    /// A running share stays, because a new one would cancel it, so this only goes back to it, and anything that stops the share goes to the list.
+    /// A rename goes on here, because its row has already passed the check of its record.
+    /// </summary>
+    private async Task GoOnWithShareAsync(GameSaveItem item)
     {
         if (_services is not { } services)
             return;
 
-        item.CloseEdits();
-        if (services.Launcher.IsRunning(item.InstanceId))
+        if (ListingEditor.IsSharing)
         {
-            ShowErrorToast(() => Localization.FormatToastShareFailed(item.Name), Localization.GameSaveCloseGame);
+            await OpenListingAsync();
             return;
         }
+
+        if (IsGameRunning(services))
+        {
+            await OpenShareChooseOnAsync(item);
+            return;
+        }
+
+        if (await TryStartShareAsync(item) is { } problem)
+            await OpenShareChooseOnAsync(item, problem);
+    }
+
+    /// <summary>The way into a share with no item at hand. A share on the way only shows again, and "Start over" is there for a new one.</summary>
+    internal async Task OpenShareFlowAsync(GameSaveKind kind)
+    {
+        StartShareSchemaLoad();
+
+        // The step shows first, because the page can wait a long time for the index and the schema, and it reads the rows again when they answer.
+        var choose = ListingEditor.HasShareOnTheWay ? Task.CompletedTask : ListingEditor.OpenShareChooseAsync(kind);
+        await OpenListingAsync();
+        await choose;
+    }
+
+    [RelayCommand]
+    private Task ShareFromDiscoverAsync() => OpenShareFlowAsync(IsSavesTab ? GameSaveKind.Save : GameSaveKind.Vehicle);
+
+    [RelayCommand]
+    private Task ShareFromListingStartAsync() => OpenShareFlowAsync(VehiclesSection.CanShare ? GameSaveKind.Vehicle : GameSaveKind.Save);
+
+    private async Task OpenShareChooseOnAsync(GameSaveItem item, string? problem = null)
+    {
+        await OpenListingAsync();
+        await ListingEditor.OpenShareChooseAsync(item.Entry.Kind, (item.InstanceId, item.FolderName), problem);
+    }
+
+    /// <summary>The items of a kind in one instance, for the list of a share. A row carries the real instance id, because a folder of the game profile cannot be shared.</summary>
+    internal async Task<IReadOnlyList<GameSaveItem>> ListShareCandidatesAsync(InstanceItem instance, GameSaveKind kind)
+    {
+        if (_services is not { } services)
+            return [];
+
+        var section = kind == GameSaveKind.Vehicle ? VehiclesSection : SavesSection;
+        var type = kind.ToContentType();
+        var entries = await services.GameSaves.ListAsync(instance.InstanceId, kind);
+        var records = await InstalledContentOfAsync(instance.InstanceId);
+        var shared = await services.SharedContent.ListAsync();
+        return entries.Select(entry =>
+        {
+            var item = new GameSaveItem(this, section, instance.InstanceId, entry, installed: null) { SharedHostName = SharedHostName(shared, type, entry.FolderName) };
+            if (RecordOfFolder(records, type, entry.FolderName) is { } record)
+                item.ShowRecord(record, listing: null, newer: null);
+            return item;
+        }).ToList();
+    }
+
+    private static InstalledContentRecord? RecordOfFolder(IReadOnlyList<InstalledContentRecord> records, ContentType type, string folderName) =>
+        records.FirstOrDefault(record => record.Type == type && string.Equals(record.FolderName, folderName, StringComparison.OrdinalIgnoreCase));
+
+    private static SharedContentEntry? SharedEntryOfFolder(IReadOnlyList<SharedContentEntry> entries, ContentType type, string folderName) =>
+        entries.LastOrDefault(entry => entry.Type == type && string.Equals(entry.FolderName, folderName, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Starts the share of the item, or opens the rename it needs first. Returns what stops it in plain words, or null.</summary>
+    internal async Task<string?> TryStartShareAsync(GameSaveItem item)
+    {
+        if (_services is not { } services)
+            return null;
 
         try
         {
@@ -85,27 +188,44 @@ public partial class MainViewModel
             // the index checks the name the way the game names a new save, which an item from an older build can fail
             if (!GameSaveName.IsValid(content.Name))
             {
-                BeginRenameGameSave(item);
+                BeginShareRename(item, Localization.FormatGameSaveShareRename(content.Name), renamed => GoOnWithShareAsync(new GameSaveItem(this, item.Section, item.InstanceId, renamed, installed: null)));
                 if (GameSaveName.Sanitize(content.Name) is { Length: > 0 } sanitized)
                     ModalInstanceName = sanitized;
-                GameSaveRenameReason = Localization.FormatGameSaveShareRename(content.Name);
-                return;
+                return null;
             }
+
+            // the sharing site refuses a file that names no build, which only the game can write again
+            if (!GameVersion.TryParse(content.GameBuild, out _))
+                return Localization.ShareNoBuild;
 
             var providers = await services.ContentProviders.ReadAsync(item.InstanceId);
             var installed = (await services.Instances.GetByIdAsync(item.InstanceId))?.Mods ?? [];
-            var share = new GameSaveShareStart(item.InstanceId, item.Entry, content, ContentShareProposal.Of(content.Ids, providers, installed));
-            await OpenListingAsync();
+            var lastAuthor = await services.SharedContent.GetAuthorAsync();
+            var type = item.Entry.Kind.ToContentType();
+            var sharedEntry = SharedEntryOfFolder(await services.SharedContent.ListAsync(), type, item.FolderName);
+            var record = RecordOfFolder(await InstalledContentOfAsync(item.InstanceId), type, item.FolderName);
+            var share = new GameSaveShareStart(item.InstanceId, item.Entry, content, ContentShareProposal.Of(content.Ids, providers, installed), lastAuthor, sharedEntry, record?.ListingId);
+            // Next on the list stands on the page already, and opening it again would read every row again.
+            if (!CurrentWindowListing)
+                await OpenListingAsync();
+
+            // The page reads the index, so the compare comes after it opens. The text stays under the list when the player cancels the rename.
+            if (ListingEditor.ShareNameTakenText(share) is { } taken)
+            {
+                BeginShareRename(share, taken, renamed => GoOnWithShareAsync(new GameSaveItem(this, item.Section, item.InstanceId, renamed, installed: null)));
+                return taken;
+            }
+
             ListingEditor.StartShare(share);
+            return null;
         }
         catch (GameFolderException exception)
         {
-            // the file name first, because the toast cuts a long text, and the full path in the details
-            ShowErrorToast(() => Localization.FormatToastShareFailed(item.Name), $"{FolderProblemText(exception)}\n{exception.Message}");
+            return FolderProblemText(exception);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            ShowErrorToast(() => Localization.FormatToastShareFailed(item.Name), exception.Message);
+            return Localization.FormatShareErrorFile(item.Name);
         }
     }
 
@@ -154,7 +274,7 @@ public partial class MainViewModel
             return null;
         }
 
-        if (services.Launcher.IsRunning(share.InstanceId))
+        if (IsGameRunning(services))
         {
             ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.GameSaveCloseGame);
             return null;
@@ -176,7 +296,8 @@ public partial class MainViewModel
 
     /// <summary>
     /// Writes the archive of the shared item into a new file in the temporary folder, which the caller deletes. Null when
-    /// nothing was written, and a toast says why.
+    /// the library is busy, and a toast says why. The caller checks that the game does not run. A file that cannot be read
+    /// or written gives an <see cref="IOException"/>, which the caller shows.
     /// </summary>
     internal async Task<(string File, GameSaveArchive Archive)?> WriteShareArchiveToTempAsync(GameSaveShareStart share)
     {
@@ -191,12 +312,6 @@ public partial class MainViewModel
             return null;
         }
 
-        if (services.Launcher.IsRunning(share.InstanceId))
-        {
-            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.GameSaveCloseGame);
-            return null;
-        }
-
         var file = Path.Combine(Path.GetTempPath(), "Borea-share-" + Guid.NewGuid().ToString("N") + ".zip");
         try
         {
@@ -206,8 +321,9 @@ public partial class MainViewModel
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             TryDeleteFile(file);
-            ShowErrorToast(() => Localization.FormatToastShareFailed(name), exception.Message);
-            return null;
+
+            // The step of the share says this, because a toast with the exception text is gone before the player can act on it.
+            throw new IOException(exception.Message, exception);
         }
     }
 
@@ -268,14 +384,76 @@ public partial class MainViewModel
                 return;
 
             var installed = GameVersionOf(services, instance.Instance);
-            section.SetItems(entries.Select(entry => new GameSaveItem(this, section, instance.InstanceId, entry, installed)));
-            await ShowRecordedContentAsync(section, instance.InstanceId);
+            var running = RunningRecordedRow(instance.InstanceId);
+            section.SetItems(entries.Select(entry => running is not null && running.Entry.Kind == entry.Kind && string.Equals(running.FolderName, entry.FolderName, StringComparison.OrdinalIgnoreCase)
+                ? running
+                : new GameSaveItem(this, section, instance.InstanceId, entry, installed)));
+            await ShowSharedContentAsync(section.Kind);
+            await ShowRecordedContentAsync(section, instance.Instance);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             if (SelectedInstance?.InstanceId == instance.InstanceId)
                 section.Error = exception.Message;
         }
+    }
+
+    /// <summary>Shows on each row the host of the last share of its folder. The record is for the whole computer, so it holds for the rows of every instance.</summary>
+    internal async Task ShowSharedContentAsync(GameSaveKind kind)
+    {
+        if (_services is not { } services)
+            return;
+
+        var section = kind == GameSaveKind.Vehicle ? VehiclesSection : SavesSection;
+        var type = kind.ToContentType();
+        var entries = await services.SharedContent.ListAsync();
+        foreach (var item in section.Items)
+            item.SharedHostName = SharedHostName(entries, type, item.FolderName);
+    }
+
+    private static string? SharedHostName(IReadOnlyList<SharedContentEntry> entries, ContentType type, string folderName) =>
+        SharedEntryOfFolder(entries, type, folderName)?.HostName;
+
+    /// <summary>How long the row of a new vehicle or save shows its border.</summary>
+    internal static readonly TimeSpan GameSaveMarkDuration = TimeSpan.FromSeconds(2);
+
+    private CancellationTokenSource? _gameSaveMarkTimer;
+    private GameSaveItem? _markedGameSave;
+
+    /// <summary>The row that the instance page scrolls to. Set again for the same row, it scrolls again.</summary>
+    [ObservableProperty]
+    private GameSaveItem? _gameSaveInView;
+
+    /// <summary>Shows the row of a vehicle or save that the player was just told about, on the Content tab where its table is.</summary>
+    private void MarkGameSave(GameSaveItem row)
+    {
+        InstanceTab = InstanceTab.Content;
+        _gameSaveMarkTimer?.Cancel();
+        _gameSaveMarkTimer?.Dispose();
+        if (_markedGameSave is { } previous)
+            previous.IsMarked = false;
+
+        _markedGameSave = row;
+        row.IsMarked = true;
+        GameSaveInView = null;
+        GameSaveInView = row;
+        _gameSaveMarkTimer = new CancellationTokenSource();
+        _ = UnmarkGameSaveAsync(row, _gameSaveMarkTimer.Token);
+    }
+
+    private async Task UnmarkGameSaveAsync(GameSaveItem row, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(GameSaveMarkDuration, Clock, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (!token.IsCancellationRequested)
+            row.IsMarked = false;
     }
 
     internal void OpenGameSaveFolder(string folder) => ShowOpenError(() => PathName(folder), TryOpenWithSystem(folder));
@@ -326,6 +504,41 @@ public partial class MainViewModel
         RenamingGameSave = item;
     }
 
+    /// <summary>Opens the rename of a shared item, whose row the instance page may not show. The share goes on after it.</summary>
+    internal void BeginShareRename(GameSaveShareStart share, string reason, Func<GameSaveEntry, Task> next)
+    {
+        var section = share.Entry.Kind == GameSaveKind.Vehicle ? VehiclesSection : SavesSection;
+        var row = section.Items.FirstOrDefault(item => item.InstanceId == share.InstanceId && item.FolderName == share.Entry.FolderName);
+        BeginShareRename(row ?? new GameSaveItem(this, section, share.InstanceId, share.Entry, installed: null), reason, next);
+        _nameTheShareCannotKeep = share.Content.Name;
+    }
+
+    private void BeginShareRename(GameSaveItem item, string reason, Func<GameSaveEntry, Task> next)
+    {
+        BeginRenameGameSave(item);
+        GameSaveRenameReason = reason;
+        _afterShareRename = next;
+        OnPropertyChanged(nameof(NameModalConfirmText));
+    }
+
+    /// <summary>Lists the instance again, because the rename moved the folder, and goes on with the entry of the new name.</summary>
+    private async Task GoOnAfterShareRenameAsync(GameSaveItem item, string name, Func<GameSaveEntry, Task> next)
+    {
+        if (_services is not { } services)
+            return;
+
+        try
+        {
+            var entries = await services.GameSaves.ListAsync(item.InstanceId, item.Entry.Kind);
+            if (entries.FirstOrDefault(entry => string.Equals(entry.FolderName, name, StringComparison.OrdinalIgnoreCase)) is { } renamed)
+                await next(renamed);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.FormatShareErrorFile(name));
+        }
+    }
+
     /// <summary>Keeps the modal open with the reason when the rename is refused or fails.</summary>
     private async Task RenameGameSaveFromModalAsync(GameSaveItem item)
     {
@@ -334,6 +547,12 @@ public partial class MainViewModel
         if (name == item.Name && name == item.FolderName && GameSaveRenameReason is null)
         {
             RenamingGameSave = null;
+            return;
+        }
+
+        if (name == _nameTheShareCannotKeep && name == item.FolderName)
+        {
+            InstanceError = Localization.GameSaveRenameChooseAnother;
             return;
         }
 
@@ -347,10 +566,20 @@ public partial class MainViewModel
             return;
         }
 
+        // A Cancel during the rename has cleared the continuation, so the share stays where it is.
+        var next = RenamingGameSave == item ? _afterShareRename : null;
         if (RenamingGameSave == item)
             RenamingGameSave = null;
         ShowSuccessToast(() => Localization.FormatGameSaveRenamed(item.Name, name));
-        await LoadGameSavesAsync(item.Section);
+
+        // the steps of a new vehicle or save read the folder name from the records of the instance row
+        if (item.Record is not null)
+            await ReloadInstancesAsync();
+        else
+            await LoadGameSavesAsync(item.Section);
+
+        if (next is not null)
+            await GoOnAfterShareRenameAsync(item, name, next);
     }
 
     /// <summary>Null when the item has the new name.</summary>
@@ -567,6 +796,8 @@ public sealed partial class GameSaveSection : ObservableObject
 
     public string EmptyText => Kind == GameSaveKind.Vehicle ? _owner.Localization.GameSaveNoVehicles : _owner.Localization.GameSaveNoSaves;
 
+    public string FindText => Kind == GameSaveKind.Vehicle ? _owner.Localization.GameSaveFindVehicles : _owner.Localization.GameSaveFindSaves;
+
     /// <summary>Whether the schema in use accepts the type, so the index takes a listing of it (RFC 0085 rollout gate).</summary>
     public bool CanShare => _owner.Services?.ListingValidator.AcceptedTypes.Contains(Kind == GameSaveKind.Vehicle ? ListingFolders.VehicleType : ListingFolders.SaveType) == true;
 
@@ -657,6 +888,7 @@ public sealed partial class GameSaveSection : ObservableObject
     {
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(EmptyText));
+        OnPropertyChanged(nameof(FindText));
         OnPropertyChanged(nameof(CopyNoteText));
         OnPropertyChanged(nameof(ProfileSelectionText));
         foreach (var item in Items.Concat(ProfileItems))
@@ -665,6 +897,9 @@ public sealed partial class GameSaveSection : ObservableObject
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenGameSaveSectionFolder(this);
+
+    [RelayCommand]
+    private void FindOnDiscover() => _owner.OpenDiscoverTab(Kind.ToContentType());
 
     [RelayCommand]
     private Task BeginCopyFromProfileAsync() => _owner.BeginCopyFromProfileAsync(this);
@@ -722,6 +957,9 @@ public sealed partial class GameSaveItem : ObservableObject
 
     public string UpdatedText => _owner.Localization.FormatGameSaveUpdated(MainViewModel.DateTimeText(Entry.UpdatedAt));
 
+    /// <summary>The date alone, which fits one line of a narrow row. The tooltip of the row has the time.</summary>
+    public string UpdatedDateText => _owner.Localization.FormatGameSaveUpdated(MainViewModel.DateText(Entry.UpdatedAt));
+
     public string? BuildText => _build?.ToString() ?? Entry.GameBuild;
 
     public string? BuildToolTip => BuildText is { } build ? _owner.Localization.FormatGameSaveBuild(build) : null;
@@ -737,20 +975,36 @@ public sealed partial class GameSaveItem : ObservableObject
     public bool ExistsInInstance { get; init; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SharedOnText))]
+    [NotifyPropertyChangedFor(nameof(ShowsListingLine))]
+    private string? _sharedHostName;
+
+    public string? SharedOnText => SharedHostName is { } host ? _owner.Localization.FormatContentSharedOn(host) : null;
+
+    public bool ShowsListingLine => HasRecord || SharedHostName is not null;
+
+    [ObservableProperty]
     private bool _isSelected;
+
+    /// <summary>Whether the row shows its border for a moment, because a toast led the player to it.</summary>
+    [ObservableProperty]
+    private bool _isMarked;
 
     partial void OnIsSelectedChanged(bool value) => Section.OnProfileSelectionChanged();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     private bool _isConfirmingDelete;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     private bool _isChoosingTarget;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     private bool _isConfirmingReplace;
 
     [ObservableProperty]
@@ -767,9 +1021,13 @@ public sealed partial class GameSaveItem : ObservableObject
     /// <summary>An item of an instance, of a type that the index accepts.</summary>
     public bool CanShare => InstanceId != Guid.Empty && Section.CanShare;
 
+    /// <summary>A row with a record has no button, because a share of the file of someone else ends in a refusal, and its menu entry leads to the note that says so.</summary>
+    public bool ShowsShareButton => CanShare && !HasRecord && IsIdle;
+
     internal void RefreshShare()
     {
         OnPropertyChanged(nameof(CanShare));
+        OnPropertyChanged(nameof(ShowsShareButton));
         ShareCommand.NotifyCanExecuteChanged();
     }
 
@@ -783,11 +1041,13 @@ public sealed partial class GameSaveItem : ObservableObject
     internal void RefreshText()
     {
         OnPropertyChanged(nameof(UpdatedText));
+        OnPropertyChanged(nameof(UpdatedDateText));
         OnPropertyChanged(nameof(BuildToolTip));
         OnPropertyChanged(nameof(OlderBuildText));
         OnPropertyChanged(nameof(SizeText));
         OnPropertyChanged(nameof(CopyNoteText));
         OnPropertyChanged(nameof(ReplaceText));
+        OnPropertyChanged(nameof(SharedOnText));
         RefreshRecordText();
     }
 

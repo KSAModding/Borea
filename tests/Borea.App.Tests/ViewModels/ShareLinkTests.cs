@@ -14,6 +14,14 @@ public sealed class ShareLinkTests
     }
 
     [Fact]
+    public void For_IndexVehicleOrSave_IsThePageOfItsType()
+    {
+        Assert.Equal("https://ksamodding.github.io/Borea/vehicle/ExampleRover/", ShareLinks.For(Listing("ExampleRover", "index", ContentType.Vehicle)));
+        Assert.Equal("https://ksamodding.github.io/Borea/save/CampaignSave/", ShareLinks.For(Listing("CampaignSave", "index", ContentType.Save)));
+        Assert.Null(ShareLinks.For(Listing("ExampleRover", "local", ContentType.Vehicle)));
+    }
+
+    [Fact]
     public void For_ListingFromAnotherSource_IsNull()
         => Assert.Null(ShareLinks.For(Listing("5000", "spacedock")));
 

@@ -34,7 +34,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
     /// Uses an ETag to determine if the index has changed since the last fetch. Then fetches each type
     /// file next to it against its own ETag; a type file never fails the fetch, see <see cref="FetchTypeFileAsync"/>.
     /// </summary>
-    /// <param name="destinationPath">The full path to the file where the index will be saved. (ex.g C:/Users/username/%LocalAppData%/Borea/index.json)</param>
+    /// <param name="destinationPath">The full path to the file where the index will be saved.</param>
     /// <returns>Downloaded when the index or any type file changed, so a reader reads them again.</returns>
     /// <exception cref="HttpRequestException"></exception>
     public async Task<ContentIndexFetchResult> FetchAsync(string destinationPath, CancellationToken ct = default)

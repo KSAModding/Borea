@@ -25,9 +25,12 @@ internal interface IContentPlanRow : IInstallRow
 /// </summary>
 public partial class MainViewModel
 {
+    private const int ChangedFilesNamed = 3;
+
     /// <summary>Plans the install of a vehicle or save into an instance, or the update of the record that the instance has of it.</summary>
     /// <param name="name">A new name the player chose in the name modal, or null.</param>
-    internal async Task PlanContentAsync(IContentPlanRow row, Guid instanceId, ModVersionMetadata release, string? name = null, bool discardChanges = false)
+    /// <param name="whenHeld">Runs once the plan waits on the row. With it every plan waits, for an install that a borea:// link asked for.</param>
+    internal async Task PlanContentAsync(IContentPlanRow row, Guid instanceId, ModVersionMetadata release, string? name = null, bool discardChanges = false, Action? whenHeld = null)
     {
         if (_services is not { } services || row.IsInstalling)
             return;
@@ -59,7 +62,7 @@ public partial class MainViewModel
         switch (plan.Check.Outcome)
         {
             case UserContentOutcome.NameTaken:
-                AskContentName(row, instanceId, plan, discardChanges);
+                AskContentName(row, instanceId, plan, discardChanges, whenHeld);
                 return;
             case UserContentOutcome.Ready or UserContentOutcome.Changed:
                 break;
@@ -72,21 +75,33 @@ public partial class MainViewModel
         {
             row.Choices = NewChoices(instanceId, [new RequestedMod(release, InstallReason.Manual)], plan.Mods);
             HoldContentPlan(row, plan);
+            whenHeld?.Invoke();
+            await ShowConflictsAsync(plan.Mods, Again);
         }
         else if (!plan.Mods.IsReady)
         {
             row.InstallError = Describe(plan.Mods.Conflicts.Concat(plan.Mods.UnresolvedChoices));
+            await ShowConflictsAsync(plan.Mods, Again);
         }
-        else if (plan.Check.Outcome == UserContentOutcome.Changed || plan.Mods.Warnings.Count > 0 || plan.Enables.Count > 0
+        else if (whenHeld is not null || plan.Check.Outcome == UserContentOutcome.Changed || plan.Mods.Warnings.Count > 0 || plan.Enables.Count > 0
             || AddedMods(plan.Mods, null).Any() || InstallStepsOf(plan.Mods).Count > 0)
         {
             HoldContentPlan(row, plan);
+            whenHeld?.Invoke();
         }
         else
         {
             await ExecuteContentPlanAsync(row, plan);
         }
+
+        Task Again() => RetryContentRow(row) is { } shown ? PlanContentAsync(shown, instanceId, release, name, discardChanges, whenHeld) : Task.CompletedTask;
     }
+
+    /// <summary>The reload after the removal builds new rows for the vehicles and saves of the instance page, and any other row stays.</summary>
+    private IContentPlanRow? RetryContentRow(IContentPlanRow row)
+        => row is GameSaveItem item && SelectedInstance?.InstanceId == item.InstanceId
+            ? item.Section.Items.FirstOrDefault(shown => shown.InstanceId == item.InstanceId && shown.FolderName == item.FolderName)
+            : row;
 
     /// <summary>
     /// Runs the plan the row holds. A plan that found changed files, or whose choices the player answered, plans again
@@ -156,6 +171,7 @@ public partial class MainViewModel
         try
         {
             run.TaskItem.MarkRunning(plan.Mods);
+            run.TaskItem.NewVersion = plan.Release.Version.ToString();
 
             // the player saw the mods it misses before the go, so the install goes on without them
             var result = await services.UserContentInstallation.ExecuteAsync(plan, allowMissing: true, ProgressOf(row), run.InstallStop);
@@ -184,6 +200,8 @@ public partial class MainViewModel
 
         await ReloadInstancesAsync();
         row.InstallError = error;
+        if (completed && plan.Installed is null)
+            LeaveInstalledWhereNotice(plan.Release.ModId, instanceId);
     }
 
     /// <summary>Repeats the plan until it names no recommendation that is neither selected nor deselected, as a mod install does.</summary>
@@ -223,12 +241,12 @@ public partial class MainViewModel
         if (plan.Enables.Count > 0)
             notes.Add(Localization.FormatPackContentEnables(string.Join(", ", plan.Enables.Select(ContentName)), name));
         if (plan.Check.Outcome == UserContentOutcome.Changed && plan.Check.Changes is { } changes)
-            notes.Add(Localization.FormatPackContentChanged(name, ChangedFilesText(changes)));
+            notes.Add(Localization.FormatPackContentChanged(name, ShortChangedFilesText(changes)));
         row.InstallWarning = notes.Count > 0 ? string.Join(" ", notes) : null;
     }
 
     /// <summary>Opens the name modal of #556 for an item whose name is taken. The new name plans the item again.</summary>
-    private void AskContentName(IContentPlanRow row, Guid instanceId, UserContentPlan plan, bool discardChanges)
+    private void AskContentName(IContentPlanRow row, Guid instanceId, UserContentPlan plan, bool discardChanges, Action? whenHeld)
     {
         var release = plan.Release;
         var name = ContentName(release.ModId);
@@ -240,7 +258,7 @@ public partial class MainViewModel
         RenamingGameSave = null;
         ModalInstanceName = FreeNameSuggestion(taken);
         var explanation = Localization.FormatContentNameTaken(taken, release.Type == ContentType.Save ? Localization.InstanceGroupSaves : Localization.InstanceGroupVehicles);
-        NamingPackContent = new PackContentNaming(release.ModId, name, explanation, names, () => PlanContentAsync(row, instanceId, release, names[release.ModId], discardChanges), IsPackMember: false);
+        NamingPackContent = new PackContentNaming(release.ModId, name, explanation, names, () => PlanContentAsync(row, instanceId, release, names[release.ModId], discardChanges, whenHeld), IsPackMember: false);
     }
 
     /// <summary>Why the folder step stopped, in the language of the App.</summary>
@@ -250,7 +268,7 @@ public partial class MainViewModel
         UserContentOutcome.AlreadyInstalled => Localization.FormatLinkAlreadyInstalled(ContentName(release.ModId), Instances.FirstOrDefault(instance => instance.InstanceId == instanceId)?.Name ?? string.Empty),
         UserContentOutcome.NameTaken => release.Type == ContentType.Save ? Localization.GameSaveSaveNameTaken : Localization.GameSaveVehicleNameTaken,
         UserContentOutcome.InvalidName => Localization.GameSaveNameNeedsLetter,
-        UserContentOutcome.Changed when result.Changes is { } changes => Localization.FormatPackContentChanged(ContentName(release.ModId), ChangedFilesText(changes)),
+        UserContentOutcome.Changed when result.Changes is { } changes => Localization.FormatPackContentChanged(ContentName(release.ModId), ShortChangedFilesText(changes)),
         _ => Localization.ContentGoneFromInstance,
     };
 
@@ -283,7 +301,7 @@ public partial class MainViewModel
             var result = await services.UserContentInstaller.RemoveAsync(instance.InstanceId, record, discardChanges: item.RemoveChanges is not null);
             if (result.Outcome == UserContentOutcome.Changed && result.Changes is { } changes)
             {
-                item.RemoveChanges = ChangedFilesText(changes);
+                item.RemoveChanges = ShortChangedFilesText(changes);
                 asksAgain = true;
             }
             else if (result.IsDone)
@@ -316,4 +334,12 @@ public partial class MainViewModel
 
     internal static string ChangedFilesText(InstalledContentChanges changes)
         => string.Join(", ", changes.Added.Concat(changes.Removed).Concat(changes.Changed));
+
+    /// <summary>The changed files for a sentence, because a full list can push the rest of the sentence off the row.</summary>
+    internal string ShortChangedFilesText(InstalledContentChanges changes)
+    {
+        var files = changes.Added.Concat(changes.Removed).Concat(changes.Changed).ToList();
+        var named = string.Join(", ", files.Take(ChangedFilesNamed));
+        return files.Count > ChangedFilesNamed ? Localization.FormatChangedFilesMore(named, files.Count - ChangedFilesNamed) : named;
+    }
 }

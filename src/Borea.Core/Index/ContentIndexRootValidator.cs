@@ -155,7 +155,6 @@ public static class ContentIndexRootValidator
             throw new InvalidOperationException($"{name} is not a JSON object.");
         }
 
-        // Reject if no usable snapshot_version or value is 0 or below
         if (!root.TryGetProperty("snapshot_version", out var versionElement) ||
             versionElement.ValueKind != JsonValueKind.Number ||
             !versionElement.TryGetInt32(out int snapshotVersion) ||
@@ -170,7 +169,6 @@ public static class ContentIndexRootValidator
             throw new InvalidOperationException($"{name} is snapshot version {snapshotVersion} and this build reads {SnapshotVersions.Highest}.");
         }
 
-        // If sources exist, make sure it is an object
         if (root.TryGetProperty("sources", out var sourcesElement))
         {
             if (sourcesElement.ValueKind != JsonValueKind.Object)

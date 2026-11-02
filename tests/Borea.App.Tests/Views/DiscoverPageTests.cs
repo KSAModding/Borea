@@ -43,6 +43,43 @@ public sealed class DiscoverPageTests
     }
 
     [Fact]
+    public async Task EmptyTab_CanBeSelectedAndSaysSo_AndASearchWithNoMatchLeadsBackThroughTheLink()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var localization = harness.Localization;
+
+        var (tabActive, emptyTab, noMatch, cleared) = await RenderAsync(harness, 1000, page =>
+        {
+            List<string?> Messages()
+            {
+                page.UpdateLayout();
+                return page.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible).Select(block => block.Text)
+                    .Where(text => text == localization.DiscoverNoSaves || text == localization.DiscoverNoSavesHint || text == localization.DiscoverEmpty)
+                    .ToList();
+            }
+
+            var tab = page.GetVisualDescendants().OfType<Button>().Single(button => button.Command == viewModel.ShowDiscoverSavesCommand);
+            Click(tab);
+            var tabActive = tab.Classes.Contains("active");
+            var emptyTab = Messages();
+
+            viewModel.ShowDiscoverModsCommand.Execute(null);
+            viewModel.SearchText = "no listing has this name";
+            var noMatch = Messages();
+            Click(page.GetVisualDescendants().OfType<Button>().Single(button => button.Command == viewModel.ClearDiscoverSearchAndFiltersCommand));
+            return (tabActive, emptyTab, noMatch, Messages());
+        });
+
+        Assert.True(tabActive);
+        Assert.Equal([localization.DiscoverNoSaves, localization.DiscoverNoSavesHint], emptyTab);
+        Assert.Equal([localization.DiscoverEmpty], noMatch);
+        Assert.Empty(cleared);
+        Assert.Equal(string.Empty, viewModel.SearchText);
+    }
+
+    [Fact]
     public async Task InstalledInOtherInstances_IsOfferedOnlyWithAnotherInstance()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -167,7 +204,7 @@ public sealed class DiscoverPageTests
 
         var (left, right, offset) = await RenderAsync(harness, 1280, page =>
         {
-            var link = SidePanelButton(page, viewModel.OpenListingCommand);
+            var link = SidePanelButton(page, viewModel.ListYourModCommand);
             var text = link.GetVisualDescendants().OfType<TextBlock>().Single();
             var heading = SidePanel(page).GetVisualDescendants().OfType<TextBlock>().Single(block => block.Text == viewModel.Localization.DiscoverForModAuthors);
             var start = Corner(text, link).X;
@@ -177,6 +214,33 @@ public sealed class DiscoverPageTests
         Assert.True(left >= 8, $"The text starts {left} px inside the link.");
         Assert.True(right >= 8, $"The text ends {right} px inside the link.");
         Assert.Equal(0, offset, 0.5);
+    }
+
+    /// <summary>An index with no vehicle shows the empty state, whose hint and button go away with a schema that refuses the type, and so does the block of the panel.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ShareEntries_ShowOnlyWhileTheIndexAcceptsTheType(bool isGated)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: isGated ? GameSaveShareTests.Gated : null);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        await viewModel.ShareSchemaLoad!;
+
+        var (buttons, panelLinks, texts) = await RenderAsync(harness, 860, page =>
+        (
+            page.GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible && button.Command == viewModel.ShareFromDiscoverCommand),
+            SidePanel(page).GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible && button.Command == viewModel.ShareFromDiscoverCommand),
+            page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList()));
+
+        var localization = harness.Localization;
+        Assert.Equal(isGated ? 0 : 2, buttons);
+        Assert.Equal(isGated ? 0 : 1, panelLinks);
+        Assert.Contains(localization.DiscoverNoVehicles, texts);
+        Assert.Equal(!isGated, texts.Contains(localization.DiscoverNoVehiclesHint));
+        Assert.Equal(!isGated, texts.Contains(localization.DiscoverShareVehicleHeading));
+        Assert.Equal(!isGated, texts.Contains(localization.DiscoverShareVehicleText));
     }
 
     [Theory]
@@ -302,20 +366,25 @@ public sealed class DiscoverPageTests
             }
         });
 
-    [Fact]
-    public async Task CategoryTabs_StayOnOneLine_InGermanAt1000Px()
+    [Theory]
+    [InlineData("de", 860, 7)]
+    [InlineData("en", 860, 7)]
+    [InlineData("de", 1000, 16)]
+    public async Task CategoryTabs_StayOnOneLine_AndKeepTheirFullPaddingWhenTheyHaveRoom(string culture, double windowWidth, double padding)
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        Assert.True(harness.Localization.TrySetCulture("de"));
+        Assert.True(harness.Localization.TrySetCulture(culture));
 
-        var tabTops = await RenderAsync(harness, 1000, page =>
+        var tabs = await RenderAsync(harness, windowWidth, page =>
             page.GetVisualDescendants().OfType<Button>()
                 .Where(button => button.Classes.Contains("tab"))
-                .Select(button => Corner(button, page).Y)
+                .Select(button => (Corner(button, page).Y, button.Bounds.Height, button.Padding.Left))
                 .ToList());
 
-        Assert.Equal(5, tabTops.Count);
-        Assert.Single(tabTops.Distinct());
+        Assert.Equal(5, tabs.Count);
+        Assert.Single(tabs.Select(tab => tab.Y).Distinct());
+        Assert.Single(tabs.Select(tab => tab.Height).Distinct());
+        Assert.All(tabs, tab => Assert.Equal(padding, tab.Left));
     }
 
     private static GameVersionControls ReadGameVersionControls(MainViewModel viewModel, Control page)

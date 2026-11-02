@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -10,9 +11,12 @@ using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using ContentPage = Borea.App.Views.Pages.ContentPage;
 using Borea.App.ViewModels;
+using Borea.App.Views;
 using Borea.App.Views.Preview;
 using Borea.Core.Preview;
+using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
+using CommunityToolkit.Mvvm.Input;
 using static Borea.App.Tests.ViewModels.UserContentViewModelTests;
 
 namespace Borea.App.Tests.Views;
@@ -105,6 +109,98 @@ public sealed class ContentPagePreviewTests
     }
 
     [Fact]
+    public async Task Expand_FillsTheWindowWithTheCameraOfThePanel_AndEscapeGivesTheCameraBack()
+    {
+        using var harness = await RoverPageAsync();
+        var seen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var (window, panel) = await ShowInMainWindowAsync(harness);
+            var preview = harness.ViewModel.VehiclePreview!;
+
+            // an earlier Reset view click must not count again for the new view
+            preview.ResetViewCommand.Execute(null);
+            await HeadlessApp.FramesUntilAsync(() => panel.IsIdle);
+            panel.Focus();
+            window.KeyPressQwerty(PhysicalKey.ArrowRight, RawInputModifiers.None);
+            await HeadlessApp.FramesUntilAsync(() => panel.IsIdle);
+            var turned = panel.CameraYaw;
+            var pose = preview.Pose;
+
+            preview.ExpandCommand.Execute(null);
+            var expanded = ExpandedView(window);
+            await HeadlessApp.FramesUntilAsync(() => expanded.IsIdle && expanded.FramesShown >= 1);
+            var opened = (Turned: turned, Yaw: expanded.CameraYaw, PoseKept: preview.Pose == pose, Area: BoundsIn(window, expanded), PanelShows: panel.IsVisible);
+
+            // the expanded view takes the focus on its own, so its keys and Escape work without a click
+            await HeadlessApp.FramesUntilAsync(() => expanded.IsFocused);
+            window.KeyPressQwerty(PhysicalKey.ArrowRight, RawInputModifiers.None);
+            await HeadlessApp.FramesUntilAsync(() => expanded.IsIdle);
+            var turnedFurther = expanded.CameraYaw;
+
+            var overlay = expanded.GetVisualParent()!;
+            var tabStaysInside = true;
+            for (var press = 0; press < 5; press++)
+            {
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                window.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                tabStaysInside &= window.FocusManager!.GetFocusedElement() is Visual focused && focused.GetSelfAndVisualAncestors().Contains(overlay);
+            }
+
+            window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+            await HeadlessApp.FramesUntilAsync(() => panel.IsVisible && panel.IsIdle);
+            var closed = (preview.IsExpanded, Views: window.GetVisualDescendants().OfType<VehiclePreviewView>().Count(), PanelYaw: panel.CameraYaw);
+
+            // Reset view in the expanded view frames the vehicle in both views
+            preview.ExpandCommand.Execute(null);
+            var again = ExpandedView(window);
+            await HeadlessApp.FramesUntilAsync(() => again.IsIdle && again.FramesShown >= 1);
+            preview.ResetViewCommand.Execute(null);
+            await HeadlessApp.FramesUntilAsync(() => again.IsIdle && panel.IsIdle);
+            var reset = (Expanded: again.CameraYaw, Panel: panel.CameraYaw);
+
+            var size = window.ClientSize;
+            window.DataContext = null;
+            window.Close();
+            return (Opened: opened, TurnedFurther: turnedFurther, TabStaysInside: tabStaysInside, Closed: closed, Reset: reset, Size: size);
+        });
+
+        Assert.NotEqual(OrbitCamera.DefaultYaw, seen.Opened.Turned);
+        Assert.Equal(seen.Opened.Turned, seen.Opened.Yaw);
+        Assert.True(seen.Opened.PoseKept, "Opening the expanded view must leave the pose alone.");
+        Assert.Equal(new Rect(seen.Size), seen.Opened.Area);
+        Assert.False(seen.Opened.PanelShows);
+        Assert.NotEqual(seen.Opened.Yaw, seen.TurnedFurther);
+        Assert.True(seen.TabStaysInside, "Tab must stay inside the expanded view.");
+        Assert.False(seen.Closed.IsExpanded);
+        Assert.Equal(1, seen.Closed.Views);
+        Assert.Equal(seen.TurnedFurther, seen.Closed.PanelYaw);
+        Assert.Equal((OrbitCamera.DefaultYaw, OrbitCamera.DefaultYaw), seen.Reset);
+    }
+
+    [Fact]
+    public async Task TheExpandedView_ShowsTheLoadStatusOfThePanel()
+    {
+        using var harness = await RoverPageAsync();
+        var seen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var (window, _) = await ShowInMainWindowAsync(harness);
+            var preview = harness.ViewModel.VehiclePreview!;
+            preview.ExpandCommand.Execute(null);
+            var overlay = ExpandedView(window).GetVisualParent()!;
+            preview.State = VehiclePreviewState.Failed;
+            window.UpdateLayout();
+            var status = overlay.GetVisualDescendants().OfType<TextBlock>().Any(text => text.IsEffectivelyVisible && text.Text == preview.StatusText);
+            var cancel = overlay.GetVisualDescendants().OfType<Button>().Any(button => ReferenceEquals(button.Command, preview.CancelCommand));
+            window.DataContext = null;
+            window.Close();
+            return (Status: status, Cancel: cancel);
+        });
+
+        Assert.True(seen.Status, "The expanded view must show the status text.");
+        Assert.True(seen.Cancel, "The expanded view must have the Cancel button of the load.");
+    }
+
+    [Fact]
     public async Task TheWheel_OverThePanelWithoutAScene_ScrollsThePage()
     {
         using var harness = await VehicleHarnessAsync();
@@ -137,6 +233,153 @@ public sealed class ContentPagePreviewTests
         Assert.True(offsets.After < offsets.Before, $"The wheel over the empty panel must scroll the page, but the offset stayed at {offsets.After}.");
     }
 
+    [Fact]
+    public async Task TheSaveButton_WritesAPngOfTheTurnedView_InTheSizeOfThePanel()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview();
+        viewModel.VehiclePreviewEncoder = new AvaloniaPngEncoder();
+        await VehiclePreviewViewModelTests.OpenRoverAsync(viewModel);
+        viewModel.VehiclePreview!.Scene = PreviewTestScenes.StackedBoxes();
+
+        var seen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var (window, page, view) = await ShowAsync(harness, height: 1600);
+            var button = page.GetVisualDescendants().OfType<Button>().Single(candidate => candidate.Command == viewModel.VehiclePreview!.SavePictureCommand);
+            var first = await SaveAsync(viewModel, button);
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.ArrowRight, RawInputModifiers.None);
+            var turned = await SaveAsync(viewModel, button);
+            var panel = new PixelSize((int)Math.Ceiling(view.Bounds.Width), (int)Math.Ceiling(view.Bounds.Height));
+            using var picture = new Bitmap(new MemoryStream(turned));
+            var visible = button.IsEffectivelyVisible;
+            window.Close();
+            return (First: first, Turned: turned, Panel: panel, Picture: picture.PixelSize, Visible: visible);
+        });
+
+        Assert.True(seen.Visible);
+        Assert.Equal(seen.Panel, seen.Picture);
+        Assert.NotEqual(seen.First, seen.Turned);
+    }
+
+    [Fact]
+    public async Task TheExpandedView_HasItsOwnSaveButton_ThatWritesThePictureOfTheExpandedView()
+    {
+        using var harness = await VehicleHarnessAsync();
+        harness.ViewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview();
+        harness.ViewModel.VehiclePreviewEncoder = new AvaloniaPngEncoder();
+        await VehiclePreviewViewModelTests.OpenRoverAsync(harness.ViewModel);
+        harness.ViewModel.VehiclePreview!.Scene = PreviewTestScenes.StackedBoxes();
+        var seen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var (window, _) = await ShowInMainWindowAsync(harness);
+            var preview = harness.ViewModel.VehiclePreview!;
+            preview.ExpandCommand.Execute(null);
+            var expanded = ExpandedView(window);
+            await HeadlessApp.FramesUntilAsync(() => expanded.IsIdle && expanded.FramesShown >= 1);
+
+            var overlay = expanded.GetVisualParent()!;
+            var button = overlay.GetVisualDescendants().OfType<Button>().Single(candidate => candidate.Command == preview.SavePictureCommand);
+            var written = await SaveAsync(harness.ViewModel, button);
+            var area = new PixelSize((int)Math.Ceiling(expanded.Bounds.Width), (int)Math.Ceiling(expanded.Bounds.Height));
+            using var picture = new Bitmap(new MemoryStream(written));
+            var result = (Source: button.CommandParameter, Expanded: expanded, Shown: button.IsEffectivelyVisible, Picture: picture.PixelSize, Area: area);
+            window.DataContext = null;
+            window.Close();
+            return result;
+        });
+
+        Assert.Same(seen.Expanded, seen.Source);
+        Assert.True(seen.Shown);
+        Assert.Equal(seen.Area, seen.Picture);
+    }
+
+    [Theory]
+    [InlineData(1200, true)]
+    [InlineData(860, false)]
+    public async Task ThePanelButtons_ShowTheirLabelsOnlyWhenTheCardIsWideEnoughForThem(double windowWidth, bool showsLabels)
+    {
+        using var harness = await RoverPageAsync();
+        var seen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var window = new MainWindow { Width = windowWidth, Height = 700, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var panel = window.GetVisualDescendants().OfType<VehiclePreviewView>().Single();
+            await HeadlessApp.FramesUntilAsync(() => panel.IsIdle && panel.FramesShown >= 1);
+            var preview = harness.ViewModel.VehiclePreview!;
+            var buttons = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible && (button.Command == preview.SavePictureCommand || button.Command == preview.ExpandCommand || button.Command == preview.ResetViewCommand)).ToList();
+            var labels = buttons.Select(button => button.GetVisualDescendants().OfType<TextBlock>().Single().IsEffectivelyVisible).ToList();
+            var card = BoundsIn(window, panel);
+            var row = buttons.Select(button => BoundsIn(window, button)).ToList();
+            var names = buttons.Select(button => Avalonia.Automation.AutomationProperties.GetName(button)).ToList();
+            window.DataContext = null;
+            window.Close();
+            return (Labels: labels, Card: card, Row: row, Names: names);
+        });
+
+        Assert.Equal(3, seen.Labels.Count);
+        Assert.All(seen.Labels, shown => Assert.Equal(showsLabels, shown));
+        Assert.All(seen.Row, button => Assert.True(seen.Card.Contains(button), $"A button at {button} leaves the card {seen.Card}."));
+        Assert.All(seen.Names, name => Assert.False(string.IsNullOrEmpty(name)));
+    }
+
+    [Fact]
+    public async Task TheTabs_KeepTheirMarginAtTheEdgeOfTheStrip_InGermanOnANarrowWindow()
+    {
+        using var harness = await RoverPageAsync();
+        harness.Localization.TrySetCulture("de");
+        var seen = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var window = new MainWindow { Width = 860, Height = 700, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var tabs = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible && button.Classes.Contains("tab")).ToList();
+            var strip = BoundsIn(window, tabs[0].GetVisualParent()!.GetVisualParent()!);
+            var last = BoundsIn(window, tabs[^1]);
+            window.DataContext = null;
+            window.Close();
+            return Task.FromResult((Count: tabs.Count, Strip: strip, Last: last));
+        });
+        harness.Localization.TrySetCulture("en");
+
+        Assert.Equal(3, seen.Count);
+        Assert.True(seen.Last.Right <= seen.Strip.Right - 6, $"The last tab ends at {seen.Last.Right}, and the strip at {seen.Strip.Right}.");
+    }
+
+    [Fact]
+    public async Task TheFacts_ShowOnThePage_WithTheCountsOfTheVehicle()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var localization = harness.Localization;
+        harness.ViewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview { Vehicle = new ResolvedVehicle([], [], [], [], [], 3, 0) { StageCount = 2 } };
+        await VehiclePreviewViewModelTests.OpenRoverAsync(harness.ViewModel);
+
+        var shown = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ContentPage();
+            var window = new Window { Width = WindowWidth, Height = 1600, DataContext = harness.ViewModel, Content = page };
+            window.Show();
+            page.UpdateLayout();
+            var texts = page.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible).Select(block => block.Text).ToList();
+            window.Close();
+            return Task.FromResult(texts);
+        });
+
+        Assert.Contains(localization.FormatPreviewFactParts(3), shown);
+        Assert.Contains(localization.FormatPreviewFactStages(2), shown);
+        Assert.Contains(localization.ShareSummaryNoMods, shown);
+    }
+
+    private static async Task<byte[]> SaveAsync(MainViewModel viewModel, Button button)
+    {
+        var window = new GameSaveShareTests.ArchiveWindow();
+        viewModel.WindowServices = window;
+        await ((IAsyncRelayCommand)button.Command!).ExecuteAsync(button.CommandParameter);
+        return window.Written.ToArray();
+    }
+
     /// <summary>The page of Example Rover, whose preview builds an empty scene that the test then replaces with boxes.</summary>
     private static async Task<ViewModelHarness> RoverPageAsync()
     {
@@ -158,6 +401,19 @@ public sealed class ContentPagePreviewTests
         Assert.True(view.FramesShown >= 1, "The panel showed no frame.");
         return (window, page, view);
     }
+
+    private static async Task<(MainWindow Window, VehiclePreviewView Panel)> ShowInMainWindowAsync(ViewModelHarness harness)
+    {
+        var window = new MainWindow { Width = WindowWidth, Height = 700, DataContext = harness.ViewModel };
+        window.Show();
+        window.UpdateLayout();
+        var panel = window.GetVisualDescendants().OfType<VehiclePreviewView>().Single();
+        await HeadlessApp.FramesUntilAsync(() => panel.IsIdle && panel.FramesShown >= 1);
+        return (window, panel);
+    }
+
+    private static VehiclePreviewView ExpandedView(Window window) =>
+        window.GetVisualDescendants().OfType<VehiclePreviewView>().Single(view => view.IsVisible);
 
     internal static Rect BoundsIn(Visual window, Visual control) => new(control.TranslatePoint(default, window)!.Value, control.Bounds.Size);
 

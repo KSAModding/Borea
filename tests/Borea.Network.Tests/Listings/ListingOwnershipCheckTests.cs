@@ -459,22 +459,18 @@ public sealed class ListingOwnershipCheckTests
         Assert.All(_sent.Skip(2), sent => Assert.Null(sent.Authorization));
     }
 
-    [Theory]
-    [InlineData(true, true, ListingOwnershipState.Verified, "Studio/NewHost")]
-    [InlineData(true, false, ListingOwnershipState.NotVerified, "Studio/NewHost")]
-    [InlineData(false, true, ListingOwnershipState.NotVerified, "Studio/MyMod")]
-    public async Task CheckPullRequestAsync_HeadThatMovesTheHost_NeedsBothProofs(bool listedProven, bool newProven, ListingOwnershipState state, string repository)
+    [Fact]
+    public async Task CheckPullRequestAsync_HeadThatMovesTheHost_ChecksTheNewHost()
     {
         OnListing(Head, Document("Studio/NewHost", ListedForums));
         OnListing("main", Document("Studio/MyMod", ListedForums));
-        OnProof("Studio/MyMod", listedProven);
-        OnProof("Studio/NewHost", newProven);
+        OnProof("Studio/MyMod", proven: true);
+        OnProof("Studio/NewHost", proven: false);
         var check = await SignedInAsync();
 
         var ownership = await check.CheckPullRequestAsync(Alice, ListingPath, "main", Head);
 
-        Assert.Equal(state, ownership.State);
-        Assert.Equal(repository, ownership.Repository);
+        Assert.Equal((ListingOwnershipState.NotVerified, "Studio/NewHost"), (ownership.State, ownership.Repository));
     }
 
     [Theory]

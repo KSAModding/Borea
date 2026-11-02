@@ -182,8 +182,17 @@ public static class SnapshotParser
         var name = StringMember(table, "name") is { Length: > 0 } text ? text : key;
         var apiBase = api.AbsoluteUri.EndsWith('/') ? api : new Uri(api.AbsoluteUri + "/");
         var types = typeArray.EnumerateArray().Select(type => type.GetString()!).ToList();
-        return new ShareHost(key, name, apiBase, types, maxBytes, HttpsUri(StringMember(table, "policy")));
+        return new ShareHost(key, name, apiBase, types, maxBytes, HttpsUri(StringMember(table, "policy")))
+        {
+            Data = BaseUrl(StringMember(table, "data")),
+            Downloads = table.TryGetProperty("downloads", out var prefixes) && prefixes.ValueKind == JsonValueKind.Array
+                ? prefixes.EnumerateArray().Select(prefix => BaseUrl(prefix.ValueKind == JsonValueKind.String ? prefix.GetString() : null)).OfType<Uri>().ToList()
+                : [],
+        };
     }
+
+    // A prefix without its last slash would also take the sibling folders with a longer name.
+    private static Uri? BaseUrl(string? text) => HttpsUri(text) is { } url && url.AbsoluteUri.EndsWith('/') ? url : null;
 
     private static string? StringMember(JsonElement table, string name) =>
         table.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
