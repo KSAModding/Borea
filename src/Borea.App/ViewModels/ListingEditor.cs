@@ -59,12 +59,13 @@ public sealed partial class ListingEditor : ObservableObject
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         _owner.Localization.PropertyChanged += (_, _) => RefreshText();
         _owner.PropertyChanged += OnOwnerChanged;
+        ShareChooseRows.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ShowsShareActionBar));
     }
 
     private LocalizationService Localization => _owner.Localization;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsStartStep), nameof(IsFormStep), nameof(IsShareStep), nameof(IntroText))]
+    [NotifyPropertyChangedFor(nameof(IsStartStep), nameof(IsFormStep), nameof(IsShareStep), nameof(IntroText), nameof(ShowsShareActionBar))]
     private ListingStep _step;
 
     public bool IsStartStep => Step == ListingStep.Start;

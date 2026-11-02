@@ -64,7 +64,7 @@ public sealed partial class ListingEditor
     private bool _choseOtherLicense;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsShareChoose), nameof(IsShareDescribe), nameof(IsSharePublish), nameof(IsShareDone), nameof(ShowsPreviewCard))]
+    [NotifyPropertyChangedFor(nameof(IsShareChoose), nameof(IsShareDescribe), nameof(IsSharePublish), nameof(IsShareDone), nameof(ShowsPreviewCard), nameof(ShowsShareActionBar))]
     private ShareFlowStep _shareFlowStep;
 
     [ObservableProperty]

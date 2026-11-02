@@ -48,6 +48,7 @@ public sealed partial class ListingEditor
 
     /// <summary>Whether an entry left the full form of a draft with no share for this step, so that Back can return to that draft.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsShareActionBar))]
     private bool _hasFormBehindShareChoose;
 
     public bool IsShareChooseVehicle => _shareChooseKind == GameSaveKind.Vehicle;
@@ -57,6 +58,9 @@ public sealed partial class ListingEditor
     public bool CanContinueShareChoose => !IsShareGameRunning && SelectedShareRow is { BlocksNext: false };
 
     public bool ShowsShareChooseFirst => SelectedShareRow is null && ShareChooseRows.Count > 0 && !IsLoadingShareChoose;
+
+    /// <summary>An empty Choose step with no draft behind it has no Back and no Next, so the bar under the page would show only its rule.</summary>
+    public bool ShowsShareActionBar => IsShareStep && !(IsShareChoose && ShareChooseRows.Count == 0 && !HasFormBehindShareChoose);
 
     public bool IsComparingShareRow => SelectedShareRow is { IsUnchangedCopy: null, Item.Record: not null };
 

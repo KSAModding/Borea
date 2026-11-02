@@ -16,13 +16,6 @@
                 <TextBlock Grid.Column="2" Classes="heading-md" Text="{Binding ListingEditor.ShareDoneHeadingText}" TextWrapping="Wrap" VerticalAlignment="Center" />
             </Grid>
             <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareDoneStateText}" TextWrapping="Wrap" />
-            <WrapPanel ItemSpacing="12" LineSpacing="8" Margin="0,8,0,8">
-                <Button Classes="cta" Command="{Binding ListingEditor.OpenShareDonePageCommand}" ToolTip.Tip="{Binding ListingEditor.ShareDoneLink}">
-                    <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareDoneOpenText}" VerticalAlignment="Center" />
-                </Button>
-                <Button Classes="text" Content="{Binding Localization.ContentCopyLink}" Command="{Binding ListingEditor.CopyShareDoneLinkCommand}" ToolTip.Tip="{Binding ListingEditor.ShareDoneCopyLink}" VerticalAlignment="Center" />
-                <Button Classes="text" Content="{Binding Localization.ShareAnother}" Command="{Binding ListingEditor.ShareAnotherCommand}" VerticalAlignment="Center" IsVisible="{Binding !ListingEditor.IsSendingSharePictures}" />
-            </WrapPanel>
             <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
                 <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" />

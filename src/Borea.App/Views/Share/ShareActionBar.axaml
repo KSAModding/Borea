@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:share="using:Borea.App.Views.Share"
+             x:Class="Borea.App.Views.Share.ShareActionBar"
+             x:DataType="vm:MainViewModel">
+    <!-- the actions of the open step, below the scroller, so a long list or form never hides them -->
+    <StackPanel>
+        <Border Height="1" Background="{StaticResource Brush.Border}" />
+        <Panel Margin="0,16,0,24">
+            <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.IsShareChoose}">
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareFormCommand}" IsVisible="{Binding ListingEditor.HasFormBehindShareChoose}" />
+                    <!-- an empty state has no Next, because a disabled button there leads nowhere -->
+                    <Button Classes="cta" Command="{Binding ListingEditor.ContinueShareChooseCommand}" IsEnabled="{Binding ListingEditor.CanContinueShareChoose}" IsVisible="{Binding !!ListingEditor.ShareChooseRows.Count}">
+                        <TextBlock Classes="action-lg" Text="{Binding Localization.ShareNext}" VerticalAlignment="Center" />
+                    </Button>
+                    <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}">
+                        <ProgressBar.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                <Binding Path="ListingEditor.IsComparingShareRow" />
+                                <Binding Path="ListingEditor.ContinueShareChooseCommand.IsRunning" />
+                            </MultiBinding>
+                        </ProgressBar.IsVisible>
+                    </ProgressBar>
+                </WrapPanel>
+                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareChooseFirst}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShowsShareChooseFirst}" />
+            </StackPanel>
+
+            <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.IsShareDescribe}">
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareChooseCommand}" />
+                    <Button Classes="cta" Command="{Binding ListingEditor.ContinueShareCommand}" IsEnabled="{Binding ListingEditor.CanContinueShare}" IsVisible="{Binding !ListingEditor.IsAskingShareListing}">
+                        <TextBlock Classes="action-lg" Text="{Binding Localization.ShareNext}" VerticalAlignment="Center" />
+                    </Button>
+                    <Button Classes="link" VerticalAlignment="Center" Command="{Binding ListingEditor.EditAllShareFieldsCommand}" IsVisible="{Binding !ListingEditor.IsAskingShareListing}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareEditAll}" />
+                    </Button>
+                </WrapPanel>
+                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareNextReason}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareNextReason, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareOtherFieldsText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasShareOtherFields}" />
+            </StackPanel>
+
+            <!-- the check, the publish and their progress, with the code of a sign-in that one of them starts -->
+            <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.IsSharePublish}">
+                <!-- the notice stays right above Publish, so the player cannot scroll it away before the click -->
+                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.HasShareUpload}">
+                    <TextBlock Classes="body-sm" Text="{Binding ListingEditor.SharePublicNoticeText}" TextWrapping="Wrap" />
+                    <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.OpenShareHostRulesCommand}" CommandParameter="{Binding ListingEditor.ShareUploadHost}" IsVisible="{Binding ListingEditor.ShareUploadRulesText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareUploadRulesText}" />
+                    </Button>
+                </StackPanel>
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareDescribeCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}" />
+                    <Button Classes="cta" Command="{Binding ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding ListingEditor.SelectedShareHostRow}" IsVisible="{Binding ListingEditor.ShowsShareCheckButton}">
+                        <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareCheckOnHostText}" VerticalAlignment="Center" />
+                    </Button>
+                    <Button Classes="cta" Command="{Binding ListingEditor.PublishToShareHostCommand}" IsEnabled="{Binding ListingEditor.CanPublishToShareHost}" IsVisible="{Binding ListingEditor.HasShareUpload}">
+                        <TextBlock Classes="action-lg" Text="{Binding ListingEditor.SharePublishText}" VerticalAlignment="Center" />
+                    </Button>
+                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}">
+                        <Button.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="ListingEditor.HasShareUpload" />
+                                <Binding Path="!ListingEditor.IsSharing" />
+                            </MultiBinding>
+                        </Button.IsVisible>
+                    </Button>
+                    <Button Classes="link" VerticalAlignment="Center" Command="{Binding ListingEditor.EditAllShareFieldsCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ShareEditAll}" />
+                    </Button>
+                </WrapPanel>
+                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareCheckHintText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShowsShareCheckButton}" />
+                <Grid ColumnDefinitions="Auto,8,*,8,Auto" IsVisible="{Binding ListingEditor.IsSharing}">
+                    <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                    <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostProgressText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="4" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" IsVisible="{Binding ListingEditor.CanCancelShareHost}" VerticalAlignment="Center" />
+                </Grid>
+                <share:ShareSignInCode />
+            </StackPanel>
+
+            <WrapPanel ItemSpacing="12" LineSpacing="8" IsVisible="{Binding ListingEditor.IsShareDone}">
+                <Button Classes="cta" Command="{Binding ListingEditor.OpenShareDonePageCommand}" ToolTip.Tip="{Binding ListingEditor.ShareDoneLink}">
+                    <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareDoneOpenText}" VerticalAlignment="Center" />
+                </Button>
+                <Button Classes="text" Content="{Binding Localization.ContentCopyLink}" Command="{Binding ListingEditor.CopyShareDoneLinkCommand}" ToolTip.Tip="{Binding ListingEditor.ShareDoneCopyLink}" VerticalAlignment="Center" />
+                <Button Classes="text" Content="{Binding Localization.ShareAnother}" Command="{Binding ListingEditor.ShareAnotherCommand}" VerticalAlignment="Center" IsVisible="{Binding !ListingEditor.IsSendingSharePictures}" />
+            </WrapPanel>
+        </Panel>
+    </StackPanel>
+</UserControl>
