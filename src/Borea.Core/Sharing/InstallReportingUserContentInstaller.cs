@@ -8,7 +8,7 @@ namespace Borea.Core.Sharing;
 
 /// <summary>
 /// Reports each finished install or update of a vehicle or save to the share host whose downloads serve its archive, so that the
-/// host can count it. Every install counts, also one whose archive came from the preview cache, and the host counts each player
+/// host can count it for the installed version. Every install counts, also one whose archive came from the preview cache, and the host counts each player
 /// once a day by itself. The report runs in the background after the result, so no answer and no failure of it delays or changes
 /// the install. A preview or a still fetches its archive without this installer and so sends no report.
 /// </summary>
@@ -95,7 +95,7 @@ public sealed class InstallReportingUserContentInstaller : IUserContentInstaller
 
             try
             {
-                await _client.ReportInstallAsync(shareHost, type, release.ModId).ConfigureAwait(false);
+                await _client.ReportInstallAsync(shareHost, type, release.ModId, release.Version.ToString()).ConfigureAwait(false);
                 _log.Write($"Reported {what} to {shareHost.Name}.");
             }
             catch (ShareHostException exception)

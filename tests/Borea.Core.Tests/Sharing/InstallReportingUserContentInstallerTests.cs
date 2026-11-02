@@ -25,17 +25,17 @@ public sealed class InstallReportingUserContentInstallerTests
     [Theory]
     [InlineData(false, ContentType.Vehicle, "vehicle")]
     [InlineData(true, ContentType.Save, "save")]
-    public async Task InstallOrUpdate_Finished_ReportsTheListingOnceToItsHost(bool update, ContentType type, string expectedType)
+    public async Task InstallOrUpdate_Finished_ReportsTheVersionOnceToItsHost(bool update, ContentType type, string expectedType)
     {
         var installer = Installer();
-        var release = Release(type, HostFiles + expectedType + "/Rover/1.0.0");
+        var release = Release(type, HostFiles + expectedType + "/Rover/1.2.0-beta.1", "1.2.0-beta.1");
 
         var result = update ? await installer.UpdateAsync(Guid.Empty, Record(release), release, null, discardChanges: false) : await installer.InstallAsync(Guid.Empty, release, null);
         await installer.Reports;
 
         Assert.Equal(update ? UserContentOutcome.Updated : UserContentOutcome.Installed, result.Outcome);
-        Assert.Equal([(Host, expectedType, "Rover")], _client.Reports);
-        Assert.Equal(["Reported the install of Rover 1.0.0 to ksamods.gg."], _log.Messages);
+        Assert.Equal([(Host, expectedType, "Rover", "1.2.0-beta.1")], _client.Reports);
+        Assert.Equal(["Reported the install of Rover 1.2.0-beta.1 to ksamods.gg."], _log.Messages);
     }
 
     [Theory]
@@ -104,8 +104,8 @@ public sealed class InstallReportingUserContentInstallerTests
 
     private InstallReportingUserContentInstaller Installer() => new(_inner, new FixedHosts([Host]), _client, _log);
 
-    private static ModVersionMetadata Release(ContentType type, string url) =>
-        new(1, "Rover", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.10.19.5638", 5638, new DownloadInfo(url, new string('A', 64), 1, "application/zip"), 1, [], type, install: new InstallInfo(null, derived: false, folder: "Rover"));
+    private static ModVersionMetadata Release(ContentType type, string url, string version = "1.0.0") =>
+        new(1, "Rover", ModVersion.Parse(version), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.10.19.5638", 5638, new DownloadInfo(url, new string('A', 64), 1, "application/zip"), 1, [], type, install: new InstallInfo(null, derived: false, folder: "Rover"));
 
     private static InstalledContentRecord Record(ModVersionMetadata release) => new(release, "Rover", DateTimeOffset.UnixEpoch, new Dictionary<string, string>());
 
@@ -135,19 +135,19 @@ public sealed class InstallReportingUserContentInstallerTests
 
     private sealed class FakeClient : IShareHostClient
     {
-        public List<(ShareHost Host, string Type, string Id)> Reports { get; } = [];
+        public List<(ShareHost Host, string Type, string Id, string Version)> Reports { get; } = [];
 
         public Task? Gate { get; set; }
 
         public ShareHostException? Failure { get; set; }
 
-        public async Task ReportInstallAsync(ShareHost host, string type, string id, CancellationToken cancellationToken = default)
+        public async Task ReportInstallAsync(ShareHost host, string type, string id, string version, CancellationToken cancellationToken = default)
         {
             if (Gate is { } gate)
                 await gate;
 
             lock (Reports)
-                Reports.Add((host, type, id));
+                Reports.Add((host, type, id, version));
             if (Failure is { } failure)
                 throw failure;
         }

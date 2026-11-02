@@ -226,10 +226,17 @@ public sealed class ShareHostClient : IShareHostClient
     }
 
     /// <summary>Sends without the token of the host, because a player who installs needs no sign-in, and the count must not be tied to an account.</summary>
-    public async Task ReportInstallAsync(ShareHost host, string type, string id, CancellationToken cancellationToken = default)
+    public async Task ReportInstallAsync(ShareHost host, string type, string id, string version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(host);
-        using var request = new HttpRequestMessage(HttpMethod.Post, Under(host, $"{ListingPath(type, id)}/{ShareHostApi.DownloadsPath}"));
+        ArgumentException.ThrowIfNullOrEmpty(version);
+
+        // The host counts the download for the version in the body, and without one it counts the newest release.
+        var body = new JsonObject { [ShareHostJson.Version] = version };
+        using var request = new HttpRequestMessage(HttpMethod.Post, Under(host, $"{ListingPath(type, id)}/{ShareHostApi.DownloadsPath}"))
+        {
+            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+        };
         var reply = await WithAnswerLimitAsync(async token => await FetchAsync(request, token).ConfigureAwait(false) ?? throw Network(), cancellationToken).ConfigureAwait(false);
         if ((int)reply.Status is < 200 or > 299)
         {

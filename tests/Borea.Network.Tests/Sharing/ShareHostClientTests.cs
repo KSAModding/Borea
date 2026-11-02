@@ -466,7 +466,7 @@ public sealed class ShareHostClientTests
     }
 
     [Fact]
-    public async Task ReportInstallAsync_SignedIn_PostsToTheListingWithoutTokenOrBody()
+    public async Task ReportInstallAsync_SignedIn_PostsTheVersionToTheListingWithoutToken()
     {
         HttpMethod? method = null;
         _apiAnswer = request =>
@@ -476,12 +476,13 @@ public sealed class ShareHostClientTests
         };
         var client = await SignedInAsync();
 
-        await client.ReportInstallAsync(Host, "vehicle", "ExampleRover");
+        await client.ReportInstallAsync(Host, "vehicle", "ExampleRover", "1.2.0-beta.1");
 
         Assert.Equal(HttpMethod.Post, method);
         var sent = _sent.Last();
         Assert.Equal(Api + "listings/vehicle/ExampleRover/downloads", sent.Url);
-        Assert.Null(sent.Body);
+        Assert.Equal("application/json", sent.MediaType);
+        Assert.Equal("""{"version":"1.2.0-beta.1"}""", JsonNode.Parse(sent.Body!)!.ToJsonString());
         Assert.Null(sent.Authorization);
     }
 
@@ -492,7 +493,7 @@ public sealed class ShareHostClientTests
     {
         _apiAnswer = _ => Json("""{"message":"Too Many Attempts."}""", status);
 
-        var exception = await Assert.ThrowsAsync<ShareHostException>(() => Client().ReportInstallAsync(Host, "save", "ExampleSave"));
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => Client().ReportInstallAsync(Host, "save", "ExampleSave", "1.0.0"));
 
         Assert.Equal(expected, exception.Failure);
         Assert.Equal($"ksamods.gg answered the install report with {(int)status}.", exception.Message);
@@ -693,7 +694,7 @@ public sealed class ShareHostClientTests
             body = await request.Content.ReadAsStringAsync();
         }
 
-        _sent.Enqueue(new Sent(request.RequestUri!.AbsoluteUri, body, request.Headers.Authorization?.ToString(), parts));
+        _sent.Enqueue(new Sent(request.RequestUri!.AbsoluteUri, body, request.Headers.Authorization?.ToString(), parts, request.Content?.Headers.ContentType?.MediaType));
         return request.RequestUri.AbsoluteUri switch
         {
             Api + "oauth/device_authorization" => Json(_deviceJson, _deviceStatus),
@@ -707,7 +708,7 @@ public sealed class ShareHostClientTests
 
     private sealed record Part(string Name, string? FileName, string? MediaType, string Text);
 
-    private sealed record Sent(string Url, string? Body, string? Authorization, IReadOnlyList<Part> Parts);
+    private sealed record Sent(string Url, string? Body, string? Authorization, IReadOnlyList<Part> Parts, string? MediaType);
 
     private sealed class MemorySecretStore : ISecretStore
     {
