@@ -118,7 +118,7 @@
     <value>从作者的服务器加载图片</value>
   </data>
   <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
-    <value>每次请求图片时，作者的服务器都会获知你的 IP 地址。</value>
+    <value>每次请求图片时，作者的服务器都会获知你的 IP 地址。关闭此选项后，Borea 也不会自动下载载具文件来生成图片或 3D 预览。</value>
   </data>
   <data name="SettingsLibraryFolderLabel" xml:space="preserve">
     <value>内容库文件夹</value>
@@ -776,6 +776,111 @@
   </data>
   <data name="StewardWatcherGoneFailedFormat" xml:space="preserve">
     <value>无法读取内容索引。{0}</value>
+  </data>
+  <data name="StewardTabStatistics" xml:space="preserve">
+    <value>统计</value>
+  </data>
+  <data name="StewardStatisticsHint" xml:space="preserve">
+    <value>根据 Borea 读取的内容索引统计，仅涵盖玩家可见的内容，不包括已下架条目。</value>
+  </data>
+  <data name="StewardStatisticsLoading" xml:space="preserve">
+    <value>正在统计内容索引…</value>
+  </data>
+  <data name="StewardStatisticsTotalListings" xml:space="preserve">
+    <value>收录条目总数</value>
+  </data>
+  <data name="StewardStatisticsModsNotBlocked" xml:space="preserve">
+    <value>当前构建版本下未被阻止的模组</value>
+  </data>
+  <data name="StewardStatisticsUpkeepListings" xml:space="preserve">
+    <value>存在维护问题的条目</value>
+  </data>
+  <data name="StewardStatisticsTotalDownloads" xml:space="preserve">
+    <value>总下载量</value>
+  </data>
+  <data name="StewardStatisticsCurrentBuild" xml:space="preserve">
+    <value>当前构建版本</value>
+  </data>
+  <data name="StewardStatisticsNoBuild" xml:space="preserve">
+    <value>内容索引未指定游戏构建版本，因此无法确定哪些模组会被阻止。</value>
+  </data>
+  <data name="StewardStatisticsNoMods" xml:space="preserve">
+    <value>内容索引未收录任何模组。</value>
+  </data>
+  <data name="StewardStatisticsNothing" xml:space="preserve">
+    <value>没有可统计的内容。</value>
+  </data>
+  <data name="StewardStatisticsNotBlockedFormat" xml:space="preserve">
+    <value>共 {1} 个模组中有 {0} 个未被游戏构建版本 {2} 的版本限制阻止，因为有发布版本允许使用该构建版本。未指定最高游戏版本的发布版本也会计入，因此这并不表示有人测试过该构建版本。</value>
+  </data>
+  <data name="StewardStatisticsNotBlocked" xml:space="preserve">
+    <value>未被阻止</value>
+  </data>
+  <data name="StewardStatisticsBlocked" xml:space="preserve">
+    <value>已被阻止</value>
+  </data>
+  <data name="StewardStatisticsBlockedMods" xml:space="preserve">
+    <value>此构建版本下被阻止的模组</value>
+  </data>
+  <data name="StewardStatisticsDependencies" xml:space="preserve">
+    <value>依赖</value>
+  </data>
+  <data name="StewardStatisticsMostDependencies" xml:space="preserve">
+    <value>依赖项最多</value>
+  </data>
+  <data name="StewardStatisticsMostDependedOn" xml:space="preserve">
+    <value>被依赖最多</value>
+  </data>
+  <data name="StewardStatisticsRequired" xml:space="preserve">
+    <value>必需</value>
+  </data>
+  <data name="StewardStatisticsOptional" xml:space="preserve">
+    <value>可选</value>
+  </data>
+  <data name="StewardStatisticsUpkeep" xml:space="preserve">
+    <value>维护</value>
+  </data>
+  <data name="StewardStatisticsListing" xml:space="preserve">
+    <value>条目</value>
+  </data>
+  <data name="StewardStatisticsUpkeepEmpty" xml:space="preserve">
+    <value>没有条目存在维护问题。</value>
+  </data>
+  <data name="StewardStatisticsNoCurrentRelease" xml:space="preserve">
+    <value>没有适用于此构建版本的发布版本</value>
+  </data>
+  <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
+    <value>已 {0} 天未更新</value>
+  </data>
+  <data name="StewardStatisticsNoImage" xml:space="preserve">
+    <value>无图片</value>
+  </data>
+  <data name="StewardStatisticsNoForumsThread" xml:space="preserve">
+    <value>无论坛帖子</value>
+  </data>
+  <data name="StewardStatisticsOverview" xml:space="preserve">
+    <value>概览</value>
+  </data>
+  <data name="StewardStatisticsTypes" xml:space="preserve">
+    <value>按类型</value>
+  </data>
+  <data name="StewardStatisticsTags" xml:space="preserve">
+    <value>按标签</value>
+  </data>
+  <data name="StewardStatisticsLicenses" xml:space="preserve">
+    <value>按许可证</value>
+  </data>
+  <data name="StewardStatisticsReleaseHosts" xml:space="preserve">
+    <value>按发布托管平台</value>
+  </data>
+  <data name="StewardStatisticsMostDownloaded" xml:space="preserve">
+    <value>下载量最多</value>
+  </data>
+  <data name="StewardStatisticsShowAllFormat" xml:space="preserve">
+    <value>显示全部 {0} 项</value>
+  </data>
+  <data name="StewardStatisticsShowFewer" xml:space="preserve">
+    <value>收起</value>
   </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>状态</value>
@@ -1506,6 +1611,21 @@
   <data name="HomeDiscoverMods" xml:space="preserve">
     <value>发现模组</value>
   </data>
+  <data name="HomeDiscoverVehicles" xml:space="preserve">
+    <value>发现载具</value>
+  </data>
+  <data name="HomeNewMods" xml:space="preserve">
+    <value>新收录模组</value>
+  </data>
+  <data name="HomeNewVehicles" xml:space="preserve">
+    <value>新收录载具</value>
+  </data>
+  <data name="HomeMostDownloaded" xml:space="preserve">
+    <value>下载量最多</value>
+  </data>
+  <data name="HomeListedOnFormat" xml:space="preserve">
+    <value>自 {0} 起收录于“发现”</value>
+  </data>
   <data name="HomeNoGameVersion" xml:space="preserve">
     <value>尚未设置游戏</value>
   </data>
@@ -1900,16 +2020,16 @@
     <value>无法分享 {0}</value>
   </data>
   <data name="ShareFolderFileMissingFormat" xml:space="preserve">
-    <value>文件夹中没有 {0}。</value>
+    <value>文件夹不完整，缺少 {0}。请在游戏中重新保存后重试。</value>
   </data>
   <data name="ShareFolderNotTomlFormat" xml:space="preserve">
-    <value>{0} 不是 TOML 文件。</value>
+    <value>{0} 已损坏，Borea 无法读取。请在游戏中重新保存后重试。</value>
   </data>
   <data name="ShareFolderNoNameFormat" xml:space="preserve">
-    <value>{0} 中没有名称。</value>
+    <value>{0} 中没有名称，游戏无法将其列出。请在游戏中重新保存后重试。</value>
   </data>
   <data name="ShareFolderNotXmlFormat" xml:space="preserve">
-    <value>{0} 不是格式正确的 XML 文件。</value>
+    <value>{0} 已损坏，Borea 无法读取。请在游戏中重新保存后重试。</value>
   </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>无法备份存档</value>
@@ -2016,6 +2136,12 @@
   <data name="GameSaveNoSaves" xml:space="preserve">
     <value>此实例中尚无存档</value>
   </data>
+  <data name="GameSaveFindVehicles" xml:space="preserve">
+    <value>查找载具</value>
+  </data>
+  <data name="GameSaveFindSaves" xml:space="preserve">
+    <value>查找存档</value>
+  </data>
   <data name="GameSaveUpdatedFormat" xml:space="preserve">
     <value>更新于 {0}</value>
   </data>
@@ -2024,6 +2150,9 @@
   </data>
   <data name="GameSaveChangedSinceInstall" xml:space="preserve">
     <value>安装后已修改</value>
+  </data>
+  <data name="GameSaveViewPage" xml:space="preserve">
+    <value>查看页面</value>
   </data>
   <data name="GameSaveBuildFormat" xml:space="preserve">
     <value>由游戏构建 {0} 创建</value>
@@ -2037,8 +2166,17 @@
   <data name="GameSaveShare" xml:space="preserve">
     <value>分享</value>
   </data>
+  <data name="GameSaveShareTip" xml:space="preserve">
+    <value>发布到网上，让其他玩家下载。</value>
+  </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
-    <value>游戏已不再接受名称“{0}”，索引也采用相同的名称检查规则。请先按下方规则重命名此项，再进行分享。</value>
+    <value>游戏已不再接受名称“{0}”，不被游戏接受的名称也无法用于分享。请选择符合下方规则的名称。</value>
+  </data>
+  <data name="GameSaveRenameContinue" xml:space="preserve">
+    <value>保存并继续</value>
+  </data>
+  <data name="GameSaveRenameChooseAnother" xml:space="preserve">
+    <value>请选择其他名称。</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>已将 {0} 备份至 {1}。</value>
@@ -2066,6 +2204,9 @@
   </data>
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>是否删除？Borea 会将文件夹移至 Backups 文件夹，可通过“恢复”找回。</value>
+  </data>
+  <data name="ChangedFilesMoreFormat" xml:space="preserve">
+    <value>{0} 及其他 {1} 项</value>
   </data>
   <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
     <value>Borea 安装 {0} 后，你对其进行了修改：{1}。仍要删除吗？Borea 会将文件夹移至 Backups 文件夹，可通过“恢复”将其还原。</value>
@@ -2295,6 +2436,33 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{1} 需要 {0}，因此将其保留。</value>
   </data>
+  <data name="ContentRemoveUpdateRunning" xml:space="preserve">
+    <value>此实例正在更新。请等待更新完成后重试。</value>
+  </data>
+  <data name="ConflictTitle" xml:space="preserve">
+    <value>这些模组无法共用</value>
+  </data>
+  <data name="ConflictWhy" xml:space="preserve">
+    <value>Borea 不会将无法共用的模组放入同一实例，因此已停止操作，未作任何更改。</value>
+  </data>
+  <data name="ConflictAgain" xml:space="preserve">
+    <value>每一步完成后，Borea 都会重新检查。仍然存在的冲突会再次显示在此处。</value>
+  </data>
+  <data name="ConflictDeclaredFormat" xml:space="preserve">
+    <value>{0} 声明它无法与 {1} 共用。</value>
+  </data>
+  <data name="ConflictRemoveFormat" xml:space="preserve">
+    <value>移除 {0} 并继续</value>
+  </data>
+  <data name="ConflictOpenPageFormat" xml:space="preserve">
+    <value>打开 {0} 的页面</value>
+  </data>
+  <data name="ConflictVersionUnknownFormat" xml:space="preserve">
+    <value>{0} 并非由 Borea 安装，且无法读取其版本，因此无法判断这两个模组能否共用。</value>
+  </data>
+  <data name="ConflictPackMemberFormat" xml:space="preserve">
+    <value>{0} 属于此实例的整合包，因此 Borea 不会移除它。</value>
+  </data>
   <data name="ContentNeededByVehicleFormat" xml:space="preserve">
     <value>载具 {0} 需要此模组，因此游戏将拒绝加载该载具。</value>
   </data>
@@ -2406,6 +2574,12 @@
   <data name="DiscoverSearchPlaceholder" xml:space="preserve">
     <value>搜索模组...</value>
   </data>
+  <data name="DiscoverSearchVehicles" xml:space="preserve">
+    <value>搜索载具…</value>
+  </data>
+  <data name="DiscoverSearchSaves" xml:space="preserve">
+    <value>搜索存档…</value>
+  </data>
   <data name="DiscoverSearchCountFormat" xml:space="preserve">
     <value>搜索 {0}</value>
   </data>
@@ -2417,6 +2591,9 @@
   </data>
   <data name="DiscoverFavoritesOnly" xml:space="preserve">
     <value>仅显示收藏</value>
+  </data>
+  <data name="DiscoverStillMissingMods" xml:space="preserve">
+    <value>缺少模组</value>
   </data>
   <data name="DiscoverFavorite" xml:space="preserve">
     <value>已收藏</value>
@@ -2501,6 +2678,21 @@
   </data>
   <data name="DiscoverEmpty" xml:space="preserve">
     <value>没有匹配的内容。</value>
+  </data>
+  <data name="DiscoverClearSearchAndFilters" xml:space="preserve">
+    <value>清除搜索和筛选条件</value>
+  </data>
+  <data name="DiscoverNoVehicles" xml:space="preserve">
+    <value>还没有人分享载具。</value>
+  </data>
+  <data name="DiscoverNoVehiclesHint" xml:space="preserve">
+    <value>来做第一个吧。分享你制作的载具，几小时后就会显示在这里。</value>
+  </data>
+  <data name="DiscoverNoSaves" xml:space="preserve">
+    <value>还没有人分享存档。</value>
+  </data>
+  <data name="DiscoverNoSavesHint" xml:space="preserve">
+    <value>来做第一个吧。分享你想让其他人游玩的存档，几小时后就会显示在这里。</value>
   </data>
   <data name="DiscoverCountModOne" xml:space="preserve">
     <value>1 个模组</value>
@@ -2662,10 +2854,37 @@
     <value>面向模组作者</value>
   </data>
   <data name="DiscoverForModAuthorsText" xml:space="preserve">
-    <value>无论是新条目还是修改已收录模组，Borea 都能编写并检查用于将模组收录于内容索引的文件。</value>
+    <value>无论是新模组还是修改已收录模组，Borea 都能编写并检查用于将模组收录于“发现”的文件。</value>
+  </data>
+  <data name="DiscoverShareVehicleHeading" xml:space="preserve">
+    <value>自己造了一辆？</value>
+  </data>
+  <data name="DiscoverShareVehicleText" xml:space="preserve">
+    <value>从你的实例中选择一辆载具，写几句介绍并发布。其他玩家便可从这里添加它。</value>
+  </data>
+  <data name="DiscoverShareVehicle" xml:space="preserve">
+    <value>分享你的载具</value>
+  </data>
+  <data name="DiscoverShareSaveHeading" xml:space="preserve">
+    <value>有值得分享的存档？</value>
+  </data>
+  <data name="DiscoverShareSaveText" xml:space="preserve">
+    <value>将某个实例中的存档发布到网上，让其他玩家在这里找到它。</value>
+  </data>
+  <data name="DiscoverShareSave" xml:space="preserve">
+    <value>分享你的存档</value>
   </data>
   <data name="ListingIntro" xml:space="preserve">
     <value>Borea 会编写将模组收录于内容索引的文件，并在创建 PR 前进行检查。</value>
+  </data>
+  <data name="ListingShareCardTitle" xml:space="preserve">
+    <value>分享载具或存档</value>
+  </data>
+  <data name="ListingShareCardText" xml:space="preserve">
+    <value>将你制作的载具或存档发布到分享站点，让所有玩家都能在“发现”中找到它。</value>
+  </data>
+  <data name="ListingShareCardAction" xml:space="preserve">
+    <value>选择要分享的内容</value>
   </data>
   <data name="ListingNewTitle" xml:space="preserve">
     <value>新建条目</value>
@@ -2710,7 +2929,7 @@
     <value>你的模组</value>
   </data>
   <data name="ListingNoListedMatch" xml:space="preserve">
-    <value>没有匹配的已收录模组。</value>
+    <value>“发现”中没有匹配的模组。</value>
   </data>
   <data name="ListingNoListedVehicleMatch" xml:space="preserve">
     <value>没有匹配的已收录载具。</value>
@@ -3094,7 +3313,7 @@
     <value>将最低版本设为该模组的最新稳定发布版本。</value>
   </data>
   <data name="ListingDependencyNotListedFormat" xml:space="preserve">
-    <value>{0} 未收录于索引，玩家无法安装。</value>
+    <value>{0} 未收录于“发现”，玩家无法安装。</value>
   </data>
   <data name="ListingSearchDependencies" xml:space="preserve">
     <value>按名称、ID 或作者搜索</value>
@@ -3348,6 +3567,414 @@
   <data name="ListingSaveFailed" xml:space="preserve">
     <value>无法保存条目文件。</value>
   </data>
+  <data name="ShareFlowTitle" xml:space="preserve">
+    <value>分享载具或存档</value>
+  </data>
+  <data name="ShareFlowIntro" xml:space="preserve">
+    <value>分享会将你的载具或存档发布到分享站点并收录于“发现”，所有 Borea 玩家都能找到它。</value>
+  </data>
+  <data name="ShareStepChoose" xml:space="preserve">
+    <value>选择</value>
+  </data>
+  <data name="ShareChooseHeading" xml:space="preserve">
+    <value>你想分享什么？</value>
+  </data>
+  <data name="ShareChooseHint" xml:space="preserve">
+    <value>Borea 会列出你所有实例中的载具和存档。请选择一项。</value>
+  </data>
+  <data name="ShareSaveHoldsAll" xml:space="preserve">
+    <value>存档包含完整的游戏进度及其中的所有载具。</value>
+  </data>
+  <data name="ShareChooseLoading" xml:space="preserve">
+    <value>正在读取你的实例…</value>
+  </data>
+  <data name="ShareChooseFirst" xml:space="preserve">
+    <value>请先选择载具或存档。</value>
+  </data>
+  <data name="ShareGameRunning" xml:space="preserve">
+    <value>游戏正在运行。请关闭游戏后再继续，以便 Borea 读取完整的文件。</value>
+  </data>
+  <data name="ShareGameRunningPublish" xml:space="preserve">
+    <value>游戏正在运行。请关闭游戏后重试，以便 Borea 读取完整的文件。</value>
+  </data>
+  <data name="ShareNoInstance" xml:space="preserve">
+    <value>载具和存档存放在实例中，但你还没有实例。</value>
+  </data>
+  <data name="ShareNoVehicles" xml:space="preserve">
+    <value>你还没有可分享的载具。请先在游戏中制作并保存一辆，再回到这里。</value>
+  </data>
+  <data name="ShareNoSaves" xml:space="preserve">
+    <value>你还没有可分享的存档。请先开始游戏并保存，再回到这里。</value>
+  </data>
+  <data name="ShareProfileVehicles" xml:space="preserve">
+    <value>你的游戏用户配置目录中有未通过 Borea 游玩时保存的载具。请先将它们复制到实例中。</value>
+  </data>
+  <data name="ShareProfileSaves" xml:space="preserve">
+    <value>你的游戏用户配置目录中有未通过 Borea 游玩时保存的存档。请先将它们复制到实例中。</value>
+  </data>
+  <data name="SharePickFromFormat" xml:space="preserve">
+    <value>来自 {0}</value>
+  </data>
+  <data name="ShareNeedsNewName" xml:space="preserve">
+    <value>需要重命名</value>
+  </data>
+  <data name="ShareUnchangedCopyFormat" xml:space="preserve">
+    <value>你从“发现”安装了 {0}，但没有作过修改，因此没有你自己的改动可供分享。</value>
+  </data>
+  <data name="ShareChangedVehicleFormat" xml:space="preserve">
+    <value>此载具来自 {0}。仅在它是你制作的或已获作者许可时分享。</value>
+  </data>
+  <data name="ShareChangedSaveFormat" xml:space="preserve">
+    <value>此存档来自 {0}。仅在它是你制作的或已获作者许可时分享。</value>
+  </data>
+  <data name="ShareNoBuild" xml:space="preserve">
+    <value>文件未记录保存它的游戏构建版本，分享站点会因此拒绝接收。请在游戏中加载并重新保存。</value>
+  </data>
+  <data name="ShareAnother" xml:space="preserve">
+    <value>继续分享其他内容</value>
+  </data>
+  <data name="ShareStepDescribe" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="ShareNext" xml:space="preserve">
+    <value>下一步</value>
+  </data>
+  <data name="SharePreviewVehicle" xml:space="preserve">
+    <value>你的载具</value>
+  </data>
+  <data name="SharePreviewSave" xml:space="preserve">
+    <value>你的存档</value>
+  </data>
+  <data name="SharePreviewSentence" xml:space="preserve">
+    <value>你的一句话简介会显示在这里、列表和搜索结果中。</value>
+  </data>
+  <data name="ShareItemInFormat" xml:space="preserve">
+    <value>{1} 中的 {0}</value>
+  </data>
+  <data name="ShareLooksLikeFormat" xml:space="preserve">
+    <value>这似乎是 {1} 上的 {0}。</value>
+  </data>
+  <data name="ShareVersionOnlineFormat" xml:space="preserve">
+    <value>版本 {0} 已发布。</value>
+  </data>
+  <data name="ShareAsNewVersionFormat" xml:space="preserve">
+    <value>作为 {0} 的新版本分享</value>
+  </data>
+  <data name="ShareIsDifferentVehicle" xml:space="preserve">
+    <value>这是另一辆载具</value>
+  </data>
+  <data name="ShareIsDifferentSave" xml:space="preserve">
+    <value>这是另一个存档</value>
+  </data>
+  <data name="ShareNewVersionLineFormat" xml:space="preserve">
+    <value>{1} 上 {0} 的新版本。描述将保持不变。</value>
+  </data>
+  <data name="ShareDescribeVehicle" xml:space="preserve">
+    <value>描述你的载具</value>
+  </data>
+  <data name="ShareDescribeSave" xml:space="preserve">
+    <value>描述你的存档</value>
+  </data>
+  <data name="ShareNameHint" xml:space="preserve">
+    <value>游戏中的名称。玩家会在“发现”中看到它。</value>
+  </data>
+  <data name="ShareYourName" xml:space="preserve">
+    <value>你的名字</value>
+  </data>
+  <data name="ShareYourNameHint" xml:space="preserve">
+    <value>显示为作者。请填写你希望大家称呼你的名字。多位作者之间用逗号分隔。</value>
+  </data>
+  <data name="ShareOneSentence" xml:space="preserve">
+    <value>一句话简介</value>
+  </data>
+  <data name="ShareOneSentenceHint" xml:space="preserve">
+    <value>这是什么？玩家会在列表中看到这句话。</value>
+  </data>
+  <data name="ShareSentenceVehicleExample" xml:space="preserve">
+    <value>一辆用于月球探索的六轮车。</value>
+  </data>
+  <data name="ShareSentenceSaveExample" xml:space="preserve">
+    <value>一座月球基地，配有三艘随时可以起飞的着陆器。</value>
+  </data>
+  <data name="ShareSentenceTooLongFormat" xml:space="preserve">
+    <value>一句话简介最多可有 {1} 个字符，当前为 {0} 个。</value>
+  </data>
+  <data name="ShareLicenseHint" xml:space="preserve">
+    <value>这决定其他玩家可以如何使用你的作品。对于玩家已经获得的副本，你无法撤回许可。</value>
+  </data>
+  <data name="ShareLicenseInvalid" xml:space="preserve">
+    <value>Borea 无法识别此许可证。请使用其简称，例如 MIT。</value>
+  </data>
+  <data name="ShareLicensePlaceholder" xml:space="preserve">
+    <value>选择许可证</value>
+  </data>
+  <data name="ShareLicenseCcBy" xml:space="preserve">
+    <value>任何人均可使用，须署名（CC BY 4.0）</value>
+  </data>
+  <data name="ShareLicenseCc0" xml:space="preserve">
+    <value>任何人均可使用，无条件（CC0）</value>
+  </data>
+  <data name="ShareLicenseCcBySa" xml:space="preserve">
+    <value>任何人均可使用，须署名并以相同许可证分享修改后的作品（CC BY-SA 4.0）</value>
+  </data>
+  <data name="ShareLicenseCcByNc" xml:space="preserve">
+    <value>任何人均可使用，须署名且不可商用（CC BY-NC 4.0）</value>
+  </data>
+  <data name="ShareLicenseOther" xml:space="preserve">
+    <value>其他许可证…</value>
+  </data>
+  <data name="ShareMoreOptions" xml:space="preserve">
+    <value>更多选项</value>
+  </data>
+  <data name="ShareShortName" xml:space="preserve">
+    <value>短名称</value>
+  </data>
+  <data name="ShareShortNameHint" xml:space="preserve">
+    <value>用于页面网址。以后无法更改，也不会改变游戏中的名称。</value>
+  </data>
+  <data name="ShareIdEmpty" xml:space="preserve">
+    <value>Borea 无法根据此名称生成短名称。请输入字母或数字，例如 KittenRover。</value>
+  </data>
+  <data name="ShareIdHeldFormat" xml:space="preserve">
+    <value>已有其他载具、存档或模组使用短名称 {0}。短名称以后无法更改，请现在另选一个。</value>
+  </data>
+  <data name="ShareIdInvalid" xml:space="preserve">
+    <value>短名称由字母和数字组成，中间也可使用 . _ -，最多 64 个字符。Core 等名称为保留名称。</value>
+  </data>
+  <data name="ShareDescriptionHint" xml:space="preserve">
+    <value>可选。用于页面的详细介绍。可以使用 Markdown 排版，例如 **粗体** 或 - 列表。</value>
+  </data>
+  <data name="ShareMissingName" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="ShareMissingAuthor" xml:space="preserve">
+    <value>你的名字</value>
+  </data>
+  <data name="ShareMissingSentence" xml:space="preserve">
+    <value>一句话简介</value>
+  </data>
+  <data name="ShareMissingLicense" xml:space="preserve">
+    <value>许可证</value>
+  </data>
+  <data name="ShareMissingId" xml:space="preserve">
+    <value>短名称</value>
+  </data>
+  <data name="ShareModsHeading" xml:space="preserve">
+    <value>所需模组</value>
+  </data>
+  <data name="ShareModsVehicleHint" xml:space="preserve">
+    <value>玩家添加你的载具时，也会获得这些模组。</value>
+  </data>
+  <data name="ShareModsSaveHint" xml:space="preserve">
+    <value>玩家添加你的存档时，也会获得这些模组。缺少它们时，游戏会跳过需要这些模组的载具。</value>
+  </data>
+  <data name="ShareModVersionFormat" xml:space="preserve">
+    <value>版本 {0} 或更新版本</value>
+  </data>
+  <data name="ShareModChangedKind" xml:space="preserve">
+    <value>你在“编辑所有字段”中更改了此模组的依赖类型，因此玩家可能不会获得它。</value>
+  </data>
+  <data name="ShareModProblem" xml:space="preserve">
+    <value>请在“编辑所有字段”中修正此模组，或将其移除。</value>
+  </data>
+  <data name="ShareModsNone" xml:space="preserve">
+    <value>仅使用游戏自带部件。</value>
+  </data>
+  <data name="ShareAddMod" xml:space="preserve">
+    <value>添加模组</value>
+  </data>
+  <data name="SharePicturesHeading" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="SharePicturesHintFormat" xml:space="preserve">
+    <value>可选。最多添加 {0} 张图片，支持 PNG、JPEG 或 WebP 格式，每张不超过 {1}。第一张为封面。发布时，这些图片也会公开。</value>
+  </data>
+  <data name="SharePicturesNewVersionHintFormat" xml:space="preserve">
+    <value>可选。这些图片将追加到页面已有的图片中，每个页面最多显示 {0} 张。请使用 PNG、JPEG 或 WebP 格式，每张不超过 {1}。发布时，这些图片也会公开。</value>
+  </data>
+  <data name="SharePictureAdd" xml:space="preserve">
+    <value>添加图片</value>
+  </data>
+  <data name="SharePictureCover" xml:space="preserve">
+    <value>封面</value>
+  </data>
+  <data name="SharePictureTooLargeFormat" xml:space="preserve">
+    <value>{0} 大于 {1}。</value>
+  </data>
+  <data name="SharePictureNotImageFormat" xml:space="preserve">
+    <value>{0} 不是 Borea 可以读取的 PNG、JPEG 或 WebP 图片。</value>
+  </data>
+  <data name="SharePictureAnimatedFormat" xml:space="preserve">
+    <value>{0} 是动画图片，而页面仅支持静态图片。</value>
+  </data>
+  <data name="SharePictureUnreadable" xml:space="preserve">
+    <value>Borea 无法读取此文件。</value>
+  </data>
+  <data name="ShareSummaryPicturesFormat" xml:space="preserve">
+    <value>图片：{0} 张。发布后会立即上传。</value>
+  </data>
+  <data name="SharePicturesSendingFormat" xml:space="preserve">
+    <value>正在添加第 {0} 张图片，共 {1} 张…</value>
+  </data>
+  <data name="SharePicturesSent" xml:space="preserve">
+    <value>图片已添加到页面。“发现”会在几小时内显示它们。</value>
+  </data>
+  <data name="SharePicturesMissingFormat" xml:space="preserve">
+    <value>仍有 {0} 张图片未完成，共 {1} 张。已发布的内容仍在线，可以重试。</value>
+  </data>
+  <data name="SharePictureLostAnswerFormat" xml:space="preserve">
+    <value>Borea 未收到 {0} 的响应，此图片可能已在页面上。请先检查页面，再决定是否重试。</value>
+  </data>
+  <data name="SharePictureNotOwnerFormat" xml:space="preserve">
+    <value>{0} 不允许此账户为 {1} 添加图片。请检查 {0} 上的页面。</value>
+  </data>
+  <data name="SharePicturesNotOfferedFormat" xml:space="preserve">
+    <value>{0} 不接受图片，因此 Borea 未添加图片。其他内容均已发布。</value>
+  </data>
+  <data name="SharePictureTooLargeOnHostFormat" xml:space="preserve">
+    <value>{0} 提示此图片过大。</value>
+  </data>
+  <data name="ShareCoverDrawing" xml:space="preserve">
+    <value>Borea 正在为你的载具生成图片…</value>
+  </data>
+  <data name="ShareCoverMissing" xml:space="preserve">
+    <value>Borea 无法为此载具生成封面。你可以使用自己的图片。</value>
+  </data>
+  <data name="ShareCoverHint" xml:space="preserve">
+    <value>Borea 根据你的载具生成的图片，用作其页面封面。发布时，图片也会公开。仅上传这张图片，不包含游戏部件或纹理文件。</value>
+  </data>
+  <data name="ShareCoverOwn" xml:space="preserve">
+    <value>使用自己的图片</value>
+  </data>
+  <data name="ShareCoverLeaveOut" xml:space="preserve">
+    <value>不使用封面</value>
+  </data>
+  <data name="ShareCoverLeftOut" xml:space="preserve">
+    <value>页面发布时不带封面。</value>
+  </data>
+  <data name="ShareCoverUseDrawn" xml:space="preserve">
+    <value>使用 Borea 生成的图片</value>
+  </data>
+  <data name="ShareCoverRowName" xml:space="preserve">
+    <value>Borea 生成的图片</value>
+  </data>
+  <data name="ShareOtherFields" xml:space="preserve">
+    <value>此步骤之外的部分字段需要修正。</value>
+  </data>
+  <data name="ShareFieldsToFixFormat" xml:space="preserve">
+    <value>请先修正：{0}。</value>
+  </data>
+  <data name="ShareEditAll" xml:space="preserve">
+    <value>编辑所有字段</value>
+  </data>
+  <data name="ShareBackToSteps" xml:space="preserve">
+    <value>返回分享步骤</value>
+  </data>
+  <data name="ShareEdit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="ShareChange" xml:space="preserve">
+    <value>更改</value>
+  </data>
+  <data name="ShareSummaryModsFormat" xml:space="preserve">
+    <value>所需模组：{0}</value>
+  </data>
+  <data name="ShareSummaryNoMods" xml:space="preserve">
+    <value>无需模组</value>
+  </data>
+  <data name="ShareNeedsBuildFormat" xml:space="preserve">
+    <value>玩家需要 KSA {0} 或更新版本才能使用此版本。</value>
+  </data>
+  <data name="ShareHostChoiceHeading" xml:space="preserve">
+    <value>你想发布到哪里？</value>
+  </data>
+  <data name="ShareHostOneFormat" xml:space="preserve">
+    <value>发布到 {0}</value>
+  </data>
+  <data name="ShareHostLimitVehicleFormat" xml:space="preserve">
+    <value>载具最大 {0}</value>
+  </data>
+  <data name="ShareHostLimitSaveFormat" xml:space="preserve">
+    <value>存档最大 {0}</value>
+  </data>
+  <data name="ShareHostRulesFormat" xml:space="preserve">
+    <value>{0} 的规则</value>
+  </data>
+  <data name="ShareNoHostVehicle" xml:space="preserve">
+    <value>Borea 暂未找到接受载具的分享站点。请检查网络连接后重试。</value>
+  </data>
+  <data name="ShareNoHostSave" xml:space="preserve">
+    <value>Borea 暂未找到接受存档的分享站点。请检查网络连接后重试。</value>
+  </data>
+  <data name="ShareCheckOnHostFormat" xml:space="preserve">
+    <value>交由 {0} 检查</value>
+  </data>
+  <data name="ShareCheckHintFormat" xml:space="preserve">
+    <value>尚未发布任何内容。{0} 会先检查文件。</value>
+  </data>
+  <data name="ShareSaveZipInstead" xml:space="preserve">
+    <value>改为保存 ZIP 文件</value>
+  </data>
+  <data name="ShareSaveZipInsteadHint" xml:space="preserve">
+    <value>不会发布任何内容，其他人无法在“发现”中找到它。</value>
+  </data>
+  <data name="ShareWaitingForApproval" xml:space="preserve">
+    <value>正在等待你在浏览器中授权…</value>
+  </data>
+  <data name="ShareSignInFormat" xml:space="preserve">
+    <value>浏览器将打开 {0} 的页面。如有要求，请在该页面登录，确认显示的是此代码后授权。</value>
+  </data>
+  <data name="ShareOpenPageAgain" xml:space="preserve">
+    <value>重新打开页面</value>
+  </data>
+  <data name="ShareCopyCode" xml:space="preserve">
+    <value>复制代码</value>
+  </data>
+  <data name="ShareCodeWarningFormat" xml:space="preserve">
+    <value>仅在 {0} 上使用此代码。如果其他页面要求输入它，请关闭该页面。</value>
+  </data>
+  <data name="ShareChecksPassedFormat" xml:space="preserve">
+    <value>{1} 的全部 {0} 项检查均已通过。</value>
+  </data>
+  <data name="ShareCheckDetailFormat" xml:space="preserve">
+    <value>{0}：{1}</value>
+  </data>
+  <data name="ShareDetailsListingFormat" xml:space="preserve">
+    <value>这是 {0} 保存的有关此文件的信息。</value>
+  </data>
+  <data name="ShareVersionLineFormat" xml:space="preserve">
+    <value>版本 {0}</value>
+  </data>
+  <data name="ShareVersionHint" xml:space="preserve">
+    <value>由三段数字组成，例如 1.0.0。更大的数字表示更新的版本。</value>
+  </data>
+  <data name="ShareVersionInvalid" xml:space="preserve">
+    <value>版本号由三段数字组成，例如 1.0.0。</value>
+  </data>
+  <data name="ShareChannelHint" xml:space="preserve">
+    <value>大多数玩家只会获得稳定版本。选择测试通道，可让测试者先行试用。</value>
+  </data>
+  <data name="SharePublicNoticeFormat" xml:space="preserve">
+    <value>发布后内容将公开。任何人都可以下载此版本，其历史记录也会一直公开。Borea 无法在之后将其移除。{0} 可应请求下架内容。</value>
+  </data>
+  <data name="SharePublishVersionFormat" xml:space="preserve">
+    <value>发布版本 {0}</value>
+  </data>
+  <data name="ShareFolderCheckVehicle" xml:space="preserve">
+    <value>已有另一辆载具使用此名称安装。请先为你的载具重命名，再重新检查。</value>
+  </data>
+  <data name="ShareFolderCheckSave" xml:space="preserve">
+    <value>已有另一个存档使用此名称安装。请先为你的存档重命名，再重新检查。</value>
+  </data>
+  <data name="ShareFolderTakenVehicleFormat" xml:space="preserve">
+    <value>“发现”中已有名为 {0} 的载具，玩家将无法区分。请先为你的载具重命名，再分享。</value>
+  </data>
+  <data name="ShareFolderTakenSaveFormat" xml:space="preserve">
+    <value>“发现”中已有名为 {0} 的存档，玩家将无法区分。请先为你的存档重命名，再分享。</value>
+  </data>
+  <data name="ShareRenameAndCheck" xml:space="preserve">
+    <value>重命名并重新检查</value>
+  </data>
   <data name="ListingShareHeading" xml:space="preserve">
     <value>分享内容</value>
   </data>
@@ -3376,22 +4003,25 @@
     <value>Borea 已读取此文件，并为此实例中定义了文件所引用的部件、物质、角色或天体的每个模组建议了一项必需依赖。请核对列表：移除文件不需要的模组，将仅改变部件行为的模组添加为推荐依赖（recommends）。</value>
   </data>
   <data name="ListingShareArchiveHeading" xml:space="preserve">
-    <value>保存压缩包</value>
+    <value>不通过分享站点分享</value>
+  </data>
+  <data name="ListingShareArchiveIntro" xml:space="preserve">
+    <value>适用于自行托管文件的作者。你需要将 ZIP 文件上传到自己 GitHub 仓库的发布版本中，并自行将其收录到索引。</value>
   </data>
   <data name="ListingShareArchiveHint" xml:space="preserve">
-    <value>将保存的压缩包附加到你自行发布的版本中，并在“发布版本”下指定该版本。</value>
+    <value>将 ZIP 文件附加到自己仓库的发布版本中，并在“发布版本”下填写该版本。</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
-    <value>以下文件并非由游戏写入，而是由模组写入。请将写入这些文件的模组添加为依赖：</value>
+    <value>以下文件并非由游戏写入，而是由模组写入。请添加写入这些文件的模组：</value>
   </data>
   <data name="ListingShareSaveArchive" xml:space="preserve">
-    <value>保存压缩包</value>
+    <value>保存 ZIP 文件</value>
   </data>
   <data name="ListingShareArchiveFileType" xml:space="preserve">
     <value>Zip 压缩包</value>
   </data>
   <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
-    <value>已保存 {0}。SHA-256：{1}，{2} 字节。</value>
+    <value>已保存 {0}（{2}）。校验和（SHA-256）：{1}</value>
   </data>
   <data name="ListingShareHostHint" xml:space="preserve">
     <value>分享托管服务会保存压缩包，并为你创建条目 PR。你需要通过该服务提供的账户登录方式登录，服务会在发布任何内容前检查压缩包。</value>
@@ -3403,7 +4033,7 @@
     <value>分享到 {0}</value>
   </data>
   <data name="ListingShareHostWriting" xml:space="preserve">
-    <value>正在写入压缩包…</value>
+    <value>正在准备文件…</value>
   </data>
   <data name="ListingShareHostSigningInFormat" xml:space="preserve">
     <value>正在等待在 {0} 上登录…</value>
@@ -3414,14 +4044,20 @@
   <data name="ListingShareHostCopyCode" xml:space="preserve">
     <value>复制代码并打开页面</value>
   </data>
+  <data name="ListingShareHostOpenFailedFormat" xml:space="preserve">
+    <value>无法打开页面：{0}</value>
+  </data>
   <data name="ListingShareHostUploading" xml:space="preserve">
     <value>正在上传，并由托管服务检查压缩包…</value>
+  </data>
+  <data name="ListingShareHostUploadingFormat" xml:space="preserve">
+    <value>正在上传文件，并由 {0} 检查…</value>
   </data>
   <data name="ListingShareHostPublishing" xml:space="preserve">
     <value>正在发布…</value>
   </data>
   <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
-    <value>压缩包大小为 {0}，而 {1} 最多接受 {2}。未发送任何内容。</value>
+    <value>文件大小为 {0}，但 {1} 最多接受 {2}。未上传任何内容。请检查文件夹中是否有载具或存档不需要的大文件。</value>
   </data>
   <data name="ListingShareCheckPassedFormat" xml:space="preserve">
     <value>{0}：通过</value>
@@ -3431,6 +4067,9 @@
   </data>
   <data name="ListingShareHostChecksFailed" xml:space="preserve">
     <value>请修正托管服务发现的问题，再次分享。</value>
+  </data>
+  <data name="ListingShareHostChecksFailedFormat" xml:space="preserve">
+    <value>{0} 发现此文件存在问题。尚未发布任何内容。</value>
   </data>
   <data name="ListingShareHostListing" xml:space="preserve">
     <value>托管服务显示的条目文本</value>
@@ -3453,17 +4092,170 @@
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>分享托管服务已不再接受当前登录凭据。请再次分享以重新登录。</value>
   </data>
+  <data name="ListingShareHostSignedOutFormat" xml:space="preserve">
+    <value>你在 {0} 上的登录已失效。请重新登录后继续。</value>
+  </data>
   <data name="ListingShareHostSignInRefused" xml:space="preserve">
     <value>登录被拒绝，或登录代码已过期。</value>
+  </data>
+  <data name="ListingShareHostSignInRefusedFormat" xml:space="preserve">
+    <value>你未在 {0} 上授权 Borea，或代码已过期。请重试。</value>
   </data>
   <data name="ListingShareHostNetwork" xml:space="preserve">
     <value>无法连接到分享托管服务。</value>
   </data>
+  <data name="ListingShareHostNetworkFormat" xml:space="preserve">
+    <value>无法连接到 {0}。请检查网络连接后重试。</value>
+  </data>
   <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
-    <value>{0} 的响应无法被 Borea 识别。</value>
+    <value>Borea 无法读取 {0} 的响应。请稍后重试。</value>
   </data>
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}：{1}</value>
+  </data>
+  <data name="ShareOpenHostFormat" xml:space="preserve">
+    <value>打开 {0}</value>
+  </data>
+  <data name="ShareManageHeading" xml:space="preserve">
+    <value>你分享的内容</value>
+  </data>
+  <data name="ShareManageDoneHint" xml:space="preserve">
+    <value>之后你仍可修改页面或下架某个版本。</value>
+  </data>
+  <data name="ShareManageChange" xml:space="preserve">
+    <value>修改页面</value>
+  </data>
+  <data name="ShareManageTakeDown" xml:space="preserve">
+    <value>下架版本</value>
+  </data>
+  <data name="ShareManageOnHostFormat" xml:space="preserve">
+    <value>在 {0} 上管理</value>
+  </data>
+  <data name="ShareManageChangeTitleFormat" xml:space="preserve">
+    <value>修改 {0} 的页面</value>
+  </data>
+  <data name="ShareManageChangeHint" xml:space="preserve">
+    <value>你的修改会作为请求提交到“发现”。未修改的字段保持不变。</value>
+  </data>
+  <data name="ShareManageNoChange" xml:space="preserve">
+    <value>尚未作任何修改。</value>
+  </data>
+  <data name="ShareManageSend" xml:space="preserve">
+    <value>提交修改</value>
+  </data>
+  <data name="ShareManageSendingFormat" xml:space="preserve">
+    <value>正在向 {0} 提交修改…</value>
+  </data>
+  <data name="ShareManageSentFormat" xml:space="preserve">
+    <value>{0} 已收到修改。请求处理完成后，修改会显示在“发现”中，这可能需要几小时。你无需进行其他操作。</value>
+  </data>
+  <data name="ShareManageSentLaterFormat" xml:space="preserve">
+    <value>{0} 已收到修改。由于 {0} 暂时无法发送请求，修改稍后才会显示在“发现”中。系统会自动重试，你无需进行其他操作。</value>
+  </data>
+  <data name="ShareManageNotOfferedFormat" xml:space="preserve">
+    <value>{0} 不支持通过 Borea 执行此操作。请使用下方链接前往 {0} 操作。</value>
+  </data>
+  <data name="ShareTakeDownTitleFormat" xml:space="preserve">
+    <value>下架 {0} 的某个版本</value>
+  </data>
+  <data name="ShareTakeDownChoose" xml:space="preserve">
+    <value>选择要下架的版本。</value>
+  </data>
+  <data name="ShareTakeDownPlaceholder" xml:space="preserve">
+    <value>选择版本</value>
+  </data>
+  <data name="ShareTakeDownButton" xml:space="preserve">
+    <value>下架</value>
+  </data>
+  <data name="ShareTakeDownNoVersion" xml:space="preserve">
+    <value>Borea 未找到可下架的版本。请使用下方链接。</value>
+  </data>
+  <data name="ShareTakeDownWarningFormat" xml:space="preserve">
+    <value>这会在 {2} 上下架 {1} 的版本 {0}，并删除其文件及其在 Internet Archive 上的副本。此操作无法撤销，版本号 {0} 永远无法再次使用。下载可能仍会在最多 10 分钟内保持可用。</value>
+  </data>
+  <data name="ShareTakeDownVersionFormat" xml:space="preserve">
+    <value>下架版本 {0}</value>
+  </data>
+  <data name="ShareTakingDownFormat" xml:space="preserve">
+    <value>正在下架版本 {0}…</value>
+  </data>
+  <data name="ShareTakenDownFormat" xml:space="preserve">
+    <value>版本 {0} 已下架。下载可能仍会在最多 10 分钟内保持可用，且该版本会在几小时内从“发现”中移除。</value>
+  </data>
+  <data name="ShareTakenDownHeadingFormat" xml:space="preserve">
+    <value>{0} 的版本 {1} 已下架</value>
+  </data>
+  <data name="ShareTakeDownLostAnswerFormat" xml:space="preserve">
+    <value>Borea 未收到 {0} 的响应，因此无法确定版本 {1} 是否已下架。请检查 {0} 上的页面。</value>
+  </data>
+  <data name="ShareDoneHeadingFormat" xml:space="preserve">
+    <value>{0} 已发布</value>
+  </data>
+  <data name="ShareDoneNow" xml:space="preserve">
+    <value>现在任何人都可以下载。</value>
+  </data>
+  <data name="ShareOpenPage" xml:space="preserve">
+    <value>打开页面</value>
+  </data>
+  <data name="ShareDoneNewListing" xml:space="preserve">
+    <value>内容会自动显示在“发现”中，这可能需要几小时。你无需进行其他操作。</value>
+  </data>
+  <data name="ShareDoneNewListingLaterFormat" xml:space="preserve">
+    <value>{0} 暂时无法将内容提交到“发现”，会自动重试。内容稍后会显示在“发现”中，你无需进行其他操作。</value>
+  </data>
+  <data name="ShareDoneNewVersion" xml:space="preserve">
+    <value>新版本会在几小时内显示在“发现”中。你无需进行其他操作。</value>
+  </data>
+  <data name="ShareTechnicalDetails" xml:space="preserve">
+    <value>技术详情</value>
+  </data>
+  <data name="ShareShowRequest" xml:space="preserve">
+    <value>在 GitHub 上查看请求</value>
+  </data>
+  <data name="ShareSignedInFormat" xml:space="preserve">
+    <value>已登录 {0}。不是你的账户？</value>
+  </data>
+  <data name="ShareSignOutFormat" xml:space="preserve">
+    <value>退出 {0}</value>
+  </data>
+  <data name="ShareBackToDescription" xml:space="preserve">
+    <value>返回描述</value>
+  </data>
+  <data name="ShareErrorIdTakenFormat" xml:space="preserve">
+    <value>{1} 上已有模组、载具或存档使用短名称 {0}。请返回并选择其他短名称。</value>
+  </data>
+  <data name="ShareErrorVersionTakenFormat" xml:space="preserve">
+    <value>{0} 曾发布过版本 {1}，即使已下架也不能重复使用。请输入更高的版本号，例如 {2}。</value>
+  </data>
+  <data name="ShareErrorNotOwnerFormat" xml:space="preserve">
+    <value>你在 {0} 上登录的账户并非 {1} 的所有者。请退出并使用最初分享它的账户登录。</value>
+  </data>
+  <data name="ShareErrorRateLimitedFormat" xml:space="preserve">
+    <value>{0} 要求等待一段时间后再分享。请在 {1} 后重试。已填写的内容会保留。</value>
+  </data>
+  <data name="ShareErrorRateLimitedLaterFormat" xml:space="preserve">
+    <value>{0} 要求等待一段时间后再分享。请稍后重试。已填写的内容会保留。</value>
+  </data>
+  <data name="ShareErrorUploadGoneFormat" xml:space="preserve">
+    <value>上传的文件已不在 {0} 上，可能已过期或已发布。请先检查 {0} 上的页面，再重新检查文件。</value>
+  </data>
+  <data name="ShareErrorTooLargeFormat" xml:space="preserve">
+    <value>{0} 提示此文件过大。请检查文件夹中是否有载具或存档不需要的大文件。</value>
+  </data>
+  <data name="ShareErrorNoVehiclesFormat" xml:space="preserve">
+    <value>{0} 目前不接受载具。</value>
+  </data>
+  <data name="ShareErrorNoSavesFormat" xml:space="preserve">
+    <value>{0} 目前不接受存档。</value>
+  </data>
+  <data name="ShareErrorUnavailableFormat" xml:space="preserve">
+    <value>{0} 目前遇到问题。你的计算机上未作任何更改。请稍后重试。</value>
+  </data>
+  <data name="ShareErrorLostAnswerFormat" xml:space="preserve">
+    <value>Borea 未收到 {0} 的响应，因此无法确定是否已发布。请再次点击“发布”。同一次上传不会重复发布。</value>
+  </data>
+  <data name="ShareErrorFileFormat" xml:space="preserve">
+    <value>Borea 无法读取或写入 {0} 的文件。请确认其文件夹仍然存在后重试。</value>
   </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
@@ -3484,7 +4276,7 @@
     <value>恒星系</value>
   </data>
   <data name="ListingShareNotProvidedFormat" xml:space="preserve">
-    <value>此实例中没有模组定义 {0}。</value>
+    <value>Borea 未找到提供 {0} 的模组。缺少该模组的玩家可能无法加载此内容。如果你知道是哪个模组，请添加它。</value>
   </data>
   <data name="ListingShareDisabledProviderFormat" xml:space="preserve">
     <value>{0} 定义了 {1}，但此实例未加载该模组，因此 Borea 未添加条目。</value>
@@ -3743,6 +4535,27 @@
   </data>
   <data name="InstallStepsDismiss" xml:space="preserve">
     <value>关闭提示</value>
+  </data>
+  <data name="InstalledWhereFormat" xml:space="preserve">
+    <value>在哪里找到 {0}</value>
+  </data>
+  <data name="InstalledStartFormat" xml:space="preserve">
+    <value>从 {0} 启动游戏。</value>
+  </data>
+  <data name="InstalledVehicleMenu" xml:space="preserve">
+    <value>按 Esc 并选择 LAUNCH VEHICLE。</value>
+  </data>
+  <data name="InstalledVehiclePickFormat" xml:space="preserve">
+    <value>在 Vehicle Save 下选择 {0}。</value>
+  </data>
+  <data name="InstalledSaveMenu" xml:space="preserve">
+    <value>按 Esc 并选择 SAVE/LOAD。</value>
+  </data>
+  <data name="InstalledSavePickFormat" xml:space="preserve">
+    <value>双击 {0}。游戏会在加载存档前要求确认。</value>
+  </data>
+  <data name="InstalledPlayFormat" xml:space="preserve">
+    <value>游玩 {0}</value>
   </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>发布版本 {0} 的状态为 {1}，不在你所选发布通道提供的范围内。</value>
@@ -5448,6 +6261,30 @@
   <data name="PreviewResetView" xml:space="preserve">
     <value>重置视角</value>
   </data>
+  <data name="PreviewSavePicture" xml:space="preserve">
+    <value>保存图片</value>
+  </data>
+  <data name="PreviewSavePictureTip" xml:space="preserve">
+    <value>将当前视图保存为计算机上的 PNG 文件。不会上传任何内容。</value>
+  </data>
+  <data name="PreviewPictureFileType" xml:space="preserve">
+    <value>PNG 图片</value>
+  </data>
+  <data name="PreviewPictureFailed" xml:space="preserve">
+    <value>无法保存图片。</value>
+  </data>
+  <data name="PreviewFactPartsFormat" xml:space="preserve">
+    <value>部件：{0}</value>
+  </data>
+  <data name="PreviewFactStagesFormat" xml:space="preserve">
+    <value>级数：{0}</value>
+  </data>
+  <data name="PreviewExpandView" xml:space="preserve">
+    <value>展开视图</value>
+  </data>
+  <data name="PreviewCollapseView" xml:space="preserve">
+    <value>收起视图</value>
+  </data>
   <data name="PreviewAttribution" xml:space="preserve">
     <value>部件取自你自己安装的 KSA。Borea 不附带游戏文件。</value>
   </data>
@@ -5501,5 +6338,77 @@
   </data>
   <data name="PreviewNoticePlannerFallback" xml:space="preserve">
     <value>所需模组来自此发布版本的必需依赖列表</value>
+  </data>
+  <data name="UpdateAllTitleFormat" xml:space="preserve">
+    <value>更新 {1} 中的 {0} 个模组</value>
+  </data>
+  <data name="UpdateAllTitleOneFormat" xml:space="preserve">
+    <value>更新 {0} 中的 1 个模组</value>
+  </data>
+  <data name="UpdateAllTitleNoCountFormat" xml:space="preserve">
+    <value>更新 {0} 中的模组</value>
+  </data>
+  <data name="UpdateAllTitleWithRecordedFormat" xml:space="preserve">
+    <value>更新 {0} 中的模组、载具和存档</value>
+  </data>
+  <data name="UpdateAllConfirmFormat" xml:space="preserve">
+    <value>更新 {0} 个模组</value>
+  </data>
+  <data name="UpdateAllConfirmOne" xml:space="preserve">
+    <value>更新 1 个模组</value>
+  </data>
+  <data name="UpdateAllConfirmAnywayFormat" xml:space="preserve">
+    <value>仍要更新 {0} 个模组</value>
+  </data>
+  <data name="UpdateAllConfirmAnywayOne" xml:space="preserve">
+    <value>仍要更新 1 个模组</value>
+  </data>
+  <data name="UpdateAllListHeading" xml:space="preserve">
+    <value>即将更改的内容</value>
+  </data>
+  <data name="UpdateAllListHint" xml:space="preserve">
+    <value>选择模组以查看更改内容。</value>
+  </data>
+  <data name="UpdateAllRecordedHeading" xml:space="preserve">
+    <value>载具和存档将在模组更新后更新。需要你确认的项目会在对应行等待处理。</value>
+  </data>
+  <data name="UpdateAllNew" xml:space="preserve">
+    <value>新增</value>
+  </data>
+  <data name="UpdateAllOlder" xml:space="preserve">
+    <value>较旧版本</value>
+  </data>
+  <data name="UpdateAllVersionChangeFormat" xml:space="preserve">
+    <value>{0} → {1}</value>
+  </data>
+  <data name="UpdateAllShowChangesFormat" xml:space="preserve">
+    <value>显示 {0} 的更改内容</value>
+  </data>
+  <data name="UpdateAllHideChangesFormat" xml:space="preserve">
+    <value>隐藏 {0} 的更改内容</value>
+  </data>
+  <data name="UpdateAllMoreMods" xml:space="preserve">
+    <value>更多模组</value>
+  </data>
+  <data name="UpdateAllChooseMod" xml:space="preserve">
+    <value>选择模组</value>
+  </data>
+  <data name="UpdateAllNoNotes" xml:space="preserve">
+    <value>无发布说明</value>
+  </data>
+  <data name="UpdateAllChooseFirst" xml:space="preserve">
+    <value>请在每个列表中选择一个模组后继续。</value>
+  </data>
+  <data name="UpdateChecking" xml:space="preserve">
+    <value>正在检查更新</value>
+  </data>
+  <data name="UpdateNothingFound" xml:space="preserve">
+    <value>Borea 未找到目前可更新的内容。</value>
+  </data>
+  <data name="InstallChoicesRecommendedHint" xml:space="preserve">
+    <value>Borea 会添加你勾选的模组。</value>
+  </data>
+  <data name="InstallChoicesSuggestedHint" xml:space="preserve">
+    <value>Borea 不会添加这些模组。你可以稍后从“发现”安装。</value>
   </data>
 </root>
