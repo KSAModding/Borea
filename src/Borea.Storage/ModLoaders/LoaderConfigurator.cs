@@ -231,11 +231,8 @@ public sealed class LoaderConfigurator : ILoaderConfigurator, ILoaderConfigurati
             var game = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameDirectory));
             if (_wine.Find(game) is { } install)
             {
-                if (_wine.ToWindowsPath(install, game) is { } windows
-                    && string.Equals(windows.TrimEnd('\\'), configured.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase))
-                {
+                if (_wine.ToWindowsPath(install, game) is { } windows && SameWindowsPath(windows, configured, install.Drives.HostComparison))
                     return game;
-                }
 
                 if (install.Drives.ToHost(configured) is { } host)
                     return host;
@@ -243,6 +240,17 @@ public sealed class LoaderConfigurator : ILoaderConfigurator, ILoaderConfigurati
         }
 
         return _wine.Find(loaderDirectory)?.Drives.ToHost(configured) ?? configured;
+    }
+
+    /// <summary>
+    /// Wine ignores the case of a drive letter, and the rest of the path names host folders, which compare the way the host does.
+    /// On Linux a value that differs from the game only in case is another folder that the player set.
+    /// </summary>
+    private static bool SameWindowsPath(string windows, string configured, StringComparison hostComparison)
+    {
+        var left = windows.TrimEnd('\\');
+        var right = configured.TrimEnd('\\', '/');
+        return char.ToUpperInvariant(left[0]) == char.ToUpperInvariant(right[0]) && string.Equals(left[1..], right[1..], hostComparison);
     }
 
     private static string? ReadJsonGamePath(string text, string[] keys, string file, ModMetadata loader)

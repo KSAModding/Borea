@@ -390,6 +390,18 @@ public sealed class LoaderConfiguratorTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadConfiguredGamePathAsync_PathThatDiffersOnlyInCaseOnACaseSensitiveHost_MapsItThroughThePrefix()
+    {
+        await WriteConfigAsync("""{ "GameLocation": "C:\\program files\\kitten space agency" }""");
+        var drives = new WineDriveMap(new Dictionary<char, string> { ['c'] = Path.Combine(Prefix, "drive_c") }, StringComparison.Ordinal, Path.DirectorySeparatorChar);
+        var configurator = new LoaderConfigurator(new FakeWineProbe(new WineInstall(Prefix, drives, Wrapper: null)));
+
+        var configured = await configurator.ReadConfiguredGamePathAsync(Loader(Json()), _loaderDirectory, GameInPrefix);
+
+        Assert.Equal(Path.Combine(Prefix, "drive_c", "program files", "kitten space agency"), configured);
+    }
+
+    [Fact]
     public async Task ReadConfiguredGamePathAsync_NoGameDirectory_MapsThroughThePrefixOfTheLoader()
     {
         var loaderInPrefix = Directory.CreateDirectory(Path.Combine(Prefix, "drive_c", "Program Files", "StarMap")).FullName;
