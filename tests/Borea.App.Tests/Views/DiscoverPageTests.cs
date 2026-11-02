@@ -102,7 +102,7 @@ public sealed class DiscoverPageTests
     }
 
     [Fact]
-    public async Task License_TheChosenOneIsMarkedUntilItIsChosenAgain()
+    public async Task License_TheChosenGroupIsCheckedUntilItIsChosenAgain_AndNamesItsLicensesWithoutAHover()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -110,15 +110,44 @@ public sealed class DiscoverPageTests
 
         var marks = await RenderAsync(harness, 1280, page =>
         {
-            var license = page.GetVisualDescendants().OfType<Button>().Single(button => button.Content is "MIT");
-            var before = license.Classes.Contains("active");
-            Click(license);
-            var chosen = license.Classes.Contains("active");
-            Click(license);
-            return (before, chosen, license.Classes.Contains("active"));
+            var group = SidePanel(page).GetVisualDescendants().OfType<Button>().Single(button => AutomationProperties.GetName(button) == harness.Localization.DiscoverLicenseFree);
+            var check = group.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().Single();
+            (bool Active, bool Checked) Mark()
+            {
+                page.UpdateLayout();
+                return (group.Classes.Contains("active"), check.IsEffectivelyVisible);
+            }
+
+            var licenses = SidePanel(page).GetVisualDescendants().OfType<TextBlock>().Any(text => text.IsEffectivelyVisible && text.Text == "MIT");
+            var before = Mark();
+            Click(group);
+            var chosen = Mark();
+            Click(group);
+            return (licenses, before, chosen, Mark());
         });
 
-        Assert.Equal((false, true, false), marks);
+        Assert.Equal((true, (false, false), (true, true), (false, false)), marks);
+        Assert.Empty(viewModel.SelectedLicenseGroups);
+    }
+
+    [Fact]
+    public async Task License_TheChosenExactLicenseIsCheckedUntilItIsChosenAgain_AndTheBoxNamesIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        var marks = await RenderAsync(harness, 1280, async page =>
+        {
+            var license = await OpenLicenseOptionAsync(page, "MIT");
+            var before = (license.IsChecked, LicenseBoxText(page));
+            Click(license);
+            var chosen = (license.IsChecked, LicenseBoxText(page));
+            Click(license);
+            return (before, chosen, (license.IsChecked, LicenseBoxText(page)));
+        });
+
+        Assert.Equal(((false, "Exact license"), (true, "MIT"), (false, "Exact license")), marks);
         Assert.Empty(viewModel.SelectedLicenses);
     }
 
@@ -129,9 +158,8 @@ public sealed class DiscoverPageTests
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
 
-        var (active, chips, left) = await RenderAsync(harness, 1280, page =>
+        var (active, box, chips, left) = await RenderAsync(harness, 1280, async page =>
         {
-            Button Option(string license) => SidePanel(page).GetVisualDescendants().OfType<Button>().Single(button => button.Content as string == license);
             List<string?> Chips()
             {
                 page.UpdateLayout();
@@ -141,16 +169,25 @@ public sealed class DiscoverPageTests
                     .ToList();
             }
 
-            Click(Option("MIT"));
-            Click(Option("CC-BY-SA-4.0"));
-            var active = viewModel.LicenseOptions.Where(license => Option(license.Value).Classes.Contains("active")).Select(license => license.Value).ToList();
-            var chips = Chips();
+            Click(await OpenLicenseOptionAsync(page, "MIT"));
+            Click(await OpenLicenseOptionAsync(page, "CC-BY-SA-4.0"));
+            var active = new List<string>();
+            foreach (var license in viewModel.LicenseOptions)
+            {
+                if ((await OpenLicenseOptionAsync(page, license.Value)).IsChecked is true)
+                    active.Add(license.Value);
+            }
 
+            // a click outside the open list only closes it, so the list closes before a chip takes its click
+            LicenseBox(page).Flyout!.Hide();
+            var box = LicenseBoxText(page);
+            var chips = Chips();
             Click(page.GetVisualDescendants().OfType<Button>().Single(button => button.Classes.Contains("chip-button") && button.CommandParameter as string == "CC-BY-SA-4.0"));
-            return (active, chips, Chips());
+            return (active, box, chips, Chips());
         });
 
         Assert.Equal(["MIT", "CC-BY-SA-4.0"], active);
+        Assert.Equal("2 licenses", box);
         Assert.Equal(["MIT", "CC-BY-SA-4.0"], chips);
         Assert.Equal(["MIT"], left);
         Assert.Equal(["AdvancedFlightComputer", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
@@ -408,13 +445,40 @@ public sealed class DiscoverPageTests
     private static Button SidePanelButton(Visual page, ICommand command) =>
         SidePanel(page).GetVisualDescendants().OfType<Button>().Single(button => button.Command == command);
 
+    /// <summary>The box of the exact licenses of the License filter, which opens their list.</summary>
+    private static Button LicenseBox(Visual page) =>
+        SidePanel(page).GetVisualDescendants().OfType<Button>().Single(button => button.Classes.Contains("select"));
+
+    private static string? LicenseBoxText(Control page)
+    {
+        page.UpdateLayout();
+        return LicenseBox(page).GetVisualDescendants().OfType<TextBlock>().Single().Text;
+    }
+
+    /// <summary>Opens the list of exact licenses when it is closed, and gives the check box of <paramref name="license"/>.</summary>
+    private static async Task<CheckBox> OpenLicenseOptionAsync(Visual page, string license)
+    {
+        var box = LicenseBox(page);
+        var flyout = (Flyout)box.Flyout!;
+        if (!flyout.IsOpen)
+        {
+            flyout.ShowAt(box);
+            await HeadlessApp.FramesAsync(5);
+        }
+
+        var list = (Control)flyout.Content!;
+        TopLevel.GetTopLevel(list)!.UpdateLayout();
+        return list.GetVisualDescendants().OfType<CheckBox>().Single(check => check.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == license));
+    }
+
+    /// <summary>Clicks the middle of the button, in the window or in the popup that shows it.</summary>
     private static void Click(Button button)
     {
-        var window = (Window)TopLevel.GetTopLevel(button)!;
-        window.UpdateLayout();
-        var center = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(center, MouseButton.Left);
-        window.MouseUp(center, MouseButton.Left);
+        var root = TopLevel.GetTopLevel(button)!;
+        root.UpdateLayout();
+        var center = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), root)!.Value;
+        root.MouseDown(center, MouseButton.Left);
+        root.MouseUp(center, MouseButton.Left);
     }
 
     private static Point Corner(Visual control, Visual page) =>

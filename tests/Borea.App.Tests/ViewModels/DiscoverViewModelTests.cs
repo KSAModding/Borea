@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.Instances;
+using Borea.Core.Licenses;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
 
@@ -485,6 +486,172 @@ public sealed class DiscoverViewModelTests
         Assert.False(viewModel.HasDiscoverFilters);
         Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
     }
+
+    [Fact]
+    public async Task LicenseFilter_OffersTheLicensesOfTheTabWithTheirRows_AndKeepsAChosenOneThatTheTabDoesNotUse()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithMixedLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.Equal([2, 1, 1, 1], viewModel.LicenseOptions.Select(license => license.Count));
+
+        viewModel.ToggleLicenseCommand.Execute("CC-BY-SA-4.0");
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+
+        Assert.Equal([("MIT", 1), ("CC-BY-SA-4.0", 0)], viewModel.LicenseOptions.Select(license => (license.Value, license.Count)));
+        Assert.Equal([false, true], viewModel.LicenseOptions.Select(license => license.IsSelected));
+        Assert.Equal("CC-BY-SA-4.0", viewModel.LicenseFilterText);
+
+        viewModel.ToggleLicenseCommand.Execute("MIT");
+        Assert.Equal("2 licenses", viewModel.LicenseFilterText);
+
+        viewModel.ClearLicensesCommand.Execute(null);
+        Assert.Equal(harness.Localization.DiscoverLicenseExact, viewModel.LicenseFilterText);
+        Assert.False(viewModel.HasDiscoverFilters);
+    }
+
+    [Fact]
+    public async Task LicenseGroups_AreTheGroupsOfTheTab_EachWithItsRowsAndTheLicensesThatPutThemThere()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithGroupLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        Assert.Equal(
+            [(LicenseGroup.Free, 1, "MIT"), (LicenseGroup.NonCommercial, 1, "CC-BY-NC-SA-3.0"), (LicenseGroup.Other, 1, "LicenseRef-KSA-Assets")],
+            viewModel.LicenseGroupOptions.Select(group => (group.Group, group.Count, string.Concat(group.Licenses))));
+        Assert.Equal(["Free, also for commercial use", "Not for commercial use", "Other terms"], viewModel.LicenseGroupOptions.Select(group => group.Name));
+
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+        Assert.Equal([(LicenseGroup.Free, 1)], viewModel.LicenseGroupOptions.Select(group => (group.Group, group.Count)));
+    }
+
+    [Fact]
+    public async Task LicenseGroups_EachLicenseOfAGroupButTheLastCarriesItsComma()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithMixedLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        Assert.Equal(["MIT,", "Apache-2.0,", "CC-BY-SA-4.0,", "GPL-2.0-only WITH Classpath-exception-2.0"], Assert.Single(viewModel.LicenseGroupOptions).Licenses);
+    }
+
+    [Fact]
+    public async Task LicenseGroups_AChosenGroupNarrowsTheList_AndTheExactLicensesToThoseOfTheGroup()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithGroupLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.Equal(harness.Localization.DiscoverLicenseListAll, viewModel.LicenseListHint);
+
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.Free);
+        Assert.True(viewModel.HasDiscoverFilters);
+        Assert.Equal(["MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+        Assert.Equal([true, false, false], viewModel.LicenseGroupOptions.Select(group => group.IsSelected));
+        Assert.Equal([("MIT", 1)], viewModel.LicenseOptions.Select(license => (license.Value, license.Count)));
+        Assert.Equal(harness.Localization.DiscoverLicenseListInGroups, viewModel.LicenseListHint);
+
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.NonCommercial);
+        Assert.Equal(["AdvancedFlightComputer", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+        Assert.Equal([("CC-BY-NC-SA-3.0", 1), ("MIT", 1)], viewModel.LicenseOptions.Select(license => (license.Value, license.Count)));
+        Assert.Equal(["Free license", "Non-commercial"], viewModel.SelectedLicenseGroups.Select(group => group.ChipName));
+
+        viewModel.ToggleLicenseCommand.Execute("CC-BY-NC-SA-3.0");
+        Assert.Equal(["AdvancedFlightComputer"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.Free);
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.NonCommercial);
+        Assert.Equal(["CC-BY-NC-SA-3.0"], viewModel.SelectedLicenses);
+        Assert.Equal(["AdvancedFlightComputer"], viewModel.DiscoverItems.Select(item => item.ModId));
+        Assert.Equal(3, viewModel.LicenseOptions.Count);
+
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.False(viewModel.HasDiscoverFilters);
+        Assert.Equal(3, viewModel.DiscoverItems.Count);
+    }
+
+    [Fact]
+    public async Task LicenseGroups_AChosenGroupDropsAnExactLicenseThatNoEntryOfTheGroupNames()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithGroupLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ToggleLicenseCommand.Execute("LicenseRef-KSA-Assets");
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.Free);
+
+        Assert.Empty(viewModel.SelectedLicenses);
+        Assert.Equal(["MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task LicenseGroups_AChosenGroupThatTheTabDoesNotUse_StaysWithNoRows_AndClearAllTakesItAway()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithGroupLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.Other);
+
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+        Assert.Equal([(LicenseGroup.Free, 1, false), (LicenseGroup.Other, 0, true)], viewModel.LicenseGroupOptions.Select(group => (group.Group, group.Count, group.IsSelected)));
+        Assert.Empty(viewModel.DiscoverItems);
+
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.Equal([LicenseGroup.Free], viewModel.LicenseGroupOptions.Select(group => group.Group));
+        Assert.Empty(viewModel.SelectedLicenseGroups);
+        Assert.Equal("StarMap", Assert.Single(viewModel.DiscoverItems).ModId);
+    }
+
+    [Fact]
+    public async Task LicenseGroups_AGroupWithNoRowsThatIsNoLongerChosen_LeavesTheList()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithGroupLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.Other);
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.Other);
+
+        Assert.Equal([(LicenseGroup.Free, 1, false)], viewModel.LicenseGroupOptions.Select(group => (group.Group, group.Count, group.IsSelected)));
+        Assert.Equal("StarMap", Assert.Single(viewModel.DiscoverItems).ModId);
+    }
+
+    [Fact]
+    public async Task LicenseFilter_AnExactLicenseCountsOnlyTheEntriesThatItPutsInTheirGroup()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithGroupLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.Equal([("CC-BY-NC-SA-3.0", 1), ("LicenseRef-KSA-Assets", 1), ("MIT", 1)], viewModel.LicenseOptions.Select(license => (license.Value, license.Count)));
+
+        // AdvancedFlightComputer is MIT AND CC-BY-NC-SA-3.0, so its terms are non-commercial and MIT does not show it
+        viewModel.ToggleLicenseCommand.Execute("MIT");
+
+        Assert.Equal(["MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task LicenseGroups_InGerman_TheRowsAndTheChipsUseTheGermanWords()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithGroupLicenses);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ToggleLicenseGroupCommand.Execute(LicenseGroup.NonCommercial);
+
+        harness.Localization.TrySetCulture("de");
+
+        Assert.Equal(["Frei, auch kommerziell", "Keine kommerzielle Nutzung", "Andere Bedingungen"], viewModel.LicenseGroupOptions.Select(group => group.Name));
+        Assert.Equal("Nicht kommerziell", Assert.Single(viewModel.SelectedLicenseGroups).ChipName);
+        Assert.Equal("Genaue Lizenz", viewModel.LicenseFilterText);
+    }
+
+    internal static string WithGroupLicenses(string json) => WithLicenses(
+        json,
+        ("AdvancedFlightComputer", "MIT AND CC-BY-NC-SA-3.0"),
+        ("KSArmory", "LicenseRef-KSA-Assets"),
+        ("MeasureTools", "MIT"));
 
     internal static string WithMixedLicenses(string json) => WithLicenses(
         json,

@@ -146,6 +146,23 @@
                                     <TextBlock Classes="label-sm" Text="{Binding SelectedOs}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
+                            <ItemsControl ItemsSource="{Binding SelectedLicenseGroups}" IsVisible="{Binding !!SelectedLicenseGroups.Count}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel ItemSpacing="8" LineSpacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DiscoverLicenseGroup">
+                                        <Button Classes="chip-button" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleLicenseGroupCommand}" CommandParameter="{Binding Group}">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                                <TextBlock Classes="label-sm" Text="{Binding ChipName}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <ItemsControl ItemsSource="{Binding SelectedLicenses}" IsVisible="{Binding !!SelectedLicenses.Count}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -367,21 +384,83 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                        <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!LicenseOptions.Count}" />
-                        <StackPanel Spacing="10" IsVisible="{Binding !!LicenseOptions.Count}">
+                        <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!LicenseGroupOptions.Count}" />
+                        <StackPanel Spacing="10" IsVisible="{Binding !!LicenseGroupOptions.Count}">
                             <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverLicense}" />
-                            <ItemsControl ItemsSource="{Binding LicenseOptions}">
+                            <ItemsControl ItemsSource="{Binding LicenseGroupOptions}">
+                                <ItemsControl.Styles>
+                                    <!-- the name sits in its own text block, which the global TextBlock style colours, so a chosen row sets the accent here -->
+                                    <Style Selector="Button.filter.active TextBlock.group-name">
+                                        <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+                                    </Style>
+                                </ItemsControl.Styles>
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <StackPanel Spacing="6" />
+                                        <StackPanel Spacing="8" />
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:DiscoverChoice">
-                                        <Button Classes="filter" Classes.active="{Binding IsSelected}" Content="{Binding Value}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleLicenseCommand}" CommandParameter="{Binding Value}" />
+                                    <DataTemplate x:DataType="vm:DiscoverLicenseGroup">
+                                        <StackPanel Spacing="2">
+                                            <Button Classes="filter" Classes.active="{Binding IsSelected}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding Meaning}" AutomationProperties.Name="{Binding Name}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleLicenseGroupCommand}" CommandParameter="{Binding Group}">
+                                                <!-- the check keeps its column when it is hidden, so the names stay in one line -->
+                                                <Grid ColumnDefinitions="16,6,*,8,Auto">
+                                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Check}" IsVisible="{Binding IsSelected}" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="2" Classes="group-name" Text="{Binding Name}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="4" Classes="label-sm" Text="{Binding Count}" VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Button>
+                                            <!-- the licenses of the group stay visible, so a player sees what a group holds without a hover -->
+                                            <ItemsControl ItemsSource="{Binding Licenses}" Margin="22,0,0,0" IsVisible="{Binding HasLicenses}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel ItemSpacing="6" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="x:String">
+                                                        <TextBlock Classes="label-sm" Text="{Binding}" TextWrapping="Wrap" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <!-- the exact licenses narrow the chosen groups, or filter on their own, in a list that stays open while the player checks several -->
+                            <Grid ColumnDefinitions="*,8,Auto">
+                                <Button Classes="select" AutomationProperties.Name="{Binding Localization.DiscoverLicenseExact}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedLeft">
+                                            <StackPanel Spacing="8" Width="240">
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding LicenseListHint}" TextWrapping="Wrap" />
+                                                <!-- the right margin keeps the counts clear of the scroll bar -->
+                                                <ScrollViewer MaxHeight="320">
+                                                    <ItemsControl ItemsSource="{Binding LicenseOptions}" Margin="0,0,14,0">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:LicenseChoice">
+                                                                <CheckBox IsChecked="{Binding IsSelected, Mode=OneWay}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleLicenseCommand}" CommandParameter="{Binding Value}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                                                    <DockPanel>
+                                                                        <TextBlock DockPanel.Dock="Right" Classes="label-sm" Text="{Binding Count}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                                                                        <TextBlock Text="{Binding Value}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                                    </DockPanel>
+                                                                </CheckBox>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <DockPanel>
+                                        <Path DockPanel.Dock="Right" Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                        <TextBlock Classes.secondary="{Binding !SelectedLicenses.Count}" Text="{Binding LicenseFilterText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    </DockPanel>
+                                </Button>
+                                <Button Grid.Column="2" Classes="icon" Command="{Binding ClearLicensesCommand}" IsEnabled="{Binding !!SelectedLicenses.Count}" ToolTip.Tip="{Binding Localization.DiscoverLicenseClear}" AutomationProperties.Name="{Binding Localization.DiscoverLicenseClear}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                </Button>
+                            </Grid>
                         </StackPanel>
                         <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding ShowsModAuthors}" />
                         <StackPanel Spacing="10" IsVisible="{Binding ShowsModAuthors}">

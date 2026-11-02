@@ -2652,6 +2652,45 @@
   <data name="DiscoverLicense" xml:space="preserve">
     <value>License</value>
   </data>
+  <data name="DiscoverLicenseFree" xml:space="preserve">
+    <value>Free, also for commercial use</value>
+  </data>
+  <data name="DiscoverLicenseFreeChip" xml:space="preserve">
+    <value>Free license</value>
+  </data>
+  <data name="DiscoverLicenseFreeMeaning" xml:space="preserve">
+    <value>You may use, change and share it, also in your own mods and for commercial use. Most of these licenses ask you to name the author, and some ask that a changed version keeps the same license.</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercial" xml:space="preserve">
+    <value>Not for commercial use</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercialChip" xml:space="preserve">
+    <value>Non-commercial</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercialMeaning" xml:space="preserve">
+    <value>You may use, change and share it, but not for commercial use. This can apply to only a part, such as the art. Its page shows the exact license.</value>
+  </data>
+  <data name="DiscoverLicenseOther" xml:space="preserve">
+    <value>Other terms</value>
+  </data>
+  <data name="DiscoverLicenseOtherMeaning" xml:space="preserve">
+    <value>The author sets their own terms, or Borea cannot tell what the license allows. Some of these licenses do not allow changes. Read the license on its page before you change or share it.</value>
+  </data>
+  <data name="DiscoverLicenseExact" xml:space="preserve">
+    <value>Exact license</value>
+  </data>
+  <data name="DiscoverLicensesChosenFormat" xml:space="preserve">
+    <value>{0} licenses</value>
+  </data>
+  <data name="DiscoverLicenseClear" xml:space="preserve">
+    <value>Clear the exact licenses</value>
+  </data>
+  <data name="DiscoverLicenseListAll" xml:space="preserve">
+    <value>Check a license to show only the entries under it. An entry with more than one license counts for the license that decides its group.</value>
+  </data>
+  <data name="DiscoverLicenseListInGroups" xml:space="preserve">
+    <value>The licenses of the chosen groups. Check a license to show only the entries of these groups under it.</value>
+  </data>
   <data name="DiscoverAuthorFilterFormat" xml:space="preserve">
     <value>By {0}</value>
   </data>

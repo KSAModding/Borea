@@ -1920,6 +1920,34 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverLicense => Resources.DiscoverLicense;
 
+    public string DiscoverLicenseFree => Resources.DiscoverLicenseFree;
+
+    public string DiscoverLicenseFreeChip => Resources.DiscoverLicenseFreeChip;
+
+    public string DiscoverLicenseFreeMeaning => Resources.DiscoverLicenseFreeMeaning;
+
+    public string DiscoverLicenseNonCommercial => Resources.DiscoverLicenseNonCommercial;
+
+    public string DiscoverLicenseNonCommercialChip => Resources.DiscoverLicenseNonCommercialChip;
+
+    public string DiscoverLicenseNonCommercialMeaning => Resources.DiscoverLicenseNonCommercialMeaning;
+
+    public string DiscoverLicenseOther => Resources.DiscoverLicenseOther;
+
+    public string DiscoverLicenseOtherMeaning => Resources.DiscoverLicenseOtherMeaning;
+
+    public string DiscoverLicenseExact => Resources.DiscoverLicenseExact;
+
+    /// <summary>"3 licenses", for two or more chosen exact licenses.</summary>
+    public string FormatDiscoverLicensesChosen(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverLicensesChosenFormat, count);
+
+    public string DiscoverLicenseClear => Resources.DiscoverLicenseClear;
+
+    public string DiscoverLicenseListAll => Resources.DiscoverLicenseListAll;
+
+    public string DiscoverLicenseListInGroups => Resources.DiscoverLicenseListInGroups;
+
     public string FormatDiscoverAuthorFilter(string author)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverAuthorFilterFormat, author);
 

@@ -224,7 +224,7 @@
             </Style>
         </Style>
         <!-- hover rules that change the Background and the BorderBrush -->
-        <Style Selector="Button.to-top">
+        <Style Selector="Button.to-top, Button.select">
             <Style Selector="^ /template/ ContentPresenter">
                 <Setter Property="Transitions">
                     <Transitions>
@@ -872,6 +872,24 @@
         </Style>
         <Style Selector="Button.dropdown:pointerover /template/ ContentPresenter, Button.dropdown:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+        </Style>
+        <!-- a box that opens a flyout and looks like the combo boxes next to it, for a filter that holds several choices -->
+        <Style Selector="Button.select">
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="12,5,10,7" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+            <Setter Property="Background" Value="{DynamicResource ComboBoxBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxBorderBrush}" />
+            <Setter Property="BorderThickness" Value="{DynamicResource ComboBoxBorderThemeThickness}" />
+            <Setter Property="Foreground" Value="{DynamicResource ComboBoxForeground}" />
+        </Style>
+        <Style Selector="Button.select:pointerover /template/ ContentPresenter, Button.select:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ComboBoxBackgroundPointerOver}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxBorderBrushPointerOver}" />
+            <Setter Property="Foreground" Value="{DynamicResource ComboBoxForeground}" />
         </Style>
         <!-- c/button-icon-more: round, 24px dots -->
         <Style Selector="Button.icon">
