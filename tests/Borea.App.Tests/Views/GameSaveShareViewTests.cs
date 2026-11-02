@@ -7,6 +7,7 @@ using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.App.Views.Pages;
+using Borea.App.Views.Share;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using ContentPage = Borea.App.Views.Pages.ContentPage;
@@ -144,6 +145,37 @@ public sealed class GameSaveShareViewTests
         Assert.DoesNotContain(localization.ListingShareHint, texts);
         Assert.DoesNotContain(localization.ShareModsNone, texts);
         Assert.DoesNotContain(localization.ShareModProblem, texts);
+    }
+
+    [Theory]
+    [InlineData(920)]
+    [InlineData(1520)]
+    [InlineData(1920)]
+    public async Task DescribeStep_TakesTheWidthOfTheBody_AndTheTitleRowEndsWhereTheStepEnds(double width)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        var (available, step, startOver) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = width, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var body = page.GetVisualDescendants().OfType<PageBodyPanel>().First();
+            var describe = page.GetVisualDescendants().OfType<ShareDescribeStep>().Single();
+            var button = page.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && button.Command == harness.ViewModel.ListingEditor.StartOverCommand);
+            var found = (body.Bounds.Width, BoundsIn(describe, body), BoundsIn(button, body));
+            window.Close();
+            return Task.FromResult(found);
+        });
+
+        var (left, bodyWidth) = PageBodyPanel.Place(available, hasSidePanel: true);
+        Assert.Equal(left, step.Left, 1);
+        Assert.Equal(bodyWidth, step.Width, 1);
+        Assert.Equal(step.Right, startOver.Right, 1);
     }
 
     [Fact]
@@ -615,6 +647,9 @@ public sealed class GameSaveShareViewTests
             window.Close();
             return texts;
         });
+
+    private static Rect BoundsIn(Control control, Visual ancestor) =>
+        new(control.TranslatePoint(default, ancestor)!.Value, control.Bounds.Size);
 
     private static Task<List<string?>> VehicleMenuAsync(ViewModelHarness harness) =>
         HeadlessApp.RunAsync(harness, () =>
