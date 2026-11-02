@@ -28,9 +28,13 @@ public interface IListingHostClient
     /// The id of the listing, which picks the archive of a release with several zips as the stamper does. When it is null,
     /// the name of the GitHub repository picks it.
     /// </param>
+    /// <param name="tagPrefix">
+    /// The tag_prefix of the listing. Only a GitHub release whose tag starts with it counts, and its version and archive name are
+    /// read from the rest of the tag, as the watcher does. Null or empty counts every release.
+    /// </param>
     /// <exception cref="ListingSourceException">The host has no such repository or mod.</exception>
     /// <exception cref="HttpRequestException">The host did not answer.</exception>
-    Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, CancellationToken cancellationToken = default);
+    Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, string? tagPrefix = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>What the latest release archive shows, read with the rules the stamper of content-index-releases uses.</summary>
@@ -67,12 +71,14 @@ public interface IListingSourceReader
 
     /// <param name="installRoot">The install root that the listing authors, or null when the stamper derives it.</param>
     /// <param name="listingId">The id of the listing, which picks the archive among several zips, or null for the repository name.</param>
+    /// <param name="tagPrefix">The tag_prefix of the listing, or null when there is none or it is not known yet.</param>
     /// <exception cref="ListingSourceException">The host has no such repository or mod.</exception>
     /// <exception cref="HttpRequestException">The host did not answer.</exception>
     Task<ListingSource> ReadAsync(
         ListingSourceReference source,
         string? installRoot = null,
         string? listingId = null,
+        string? tagPrefix = null,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }

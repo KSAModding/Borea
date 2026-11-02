@@ -28,14 +28,14 @@ public sealed class ListingHostClient : IListingHostClient
         _http = http ?? throw new ArgumentNullException(nameof(http));
     }
 
-    public Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, CancellationToken cancellationToken = default) => source switch
+    public Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, string? tagPrefix = null, CancellationToken cancellationToken = default) => source switch
     {
-        ListingSourceReference.GitHub github => ReadGitHubAsync(github, listingId, cancellationToken),
+        ListingSourceReference.GitHub github => ReadGitHubAsync(github, listingId, tagPrefix, cancellationToken),
         ListingSourceReference.SpaceDock spaceDock => ReadSpaceDockAsync(spaceDock, cancellationToken),
         _ => throw new ArgumentException("The source names no host Borea reads.", nameof(source)),
     };
 
-    private async Task<ListingHostFacts> ReadGitHubAsync(ListingSourceReference.GitHub source, string? listingId, CancellationToken cancellationToken)
+    private async Task<ListingHostFacts> ReadGitHubAsync(ListingSourceReference.GitHub source, string? listingId, string? tagPrefix, CancellationToken cancellationToken)
     {
         var repository = await GetGitHubAsync<GitHubRepositoryDto>($"{GitHubApi}/repos/{source.FullName}", cancellationToken).ConfigureAwait(false)
             ?? throw new ListingSourceException($"GitHub has no repository '{source.FullName}' that Borea can read.");
@@ -48,8 +48,9 @@ public sealed class ListingHostClient : IListingHostClient
         if (repository.HasIssues)
             links.Add(new ListingLink("bugtracker", $"{repository.HtmlUrl}/issues"));
 
+        var prefix = tagPrefix ?? string.Empty;
         var latest = releases
-            .Where(release => !release.Draft && Version(release.TagName) is not null)
+            .Where(release => !release.Draft && release.TagName.StartsWith(prefix, StringComparison.Ordinal) && Version(release.TagName[prefix.Length..]) is not null)
             .OrderByDescending(release => release.PublishedAt ?? release.CreatedAt)
             .ThenByDescending(release => release.TagName, StringComparer.Ordinal)
             .FirstOrDefault();
@@ -62,28 +63,28 @@ public sealed class ListingHostClient : IListingHostClient
             repository.Owner?.Type == "User" && !string.IsNullOrWhiteSpace(repository.Owner.Login) ? [repository.Owner.Login] : [],
             links,
             new ListingReleases(repository.FullName, null),
-            latest is null ? null : GitHubRelease(latest, listingId ?? repository.Name));
+            latest is null ? null : GitHubRelease(latest, listingId ?? repository.Name, prefix));
     }
 
     /// <summary>One zip archive is the release. Of several, the one named after the listing wins, and otherwise none does.</summary>
-    private static ListingHostRelease GitHubRelease(GitHubReleaseDto release, string listingId)
+    private static ListingHostRelease GitHubRelease(GitHubReleaseDto release, string listingId, string tagPrefix)
     {
         var uploaded = release.Assets.Where(asset => asset.State == "uploaded").ToList();
         var archives = uploaded.Where(asset => asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)).ToList();
         if (archives.Count == 0)
             archives = uploaded.Where(asset => asset.ContentType is "application/zip" or "application/x-zip-compressed").ToList();
 
-        var chosen = archives.Count <= 1 ? archives.FirstOrDefault() : ArchiveNamedAfter(listingId, release.TagName, archives);
+        var chosen = archives.Count <= 1 ? archives.FirstOrDefault() : ArchiveNamedAfter(listingId, release.TagName[tagPrefix.Length..], archives);
 
         return new ListingHostRelease(
             release.TagName,
-            Version(release.TagName)!,
+            Version(release.TagName[tagPrefix.Length..])!,
             chosen?.BrowserDownloadUrl,
             chosen?.Size,
             chosen is null ? archives.Select(asset => asset.Name).ToList() : []);
     }
 
-    /// <summary>The archive named id.zip, id-tag.zip or id_tag.zip, in that order, where the tag has no leading v, or null.</summary>
+    /// <summary>The archive named id.zip, id-tag.zip or id_tag.zip, in that order, where the tag has no tag_prefix and no leading v, or null.</summary>
     private static GitHubAssetDto? ArchiveNamedAfter(string listingId, string tagName, List<GitHubAssetDto> archives)
     {
         var id = listingId.ToLowerInvariant();
