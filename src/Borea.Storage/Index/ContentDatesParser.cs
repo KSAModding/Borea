@@ -33,6 +33,25 @@ internal static class ContentDatesParser
         return (publishedAt, updatedAt, listedAt, errors);
     }
 
+    /// <summary>
+    /// Reads forums.unavailable_since of one listing entry, which the index writes when the forums thread of the listing is gone (RFC 0110).
+    /// A bad value drops only the mark, so the listing stays usable and is offered as if the thread were fine.
+    /// </summary>
+    public static (DateTimeOffset? UnavailableSince, IReadOnlyList<RejectedIndexEntry> Errors) ParseForums(JsonElement entry, string id)
+    {
+        if (entry.ValueKind != JsonValueKind.Object || !entry.TryGetProperty("forums", out var forums))
+            return (null, Array.Empty<RejectedIndexEntry>());
+
+        var errors = new List<RejectedIndexEntry>();
+        if (forums.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add(new RejectedIndexEntry(id, $"The forums value is unreadable. It must be an object, but was {forums.ValueKind}."));
+            return (null, errors);
+        }
+
+        return (Read(forums, "unavailable_since", id, errors), errors);
+    }
+
     private static DateTimeOffset? Read(JsonElement entry, string propertyName, string id, List<RejectedIndexEntry> errors)
     {
         if (!entry.TryGetProperty(propertyName, out var property))

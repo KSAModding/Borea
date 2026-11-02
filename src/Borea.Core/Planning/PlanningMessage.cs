@@ -56,6 +56,9 @@ public enum PlanningMessageKind
 
     /// <summary>The plan takes a mod out of the range that a recorded save needs. <see cref="PlanningMessage.Value"/> is the folder of the save.</summary>
     BreaksSave,
+
+    /// <summary>The forums thread of the listing is gone (RFC 0110), so Borea installs no new copy of it. <see cref="PlanningMessage.Since"/> is when the watcher marked it.</summary>
+    ForumsGone,
 }
 
 /// <summary>
@@ -82,7 +85,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
 
     public int? Limit { get; init; }
 
-    /// <summary>When the download of the release went from its host (RFC 0078).</summary>
+    /// <summary>When the download of the release went from its host (RFC 0078), or when the forums thread of its listing went (RFC 0110).</summary>
     public DateTimeOffset? Since { get; init; }
 
     public string Code => Kind switch
@@ -124,6 +127,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.MissingForSave => "missing-for-save",
         PlanningMessageKind.BreaksVehicle => "breaks-vehicle",
         PlanningMessageKind.BreaksSave => "breaks-save",
+        PlanningMessageKind.ForumsGone => "forums-gone",
         _ => throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "The planning message kind is not defined."),
     };
 
@@ -156,6 +160,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.MissingForSave => $"{Dependency} cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles.",
         PlanningMessageKind.BreaksVehicle => $"{Change} does not meet the {Dependency} of the vehicle {Value}, so the game refuses that vehicle.",
         PlanningMessageKind.BreaksSave => $"{Change} does not meet the {Dependency} of the save {Value}, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.",
+        PlanningMessageKind.ForumsGone => $"The forums thread of {ModId} is gone since {Since:yyyy-MM-dd}, so Borea installs no new copy of it. An installed copy stays.",
         _ => $"{Dependency}",
     };
 

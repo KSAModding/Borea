@@ -84,6 +84,22 @@ public sealed class ModPackUserContentTests
     }
 
     [Fact]
+    public async Task Install_VehiclePinWhoseForumsThreadIsGone_WarnsWithTheDateAndTheRestInstalls()
+    {
+        var (instances, instance) = await TargetAsync();
+        var mod = Release("Parts");
+        var since = new DateTimeOffset(2026, 10, 30, 6, 0, 0, TimeSpan.Zero);
+        var gone = Vehicle("Rover", forumsGone: since);
+
+        var result = await Installer(instances, new FakeContentInstaller(_log)).InstallAsync(Request(instance, Pack([mod], vehicles: [gone]), mod, gone));
+
+        Assert.True(result.IsComplete);
+        Assert.Equal(ModPackContentStatus.Skipped, Assert.Single(result.Content).Status);
+        Assert.Contains(result.Warnings, warning => (warning.ModId, warning.Kind, warning.Since) == ("Rover", PlanningMessageKind.ForumsGone, since));
+        Assert.Equal(["mod Parts"], _log);
+    }
+
+    [Fact]
     public async Task Install_VehiclePinOfASaveListing_IsSkippedAsUnlisted()
     {
         var (instances, instance) = await TargetAsync();
@@ -202,8 +218,8 @@ public sealed class ModPackUserContentTests
         return new ModPackResult(metadata.ModPackId, metadata.Version.ToString(), metadata, null, null, []);
     }
 
-    private static ModVersionMetadata Vehicle(string id, string version = "1.0.0", bool yanked = false, ContentType type = ContentType.Vehicle) =>
-        new(1, id, ModVersion.Parse(version), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.7.4.2131", 2131, new DownloadInfo($"https://example.com/{id}.zip", new string('A', 64), 1, "application/zip"), 1, [], type, install: new InstallInfo(null, derived: false, folder: id), yanked: yanked);
+    private static ModVersionMetadata Vehicle(string id, string version = "1.0.0", bool yanked = false, ContentType type = ContentType.Vehicle, DateTimeOffset? forumsGone = null) =>
+        new(1, id, ModVersion.Parse(version), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.7.4.2131", 2131, new DownloadInfo($"https://example.com/{id}.zip", new string('A', 64), 1, "application/zip"), 1, [], type, install: new InstallInfo(null, derived: false, folder: id), yanked: yanked, forumsUnavailableSince: forumsGone);
 
     private sealed class FakeContentRepository(IReadOnlyList<ModVersionMetadata> releases) : IUserContentRepository
     {

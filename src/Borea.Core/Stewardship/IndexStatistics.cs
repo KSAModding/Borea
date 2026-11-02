@@ -129,15 +129,21 @@ public sealed record IndexStatistics(
 
     private static HashSet<string> Ids(IEnumerable<Listing> listings) => listings.Select(listing => listing.Id).ToHashSet(ModIds.Comparer);
 
-    /// <summary>A listing fits the build when the bounds of one release that Borea offers allow it, whichever channel that release is in.</summary>
+    /// <summary>A listing fits the build when the bounds of one release that is not yanked and still downloads allow it, whichever channel that release is in.</summary>
     private static Entry EntryOf(ContentIndexListing listing, GameVersion? build)
     {
         var authored = listing.Authored!;
         var compatibility = build is null ? GameCompatibility.Unknown
-            : listing.Releases.Any(release => release.IsOffered && Compatibility.Evaluate(release, build) == GameCompatibility.Compatible) ? GameCompatibility.Compatible
+            : listing.Releases.Any(release => CountsForStatistics(release) && Compatibility.Evaluate(release, build) == GameCompatibility.Compatible) ? GameCompatibility.Compatible
             : GameCompatibility.Incompatible;
         return new Entry(listing.Id, authored.Name, authored.Type, authored.Tags, authored.License, authored.ForumUrl, listing.Images, listing.UpdatedAt, compatibility);
     }
+
+    /// <summary>
+    /// A release that is not yanked and whose download is not gone. The forums mark of the listing (RFC 0110) is left out,
+    /// because it says nothing about the game fit or the dependencies of the release.
+    /// </summary>
+    private static bool CountsForStatistics(ModVersionMetadata release) => !release.Yanked && release.Download.UnavailableSince is null;
 
     /// <summary>The newest version that is not retracted stands for the pack, the version that Discover rates by its bounds and its pins.</summary>
     private static Entry? EntryOf(ContentIndexSnapshot snapshot, ContentIndexPack pack, GameVersion? build, GameReleaseList releases)
@@ -153,13 +159,13 @@ public sealed record IndexStatistics(
     }
 
     /// <summary>
-    /// The entries of the newest release that Borea offers, or of the authored document without such a release.
+    /// The entries of the newest release that is not yanked and still downloads, or of the authored document without such a release.
     /// An any_of entry counts as one, and a conflict is no dependency.
     /// The [loader] table is not read, because almost every code mod has one, so it would push the listings with real dependencies out of the ranked lists.
     /// </summary>
     private static List<DirectDependency> DirectDependencies(ContentIndexListing listing)
     {
-        var newest = listing.Releases.Where(release => release.IsOffered).MaxBy(release => release.Version);
+        var newest = listing.Releases.Where(CountsForStatistics).MaxBy(release => release.Version);
         var entries = newest is null ? listing.Authored!.Dependencies : newest.Dependencies;
         return
         [

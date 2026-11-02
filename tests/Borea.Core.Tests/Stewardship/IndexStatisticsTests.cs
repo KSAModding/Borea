@@ -35,6 +35,17 @@ public sealed class IndexStatisticsTests
     }
 
     [Fact]
+    public void ListingWhoseForumsThreadIsGone_StillFitsTheBuild_AndKeepsTheDependenciesOfItsRelease()
+    {
+        var statistics = From(
+            Listing("Marked", dependencies: [], releases: [Release("Marked", "1.0.0", forumsGone: true, dependencies: [new ModDependency("Base", ModDependencyKind.Required)])]));
+
+        Assert.Equal(1, statistics.ModsNotBlocked);
+        Assert.Empty(statistics.NoCurrentRelease);
+        Assert.Equal([("Marked", 1)], statistics.MostDependencies.Select(row => (row.Id, row.Required)));
+    }
+
+    [Fact]
     public void SnapshotWithoutABuild_SaysNothingAboutTheBuild()
     {
         var snapshot = new ContentIndexSnapshot(1, [Listing("Mod", releases: [])], [Pack("Pack", "1.0.0")], null, []);
@@ -333,7 +344,8 @@ public sealed class IndexStatisticsTests
         bool yanked = false,
         bool gone = false,
         LoaderRequirement? loader = null,
-        IReadOnlyList<ModDependency>? dependencies = null) => new(
+        IReadOnlyList<ModDependency>? dependencies = null,
+        bool forumsGone = false) => new(
             1,
             id,
             ModVersion.Parse(version),
@@ -348,7 +360,8 @@ public sealed class IndexStatisticsTests
             gameMax: gameMax?.Text,
             gameMaxRevision: gameMax?.Revision,
             loader: loader,
-            yanked: yanked);
+            yanked: yanked,
+            forumsUnavailableSince: forumsGone ? Now : null);
 
     private static ContentIndexPack Pack(string id, string version) => new(id, [PackVersion(id, version, images: Icon)], null);
 

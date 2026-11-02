@@ -213,6 +213,18 @@ internal sealed class ViewModelHarness : IDisposable
         return root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
     };
 
+    /// <summary>When <see cref="MarkForumsGone"/> says the forums thread went.</summary>
+    public static readonly DateTimeOffset ForumsGoneSince = new(2026, 10, 30, 6, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Marks the forums thread of one listing as gone (RFC 0110), the way the snapshot carries it.</summary>
+    public static Func<string, string> MarkForumsGone(string modId) => json =>
+    {
+        var root = JsonNode.Parse(json)!;
+        var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!.AsObject();
+        listing["forums"] = new JsonObject { ["unavailable_since"] = "2026-10-30T06:00:00Z" };
+        return root.ToJsonString();
+    };
+
     /// <summary>Removes the authored document of one listing after <paramref name="edit"/>, so the snapshot keeps only its releases.</summary>
     public static Func<string, string> WithoutAuthored(string modId, Func<string, string> edit) => json =>
     {

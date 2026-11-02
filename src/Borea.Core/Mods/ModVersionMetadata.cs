@@ -143,10 +143,16 @@ public sealed class ModVersionMetadata
     public string? YankedReason { get; }
 
     /// <summary>
-    /// Whether Borea may pick this release for an install or an update by itself: it is not yanked,
-    /// and its download is not gone from its host (RFC 0078). An exact request can still name it.
+    /// When the watcher found the forums thread of the listing of this release gone (RFC 0110), as the index snapshot says.
+    /// Null when the thread is fine. The record of an installed copy does not store it, because the mark belongs to the listing and not to the copy.
     /// </summary>
-    public bool IsOffered => !Yanked && Download.UnavailableSince is null;
+    public DateTimeOffset? ForumsUnavailableSince { get; }
+
+    /// <summary>
+    /// Whether Borea may pick this release for an install or an update by itself: it is not yanked,
+    /// its download is not gone from its host (RFC 0078), and the forums thread of its listing is not gone (RFC 0110). An exact request can still name it.
+    /// </summary>
+    public bool IsOffered => !Yanked && Download.UnavailableSince is null && ForumsUnavailableSince is null;
 
     public ModVersionMetadata(
         int specVersion,
@@ -173,7 +179,8 @@ public sealed class ModVersionMetadata
         string? yankedReason = null,
         string? source = null,
         IReadOnlyList<string>? manages = null,
-        IReadOnlyDictionary<OsPlatform, PlatformDownload>? platformDownloads = null)
+        IReadOnlyDictionary<OsPlatform, PlatformDownload>? platformDownloads = null,
+        DateTimeOffset? forumsUnavailableSince = null)
     {
         if (specVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(specVersion), "Spec version must be a positive integer.");
@@ -271,6 +278,7 @@ public sealed class ModVersionMetadata
         Yanked = yanked;
         YankedReason = yankedReason;
         Source = source;
+        ForumsUnavailableSince = forumsUnavailableSince;
     }
 
     /// <summary>The same release with <paramref name="download"/> as the archive that Borea takes.</summary>
@@ -303,6 +311,7 @@ public sealed class ModVersionMetadata
         Yanked = release.Yanked;
         YankedReason = release.YankedReason;
         Source = release.Source;
+        ForumsUnavailableSince = release.ForumsUnavailableSince;
     }
 
     /// <summary>

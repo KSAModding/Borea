@@ -44,8 +44,11 @@ public sealed class ParsedListing
     /// <summary>When the entry came into the index (RFC 0092). Null when the snapshot does not say.</summary>
     public DateTimeOffset? ListedAt { get; }
 
-    /// <summary>The dates that cannot be read. The listing stays usable.</summary>
+    /// <summary>The dates that cannot be read, forums.unavailable_since included. The listing stays usable.</summary>
     public IReadOnlyList<RejectedIndexEntry> DatesErrors { get; }
+
+    /// <summary>When the forums thread of the listing was found gone (RFC 0110). Null when the snapshot carries no mark.</summary>
+    public DateTimeOffset? ForumsUnavailableSince { get; }
 
     /// <summary>The changelog_text values that cannot be used. Their releases stay usable.</summary>
     public IReadOnlyList<RejectedIndexEntry> ChangelogTextErrors { get; }
@@ -66,7 +69,8 @@ public sealed class ParsedListing
         DateTimeOffset? updatedAt = null,
         IReadOnlyList<RejectedIndexEntry>? datesErrors = null,
         IReadOnlyList<RejectedIndexEntry>? changelogTextErrors = null,
-        DateTimeOffset? listedAt = null)
+        DateTimeOffset? listedAt = null,
+        DateTimeOffset? forumsUnavailableSince = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -86,5 +90,6 @@ public sealed class ParsedListing
         ListedAt = listedAt;
         DatesErrors = datesErrors ?? Array.Empty<RejectedIndexEntry>();
         ChangelogTextErrors = changelogTextErrors ?? Array.Empty<RejectedIndexEntry>();
+        ForumsUnavailableSince = forumsUnavailableSince;
     }
 }

@@ -255,6 +255,8 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     {
         if (release.Yanked) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Yanked) { Value = release.YankedReason });
         if (release.Download.UnavailableSince is { } since && !IsInstalled(request, release)) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Unavailable) { Version = release.Version, Since = since });
+        // RFC 0110: a listing whose forums thread is gone gets no new copy, but a copy that the instance holds stays
+        if (release.ForumsUnavailableSince is { } forumsGone && !IsInstalled(request, release)) conflicts.Add(new PlanningMessage(release.ModId, PlanningMessageKind.ForumsGone) { Since = forumsGone });
         // only an exact request reaches this
         if (!channel.Includes(release.ReleaseStatus) && !IsInstalled(request, release)) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.ReleaseChannel) { Version = release.Version, Status = release.ReleaseStatus, Channel = channel });
         var compatibility = Compatibility.Evaluate(release, request.GameVersion);

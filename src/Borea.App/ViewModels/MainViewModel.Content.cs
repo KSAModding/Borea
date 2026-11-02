@@ -992,9 +992,9 @@ public sealed partial class VersionItem : ObservableObject, IContentPlanRow
 
     /// <summary>
     /// Mods, vehicles and saves install into an instance; a loader is set up from the settings. The installed version
-    /// has nothing to add, and a release whose download is gone can only come from a mirror.
+    /// has nothing to add, a release whose download is gone can only come from a mirror, and a listing whose forums thread is gone offers no release (RFC 0110).
     /// </summary>
-    public bool CanInstall => (_release.Type == ContentType.Mod || _release.Type.IsVehicleOrSave()) && !IsInstalled && (_release.Download.UnavailableSince is null || _release.Download.Mirrors.Count > 0);
+    public bool CanInstall => (_release.Type == ContentType.Mod || _release.Type.IsVehicleOrSave()) && !IsInstalled && (_release.Download.UnavailableSince is null || _release.Download.Mirrors.Count > 0) && _release.ForumsUnavailableSince is null;
 
     /// <summary>Since when the download of the release is gone from its host, or null while it downloads.</summary>
     public string? GoneText => _release.Download.UnavailableSince is { } since ? _owner.Localization.FormatContentVersionGone(MainViewModel.DateText(since)) : null;

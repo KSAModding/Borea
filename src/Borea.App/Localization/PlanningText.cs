@@ -31,6 +31,7 @@ internal static class PlanningText
             PlanningMessageKind.Yanked => WithReason(Resources.InstallMessageYanked, message.Value),
             PlanningMessageKind.YankedPin => WithReason(Resources.InstallMessageYankedPin, message.Value),
             PlanningMessageKind.Unavailable => Fill(Resources.InstallMessageUnavailableFormat, message.Version, message.Since is { } since ? ViewModels.MainViewModel.DateText(since) : null),
+            PlanningMessageKind.ForumsGone => Fill(Resources.InstallMessageForumsGoneFormat, message.Since is { } forumsGone ? ViewModels.MainViewModel.DateText(forumsGone) : null),
             PlanningMessageKind.ReleaseChannel => Fill(Resources.InstallReleaseChannelFormat, message.Version, StatusText(message.Status)),
             PlanningMessageKind.Incompatible => Fill(Resources.InstallMessageIncompatibleFormat, message.Value),
             PlanningMessageKind.AboveGameMax => Fill(Resources.InstallMessageAboveGameMaxFormat, message.Value),

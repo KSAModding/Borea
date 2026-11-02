@@ -6420,4 +6420,16 @@
   <data name="InstallChoicesSuggestedHint" xml:space="preserve">
     <value>Borea fügt diese Mods nicht hinzu. Du kannst sie später unter Entdecken installieren.</value>
   </data>
+  <data name="ContentForumsGoneFormat" xml:space="preserve">
+    <value>Der Forenthread dieses Inhalts ist seit {0} nicht mehr vorhanden, daher bietet Borea ihn nicht mehr zur Installation an. Installierte Kopien bleiben und funktionieren weiter.</value>
+  </data>
+  <data name="PackMemberForumsGone" xml:space="preserve">
+    <value>Forenthread entfernt</value>
+  </data>
+  <data name="PackMemberForumsGoneFormat" xml:space="preserve">
+    <value>Der Forenthread dieses Eintrags ist seit {0} nicht mehr vorhanden, daher installiert Borea keine neue Kopie davon.</value>
+  </data>
+  <data name="InstallMessageForumsGoneFormat" xml:space="preserve">
+    <value>Der Forenthread dieses Eintrags ist seit {0} nicht mehr vorhanden, daher installiert Borea keine neue Kopie davon. Eine installierte Kopie bleibt.</value>
+  </data>
 </root>

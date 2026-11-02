@@ -24,6 +24,7 @@ public sealed class PlanningMessageTests
         { new("A", PlanningMessageKind.Yanked) { Value = "Broken build." }, "yanked", "Broken build." },
         { new("A", PlanningMessageKind.YankedPin), "yanked", "The exact pinned release is yanked." },
         { new("A", PlanningMessageKind.Unavailable) { Version = ModVersion.Parse("1.0.0"), Since = new DateTimeOffset(2026, 9, 23, 10, 24, 0, TimeSpan.Zero) }, "unavailable", "The download of A 1.0.0 is gone from its host since 2026-09-23, so Borea can install it only from a mirror or a copy it already has." },
+        { new("A", PlanningMessageKind.ForumsGone) { Since = new DateTimeOffset(2026, 9, 23, 10, 24, 0, TimeSpan.Zero) }, "forums-gone", "The forums thread of A is gone since 2026-09-23, so Borea installs no new copy of it. An installed copy stays." },
         { new("A", PlanningMessageKind.ReleaseChannel) { Version = ModVersion.Parse("2.0.0-dev.1"), Status = ReleaseStatus.Dev, Channel = ReleaseChannel.Stable }, "release-channel", "Release 2.0.0-dev.1 has the release status dev, which the stable channel does not offer." },
         { new("A", PlanningMessageKind.Incompatible) { Value = "2026.9.4.5400" }, "incompatible", "The release is incompatible with the target game." },
         { new("A", PlanningMessageKind.AboveGameMax) { Value = "2026.9.4.5400" }, "above-game-max", "The release supports the game only up to 2026.9.4.5400, and the target game is newer." },

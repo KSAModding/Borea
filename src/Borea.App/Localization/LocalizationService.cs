@@ -3400,6 +3400,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentVersionGone(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentVersionGoneFormat, date);
 
+    public string FormatContentForumsGone(string date)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentForumsGoneFormat, date);
+
+    public string FormatPackMemberForumsGone(string date)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberForumsGoneFormat, date);
+
     public string ContentChangelog => Resources.ContentChangelog;
 
     public string ContentTypeModLoader => Resources.ContentTypeModLoader;
@@ -3459,6 +3465,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string PackMemberYanked => Resources.PackMemberYanked;
 
     public string PackMemberGone => Resources.PackMemberGone;
+
+    public string PackMemberForumsGone => Resources.PackMemberForumsGone;
 
     public string PackMemberUnlisted => Resources.PackMemberUnlisted;
 

@@ -53,6 +53,7 @@ internal static class PackParser
             }
 
             var (publishedAt, updatedAt, listedAt, datesErrors) = ContentDatesParser.Parse(element, pack.Id);
+            var (forumsUnavailableSince, forumsErrors) = ContentDatesParser.ParseForums(element, pack.Id);
             var validVersions = new List<ParsedPackVersion>();
             var rejectedVersions = new List<RejectedIndexEntry>();
             var unknownVersions = new List<UnknownIndexVersionEntry>();
@@ -88,7 +89,7 @@ internal static class PackParser
 
             return ParseOutcome<ParsedPack>.Valid(new ParsedPack(
                 pack.Id, validVersions, rejectedVersions, unknownVersions, indexStatus, indexStatusError,
-                publishedAt, updatedAt, datesErrors, listedAt));
+                publishedAt, updatedAt, [.. datesErrors, .. forumsErrors], listedAt, forumsUnavailableSince));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

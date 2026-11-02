@@ -229,6 +229,39 @@ public sealed class LinkViewModelTests
     }
 
     [Fact]
+    public async Task InstallLink_ListingWhoseForumsThreadIsGone_SaysSo_AndPlansNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.MarkForumsGone("MeasureTools"));
+        await ActivateInstanceAsync(harness);
+
+        await harness.ViewModel.OpenLinkAsync("borea://install/MeasureTools");
+
+        var row = harness.ViewModel.SelectedContent!;
+        Assert.Null(row.PendingPlan);
+        Assert.Null(row.InstallError);
+        Assert.Equal(row.ForumsGoneText, Assert.Single(harness.ViewModel.Toasts.Items).Message);
+    }
+
+    [Fact]
+    public async Task InstallLink_VersionOfAListingWhoseForumsThreadIsGone_NamesTheThread_NotAGoneDownload()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.MarkForumsGone("MeasureTools"));
+        var instance = await ActivateInstanceAsync(harness);
+        var held = (await harness.Services.ContentIndex.GetReleaseAsync("MeasureTools", ModVersion.Parse("1.1.9")))!;
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.AddMod(new InstalledMod("MeasureTools", held.Version, InstallReason.Manual, DateTimeOffset.UtcNow, held));
+            return true;
+        });
+        await harness.ViewModel.LoadAsync();
+
+        await harness.ViewModel.OpenLinkAsync("borea://install/MeasureTools?version=1.1.10");
+
+        var forumsGone = harness.Localization.FormatContentForumsGone(MainViewModel.DateText(ViewModelHarness.ForumsGoneSince));
+        Assert.StartsWith(forumsGone, harness.ViewModel.Toasts.Items[^1].Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task InstallLink_Confirmed_Installs_AndASecondLinkSaysItIsInstalled()
     {
         var archive = Archive();

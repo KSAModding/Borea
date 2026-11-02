@@ -120,6 +120,7 @@ public sealed class CompositeModRepositoryTests
         Assert.Equal(original.Listing.Description, tagged.Listing.Description);
         Assert.True(tagged.Yanked);
         Assert.Equal(original.YankedReason, tagged.YankedReason);
+        Assert.Equal(original.ForumsUnavailableSince, tagged.ForumsUnavailableSince);
     }
 
     [Fact]

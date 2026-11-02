@@ -87,6 +87,9 @@ public sealed class ContentIndexListing
     /// <summary>When the entry came into the index, which no release date stands in for (RFC 0092). Null when the index does not say.</summary>
     public DateTimeOffset? ListedAt { get; }
 
+    /// <summary>When the watcher found the forums thread of the listing gone (RFC 0110), so Borea offers the listing for no new install. Null when the thread is fine.</summary>
+    public DateTimeOffset? ForumsUnavailableSince { get; }
+
     public ContentIndexListing(
         string id,
         ModMetadata? authored,
@@ -96,7 +99,8 @@ public sealed class ContentIndexListing
         ContentImages? images = null,
         DateTimeOffset? publishedAt = null,
         DateTimeOffset? updatedAt = null,
-        DateTimeOffset? listedAt = null)
+        DateTimeOffset? listedAt = null,
+        DateTimeOffset? forumsUnavailableSince = null)
     {
         ContentIndexDates.Validate(publishedAt, updatedAt);
         ModIds.Validate(id, nameof(id));
@@ -116,6 +120,7 @@ public sealed class ContentIndexListing
         PublishedAt = publishedAt;
         UpdatedAt = updatedAt;
         ListedAt = listedAt;
+        ForumsUnavailableSince = forumsUnavailableSince;
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)
@@ -142,13 +147,17 @@ public sealed class ContentIndexPack
     /// <summary>When the entry came into the index, which no release date stands in for (RFC 0092). Null when the index does not say.</summary>
     public DateTimeOffset? ListedAt { get; }
 
+    /// <summary>When the watcher found the forums thread of the pack gone (RFC 0110), so Borea offers the pack for no new install. Null when the thread is fine.</summary>
+    public DateTimeOffset? ForumsUnavailableSince { get; }
+
     public ContentIndexPack(
         string id,
         IReadOnlyList<ContentIndexPackVersion> versions,
         IndexStatus? indexStatus,
         DateTimeOffset? publishedAt = null,
         DateTimeOffset? updatedAt = null,
-        DateTimeOffset? listedAt = null)
+        DateTimeOffset? listedAt = null,
+        DateTimeOffset? forumsUnavailableSince = null)
     {
         ModIds.Validate(id, nameof(id));
         ContentIndexDates.Validate(publishedAt, updatedAt);
@@ -162,6 +171,7 @@ public sealed class ContentIndexPack
         PublishedAt = publishedAt;
         UpdatedAt = updatedAt;
         ListedAt = listedAt;
+        ForumsUnavailableSince = forumsUnavailableSince;
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)
