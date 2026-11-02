@@ -449,6 +449,28 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
+    public async Task Versions_CountOfAShareHost_NamesTheShareHostInTheToolTip()
+    {
+        var hosts = ViewModelHarness.ShareHosts("""{ "ksamods": { "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/", "types": ["vehicle", "mod"] } }""");
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+        {
+            const string marker = "\"id\": \"AdvancedFlightComputer\",";
+            var at = json.IndexOf(marker, StringComparison.Ordinal) + marker.Length;
+            return hosts(json.Insert(at, """
+                 "downloads": { "total": 15, "hosts": { "github": 3, "ksamods": 12 }, "releases": [
+                   { "version": "0.7.5", "total": 15, "hosts": { "github": 3, "ksamods": 12 } } ] },
+                """));
+        });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.Equal("GitHub 3, ksamods.gg 12", viewModel.ContentVersions.Single(row => row.Version == "0.7.5").DownloadsToolTip);
+    }
+
+    [Fact]
     public async Task Versions_ReleaseWithoutACount_ShowsNoDownloadsAndNotZero()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithReleaseDownloads);
