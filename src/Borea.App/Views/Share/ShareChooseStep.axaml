@@ -69,24 +69,5 @@
                 </Grid>
             </StackPanel>
         </Border>
-
-        <StackPanel Spacing="8">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareFormCommand}" IsVisible="{Binding ListingEditor.HasFormBehindShareChoose}" />
-                <!-- an empty state has no Next, because a disabled button there leads nowhere -->
-                <Button Classes="cta" Command="{Binding ListingEditor.ContinueShareChooseCommand}" IsEnabled="{Binding ListingEditor.CanContinueShareChoose}" IsVisible="{Binding !!ListingEditor.ShareChooseRows.Count}">
-                    <TextBlock Classes="action-lg" Text="{Binding Localization.ShareNext}" VerticalAlignment="Center" />
-                </Button>
-                <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}">
-                    <ProgressBar.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.Or}">
-                            <Binding Path="ListingEditor.IsComparingShareRow" />
-                            <Binding Path="ListingEditor.ContinueShareChooseCommand.IsRunning" />
-                        </MultiBinding>
-                    </ProgressBar.IsVisible>
-                </ProgressBar>
-            </StackPanel>
-            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareChooseFirst}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShowsShareChooseFirst}" />
-        </StackPanel>
     </StackPanel>
 </UserControl>

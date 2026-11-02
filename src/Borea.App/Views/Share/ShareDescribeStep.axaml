@@ -195,19 +195,5 @@
                 </StackPanel>
             </StackPanel>
         </Border>
-
-        <StackPanel Spacing="8">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="text" VerticalAlignment="Center" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareChooseCommand}" />
-                <Button Classes="cta" Command="{Binding ListingEditor.ContinueShareCommand}" IsEnabled="{Binding ListingEditor.CanContinueShare}" IsVisible="{Binding !ListingEditor.IsAskingShareListing}">
-                    <TextBlock Classes="action-lg" Text="{Binding Localization.ShareNext}" VerticalAlignment="Center" />
-                </Button>
-            </StackPanel>
-            <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareNextReason}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareNextReason, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareOtherFieldsText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasShareOtherFields}" />
-            <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.EditAllShareFieldsCommand}" IsVisible="{Binding !ListingEditor.IsAskingShareListing}">
-                <TextBlock Classes="action-md" Text="{Binding Localization.ShareEditAll}" />
-            </Button>
-        </StackPanel>
     </StackPanel>
 </UserControl>

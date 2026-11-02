@@ -179,6 +179,43 @@ public sealed class GameSaveShareViewTests
     }
 
     [Fact]
+    public async Task ChooseStep_WithAListTallerThanTheWindow_ShowsNextAtTheTopOfTheList()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = await GameSaveShareTests.CreateInstanceAsync(harness, "Rover 01");
+        var vehicles = harness.Services.Paths.GetInstanceVehiclesFolder(instance);
+        foreach (var number in Enumerable.Range(2, 11))
+        {
+            var copy = Directory.CreateDirectory(Path.Combine(vehicles, $"Rover {number:00}")).FullName;
+            foreach (var file in Directory.GetFiles(Path.Combine(vehicles, "Rover 01")))
+                File.Copy(file, Path.Combine(copy, Path.GetFileName(file)));
+        }
+
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
+        await harness.ViewModel.ListingEditor.ShareChooseLoad;
+        await harness.ViewModel.ListingEditor.ShareRowCompare;
+
+        var (scrolls, step, next, height) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1000, Height = 700, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var scroller = page.FindControl<ScrollViewer>("PageScroller")!;
+            var choose = page.GetVisualDescendants().OfType<ShareChooseStep>().Single();
+            var button = page.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && button.Command == harness.ViewModel.ListingEditor.ContinueShareChooseCommand);
+            var found = (scroller.Extent.Height > scroller.Viewport.Height + 200, BoundsIn(choose, page), BoundsIn(button, page), page.Bounds.Height);
+            window.Close();
+            return Task.FromResult(found);
+        });
+
+        Assert.True(scrolls);
+        Assert.True(next.Bottom <= height, $"Next ends at {next.Bottom}, below the page height {height}.");
+        Assert.Equal(step.Left, next.Left, 1);
+    }
+
+    [Fact]
     public async Task ChooseStep_ShowsTheRowsWithTheirChipsAndTheNoteOfTheSelectedRow()
     {
         using var harness = await ViewModelHarness.CreateAsync();

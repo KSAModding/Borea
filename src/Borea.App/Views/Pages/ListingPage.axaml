@@ -114,7 +114,7 @@
     </UserControl.Resources>
 
     <!-- List or change your mod: the form, with the checks along the right edge -->
-    <Grid>
+    <Grid RowDefinitions="*,Auto">
         <ScrollViewer x:Name="PageScroller">
             <!-- the start step has no side panel, so its cards take that room -->
             <views:PageBodyPanel HasSidePanel="{Binding !ListingEditor.IsStartStep}">
@@ -858,8 +858,13 @@
             </views:PageBodyPanel>
         </ScrollViewer>
 
+        <!-- the actions of a share step line up with the cards above them, and the tab order reaches them after the step -->
+        <views:PageBodyPanel Grid.Row="1" HasSidePanel="{Binding !ListingEditor.IsStartStep}" HasTopMargin="False" HasBottomMargin="False" IsVisible="{Binding ListingEditor.IsShareStep}">
+            <share:ShareActionBar />
+        </views:PageBodyPanel>
+
         <!-- the preview, the steps and the problems, while the author types -->
-        <Border Classes="side-panel" IsVisible="{Binding !ListingEditor.IsStartStep}">
+        <Border Grid.RowSpan="2" Classes="side-panel" IsVisible="{Binding !ListingEditor.IsStartStep}">
             <ScrollViewer>
                 <StackPanel Spacing="16" Margin="24">
                     <TextBlock Classes="heading-md" Text="{Binding ListingEditor.PreviewHeading}" IsVisible="{Binding ListingEditor.ShowsPreviewCard}" />

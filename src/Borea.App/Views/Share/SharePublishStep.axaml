@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
-             xmlns:share="using:Borea.App.Views.Share"
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Share.SharePublishStep"
              x:DataType="vm:MainViewModel">
@@ -162,14 +161,6 @@
                     <TextBlock Classes="action-md" Text="{Binding Localization.ShareRenameAndCheck}" />
                 </Button>
 
-                <!-- the check comes after what stopped the last one -->
-                <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.ShowsShareCheckButton}">
-                    <Button Classes="cta" HorizontalAlignment="Left" Command="{Binding ListingEditor.UploadToShareHostCommand}" CommandParameter="{Binding ListingEditor.SelectedShareHostRow}">
-                        <TextBlock Classes="action-lg" Text="{Binding ListingEditor.ShareCheckOnHostText}" VerticalAlignment="Center" />
-                    </Button>
-                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareCheckHintText}" TextWrapping="Wrap" />
-                </StackPanel>
-
                 <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareChecksPassedText, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <Path Classes="icon size-16" Data="{StaticResource Icon.CheckCircle}" Stroke="{StaticResource Brush.Positive}" VerticalAlignment="Top" />
                     <TextBlock Grid.Column="2" Classes="body-md" Text="{Binding ListingEditor.ShareChecksPassedText}" TextWrapping="Wrap" />
@@ -203,7 +194,7 @@
                 </StackPanel>
 
                 <!-- one row each, with one layout at every width -->
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+                <Grid RowDefinitions="Auto,Auto">
                     <StackPanel Spacing="6" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.HasShareUpload}">
                         <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding !ListingEditor.IsEditingShareVersion}">
                             <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareVersionLineText}" TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -233,20 +224,7 @@
                             <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareUploadRulesText}" />
                         </Button>
                     </StackPanel>
-                    <WrapPanel Grid.Row="2" ItemSpacing="12" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.HasShareUpload}">
-                        <Button Classes="cta" Command="{Binding ListingEditor.PublishToShareHostCommand}" IsEnabled="{Binding ListingEditor.CanPublishToShareHost}">
-                            <TextBlock Classes="action-lg" Text="{Binding ListingEditor.SharePublishText}" VerticalAlignment="Center" />
-                        </Button>
-                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" IsVisible="{Binding !ListingEditor.IsSharing}" VerticalAlignment="Center" />
-                    </WrapPanel>
-                    <Grid Grid.Row="3" ColumnDefinitions="Auto,8,*,8,Auto" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.IsSharing}">
-                        <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                        <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding ListingEditor.ShareHostProgressText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                        <Button Grid.Column="4" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" IsVisible="{Binding ListingEditor.CanCancelShareHost}" VerticalAlignment="Center" />
-                    </Grid>
                 </Grid>
-
-                <share:ShareSignInCode />
             </StackPanel>
         </Border>
 
@@ -261,11 +239,5 @@
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareSaveZipInsteadHint}" TextWrapping="Wrap" />
             <SelectableTextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareArchiveText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareArchiveText, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
-        <WrapPanel ItemSpacing="16" LineSpacing="8" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
-            <Button Classes="text" Content="{Binding Localization.NavigationBack}" Command="{Binding ListingEditor.BackToShareDescribeCommand}" />
-            <Button Classes="link" Margin="-8,0,0,0" VerticalAlignment="Center" Command="{Binding ListingEditor.EditAllShareFieldsCommand}">
-                <TextBlock Classes="action-md" Text="{Binding Localization.ShareEditAll}" />
-            </Button>
-        </WrapPanel>
     </StackPanel>
 </UserControl>
