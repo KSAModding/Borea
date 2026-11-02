@@ -74,6 +74,27 @@ public sealed class GoneReleaseAmendmentTests
     }
 
     [Fact]
+    public void Check_TheMarkInAPlatformDownload_IsRefusedWithTheHintToRebase()
+    {
+        const string Entry = """{ "url": "https://example.com/afc-linux.zip", "sha256": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", "size": 10, "content_type": "application/zip", "install_size": 20 }""";
+        var published = Document();
+        published["platform_downloads"] = new JsonObject { ["linux"] = JsonNode.Parse(Entry) };
+        var amended = Document();
+        amended["platform_downloads"] = new JsonObject { ["linux"] = JsonNode.Parse(Entry) };
+        amended["platform_downloads"]!["linux"]!["unavailable_since"] = Mark;
+        var errors = new List<string>();
+
+        ReleaseAmendmentCheck.Check(Path, published, amended, errors, []);
+
+        Assert.Equal(
+            [
+                "'platform_downloads' changed, and identity, the version, the download and the install data never change after publish",
+                "the platform downloads differ only in 'platform_downloads.linux.unavailable_since', which the watcher writes on the default branch: rebase and run tools/amend.py again",
+            ],
+            errors);
+    }
+
+    [Fact]
     public void Check_TheMarkKeptWithAYank_Passes()
     {
         var published = WithMark(Document(), Mark);

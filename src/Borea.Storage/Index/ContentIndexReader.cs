@@ -1,22 +1,27 @@
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Paths;
+using Borea.Storage.Game;
 
 namespace Borea.Storage.Index;
 
 /// <summary>
 /// Reads and maps the cached snapshot through the shared envelope validator, with the type
-/// files of <see cref="ContentIndexTypeFiles"/> next to it. A type file that is not there is empty.
+/// files of <see cref="ContentIndexTypeFiles"/> next to it. A type file that is not there is empty. Each release takes
+/// the archive of the platform whose code the game runs, so everything that reads the snapshot takes the same archive.
 /// </summary>
 public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandidateValidator
 {
     private readonly IGamePathProvider _paths;
     private readonly string _source;
+    private readonly IGamePlatform _platform;
 
-    public ContentIndexReader(IGamePathProvider paths, string source = "index")
+    public ContentIndexReader(IGamePathProvider paths, string source = "index", IGamePlatform? platform = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         _source = source;
+        _platform = platform ?? new GamePlatform(paths);
     }
 
     public async Task<ContentIndexSnapshot> ReadAsync(CancellationToken cancellationToken = default)
@@ -43,7 +48,7 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Map(SnapshotParser.Parse(content, typeFiles, _source, cancellationToken), diagnostics, cancellationToken);
+        return Map(SnapshotParser.Parse(content, typeFiles, _source, cancellationToken), diagnostics, _platform.Current, cancellationToken);
     }
 
     /// <summary>Checks the main document only, because a type file never fails the main refresh.</summary>
@@ -51,7 +56,7 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
     {
         var content = await ReadIndexAsync(candidatePath, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        Map(SnapshotParser.Parse(content, _source, cancellationToken), [], cancellationToken);
+        Map(SnapshotParser.Parse(content, _source, cancellationToken), [], _platform.Current, cancellationToken);
     }
 
     private static async Task<string> ReadIndexAsync(string path, CancellationToken cancellationToken)
@@ -66,11 +71,11 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
         return content;
     }
 
-    private static ContentIndexSnapshot Map(IndexValidationResult result, List<ContentIndexDiagnostic> diagnostics, CancellationToken cancellationToken)
+    private static ContentIndexSnapshot Map(IndexValidationResult result, List<ContentIndexDiagnostic> diagnostics, OsPlatform platform, CancellationToken cancellationToken)
     {
-        var listings = MapListings(result.ValidListings, diagnostics, cancellationToken);
-        var vehicles = MapListings(result.ValidVehicles, diagnostics, cancellationToken);
-        var saves = MapListings(result.ValidSaves, diagnostics, cancellationToken);
+        var listings = MapListings(result.ValidListings, diagnostics, platform, cancellationToken);
+        var vehicles = MapListings(result.ValidVehicles, diagnostics, platform, cancellationToken);
+        var saves = MapListings(result.ValidSaves, diagnostics, platform, cancellationToken);
 
         AddMalformed(diagnostics, result.MalformedListings, ContentIndexDiagnosticScope.Listing);
         AddUnknown(diagnostics, result.UnknownListings, ContentIndexDiagnosticScope.Listing);
@@ -129,6 +134,7 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
     private static List<ContentIndexListing> MapListings(
         IReadOnlyList<ParsedListing> parsed,
         List<ContentIndexDiagnostic> diagnostics,
+        OsPlatform platform,
         CancellationToken cancellationToken)
     {
         var listings = new List<ContentIndexListing>(parsed.Count);
@@ -138,7 +144,7 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
             listings.Add(new ContentIndexListing(
                 listing.Id,
                 listing.Authored,
-                listing.ValidReleases.ToArray(),
+                listing.ValidReleases.Select(release => release.ForPlatform(platform)).ToArray(),
                 listing.IndexStatus,
                 listing.Downloads,
                 listing.Images,

@@ -125,6 +125,24 @@ public sealed class ListingHostClientTests
     }
 
     [Fact]
+    public async Task ReadAsync_PlatformArchivesNextToTheirArchive_PicksTheArchiveForEveryPlatform()
+    {
+        const string releases = """
+            [ { "tag_name": "ksa-v0.3.0", "draft": false, "published_at": "2026-10-01T00:00:00Z", "assets": [
+              { "name": "krpc-ksa-0.3.0.zip", "state": "uploaded", "size": 26327525, "browser_download_url": "https://example.com/krpc-ksa-0.3.0.zip" },
+              { "name": "krpc-ksa-0.3.0-windows.zip", "state": "uploaded", "size": 13900000, "browser_download_url": "https://example.com/krpc-ksa-0.3.0-windows.zip" },
+              { "name": "krpc-ksa-0.3.0_Linux.zip", "state": "uploaded", "size": 13100000, "browser_download_url": "https://example.com/krpc-ksa-0.3.0_Linux.zip" }
+            ] } ]
+            """;
+        var client = ClientWithReleases(releases);
+
+        var latest = (await client.ReadAsync(new ListingSourceReference.GitHub("krpc", "krpc"), "kRPC", "ksa-v")).Latest!;
+
+        Assert.Equal("https://example.com/krpc-ksa-0.3.0.zip", latest.DownloadUrl);
+        Assert.Equal(26327525, latest.SizeBytes);
+    }
+
+    [Fact]
     public async Task ReadAsync_TagPrefix_OffersOnlyTheReleasesThatStartWithIt()
     {
         const string releases = """

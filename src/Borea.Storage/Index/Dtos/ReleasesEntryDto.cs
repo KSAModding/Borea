@@ -47,6 +47,9 @@ public sealed class ReleasesEntryDto
     [JsonPropertyName("install_size")]
     public required long InstallSize { get; set; }
 
+    [JsonPropertyName("platform_downloads")]
+    public Dictionary<string, PlatformDownloadDto?>? PlatformDownloads { get; set; }
+
     [JsonPropertyName("install")]
     public InstallInfoDto? Install { get; set; }
 

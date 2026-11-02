@@ -116,7 +116,8 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
         var matches = listing.Releases
             .Where(release => release.Type == ContentType.Mod)
             .Where(release => ModIds.Equals(release.ModId, listing.Id))
-            .Where(release => string.Equals(release.Download.Sha256, sha256, StringComparison.OrdinalIgnoreCase))
+            .Select(release => release.ForArchive(sha256))
+            .OfType<ModVersionMetadata>()
             .Take(2)
             .ToArray();
         return matches.Length == 1 ? matches[0] : null;

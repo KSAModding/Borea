@@ -18,8 +18,8 @@ public sealed record GoneListing(string ListingId, string? Name, IReadOnlyList<G
 
         return [.. snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves)
             .Select(listing => new GoneListing(listing.Id, listing.Authored?.Name, [.. listing.Releases
-                .Where(release => release.Download.UnavailableSince is not null)
-                .Select(release => new GoneRelease(release.Version, release.Download.UnavailableSince!.Value))
+                .Where(release => release.ReleaseDownload.UnavailableSince is not null)
+                .Select(release => new GoneRelease(release.Version, release.ReleaseDownload.UnavailableSince!.Value))
                 .OrderByDescending(release => release.Since)
                 .ThenByDescending(release => release.Version)]))
             .Where(listing => listing.Releases.Count > 0)

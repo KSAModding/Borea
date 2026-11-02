@@ -19,6 +19,8 @@ public sealed class ListingHostClient : IListingHostClient
 
     private const int KsaGameId = 22409;
 
+    private static readonly string[] PlatformNames = ["windows", "linux", "macos"];
+
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
     private readonly HttpClient _http;
@@ -66,7 +68,11 @@ public sealed class ListingHostClient : IListingHostClient
             latest is null ? null : GitHubRelease(latest, listingId ?? repository.Name, prefix));
     }
 
-    /// <summary>One zip archive is the release. Of several, the one named after the listing wins, and otherwise none does.</summary>
+    /// <summary>
+    /// One zip archive is the release. Of several, the one named after the listing wins, and otherwise none does. A zip
+    /// named stem-platform.zip or stem_platform.zip next to stem.zip is the archive of one platform, so it takes no part
+    /// in that pick.
+    /// </summary>
     private static ListingHostRelease GitHubRelease(GitHubReleaseDto release, string listingId, string tagPrefix)
     {
         var uploaded = release.Assets.Where(asset => asset.State == "uploaded").ToList();
@@ -74,7 +80,9 @@ public sealed class ListingHostClient : IListingHostClient
         if (archives.Count == 0)
             archives = uploaded.Where(asset => asset.ContentType is "application/zip" or "application/x-zip-compressed").ToList();
 
-        var chosen = archives.Count <= 1 ? archives.FirstOrDefault() : ArchiveNamedAfter(listingId, release.TagName[tagPrefix.Length..], archives);
+        var names = archives.Select(asset => asset.Name.ToLowerInvariant()).ToHashSet();
+        var pool = archives.Where(asset => !IsPlatformArchive(asset.Name, names)).ToList();
+        var chosen = pool.Count <= 1 ? pool.FirstOrDefault() : ArchiveNamedAfter(listingId, release.TagName[tagPrefix.Length..], pool);
 
         return new ListingHostRelease(
             release.TagName,
@@ -82,6 +90,14 @@ public sealed class ListingHostClient : IListingHostClient
             chosen?.BrowserDownloadUrl,
             chosen?.Size,
             chosen is null ? archives.Select(asset => asset.Name).ToList() : []);
+    }
+
+    /// <summary>Whether the zip is named stem-platform.zip or stem_platform.zip, ignoring case, and stem.zip is among <paramref name="names"/> too.</summary>
+    private static bool IsPlatformArchive(string name, HashSet<string> names)
+    {
+        var lower = name.ToLowerInvariant();
+        return PlatformNames.SelectMany(platform => new[] { $"-{platform}.zip", $"_{platform}.zip" })
+            .Any(ending => lower.Length > ending.Length && lower.EndsWith(ending, StringComparison.Ordinal) && names.Contains($"{lower[..^ending.Length]}.zip"));
     }
 
     /// <summary>The archive named id.zip, id-tag.zip or id_tag.zip, in that order, where the tag has no tag_prefix and no leading v, or null.</summary>
