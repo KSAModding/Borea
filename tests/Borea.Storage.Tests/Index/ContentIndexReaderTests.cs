@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Storage.Index;
 using Borea.Storage.Tests.Paths;
@@ -408,6 +409,32 @@ public sealed class ContentIndexReaderTests : IDisposable
         Assert.Equal(new DateTimeOffset(2026, 9, 2, 9, 48, 3, TimeSpan.Zero), release.ReleaseDate);
     }
 
+    /// <summary>The Windows entry is gone from its host, so a game on Windows takes the archive for every platform.</summary>
+    [Theory]
+    [InlineData(OsPlatform.Linux, "https://example.test/mod-linux.zip", 3000)]
+    [InlineData(OsPlatform.Windows, "https://example.test/mod.zip", 2048)]
+    [InlineData(OsPlatform.MacOs, "https://example.test/mod.zip", 2048)]
+    public async Task ReadAsync_PlatformDownloads_EachReleaseTakesTheArchiveForTheGamePlatform(OsPlatform platform, string url, long installSize)
+    {
+        var release = ValidReleaseJson
+            .Replace("\"id\": \"future-mod\"", "\"id\": \"test-mod\"")
+            .Replace("\"install_size\": 2048,", """
+                "install_size": 2048,
+                "platform_downloads": {
+                    "windows": { "url": "https://example.test/mod-windows.zip", "sha256": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "size": 600, "content_type": "application/zip", "install_size": 1500, "unavailable_since": "2026-10-01T00:00:00Z" },
+                    "linux": { "url": "https://example.test/mod-linux.zip", "sha256": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", "size": 500, "content_type": "application/zip", "install_size": 3000 }
+                },
+                """);
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson, $$""", "releases": [{{release}}]""")));
+
+        var result = await new ContentIndexReader(_paths, platform: new FixedGamePlatform(platform)).ReadAsync();
+
+        var read = Assert.Single(Assert.Single(result.Listings).Releases);
+        Assert.Equal<(string, long?)>((url, installSize), (read.Download.Url, read.InstallSizeBytes));
+        Assert.Equal("https://example.test/mod.zip", read.ReleaseDownload.Url);
+        Assert.Equal([OsPlatform.Windows, OsPlatform.Linux], read.PlatformDownloads.Keys.Order());
+    }
+
     [Fact]
     public async Task ReadAsync_PackVersion_ReturnsEveryPackContentCategory()
     {
@@ -504,6 +531,11 @@ public sealed class ContentIndexReaderTests : IDisposable
         await _reader.ValidateAsync(candidatePath);
 
         Assert.False(File.Exists(IndexPath));
+    }
+
+    private sealed class FixedGamePlatform(OsPlatform platform) : IGamePlatform
+    {
+        public OsPlatform Current => platform;
     }
 
     private static string Listing(string id, string authored, string suffix = "") =>

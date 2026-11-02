@@ -1,4 +1,7 @@
+using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Mods;
 using Borea.Core.Stewardship;
 using Borea.Core.Tests.ModPacks;
 
@@ -64,6 +67,21 @@ public sealed class GoneListingTests
             saves: [Listing("ExampleSave", Early), Listing("OtherSave", null)]);
 
         Assert.Equal(["ExampleRover", "ExampleSave", "MeasureTools"], GoneListing.From(snapshot).Select(listing => listing.ListingId));
+    }
+
+    [Fact]
+    public void From_AReleaseThatTakesAPlatformArchive_KeepsTheMarkOfTheArchiveForEveryPlatform()
+    {
+        var linux = new PlatformDownload(new DownloadInfo("https://example.com/afc-linux.zip", new string('C', 64), 1, "application/zip"), 1);
+        var release = new ModVersionMetadata(
+            1, "AdvancedFlightComputer", ModVersion.Parse("0.8.1"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.7.4.2131", 2131,
+            new DownloadInfo("https://example.com/afc.zip", new string('A', 64), 2, "application/zip", unavailableSince: Late), 2, Array.Empty<ModDependency>(),
+            platformDownloads: new Dictionary<OsPlatform, PlatformDownload> { [OsPlatform.Linux] = linux });
+        var snapshot = new ContentIndexSnapshot(1, [new ContentIndexListing("AdvancedFlightComputer", null, [release.ForPlatform(OsPlatform.Linux)], null)], [], null, []);
+
+        var gone = Assert.Single(GoneListing.From(snapshot));
+
+        Assert.Equal(Late, Assert.Single(gone.Releases).Since);
     }
 
     private static ContentIndexListing Listing(string id, DateTimeOffset? since) =>

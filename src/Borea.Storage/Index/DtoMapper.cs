@@ -75,7 +75,8 @@ public static class DtoMapper
             yanked: dto.Yanked ?? false,
             yankedReason: dto.YankedReason,
             source: source,
-            manages: authored?.Install?.Manages));
+            manages: authored?.Install?.Manages,
+            platformDownloads: type is ContentType.Mod or ContentType.ModLoader ? MapPlatformDownloads(dto.PlatformDownloads) : null));
     }
 
     public static ModPackMetadata MapPackVersion(PackAuthoredDto dto, string source)
@@ -351,13 +352,7 @@ public static class DtoMapper
         var mapped = new Dictionary<OsPlatform, LoaderPlatformLaunch>();
         foreach (var (name, element) in platforms)
         {
-            OsPlatform? platform = name switch
-            {
-                "windows" => OsPlatform.Windows,
-                "linux" => OsPlatform.Linux,
-                "macos" => OsPlatform.MacOs,
-                _ => null,
-            };
+            var platform = PlatformNamed(name);
             if (platform is null || element.ValueKind == JsonValueKind.Null)
                 continue;
 
@@ -372,6 +367,33 @@ public static class DtoMapper
             }
 
             mapped[platform.Value] = new LoaderPlatformLaunch(dto.Launch, dto.Runtime, dto.UnknownFields?.Keys.ToList());
+        }
+
+        return mapped;
+    }
+
+    private static OsPlatform? PlatformNamed(string name) => name switch
+    {
+        "windows" => OsPlatform.Windows,
+        "linux" => OsPlatform.Linux,
+        "macos" => OsPlatform.MacOs,
+        _ => null,
+    };
+
+    /// <summary>The entries of the platforms that Borea knows. An entry of another platform is left out, as an unknown key is.</summary>
+    private static Dictionary<OsPlatform, PlatformDownload>? MapPlatformDownloads(Dictionary<string, PlatformDownloadDto?>? entries)
+    {
+        if (entries is null)
+            return null;
+
+        var mapped = new Dictionary<OsPlatform, PlatformDownload>();
+        foreach (var (name, dto) in entries)
+        {
+            if (PlatformNamed(name) is not { } platform || dto is null)
+                continue;
+
+            var unavailableSince = dto.UnavailableSince is null ? (DateTimeOffset?)null : DateTimeOffset.Parse(dto.UnavailableSince, System.Globalization.CultureInfo.InvariantCulture);
+            mapped[platform] = new PlatformDownload(new DownloadInfo(dto.URL, dto.SHA256, dto.Size, dto.ContentType, unavailableSince: unavailableSince), dto.InstallSize);
         }
 
         return mapped;

@@ -533,7 +533,8 @@ public sealed class BoreaServices : IDisposable
         var resolver = new SpaceDockResolver();
         var installedContent = new FileInstalledContentRecords(paths);
         var sharedContent = new FileSharedContentRecords(paths, log);
-        var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
+        var gamePlatformValue = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths);
+        var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName, gamePlatformValue);
         var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader, ContentIndexTypeFiles.All, log), log);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
         var contentIndex = new ContentIndexModRepository(indexSnapshots);
@@ -590,7 +591,6 @@ public sealed class BoreaServices : IDisposable
             installPlanner = wrapInstallPlanner(installPlanner);
         isGameProcessRunning ??= RunningProcesses.IsGameRunning;
         var channelOfflineMods = new ReleaseChannelModRepository(offlineMods, settings.ReleaseChannel);
-        var gamePlatformValue = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths);
 
         // The preview plans over the offline repository only, so opening a vehicle page never sends a request.
         var previewThumbnails = new PreviewThumbnailCache(paths, log);

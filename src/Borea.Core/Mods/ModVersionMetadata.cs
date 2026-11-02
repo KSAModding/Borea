@@ -66,9 +66,22 @@ public sealed class ModVersionMetadata
     public IReadOnlyList<string>? Os { get; }
 
     /// <summary>
-    /// Where the archive is and what it hashes to.
+    /// The archive that Borea takes, where it is and what it hashes to. It is <see cref="ReleaseDownload"/> unless
+    /// <see cref="ForPlatform"/> or <see cref="ForArchive"/> took an archive of <see cref="PlatformDownloads"/>.
     /// </summary>
     public DownloadInfo Download { get; }
+
+    /// <summary>
+    /// The download of the release file, the archive for every platform. The watcher marks the release as gone
+    /// (RFC 0078) only by this archive.
+    /// </summary>
+    public DownloadInfo ReleaseDownload { get; }
+
+    /// <summary>
+    /// The smaller archive of each platform that the author built one for, as the release file stamps them. Empty when
+    /// the release has none.
+    /// </summary>
+    public IReadOnlyDictionary<OsPlatform, PlatformDownload> PlatformDownloads { get; }
 
     /// <summary>
     /// Which source this release came from. Borea-internal, not a format field.
@@ -76,9 +89,11 @@ public sealed class ModVersionMetadata
     public string? Source { get; }
 
     /// <summary>
-    /// Unpacked size in bytes. Null when the source does not expose it.
+    /// Unpacked size of <see cref="Download"/> in bytes. Null when the source does not expose it.
     /// </summary>
     public long? InstallSizeBytes { get; }
+
+    private readonly long? _releaseInstallSizeBytes;
 
     /// <summary>
     /// The install directive. Null leaves the type default in force.
@@ -157,7 +172,8 @@ public sealed class ModVersionMetadata
         bool yanked = false,
         string? yankedReason = null,
         string? source = null,
-        IReadOnlyList<string>? manages = null)
+        IReadOnlyList<string>? manages = null,
+        IReadOnlyDictionary<OsPlatform, PlatformDownload>? platformDownloads = null)
     {
         if (specVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(specVersion), "Spec version must be a positive integer.");
@@ -216,6 +232,15 @@ public sealed class ModVersionMetadata
         if (installSizeBytes is < 0)
             throw new ArgumentOutOfRangeException(nameof(installSizeBytes), "Install size cannot be negative.");
 
+        if (platformDownloads is { Count: > 0 })
+        {
+            if (type is not (ContentType.Mod or ContentType.ModLoader))
+                throw new ArgumentException("Only a mod or a mod loader has platform downloads.", nameof(platformDownloads));
+
+            if (platformDownloads.Values.Any(entry => entry is null || entry.InstallSizeBytes < 0))
+                throw new ArgumentException("A platform download needs a download and an install size that is not negative.", nameof(platformDownloads));
+        }
+
         if (changelogText is not null && Encoding.UTF8.GetByteCount(changelogText) > MaxChangelogTextBytes)
             throw new ArgumentException($"The changelog text can have at most {MaxChangelogTextBytes} bytes of UTF-8.", nameof(changelogText));
 
@@ -232,7 +257,10 @@ public sealed class ModVersionMetadata
         GameMaxRevision = gameMaxRevision;
         Os = os is null ? null : new ReadOnlyCollection<string>(os.ToArray());
         Download = download;
+        ReleaseDownload = download;
+        PlatformDownloads = new ReadOnlyDictionary<OsPlatform, PlatformDownload>(platformDownloads is null ? new Dictionary<OsPlatform, PlatformDownload>() : new Dictionary<OsPlatform, PlatformDownload>(platformDownloads));
         InstallSizeBytes = installSizeBytes;
+        _releaseInstallSizeBytes = installSizeBytes;
         Install = install;
         Manages = manages is null ? null : new ReadOnlyCollection<string>(manages.ToArray());
         Loader = loader;
@@ -244,4 +272,63 @@ public sealed class ModVersionMetadata
         YankedReason = yankedReason;
         Source = source;
     }
+
+    /// <summary>The same release with <paramref name="download"/> as the archive that Borea takes.</summary>
+    private ModVersionMetadata(ModVersionMetadata release, DownloadInfo download, long? installSizeBytes)
+    {
+        SpecVersion = release.SpecVersion;
+        ModId = release.ModId;
+        Type = release.Type;
+        Version = release.Version;
+        VersionScheme = release.VersionScheme;
+        ReleaseStatus = release.ReleaseStatus;
+        ReleaseDate = release.ReleaseDate;
+        GameMin = release.GameMin;
+        GameMinRevision = release.GameMinRevision;
+        GameMax = release.GameMax;
+        GameMaxRevision = release.GameMaxRevision;
+        Os = release.Os;
+        Download = download;
+        ReleaseDownload = release.ReleaseDownload;
+        PlatformDownloads = release.PlatformDownloads;
+        InstallSizeBytes = installSizeBytes;
+        _releaseInstallSizeBytes = release._releaseInstallSizeBytes;
+        Install = release.Install;
+        Manages = release.Manages;
+        Loader = release.Loader;
+        Dependencies = release.Dependencies;
+        Changelog = release.Changelog;
+        ChangelogText = release.ChangelogText;
+        Listing = release.Listing;
+        Yanked = release.Yanked;
+        YankedReason = release.YankedReason;
+        Source = release.Source;
+    }
+
+    /// <summary>
+    /// The release as Borea takes it for a game on <paramref name="platform"/>, which is the archive of that platform
+    /// while it is not gone from its host, or else the archive for every platform. The installers, the downloader, the size
+    /// shown and the space check then all read the taken archive from <see cref="Download"/>.
+    /// </summary>
+    public ModVersionMetadata ForPlatform(OsPlatform platform) =>
+        PlatformDownloads.TryGetValue(platform, out var entry) && entry.Download.UnavailableSince is null
+            ? Taking(entry.Download, entry.InstallSizeBytes)
+            : Taking(ReleaseDownload, _releaseInstallSizeBytes);
+
+    /// <summary>
+    /// The release taking the one of its archives whose bytes have the hex digest <paramref name="sha256"/>, so that
+    /// a copy unpacked from the archive for every platform or from a platform archive both count. Null when no
+    /// archive of the release matches.
+    /// </summary>
+    public ModVersionMetadata? ForArchive(string sha256)
+    {
+        if (ReleaseDownload.HashMatches(sha256))
+            return Taking(ReleaseDownload, _releaseInstallSizeBytes);
+
+        var entry = PlatformDownloads.Values.FirstOrDefault(candidate => candidate.Download.HashMatches(sha256));
+        return entry is null ? null : Taking(entry.Download, entry.InstallSizeBytes);
+    }
+
+    private ModVersionMetadata Taking(DownloadInfo download, long? installSizeBytes) =>
+        ReferenceEquals(download, Download) ? this : new ModVersionMetadata(this, download, installSizeBytes);
 }
