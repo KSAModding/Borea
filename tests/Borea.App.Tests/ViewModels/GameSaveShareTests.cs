@@ -150,15 +150,21 @@ public sealed class GameSaveShareTests
         WriteItem(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Second Rover", "vehicle.xml", Vehicle);
         await harness.ViewModel.LoadAsync();
         var editor = harness.ViewModel.ListingEditor;
+        ShareChooseRow? clicked = null;
         editor.ShareChooseRows.CollectionChanged += (_, change) =>
         {
-            if (change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && editor.SelectedShareRow is null)
-                editor.SelectedShareRow = (ShareChooseRow)change.NewItems![0]!;
+            if (change.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Add || editor.SelectedShareRow is not null)
+                return;
+
+            editor.SelectedShareRow = (ShareChooseRow)change.NewItems![0]!;
+            clicked ??= editor.SelectedShareRow;
         };
 
         await harness.ViewModel.OpenShareFlowAsync(GameSaveKind.Vehicle);
 
-        Assert.Same(editor.ShareChooseRows[0], editor.SelectedShareRow);
+        // The page reads the rows again when the index answers, and rows sort by folder time, which can change between two reads, so the row is found by its folder and not by its place.
+        Assert.Equal(clicked?.Item.FolderName, editor.SelectedShareRow?.Item.FolderName);
+        Assert.Contains(editor.SelectedShareRow!, editor.ShareChooseRows);
     }
 
     [Fact]
