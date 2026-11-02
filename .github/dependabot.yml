@@ -1,10 +1,12 @@
 version: 2
-# Every ecosystem runs daily, so that a security fix waits one day for a pull request and not a week.
+# Every ecosystem runs every day, so that a security fix waits at most a day for a pull request and not a week.
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "cron"
+      # Every day at 05:00 UTC, weekends included, because "daily" runs only Monday to Friday.
+      cronjob: "0 5 * * *"
     groups:
       # A day with several action releases gives one pull request.
       actions:
@@ -14,17 +16,23 @@ updates:
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "cron"
+      # Every day at 05:00 UTC, weekends included, because "daily" runs only Monday to Friday.
+      cronjob: "0 5 * * *"
     groups:
       # Minor and patch bumps as one pull request instead of one each.
       minor-and-patch:
         update-types: ["minor", "patch"]
+        # A CycloneDX bump also needs the hash in .config/dotnet-tools.sha512, so it comes alone and does not hold back the others.
+        exclude-patterns: ["cyclonedx"]
 
   # The published app carries the .NET runtime of the SDK that global.json names.
   - package-ecosystem: "dotnet-sdk"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "cron"
+      # Every day at 05:00 UTC, weekends included, because "daily" runs only Monday to Friday.
+      cronjob: "0 5 * * *"
     ignore:
       # The next .NET major is a decision of its own and not a patch.
       - dependency-name: "*"
