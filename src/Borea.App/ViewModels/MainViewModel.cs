@@ -1078,6 +1078,7 @@ public partial class MainViewModel : ViewModelBase
             option.RefreshText();
         foreach (var category in CategoryOptions)
             category.RefreshText();
+        RefreshLicenseText();
         RefreshContentGroups();
         VehiclePreview?.RefreshText();
         RefreshInstanceLoader();

@@ -11,8 +11,11 @@ public sealed partial class SpdxExpression
     /// <summary>How deep parentheses can go. The parser recurses once per level, so a deeper text does not parse.</summary>
     public const int MaxDepth = 64;
 
+    private readonly Node _root;
+
     private SpdxExpression(Node root)
     {
+        _root = root;
         Licenses = root.Licenses().Distinct().ToList();
     }
 
@@ -21,6 +24,15 @@ public sealed partial class SpdxExpression
     /// spelling is here once, and a license written twice with different case is here twice.
     /// </summary>
     public IReadOnlyList<SpdxLicense> Licenses { get; }
+
+    /// <summary>Turns the expression into one value. Each license gives a value, and each AND and each OR joins the values of its parts.</summary>
+    public T Fold<T>(Func<SpdxLicense, T> ofLicense, Func<IEnumerable<T>, T> and, Func<IEnumerable<T>, T> or)
+    {
+        ArgumentNullException.ThrowIfNull(ofLicense);
+        ArgumentNullException.ThrowIfNull(and);
+        ArgumentNullException.ThrowIfNull(or);
+        return _root.Fold(ofLicense, and, or);
+    }
 
     /// <summary>The expression, or null when the text does not parse or its parentheses go deeper than <see cref="MaxDepth"/>.</summary>
     public static SpdxExpression? Parse(string text)
@@ -45,21 +57,31 @@ public sealed partial class SpdxExpression
     private abstract class Node
     {
         public abstract IEnumerable<SpdxLicense> Licenses();
+
+        public abstract T Fold<T>(Func<SpdxLicense, T> ofLicense, Func<IEnumerable<T>, T> and, Func<IEnumerable<T>, T> or);
     }
 
     private sealed class LicenseNode(SpdxLicense license) : Node
     {
         public override IEnumerable<SpdxLicense> Licenses() => [license];
+
+        public override T Fold<T>(Func<SpdxLicense, T> ofLicense, Func<IEnumerable<T>, T> and, Func<IEnumerable<T>, T> or) => ofLicense(license);
     }
 
     private sealed class AndNode(List<Node> parts) : Node
     {
         public override IEnumerable<SpdxLicense> Licenses() => parts.SelectMany(part => part.Licenses());
+
+        public override T Fold<T>(Func<SpdxLicense, T> ofLicense, Func<IEnumerable<T>, T> and, Func<IEnumerable<T>, T> or) =>
+            and(parts.Select(part => part.Fold(ofLicense, and, or)));
     }
 
     private sealed class OrNode(List<Node> parts) : Node
     {
         public override IEnumerable<SpdxLicense> Licenses() => parts.SelectMany(part => part.Licenses());
+
+        public override T Fold<T>(Func<SpdxLicense, T> ofLicense, Func<IEnumerable<T>, T> and, Func<IEnumerable<T>, T> or) =>
+            or(parts.Select(part => part.Fold(ofLicense, and, or)));
     }
 
     private sealed class Parser(List<string> tokens)

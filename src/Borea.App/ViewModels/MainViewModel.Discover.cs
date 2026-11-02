@@ -54,10 +54,34 @@ public partial class MainViewModel
 
     public ObservableCollection<DiscoverChoice> OsOptions { get; } = [];
 
-    public ObservableCollection<DiscoverChoice> LicenseOptions { get; } = [];
+    /// <summary>The groups of the License filter that the entries of the current tab fall in, and every chosen group that the tab does not use.</summary>
+    public ObservableCollection<DiscoverLicenseGroup> LicenseGroupOptions { get; } = [];
 
-    /// <summary>The licenses the License filter holds. A listing shows when its license names one of them.</summary>
+    /// <summary>The groups the License filter holds. A listing shows when its license falls in one of them.</summary>
+    public ObservableCollection<DiscoverLicenseGroup> SelectedLicenseGroups { get; } = [];
+
+    /// <summary>
+    /// The exact licenses of the current tab, the most used first, and every chosen license that the tab does not use.
+    /// These are the licenses that put the entries in their groups, so a group chosen shows the licenses of the line under that group.
+    /// </summary>
+    public ObservableCollection<LicenseChoice> LicenseOptions { get; } = [];
+
+    /// <summary>
+    /// The exact licenses the License filter holds. A listing shows when one of them puts its license in its group, and when a group
+    /// is chosen too, its license must also fall in a chosen group.
+    /// </summary>
     public ObservableCollection<string> SelectedLicenses { get; } = [];
+
+    /// <summary>The text on the closed box of exact licenses, which names the chosen license, or how many are chosen.</summary>
+    public string LicenseFilterText => SelectedLicenses.Count switch
+    {
+        0 => Localization.DiscoverLicenseExact,
+        1 => SelectedLicenses[0],
+        var count => Localization.FormatDiscoverLicensesChosen(count),
+    };
+
+    /// <summary>The line above the exact licenses, which says whether they narrow the chosen groups or filter on their own.</summary>
+    public string LicenseListHint => SelectedLicenseGroups.Count == 0 ? Localization.DiscoverLicenseListAll : Localization.DiscoverLicenseListInGroups;
 
     public ObservableCollection<DiscoverCategory> CategoryOptions { get; } = [];
 
@@ -181,7 +205,7 @@ public partial class MainViewModel
         ({ } min, { } max) => $"{min.Text} - {max.Text}",
     };
 
-    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenses.Count > 0 || (ShowsCategories && SelectedCategories.Count > 0) || HasGameVersionRange;
+    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenseGroups.Count > 0 || SelectedLicenses.Count > 0 || (ShowsCategories && SelectedCategories.Count > 0) || HasGameVersionRange;
 
     /// <summary>The Sort by choice of every tab except Loaders, the saved one until the menu or a link on Home changes it.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
@@ -290,10 +314,7 @@ public partial class MainViewModel
                 OsOptions.Add(new DiscoverChoice(os));
             MarkChoice(OsOptions, SelectedOs);
 
-            LicenseOptions.Clear();
-            foreach (var license in LicenseFilter.Options(listings.Concat(content).Select(listing => listing.License).Concat(packs.Select(pack => pack.License))))
-                LicenseOptions.Add(new DiscoverChoice(license));
-            MarkLicenses();
+            LoadLicenseOptions();
 
             LoadCategoryOptions(listings, packs);
             LoadGameVersionOptions(snapshot.GameVersions);
@@ -336,8 +357,8 @@ public partial class MainViewModel
             filtered = filtered.Where(item => item.SupportsOs(SelectedOs));
         if (SelectedAuthor is { } author)
             filtered = filtered.Where(item => item.Listing.Authors.Contains(author, StringComparer.OrdinalIgnoreCase));
-        if (SelectedLicenses.Count > 0)
-            filtered = filtered.Where(item => LicenseFilter.Matches(item.License, SelectedLicenses));
+        if (SelectedLicenseGroups.Count > 0 || SelectedLicenses.Count > 0)
+            filtered = filtered.Where(item => MatchesLicenseFilter(item.License));
         if (HasGameVersionRange)
             filtered = filtered.Where(item => item.LatestInChannel is { } release
                 && Borea.Core.Game.Compatibility.SupportsAnyBuild(release.GameMinRevision, release.GameMaxRevision, DiscoverGameMin?.Revision, DiscoverGameMax?.Revision));
@@ -501,6 +522,7 @@ public partial class MainViewModel
 
     partial void OnDiscoverTypeChanged(ContentType value)
     {
+        LoadLicenseOptions();
         ApplyDiscoverFilters();
         if (value.IsVehicleOrSave())
             StartShareSchemaLoad();
@@ -627,10 +649,70 @@ public partial class MainViewModel
             choice.IsSelected = string.Equals(choice.Value, selected, StringComparison.OrdinalIgnoreCase);
     }
 
+    private IEnumerable<LicenseGroup> ChosenLicenseGroups => SelectedLicenseGroups.Select(chosen => chosen.Group);
+
+    private bool MatchesLicenseFilter(string license) =>
+        LicenseFilter.InGroups(license, ChosenLicenseGroups) && LicenseFilter.Matches(license, SelectedLicenses);
+
     private void MarkLicenses()
     {
+        var groups = ChosenLicenseGroups.ToHashSet();
+        foreach (var option in LicenseGroupOptions)
+            option.IsSelected = groups.Contains(option.Group);
         foreach (var choice in LicenseOptions)
             choice.IsSelected = SelectedLicenses.Contains(choice.Value, StringComparer.OrdinalIgnoreCase);
+        OnPropertyChanged(nameof(LicenseFilterText));
+        OnPropertyChanged(nameof(LicenseListHint));
+    }
+
+    /// <summary>
+    /// Fills the License filter with the groups and the licenses of the current tab, so that each count is a number of rows
+    /// that the tab can show. A chosen group or license that the tab does not use stays with no rows, so that a click can
+    /// still take it away.
+    /// </summary>
+    private void LoadLicenseOptions()
+    {
+        var expressions = LicensesOfTab();
+        var groups = LicenseFilter.GroupOptions(expressions).ToList();
+        groups.AddRange(ChosenLicenseGroups
+            .Where(group => groups.All(option => option.Group != group))
+            .Select(group => new LicenseGroupOption(group, 0, [])));
+
+        LicenseGroupOptions.Clear();
+        foreach (var option in groups.OrderBy(option => option.Group))
+            LicenseGroupOptions.Add(new DiscoverLicenseGroup(this, option));
+        ShowExactLicenses(ExactLicensesOfTab(expressions));
+    }
+
+    private List<string> LicensesOfTab() => DiscoverType == ContentType.ModPack
+        ? [.. _packs.Select(pack => pack.License)]
+        : [.. _listings.Where(item => item.Type == DiscoverType).Select(item => item.License)];
+
+    private List<LicenseOption> ExactLicensesOfTab(IEnumerable<string> expressions)
+    {
+        var groups = ChosenLicenseGroups.ToList();
+        return [.. LicenseFilter.Options(expressions.Where(expression => LicenseFilter.InGroups(expression, groups)))];
+    }
+
+    private void ShowExactLicenses(IReadOnlyList<LicenseOption> offered)
+    {
+        var unused = SelectedLicenses
+            .Where(license => !offered.Any(option => string.Equals(option.License, license, StringComparison.OrdinalIgnoreCase)))
+            .Select(license => new LicenseOption(license, 0))
+            .ToList();
+
+        LicenseOptions.Clear();
+        foreach (var option in offered.Concat(unused))
+            LicenseOptions.Add(new LicenseChoice(option.License, option.Count));
+        MarkLicenses();
+    }
+
+    internal void RefreshLicenseText()
+    {
+        foreach (var option in LicenseGroupOptions.Union(SelectedLicenseGroups))
+            option.RefreshText();
+        OnPropertyChanged(nameof(LicenseFilterText));
+        OnPropertyChanged(nameof(LicenseListHint));
     }
 
     // a range whose Min is above its Max would match nothing, so the other bound follows
@@ -710,6 +792,43 @@ public partial class MainViewModel
         ApplyDiscoverFilters();
     }
 
+    // a reload builds new rows, so a chip that stays from before is found by its group and not by its row
+    [RelayCommand]
+    private void ToggleLicenseGroup(LicenseGroup? group)
+    {
+        if (group is null)
+            return;
+
+        if (SelectedLicenseGroups.FirstOrDefault(chosen => chosen.Group == group) is { } chip)
+        {
+            SelectedLicenseGroups.Remove(chip);
+
+            // a group that the tab does not use only stays so that a click can take it away, so it leaves the list with that click
+            if (LicenseGroupOptions.FirstOrDefault(option => option.Group == group) is { Count: 0 } unused)
+                LicenseGroupOptions.Remove(unused);
+        }
+        else
+            SelectedLicenseGroups.Add(LicenseGroupOptions.FirstOrDefault(option => option.Group == group) ?? new DiscoverLicenseGroup(this, new LicenseGroupOption(group.Value, 0, [])));
+
+        // an exact license that is not among the licenses of the chosen groups would hide every row, so the groups win and it leaves the filter
+        var offered = ExactLicensesOfTab(LicensesOfTab());
+        foreach (var license in SelectedLicenses.Where(license => !offered.Any(option => string.Equals(option.License, license, StringComparison.OrdinalIgnoreCase))).ToList())
+            SelectedLicenses.Remove(license);
+        ShowExactLicenses(offered);
+
+        OnPropertyChanged(nameof(HasDiscoverFilters));
+        ApplyDiscoverFilters();
+    }
+
+    [RelayCommand]
+    private void ClearLicenses()
+    {
+        SelectedLicenses.Clear();
+        MarkLicenses();
+        OnPropertyChanged(nameof(HasDiscoverFilters));
+        ApplyDiscoverFilters();
+    }
+
     [RelayCommand]
     private void ClearDiscoverGameVersionRange()
     {
@@ -778,8 +897,15 @@ public partial class MainViewModel
         InstalledInOtherInstances = false;
         SelectedOs = null;
         SelectedAuthor = null;
+
+        // a chosen group narrows the exact licenses, so only then does their list have to come back whole
+        var narrowed = SelectedLicenseGroups.Count > 0;
+        SelectedLicenseGroups.Clear();
         SelectedLicenses.Clear();
-        MarkLicenses();
+        if (narrowed)
+            LoadLicenseOptions();
+        else
+            MarkLicenses();
         DiscoverGameMin = null;
         DiscoverGameMax = null;
         foreach (var category in SelectedCategories)
@@ -1372,12 +1498,70 @@ public sealed partial class DiscoverCategory : ObservableObject
     internal void RefreshText() => OnPropertyChanged(nameof(Name));
 }
 
-/// <summary>
-/// One row of the Operating system filter, which holds one choice at a time, or of the License filter, which holds several.
-/// </summary>
+/// <summary>One row of the Operating system filter, which holds one choice at a time.</summary>
 public sealed partial class DiscoverChoice(string value) : ObservableObject
 {
     public string Value { get; } = value;
+
+    [ObservableProperty]
+    private bool _isSelected;
+}
+
+/// <summary>One group row of the License filter, which holds several, or the chip of a chosen group.</summary>
+public sealed partial class DiscoverLicenseGroup(MainViewModel owner, LicenseGroupOption option) : ObservableObject
+{
+    public LicenseGroup Group => option.Group;
+
+    /// <summary>The number of entries of the tab in the group.</summary>
+    public int Count => option.Count;
+
+    /// <summary>
+    /// The licenses that put the entries in the group, shown under the row so that it says what it holds without a hover.
+    /// Each license but the last carries its comma, so a line breaks between two licenses and never inside an id such as GPL-3.0-or-later.
+    /// </summary>
+    public IReadOnlyList<string> Licenses { get; } = [.. option.Licenses.Select((license, index) => index < option.Licenses.Count - 1 ? license + "," : license)];
+
+    public bool HasLicenses => option.Licenses.Count > 0;
+
+    public string Name => Group switch
+    {
+        LicenseGroup.Free => owner.Localization.DiscoverLicenseFree,
+        LicenseGroup.NonCommercial => owner.Localization.DiscoverLicenseNonCommercial,
+        _ => owner.Localization.DiscoverLicenseOther,
+    };
+
+    /// <summary>The short name on the chip, because the chip row next to Sort by has less room than the sidebar.</summary>
+    public string ChipName => Group switch
+    {
+        LicenseGroup.Free => owner.Localization.DiscoverLicenseFreeChip,
+        LicenseGroup.NonCommercial => owner.Localization.DiscoverLicenseNonCommercialChip,
+        _ => owner.Localization.DiscoverLicenseOther,
+    };
+
+    public string Meaning => Group switch
+    {
+        LicenseGroup.Free => owner.Localization.DiscoverLicenseFreeMeaning,
+        LicenseGroup.NonCommercial => owner.Localization.DiscoverLicenseNonCommercialMeaning,
+        _ => owner.Localization.DiscoverLicenseOtherMeaning,
+    };
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(ChipName));
+        OnPropertyChanged(nameof(Meaning));
+    }
+}
+
+/// <summary>One check box of the exact licenses of the License filter, with the number of entries that the license puts in their group.</summary>
+public sealed partial class LicenseChoice(string value, int count) : ObservableObject
+{
+    public string Value { get; } = value;
+
+    public int Count { get; } = count;
 
     [ObservableProperty]
     private bool _isSelected;

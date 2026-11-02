@@ -2652,6 +2652,45 @@
   <data name="DiscoverLicense" xml:space="preserve">
     <value>Lizenz</value>
   </data>
+  <data name="DiscoverLicenseFree" xml:space="preserve">
+    <value>Frei, auch kommerziell</value>
+  </data>
+  <data name="DiscoverLicenseFreeChip" xml:space="preserve">
+    <value>Freie Lizenz</value>
+  </data>
+  <data name="DiscoverLicenseFreeMeaning" xml:space="preserve">
+    <value>Du darfst es nutzen, ändern und weitergeben, auch in eigenen Mods und kommerziell. Die meisten dieser Lizenzen verlangen, dass du den Autor nennst, und manche, dass eine geänderte Fassung dieselbe Lizenz behält.</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercial" xml:space="preserve">
+    <value>Keine kommerzielle Nutzung</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercialChip" xml:space="preserve">
+    <value>Nicht kommerziell</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercialMeaning" xml:space="preserve">
+    <value>Du darfst es nutzen, ändern und weitergeben, aber nicht kommerziell. Das kann nur für einen Teil gelten, zum Beispiel die Grafiken. Die Detailseite zeigt die genaue Lizenz.</value>
+  </data>
+  <data name="DiscoverLicenseOther" xml:space="preserve">
+    <value>Andere Bedingungen</value>
+  </data>
+  <data name="DiscoverLicenseOtherMeaning" xml:space="preserve">
+    <value>Der Autor legt eigene Bedingungen fest, oder Borea kann nicht erkennen, was die Lizenz erlaubt. Manche dieser Lizenzen erlauben keine Änderungen. Lies die Lizenz auf der Detailseite, bevor du etwas änderst oder weitergibst.</value>
+  </data>
+  <data name="DiscoverLicenseExact" xml:space="preserve">
+    <value>Genaue Lizenz</value>
+  </data>
+  <data name="DiscoverLicensesChosenFormat" xml:space="preserve">
+    <value>{0} Lizenzen</value>
+  </data>
+  <data name="DiscoverLicenseClear" xml:space="preserve">
+    <value>Genaue Lizenzen zurücksetzen</value>
+  </data>
+  <data name="DiscoverLicenseListAll" xml:space="preserve">
+    <value>Hake eine Lizenz an, um nur die Einträge unter dieser Lizenz zu zeigen. Ein Eintrag mit mehreren Lizenzen zählt für die Lizenz, die seine Gruppe bestimmt.</value>
+  </data>
+  <data name="DiscoverLicenseListInGroups" xml:space="preserve">
+    <value>Die Lizenzen der gewählten Gruppen. Hake eine Lizenz an, um in diesen Gruppen nur die Einträge unter dieser Lizenz zu zeigen.</value>
+  </data>
   <data name="DiscoverAuthorFilterFormat" xml:space="preserve">
     <value>Von {0}</value>
   </data>
