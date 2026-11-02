@@ -3238,6 +3238,8 @@ public sealed class ShareHostShareTests
                 throw failure;
         }
 
+        public Task ReportInstallAsync(ShareHost host, string type, string id, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
         private ShareHostException? RefuseToken()
         {
             if (TokenRefusals == 0)

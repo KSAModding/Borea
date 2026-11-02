@@ -79,6 +79,9 @@ public sealed class BoreaServices : IDisposable
     /// </summary>
     private static readonly TimeSpan ConnectionLifetime = TimeSpan.FromMinutes(2);
 
+    /// <summary>How long a close waits for install reports that are still on their way. A host that is slower loses that count.</summary>
+    private static readonly TimeSpan InstallReportLimit = TimeSpan.FromSeconds(5);
+
     /// <summary>
     /// The one HttpClient that every network service shares. Only the GitHub
     /// session (without redirects) and the image source build their own.
@@ -596,7 +599,6 @@ public sealed class BoreaServices : IDisposable
         var previewThumbnails = new PreviewThumbnailCache(paths, log);
         var shareFiles = httpHandler is null ? ProcessShareFiles.Value : new HttpClient(httpHandler, disposeHandler: false);
         var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, instanceGames, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log, previewThumbnails, host => new ShareFileDownloader(shareFiles, host));
-        var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning, instanceGames, log), instances), log);
         // the index lists every loader, and the offline SpaceDock throws on a list of all mods, so the keeper reads only the cached index
         IGameBuildKeeper gameBuilds = new GameBuildKeeper(paths, instances, offlineContentIndex, loaderVersions, isGameProcessRunning, launcher.IsRunning);
@@ -606,6 +608,12 @@ public sealed class BoreaServices : IDisposable
         var announcementReader = new AnnouncementReader();
         var listedDocuments = new ListedDocumentFetcher(http);
         var listingFormat = new TomlListingFormat();
+        var shareHostClientValue = shareHostClient ?? new ShareHostClient(http, listingFormat);
+        var userContentInstaller = new InstallReportingUserContentInstaller(
+            new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log),
+            new ShareHostStore(indexSnapshots.CachedOnly),
+            shareHostClientValue,
+            log);
         var gitHubSession = new LoggingGitHubSession(gitHub ?? new GitHubSession(http, BoreaGitHubApp.ClientId, BoreaGitHubApp.Slug), log);
         var stewardRole = new GitHubStewardRole(gitHubSession, http);
         var listingOwnership = new ListingOwnershipCheck(gitHubSession, http, listingFormat);
@@ -700,7 +708,7 @@ public sealed class BoreaServices : IDisposable
             ListingFormat = listingFormat,
             ListingValidator = new ListingValidator(new ListingSchemaStore(listedDocuments, paths)),
             ShareHosts = new ShareHostStore(indexSnapshots),
-            ShareHostClient = shareHostClient ?? new ShareHostClient(http, listingFormat),
+            ShareHostClient = shareHostClientValue,
             ListingPublisher = new LoggingListingPublisher(listingPublisher ?? new ListingPublisher(gitHubSession, http, listingFormat), log),
             ListingOwnership = listingOwnership,
             StewardRole = stewardRole,
@@ -749,6 +757,10 @@ public sealed class BoreaServices : IDisposable
         BoreaUserAgent.Apply(http);
         return http;
     }
+
+    /// <summary>Waits a short time for the install reports that are still on their way. Call it before <see cref="Dispose"/>.</summary>
+    public Task WaitForInstallReportsAsync()
+        => UserContentInstaller is InstallReportingUserContentInstaller reporting ? reporting.WaitForReportsAsync(InstallReportLimit) : Task.CompletedTask;
 
     public void Dispose()
     {

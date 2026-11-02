@@ -26,6 +26,8 @@ internal static class ShareHostApi
 
     public const string TakeDownPath = "take-down";
 
+    public const string DownloadsPath = "downloads";
+
     /// <summary>The kept secret says which kind of token it holds, because a host may give no refresh token.</summary>
     public const string RefreshPrefix = "refresh:";
 

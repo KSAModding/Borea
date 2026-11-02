@@ -225,6 +225,19 @@ public sealed class ShareHostClient : IShareHostClient
             throw Unexpected(host, reply);
     }
 
+    /// <summary>Sends without the token of the host, because a player who installs needs no sign-in, and the count must not be tied to an account.</summary>
+    public async Task ReportInstallAsync(ShareHost host, string type, string id, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        using var request = new HttpRequestMessage(HttpMethod.Post, Under(host, $"{ListingPath(type, id)}/{ShareHostApi.DownloadsPath}"));
+        var reply = await WithAnswerLimitAsync(async token => await FetchAsync(request, token).ConfigureAwait(false) ?? throw Network(), cancellationToken).ConfigureAwait(false);
+        if ((int)reply.Status is < 200 or > 299)
+        {
+            var failure = reply.Status == HttpStatusCode.NotFound ? ShareHostFailure.NotOffered : ShareHostFailure.Host;
+            throw new ShareHostException(failure, $"{host.Name} answered the install report with {(int)reply.Status}.");
+        }
+    }
+
     private static string ListingPath(string type, string id) =>
         $"{ShareHostApi.ListingsPath}/{Uri.EscapeDataString(type)}/{Uri.EscapeDataString(id)}";
 

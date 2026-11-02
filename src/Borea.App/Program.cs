@@ -87,9 +87,12 @@ sealed class Program
 
         var pendingHandover = new PendingHandover();
         int result;
+        BoreaServices? lastServices;
         using (var primary = election.Primary!)
         {
-            result = BuildAvaloniaApp(services, inbox, primary, pendingHandover, handover).StartWithClassicDesktopLifetime(args);
+            var builder = BuildAvaloniaApp(services, inbox, primary, pendingHandover, handover);
+            result = builder.StartWithClassicDesktopLifetime(args);
+            lastServices = (builder.Instance as App)?.CurrentServices;
         }
 
         // The lock and the handover server are gone now, so a new build can take the App over.
@@ -106,6 +109,8 @@ sealed class Program
                 ShowWithoutWindow(text);
         }
 
+        // A setting change can have replaced the services built here, so the wait is for the services that made the last installs.
+        lastServices?.WaitForInstallReportsAsync().GetAwaiter().GetResult();
         return result;
     }
 
