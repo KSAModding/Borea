@@ -83,7 +83,8 @@
                     </Button>
                 </StackPanel>
                 <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.ShowsShareCoverMissing}">
-                    <TextBlock Classes="body-md" Text="{Binding Localization.ShareCoverMissing}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-md" Text="{Binding Localization.ShareCoverMissing}" TextWrapping="Wrap" IsVisible="{Binding !ListingEditor.IsShareCoverNewerPartFormat}" />
+                    <TextBlock Classes="body-md" Text="{Binding Localization.ShareCoverNewerPartFormat}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsShareCoverNewerPartFormat}" />
                     <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.AddSharePictureCommand}" IsVisible="{Binding !ListingEditor.IsSendingSharePublish}">
                         <TextBlock Classes="action-md" Text="{Binding Localization.ShareCoverOwn}" />
                     </Button>

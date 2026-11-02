@@ -29,6 +29,9 @@ public enum GameFolderProblem
     NameMissing,
     GameFileMissing,
     GameFileNotWellFormed,
+
+    /// <summary>The game file is well-formed XML, but its root or its root part is not one that the game writes today.</summary>
+    GameFileUnknownLayout,
 }
 
 /// <summary>The folder is not one the game reads. The message names the file.</summary>
@@ -55,6 +58,7 @@ public sealed class GameFolderException : Exception
             GameFolderProblem.MetadataMissing or GameFolderProblem.GameFileMissing => $"{path} does not exist.",
             GameFolderProblem.MetadataUnreadable => $"{path} is not TOML.",
             GameFolderProblem.NameMissing => $"{path} has no name.",
+            GameFolderProblem.GameFileUnknownLayout => $"{path} has a layout that Borea does not know.",
             _ => $"{path} is not well-formed XML.",
         };
         return detail is null ? message : $"{message} {detail}";

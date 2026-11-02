@@ -38,6 +38,11 @@ public sealed class VehiclePreviewTests : IDisposable
         </VehicleSaveData>
         """;
 
+    private const string TodayLayoutParts = """<MeshAtlas Path="Meshes/All.glb" /><Part Id="Body"><PartModel Id="m"><Mesh Id="BodyMesh" /></PartModel></Part>""";
+
+    /// <summary>The Body of <see cref="TodayLayoutParts"/> in the newer layout, which merges into a generated part and wraps its components.</summary>
+    private const string NewerLayoutParts = """<MeshAtlas Path="Meshes/All.glb" /><Part Id="Body" Modify="Patch"><Components><PartModel Key="m"><Mesh Ref="BodyMesh" /></PartModel></Components></Part>""";
+
     private readonly string _root = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
     private readonly Guid _targetId = Guid.NewGuid();
@@ -203,6 +208,87 @@ public sealed class VehiclePreviewTests : IDisposable
 
         Assert.Equal((VehiclePreviewPlanState.NoGameFolder, VehiclePreviewLoadState.NoGameFolder), (plan.State, result.State));
         Assert.Empty(_downloader.ArchivePaths);
+    }
+
+    [Theory]
+    [InlineData(TodayLayoutParts, VehiclePreviewPlanState.CanBuildLocally, VehiclePreviewLoadState.Ready, 1)]
+    [InlineData(NewerLayoutParts, VehiclePreviewPlanState.NewerPartFormat, VehiclePreviewLoadState.NewerPartFormat, 0)]
+    public async Task GamePartsInTheNewerLayout_StopEveryLoad_AndPartsInTheLayoutOfTodayStillDraw(string parts, VehiclePreviewPlanState planState, VehiclePreviewLoadState loadState, int draws)
+    {
+        Write(Path.Combine(_paths.GetGameDirectoryPath()!, "Content", "Core", "Parts.xml"), Assets(parts));
+        var zip = VehicleZip();
+        CacheArchive(zip);
+        var folder = Path.Combine(_root, "Vehicles", "Rover");
+        Write(Path.Combine(folder, "vehicle.xml"), Rover);
+        using var preview = Preview(instances: new MemoryInstanceRepository(Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, [], false)));
+
+        var plan = await preview.PrepareAsync(Vehicle(zip), null);
+        using var result = await preview.LoadAsync(plan with { State = VehiclePreviewPlanState.CanBuildLocally }, fetchVehicle: true, fetchMods: true);
+        using var fromFolder = await preview.LoadFolderAsync(folder, _targetId);
+
+        Assert.Equal((planState, loadState, loadState), (plan.State, result.State, fromFolder.State));
+        Assert.Equal((draws, draws), (result.Vehicle?.Draws.Count ?? 0, fromFolder.Vehicle?.Draws.Count ?? 0));
+        Assert.Empty(_downloader.ArchivePaths);
+    }
+
+    [Fact]
+    public async Task TheLayoutOfAKeptBuild_IsReadFromItsOwnFolder_AndRememberedForTheSession()
+    {
+        var kept = _paths.GetGameBuildFolder(KeptBuild);
+        Directory.CreateDirectory(kept);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(kept, "KSA.dll"));
+        var keptParts = Path.Combine(kept, "Content", "Core", "Parts.xml");
+        Write(Path.Combine(kept, "Content", "manifest.toml"), "[[mods]]\nid = \"Core\"\nenabled = true\n");
+        Write(Path.Combine(kept, "Content", "Core", "mod.toml"), "name = \"Core\"\nassets = [\"Parts.xml\"]\n");
+        Write(keptParts, Assets(NewerLayoutParts));
+        var zip = VehicleZip();
+        CacheArchive(zip);
+        var instances = new MemoryInstanceRepository(Keeping(KeptBuild));
+        using var preview = Preview(instances: instances);
+
+        var onKept = await preview.PrepareAsync(Vehicle(zip), _targetId);
+        var onSettings = await preview.PrepareAsync(Vehicle(zip), null);
+        Write(keptParts, Assets("""<Part Id="Body"><PartModel Id="m"><Mesh Id="BodyMesh" /></PartModel></Part>"""));
+        var again = await preview.PrepareAsync(Vehicle(zip), _targetId);
+        using var later = Preview(instances: instances);
+        var nextSession = await later.PrepareAsync(Vehicle(zip), _targetId);
+
+        Assert.Equal(
+            (VehiclePreviewPlanState.NewerPartFormat, VehiclePreviewPlanState.CanBuildLocally, VehiclePreviewPlanState.NewerPartFormat, VehiclePreviewPlanState.CanBuildLocally),
+            (onKept.State, onSettings.State, again.State, nextSession.State));
+    }
+
+    [Fact]
+    public async Task APartFileThatCannotBeOpened_IsNotRememberedAsTheLayoutOfToday()
+    {
+        var parts = Path.Combine(_paths.GetGameDirectoryPath()!, "Content", "Core", "Parts.xml");
+        Write(parts, Assets(NewerLayoutParts));
+        var zip = VehicleZip();
+        CacheArchive(zip);
+        using var preview = Preview();
+
+        VehiclePreviewPlan whileLocked;
+        using (new FileStream(parts, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            whileLocked = await preview.PrepareAsync(Vehicle(zip), null);
+        var afterwards = await preview.PrepareAsync(Vehicle(zip), null);
+
+        Assert.Equal((VehiclePreviewPlanState.CanBuildLocally, VehiclePreviewPlanState.NewerPartFormat), (whileLocked.State, afterwards.State));
+    }
+
+    [Theory]
+    [InlineData("""<VehicleSaveData Id="Rover"><RootPartRef Ref="Body" LocalInstanceId="1" /></VehicleSaveData>""")]
+    [InlineData("""<Vehicle Id="Rover"><RootPartRef InstanceOf="Body" LocalInstanceId="1" /></Vehicle>""")]
+    [InlineData("""<VehicleSaveData Id="Rover"><RootPartRef""")]
+    public async Task AVehicleFileThatTheReaderCannotRead_IsDamagedWithAReason_AndNotAnEmptyScene(string vehicle)
+    {
+        var folder = Path.Combine(_root, "Vehicles", "Rover");
+        Write(Path.Combine(folder, "vehicle.xml"), vehicle);
+        using var preview = Preview(instances: new MemoryInstanceRepository(Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, [], false)));
+
+        using var result = await preview.LoadFolderAsync(folder, _targetId);
+
+        Assert.Equal(VehiclePreviewLoadState.VehicleDamaged, result.State);
+        Assert.False(string.IsNullOrEmpty(result.Message));
     }
 
     [Fact]

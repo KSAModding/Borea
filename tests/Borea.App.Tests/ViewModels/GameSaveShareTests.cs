@@ -85,6 +85,7 @@ public sealed class GameSaveShareTests
 
     [Theory]
     [InlineData("vehicle.xml", "<VehicleSaveData Id=", "vehicle.xml is damaged, so Borea cannot read it. Save it again in the game, then try again.")]
+    [InlineData("vehicle.xml", "<VehicleSaveData Id=\"Example Rover\"><RootPartRef Ref=\"RoverWheel\" /></VehicleSaveData>", "Borea does not know the layout of vehicle.xml, so it cannot read what the file needs. Save it again in the game, or update Borea.")]
     [InlineData("meta.toml", "name = \"Example Rover\"\n", "The file does not say which game build wrote it, so the sharing site would refuse it. Load it in the game and save it again.")]
     public async Task FileThatStopsTheShare_ShowsUnderTheListInPlainWords(string file, string content, string expected)
     {

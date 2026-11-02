@@ -359,6 +359,26 @@ public sealed class ShareHostShareTests
     }
 
     [Fact]
+    public async Task Cover_OfAGameWithANewerPartFormat_IsNotDrawn_SaysWhy_AndAnOwnPictureStillGoes()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var encoder = new CoverEncoder();
+        var service = new FakeVehiclePreview { Vehicle = VehiclePreviewViewModelTests.TriangleVehicle(), Files = VehiclePreviewViewModelTests.TriangleFiles, FolderState = VehiclePreviewLoadState.NewerPartFormat };
+        var editor = await ShareWithCoverAsync(harness, service, encoder);
+
+        Assert.Equal((false, true, true), (editor.ShowsShareCoverPicture, editor.ShowsShareCoverMissing, editor.IsShareCoverNewerPartFormat));
+        Assert.Equal(0, encoder.Width);
+
+        harness.ViewModel.WindowServices = new PictureWindow { File = new PickedBinaryFile("shot.png", Picture(1)) };
+        await editor.AddSharePictureCommand.ExecuteAsync(null);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        Assert.Equal(new ImageUpload("vehicle", "ExampleRover", Picture(1).Length), Assert.Single(host.ImageUploads));
+    }
+
+    [Fact]
     public async Task Cover_IsNotOfferedWhenAPartIsABox()
     {
         var box = new ResolvedPlaceholder(System.Numerics.Matrix4x4.Identity, System.Numerics.Vector3.One, "Wing", PlaceholderReason.UnknownPart, null);

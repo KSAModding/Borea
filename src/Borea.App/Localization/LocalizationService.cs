@@ -329,6 +329,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatShareFolderNotXml(string file)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderNotXmlFormat, file);
 
+    public string FormatShareFolderUnknownLayout(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderUnknownLayoutFormat, file);
+
     public string ToastBackUpAllFailed => Resources.ToastBackUpAllFailed;
 
     public string FormatToastCopyFailed(string name)
@@ -2263,6 +2266,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareCoverMissing => Resources.ShareCoverMissing;
 
+    public string ShareCoverNewerPartFormat => Resources.ShareCoverNewerPartFormat;
+
     public string ShareCoverHint => Resources.ShareCoverHint;
 
     public string ShareCoverOwn => Resources.ShareCoverOwn;
@@ -3203,6 +3208,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string PreviewNoGameFolder => Resources.PreviewNoGameFolder;
 
     public string PreviewGameFolderInvalid => Resources.PreviewGameFolderInvalid;
+
+    public string PreviewNewerPartFormat => Resources.PreviewNewerPartFormat;
 
     public string PreviewVehicleDamaged => Resources.PreviewVehicleDamaged;
 

@@ -182,6 +182,36 @@ public sealed class VehiclePreviewViewModelTests
     }
 
     [Fact]
+    public async Task ANewerPartFormat_SaysThatThePreviewComesWithTheNextUpdate_AndOffersNoShow()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NewerPartFormat };
+        using var preview = Start(service);
+        await preview.Loading;
+
+        Assert.Equal((VehiclePreviewState.NewerPartFormat, Localization.PreviewNewerPartFormat), (preview.State, preview.StatusText));
+        Assert.False(preview.CanShow);
+        Assert.False(preview.IsNoGameFolder);
+        Assert.Empty(service.Loads);
+        Assert.Null(preview.Scene);
+    }
+
+    [Fact]
+    public async Task ALoadThatFindsANewerPartFormat_ShowsTheSameText_AndNoScene()
+    {
+        var thumbnails = new FakeThumbnails();
+        var service = new FakeVehiclePreview
+        {
+            HoldLoad = _ => Task.FromResult(new VehiclePreviewResult(VehiclePreviewLoadState.NewerPartFormat, null, null, [], [], null, new string('a', 64), "2026.10.19.5638")),
+        };
+        using var preview = Start(service, thumbnails: thumbnails);
+        await preview.Loading;
+
+        Assert.Equal((VehiclePreviewState.NewerPartFormat, Localization.PreviewNewerPartFormat), (preview.State, preview.StatusText));
+        Assert.Null(preview.Scene);
+        Assert.Empty(thumbnails.Stores);
+    }
+
+    [Fact]
     public async Task NoGameFolder_OffersTheSettings()
     {
         var opened = 0;
@@ -1096,6 +1126,9 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
 
     public Exception? FolderFailure { get; init; }
 
+    /// <summary>The state of a load of a vehicle folder, which gives a result without a vehicle unless it is Ready.</summary>
+    public VehiclePreviewLoadState FolderState { get; init; } = VehiclePreviewLoadState.Ready;
+
     /// <summary>The progress of the last load, so a test can report a stage after the load ended.</summary>
     public IProgress<VehiclePreviewStage>? LastProgress { get; private set; }
 
@@ -1126,7 +1159,9 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
         if (FolderFailure is { } failure)
             throw failure;
 
-        return Ready(new FakeAssets(Files), []);
+        return FolderState == VehiclePreviewLoadState.Ready
+            ? Ready(new FakeAssets(Files), [])
+            : new VehiclePreviewResult(FolderState, null, null, [], [], null, null, ResultNames.GameBuild);
     }
 
     public VehiclePreviewResult Ready(IPreviewAssetSource assets, IReadOnlyList<VehiclePreviewMissingMod>? missing = null) => new(

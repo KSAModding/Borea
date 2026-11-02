@@ -237,6 +237,7 @@ public partial class MainViewModel
             GameFolderProblem.MetadataMissing or GameFolderProblem.GameFileMissing => Localization.FormatShareFolderFileMissing(file),
             GameFolderProblem.MetadataUnreadable => Localization.FormatShareFolderNotToml(file),
             GameFolderProblem.NameMissing => Localization.FormatShareFolderNoName(file),
+            GameFolderProblem.GameFileUnknownLayout => Localization.FormatShareFolderUnknownLayout(file),
             _ => Localization.FormatShareFolderNotXml(file),
         };
     }

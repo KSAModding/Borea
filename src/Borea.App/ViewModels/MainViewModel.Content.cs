@@ -364,12 +364,12 @@ public partial class MainViewModel
         ]);
 
     /// <summary>
-    /// Draws the cover that a share offers, or gives null when it cannot. It reads the same folders as a preview, so whatever moves them waits for it too.
+    /// Draws the cover that a share offers, or gives no picture when it cannot. It reads the same folders as a preview, so whatever moves them waits for it too.
     /// </summary>
-    internal async Task<byte[]?> DrawShareCoverAsync(GameSaveShareStart share, CancellationToken token)
+    internal async Task<VehicleCoverPicture.Drawing> DrawShareCoverAsync(GameSaveShareStart share, CancellationToken token)
     {
         if (_services is not { } services || IsChangingLibraryFolder || VehiclePreviewEncoder is not { } encoder)
-            return null;
+            return default;
 
         var draw = VehicleCoverPicture.DrawAsync(VehiclePreviewServiceOf(services), VehiclePreviewBuilderOf(), encoder, share.Entry.Path, share.InstanceId, token);
         _closedVehiclePreviewLoads = Chain(_closedVehiclePreviewLoads, draw);

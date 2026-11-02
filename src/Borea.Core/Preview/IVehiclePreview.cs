@@ -69,6 +69,9 @@ public enum VehiclePreviewPlanState
     /// <summary>The game folder holds no Content/Core, so it is not a KSA install.</summary>
     GameFolderInvalid,
 
+    /// <summary>The part files of the game use a newer layout than Borea reads, so the preview would draw wrong parts.</summary>
+    NewerPartFormat,
+
     /// <summary>The vehicle file is on disk, so a load uses no network. Missing mods still show as placeholders.</summary>
     CanBuildLocally,
 
@@ -122,6 +125,9 @@ public enum VehiclePreviewLoadState
     NoGameFolder,
 
     GameFolderInvalid,
+
+    /// <summary>The part files of the game use a newer layout than Borea reads, so nothing is drawn.</summary>
+    NewerPartFormat,
 
     /// <summary>The vehicle file is not on disk and the load was not allowed to fetch it.</summary>
     NeedsVehicleFile,

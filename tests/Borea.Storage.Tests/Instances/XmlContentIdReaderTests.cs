@@ -95,6 +95,23 @@ public sealed class XmlContentIdReaderTests : IDisposable
         Assert.Equal(["mod data/state.txt", "unscience.json"], content.ExtraFiles);
     }
 
+    [Theory]
+    [InlineData(GameSaveKind.Vehicle, """<VehicleSaveData Id="Example Rover"><RootPartRef Ref="CoreCommandPod" /></VehicleSaveData>""")]
+    [InlineData(GameSaveKind.Vehicle, """<Vehicle Id="Example Rover"><RootPartRef InstanceOf="CoreCommandPod" /></Vehicle>""")]
+    [InlineData(GameSaveKind.Vehicle, """<UniverseData />""")]
+    [InlineData(GameSaveKind.Save, """<VehicleSaveData Id="Example Rover" />""")]
+    [InlineData(GameSaveKind.Save, """<UniverseData><System><Vehicle Id="Rover 1"><RootPartRef Ref="CoreCommandPod" /></Vehicle></System></UniverseData>""")]
+    public async Task ReadAsync_ALayoutThatTheGameDoesNotWriteToday_NamesTheFile(GameSaveKind kind, string gameFile)
+    {
+        var name = XmlContentIdReader.GameFileName(kind);
+        var folder = Write("Example Rover", name, gameFile);
+
+        var exception = await Assert.ThrowsAsync<GameFolderException>(() => _reader.ReadAsync(folder, kind));
+
+        Assert.Equal(GameFolderProblem.GameFileUnknownLayout, exception.Problem);
+        Assert.Contains(Path.Combine(folder, name), exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ReadAsync_CutOffFile_NamesTheFile()
     {

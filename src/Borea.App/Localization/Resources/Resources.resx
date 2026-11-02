@@ -2031,6 +2031,9 @@
   <data name="ShareFolderNotXmlFormat" xml:space="preserve">
     <value>{0} is damaged, so Borea cannot read it. Save it again in the game, then try again.</value>
   </data>
+  <data name="ShareFolderUnknownLayoutFormat" xml:space="preserve">
+    <value>Borea does not know the layout of {0}, so it cannot read what the file needs. Save it again in the game, or update Borea.</value>
+  </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Could not back up the saves</value>
   </data>
@@ -3839,6 +3842,9 @@
   </data>
   <data name="ShareCoverMissing" xml:space="preserve">
     <value>Borea could not draw a cover for this vehicle. You can use your own picture.</value>
+  </data>
+  <data name="ShareCoverNewerPartFormat" xml:space="preserve">
+    <value>This KSA build uses a newer part format, so Borea draws no cover for now. You can use your own picture.</value>
   </data>
   <data name="ShareCoverHint" xml:space="preserve">
     <value>A picture that Borea drew from your vehicle, as the cover of its page. It becomes public when you publish. Only this picture goes up, with no parts or textures of the game.</value>
@@ -6191,6 +6197,9 @@
   </data>
   <data name="PreviewVehicleDamaged" xml:space="preserve">
     <value>Borea cannot read the vehicle file, so it cannot show a preview.</value>
+  </data>
+  <data name="PreviewNewerPartFormat" xml:space="preserve">
+    <value>This KSA build uses a newer part format. The 3D preview comes with the next Borea update.</value>
   </data>
   <data name="PreviewFailedFormat" xml:space="preserve">
     <value>The preview stopped with an error: {0}</value>

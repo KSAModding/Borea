@@ -19,6 +19,13 @@ public sealed class XmlContentIdReader : IContentIdReader
     /// <summary>The file UniverseData writes.</summary>
     public const string SaveFileName = "universe.xml";
 
+    /// <summary>The root elements that XmlSerializer writes for VehicleSaveData and UniverseData.</summary>
+    private const string VehicleRoot = "VehicleSaveData";
+
+    private const string SaveRoot = "UniverseData";
+
+    private const string RootPart = "RootPartRef";
+
     private static readonly HashSet<string> PartElements = new(StringComparer.Ordinal) { "RootPartRef", "PartRef", "SubPartRef" };
 
     private static readonly HashSet<string> CharacterElements = new(StringComparer.Ordinal) { "Vehicle", "Kitten" };
@@ -54,7 +61,8 @@ public sealed class XmlContentIdReader : IContentIdReader
         var clutter = new List<GroundClutterRef>();
         try
         {
-            await ReadGameFileAsync(gameFile, kind, ids, clutter, cancellationToken).ConfigureAwait(false);
+            if (!await ReadGameFileAsync(gameFile, kind, ids, clutter, cancellationToken).ConfigureAwait(false))
+                throw new GameFolderException(GameFolderProblem.GameFileUnknownLayout, gameFile);
         }
         catch (XmlException exception)
         {
@@ -92,7 +100,11 @@ public sealed class XmlContentIdReader : IContentIdReader
         return (name, table.TryGetValue("version", out var version) && version is string { Length: > 0 } build ? build : null);
     }
 
-    private static async Task ReadGameFileAsync(string path, GameSaveKind kind, ContentIds ids, List<GroundClutterRef> clutter, CancellationToken cancellationToken)
+    /// <summary>
+    /// Adds the ids of the game file, and gives false when its layout is not one the game writes today, which is another root element or a RootPartRef that names no part.
+    /// The ids of such a file would leave out what it needs, so the share stops instead.
+    /// </summary>
+    private static async Task<bool> ReadGameFileAsync(string path, GameSaveKind kind, ContentIds ids, List<GroundClutterRef> clutter, CancellationToken cancellationToken)
     {
         var settings = new XmlReaderSettings
         {
@@ -117,6 +129,11 @@ public sealed class XmlContentIdReader : IContentIdReader
             {
                 case XmlNodeType.Element:
                     var element = reader.LocalName;
+                    if (open.Count == 0 && element != (kind == GameSaveKind.Save ? SaveRoot : VehicleRoot))
+                        return false;
+                    if (element == RootPart && string.IsNullOrEmpty(reader.GetAttribute("InstanceOf")))
+                        return false;
+
                     if (PartElements.Contains(element))
                         ids.Add(ContentIdKind.Part, reader.GetAttribute("InstanceOf"));
                     ids.Add(ContentIdKind.SubstancePhase, reader.GetAttribute("SubstancePhaseId"));
@@ -146,6 +163,8 @@ public sealed class XmlContentIdReader : IContentIdReader
                     break;
             }
         }
+
+        return true;
 
         void Close(string element)
         {

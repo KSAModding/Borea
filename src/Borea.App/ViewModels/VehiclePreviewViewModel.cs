@@ -37,6 +37,9 @@ public enum VehiclePreviewState
     /// <summary>No game folder is set, or the folder is not a KSA install, so Borea has no parts to draw with.</summary>
     NoGameFolder,
 
+    /// <summary>The part files of the game have a newer layout than Borea reads, so it draws nothing.</summary>
+    NewerPartFormat,
+
     VehicleDamaged,
 
     Failed,
@@ -216,6 +219,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         VehiclePreviewState.Idle => _localization.PreviewIdle,
         VehiclePreviewState.Fetching or VehiclePreviewState.Building => StepText(_step),
         VehiclePreviewState.NoGameFolder => _gameFolderInvalid ? _localization.PreviewGameFolderInvalid : _localization.PreviewNoGameFolder,
+        VehiclePreviewState.NewerPartFormat => _localization.PreviewNewerPartFormat,
         VehiclePreviewState.VehicleDamaged => _localization.PreviewVehicleDamaged,
         VehiclePreviewState.Failed => _localization.FormatPreviewFailed(_message ?? string.Empty),
         VehiclePreviewState.Cancelled => _localization.PreviewCancelled,
@@ -421,6 +425,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
             case VehiclePreviewPlanState.NoGameFolder or VehiclePreviewPlanState.GameFolderInvalid:
                 SetState(VehiclePreviewState.NoGameFolder);
                 break;
+            case VehiclePreviewPlanState.NewerPartFormat:
+                SetState(VehiclePreviewState.NewerPartFormat);
+                break;
             case VehiclePreviewPlanState.VehicleDamaged:
                 SetState(VehiclePreviewState.VehicleDamaged);
                 break;
@@ -467,6 +474,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
             {
                 VehiclePreviewLoadState.NoGameFolder or VehiclePreviewLoadState.GameFolderInvalid => VehiclePreviewState.NoGameFolder,
                 VehiclePreviewLoadState.NeedsVehicleFile => VehiclePreviewState.Idle,
+                VehiclePreviewLoadState.NewerPartFormat => VehiclePreviewState.NewerPartFormat,
                 VehiclePreviewLoadState.VehicleDamaged => VehiclePreviewState.VehicleDamaged,
                 _ => VehiclePreviewState.Failed,
             });

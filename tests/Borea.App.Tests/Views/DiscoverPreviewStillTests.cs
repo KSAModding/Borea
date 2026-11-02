@@ -382,6 +382,29 @@ public sealed class DiscoverPreviewStillTests
     }
 
     [Fact]
+    public async Task ANewerPartFormat_DrawsAndStoresNoStill_FetchesNothing_AndKeepsTheStoredStill()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NewerPartFormat, Vehicle = VehiclePreviewViewModelTests.TriangleVehicle(), Files = VehiclePreviewViewModelTests.TriangleFiles };
+        using var harness = await StillHarnessAsync(service, HostWithoutACount);
+        var (sha256, build) = service.ResultNames;
+        var png = await HeadlessApp.RunAsync(() =>
+            Task.FromResult(new AvaloniaPngEncoder().Encode(VehiclePreviewViewModel.RenderStill(PreviewTestScenes.StackedBoxes(), CancellationToken.None))));
+
+        // A still drawn while mods were missing makes the row ask for a new one.
+        var key = "scene" + VehiclePreviewViewModel.MissingModsKeySuffix;
+        harness.Services.PreviewThumbnails.Store(sha256, build, key, png);
+        var stored = harness.Services.PreviewThumbnails.TryGetPath(sha256, build);
+
+        var path = await ShowVehiclesAsync(harness, (viewModel, _) => Task.FromResult(viewModel.DiscoverItems.Single().PreviewStillPath));
+
+        Assert.NotEmpty(service.Prepares);
+        Assert.Empty(service.Loads);
+        Assert.Empty(service.ShareFetches);
+        Assert.Equal(stored, path);
+        Assert.Equal(key, harness.Services.PreviewThumbnails.TryGetSceneKey(sha256, build));
+    }
+
+    [Fact]
     public async Task AVehicleOfOnlyMissingParts_KeepsTheNormalIcon()
     {
         var onlyBoxes = new ResolvedVehicle([], [], [], [Box], [], 1, 0);
