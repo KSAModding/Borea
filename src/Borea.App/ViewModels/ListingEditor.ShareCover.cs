@@ -23,6 +23,9 @@ public sealed partial class ListingEditor
     /// <summary>A drawing that ended without a picture, for which the step says that no cover comes.</summary>
     private bool _isShareCoverMissing;
 
+    /// <summary>The drawing gave no picture because the part files of the game have a newer layout than Borea reads.</summary>
+    private bool _isShareCoverNewerPartFormat;
+
     /// <summary>The file picker of the step is open, and the picture that it can still bring wins over the cover.</summary>
     private bool _isPickingSharePicture;
 
@@ -47,6 +50,9 @@ public sealed partial class ListingEditor
     public bool ShowsShareCoverLeftOut => CanOfferShareCover && ShareCoverBytes is not null && IsShareCoverLeftOut;
 
     public bool ShowsShareCoverMissing => CanOfferShareCover && _isShareCoverMissing;
+
+    /// <summary>True when the step says that no cover comes because of the part layout of the game, instead of the words for any other reason.</summary>
+    public bool IsShareCoverNewerPartFormat => _isShareCoverNewerPartFormat;
 
     public bool ShowsShareCoverCard => ShowsShareCoverDrawing || ShowsShareCoverPicture || ShowsShareCoverLeftOut || ShowsShareCoverMissing;
 
@@ -97,19 +103,20 @@ public sealed partial class ListingEditor
     /// <summary>An exception still faults the task, and the step goes on without a cover.</summary>
     private async Task DrawShareCoverAsync(GameSaveShareStart share, CancellationTokenSource run)
     {
-        byte[]? bytes = null;
+        VehicleCoverPicture.Drawing drawing = default;
         try
         {
-            bytes = await _owner.DrawShareCoverAsync(share, run.Token);
+            drawing = await _owner.DrawShareCoverAsync(share, run.Token);
         }
         finally
         {
             if (_shareCoverRun == run)
             {
                 _shareCoverRun = null;
-                ShareCoverBytes = bytes;
+                ShareCoverBytes = drawing.Png;
                 IsDrawingShareCover = false;
-                _isShareCoverMissing = bytes is null;
+                _isShareCoverMissing = drawing.Png is null;
+                _isShareCoverNewerPartFormat = drawing.Png is null && drawing.IsNewerPartFormat;
                 RefreshShareCover();
             }
 
@@ -124,6 +131,7 @@ public sealed partial class ListingEditor
         ShareCoverBytes = null;
         IsDrawingShareCover = false;
         _isShareCoverMissing = false;
+        _isShareCoverNewerPartFormat = false;
         RefreshShareCover();
     }
 
@@ -148,6 +156,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShowsShareCoverPicture));
         OnPropertyChanged(nameof(ShowsShareCoverLeftOut));
         OnPropertyChanged(nameof(ShowsShareCoverMissing));
+        OnPropertyChanged(nameof(IsShareCoverNewerPartFormat));
         OnPropertyChanged(nameof(ShowsShareCoverCard));
         OnPropertyChanged(nameof(CanPublishToShareHost));
     }

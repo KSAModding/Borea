@@ -19,30 +19,31 @@ internal static class VehicleCoverPicture
     private static readonly Rgba8 Background = new(0x26, 0x26, 0x26, 0xFF);
 
     /// <summary>
-    /// Gives the PNG bytes, or null when no picture can stand for the vehicle. A box for a part that did not resolve must not go public, so a scene with one gives no picture.
-    /// A failure or a cancel also gives null, because the share goes on without a cover. The files stay in use until this task ends.
+    /// Gives the PNG bytes, or no bytes when no picture can stand for the vehicle. A box for a part that did not resolve must not go public, so a scene with one gives no picture.
+    /// A game whose part files have a newer layout than Borea reads gives no picture either, and the result says so, because its parts would not look like the vehicle.
+    /// A failure or a cancel also gives no bytes, because the share goes on without a cover. The files stay in use until this task ends.
     /// </summary>
-    public static async Task<byte[]?> DrawAsync(IVehiclePreview service, PreviewSceneBuilder builder, IPngEncoder encoder, string vehicleFolder, Guid instanceId, CancellationToken token)
+    public static async Task<Drawing> DrawAsync(IVehiclePreview service, PreviewSceneBuilder builder, IPngEncoder encoder, string vehicleFolder, Guid instanceId, CancellationToken token)
     {
         try
         {
             using var result = await service.LoadFolderAsync(vehicleFolder, instanceId, token);
             if (!result.IsReady)
-                return null;
+                return new Drawing(null, result.State == VehiclePreviewLoadState.NewerPartFormat);
 
             var options = new PreviewLoadOptions();
             var (geometry, _) = await builder.BuildGeometryAsync(result.Vehicle, result.Assets, options, token);
             if (geometry.Draws.Count == 0 || geometry.Placeholders.Count > 0)
-                return null;
+                return default;
 
             var (textured, _) = await builder.AddTexturesAsync(geometry, result.Vehicle, result.Assets, options, token);
             var scene = await builder.AddNormalsAsync(textured, result.Vehicle, result.Assets, options, token);
             var png = await Task.Run(() => encoder.Encode(Render(scene, token)), token);
-            return png.Length <= ShareImageLimits.MaxBytes ? png : null;
+            return new Drawing(png.Length <= ShareImageLimits.MaxBytes ? png : null, false);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            return null;
+            return default;
         }
     }
 
@@ -55,4 +56,8 @@ internal static class VehicleCoverPicture
         new SoftwareRenderer().Render(scene, camera, frame, new RenderOptions { Background = Background, Quality = RenderQuality.High, WorldCacheBytes = 0, WorkBufferBytes = 0 }, token);
         return frame;
     }
+
+    /// <param name="Png">The picture, or null when no cover comes.</param>
+    /// <param name="IsNewerPartFormat">True when no cover comes because the part files of the game have a newer layout than Borea reads.</param>
+    internal readonly record struct Drawing(byte[]? Png, bool IsNewerPartFormat);
 }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using Borea.Core.Game;
@@ -46,6 +47,10 @@ public sealed class VehiclePreview : IVehiclePreview
 
     private const int CachedCatalogs = 2;
 
+    private const string NoCoreMessage = "The game folder holds no Content/Core.";
+
+    private const string NewerLayoutMessage = "The part files of this KSA build use a newer layout than Borea reads.";
+
     private readonly PreviewSources _sources;
     private readonly PreviewArchiveCache _archives;
     private readonly PreviewThumbnailCache? _thumbnails;
@@ -57,6 +62,14 @@ public sealed class VehiclePreview : IVehiclePreview
     private readonly Lock _gate = new();
     private readonly LinkedList<(string Key, PartCatalog Catalog, MeshIndex Meshes)> _catalogs = new();
     private readonly HashSet<OwnedAssets> _open = [];
+
+    /// <summary>
+    /// Whether the part files of a game folder use the newer layout, by the folder and the build that Borea reads in it.
+    /// The build is part of the key because a game can update in its folder while Borea runs. An uncertain answer is not
+    /// kept, so that the next preview reads the files again.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, bool> _newerLayout = new(StringComparer.OrdinalIgnoreCase);
+
     private Task? _maintenance;
     private int _catalogBuilds;
     private bool _disposed;
@@ -118,12 +131,14 @@ public sealed class VehiclePreview : IVehiclePreview
             if (game.Problem != KeptBuildProblem.None)
                 return Plan(VehiclePreviewPlanState.Failed, message: KeptBuildMessage(game));
 
-            switch (GameCoreFiles.Open(game.GameDirectory).Status)
+            switch (CheckGameParts(game, gameBuild, cancellationToken))
             {
-                case GameCoreStatus.NoGame:
+                case GameParts.NoGame:
                     return Plan(VehiclePreviewPlanState.NoGameFolder);
-                case GameCoreStatus.GameInvalid:
-                    return Plan(VehiclePreviewPlanState.GameFolderInvalid, message: "The game folder holds no Content/Core.");
+                case GameParts.Invalid:
+                    return Plan(VehiclePreviewPlanState.GameFolderInvalid, message: NoCoreMessage);
+                case GameParts.NewerLayout:
+                    return Plan(VehiclePreviewPlanState.NewerPartFormat, message: NewerLayoutMessage);
             }
 
             var (vehicle, damaged) = await FindVehicleAsync(release, target, cancellationToken).ConfigureAwait(false);
@@ -179,12 +194,14 @@ public sealed class VehiclePreview : IVehiclePreview
             if (game.Problem != KeptBuildProblem.None)
                 return Result(VehiclePreviewLoadState.Failed, KeptBuildMessage(game));
 
-            switch (GameCoreFiles.Open(game.GameDirectory).Status)
+            switch (CheckGameParts(game, gameBuild, cancellationToken))
             {
-                case GameCoreStatus.NoGame:
+                case GameParts.NoGame:
                     return Result(VehiclePreviewLoadState.NoGameFolder);
-                case GameCoreStatus.GameInvalid:
-                    return Result(VehiclePreviewLoadState.GameFolderInvalid, "The game folder holds no Content/Core.");
+                case GameParts.Invalid:
+                    return Result(VehiclePreviewLoadState.GameFolderInvalid, NoCoreMessage);
+                case GameParts.NewerLayout:
+                    return Result(VehiclePreviewLoadState.NewerPartFormat, NewerLayoutMessage);
             }
 
             (vehicle, var damaged) = await FindVehicleAsync(release, target, cancellationToken).ConfigureAwait(false);
@@ -263,12 +280,14 @@ public sealed class VehiclePreview : IVehiclePreview
             if (game.Problem != KeptBuildProblem.None)
                 return Result(VehiclePreviewLoadState.Failed, KeptBuildMessage(game));
 
-            switch (GameCoreFiles.Open(game.GameDirectory).Status)
+            switch (CheckGameParts(game, gameBuild, cancellationToken))
             {
-                case GameCoreStatus.NoGame:
+                case GameParts.NoGame:
                     return Result(VehiclePreviewLoadState.NoGameFolder);
-                case GameCoreStatus.GameInvalid:
-                    return Result(VehiclePreviewLoadState.GameFolderInvalid, "The game folder holds no Content/Core.");
+                case GameParts.Invalid:
+                    return Result(VehiclePreviewLoadState.GameFolderInvalid, NoCoreMessage);
+                case GameParts.NewerLayout:
+                    return Result(VehiclePreviewLoadState.NewerPartFormat, NewerLayoutMessage);
             }
 
             vehicle = new PreviewVehicleSource(PreviewVehicleLocation.Installed, new FolderPreviewFiles(vehicleFolder), vehicleFolder, null);
@@ -411,6 +430,30 @@ public sealed class VehiclePreview : IVehiclePreview
         }
     }
 
+    /// <summary>Whether the game can give its parts to a preview, and the reason when it cannot.</summary>
+    private GameParts CheckGameParts(InstanceGame game, string? gameBuild, CancellationToken cancellationToken)
+    {
+        var core = GameCoreFiles.Open(game.GameDirectory);
+        switch (core.Status)
+        {
+            case GameCoreStatus.NoGame:
+                return GameParts.NoGame;
+            case GameCoreStatus.GameInvalid:
+                return GameParts.Invalid;
+        }
+
+        var key = $"{Path.GetFullPath(game.GameDirectory!)}|{gameBuild}";
+        if (!_newerLayout.TryGetValue(key, out var newer))
+        {
+            var layout = PartFormatProbe.Read(core, cancellationToken);
+            newer = layout == PartLayout.Newer;
+            if (layout != PartLayout.Uncertain)
+                _newerLayout.TryAdd(key, newer);
+        }
+
+        return newer ? GameParts.NewerLayout : GameParts.Ok;
+    }
+
     private static string KeptBuildMessage(InstanceGame game) =>
         $"KSA {game.KeptBuild}, which this instance keeps, is not in its folder of the library, or that folder holds another build.";
 
@@ -519,6 +562,14 @@ public sealed class VehiclePreview : IVehiclePreview
     {
         lock (_gate)
             _open.Remove(assets);
+    }
+
+    private enum GameParts
+    {
+        Ok,
+        NoGame,
+        Invalid,
+        NewerLayout,
     }
 
     /// <summary>

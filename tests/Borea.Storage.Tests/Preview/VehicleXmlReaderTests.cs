@@ -60,6 +60,7 @@ public sealed class VehicleXmlReaderTests
     [InlineData("oversized")]
     [InlineData("noRoot")]
     [InlineData("malformed")]
+    [InlineData("rootNamesNoPart")]
     public void ABrokenFile_GivesAProblem_AndNoParts(string kind)
     {
         const string part = "<RootPartRef InstanceOf=\"Capsule\" />";
@@ -68,6 +69,7 @@ public sealed class VehicleXmlReaderTests
             "dtd" => Text($"<?xml version=\"1.0\"?><!DOCTYPE VehicleSaveData [<!ENTITY a \"b\">]><VehicleSaveData>{part}</VehicleSaveData>"),
             "oversized" => Text($"<VehicleSaveData Id=\"{new string('a', (int)VehicleXmlReader.MaxCharacters)}\">{part}</VehicleSaveData>"),
             "noRoot" => Vehicle("<PartRef InstanceOf=\"Capsule\" />"),
+            "rootNamesNoPart" => Vehicle("<RootPartRef Ref=\"Capsule\"><PartRef InstanceOf=\"Wing\" /></RootPartRef>"),
             _ => Vehicle("<RootPartRef InstanceOf=\"Capsule\">"),
         };
 

@@ -60,6 +60,10 @@ internal sealed record VehicleXml(IReadOnlyList<VehiclePartRef> Parts, IReadOnly
 /// <para>
 /// The reader walks the file with a stack and not with recursion, because a vehicle can nest thousands of parts.
 /// </para>
+/// <para>
+/// A file without a RootPartRef, or with one that names no part, has a layout that the reader does not know, so it
+/// counts as a file that cannot be read and the preview says so instead of drawing one box.
+/// </para>
 /// </remarks>
 internal static class VehicleXmlReader
 {
@@ -148,6 +152,9 @@ internal static class VehicleXmlReader
                 && int.TryParse(reader.GetAttribute(KsaPartSchema.Sequence), NumberStyles.None, CultureInfo.InvariantCulture, out var stage)
                 && stage > 0)
                 stages.Add(stage);
+
+            if (isRoot && string.IsNullOrEmpty(reader.GetAttribute(KsaPartSchema.InstanceOf)))
+                throw new XmlException("The RootPartRef element names no part in an InstanceOf attribute.");
 
             if (isRoot || isChild)
             {
