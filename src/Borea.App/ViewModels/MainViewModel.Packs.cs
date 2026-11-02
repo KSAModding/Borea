@@ -542,6 +542,10 @@ public partial class MainViewModel
         string? stopped = null;
         try
         {
+            // RFC 0110: Borea offers a pack whose forums thread is gone for no new install
+            if (pack.ForumsGoneText is { } forumsGone)
+                throw new InvalidOperationException(forumsGone);
+
             var selected = version is { } exact ? await services.ModPacks.GetVersionAsync(pack.PackId, exact) : await services.ModPacks.GetLatestAsync(pack.PackId);
             if (selected?.Metadata is not { } metadata)
                 throw new InvalidOperationException(Localization.DiscoverNoRelease);
@@ -553,6 +557,7 @@ public partial class MainViewModel
             var pinned = await PinnedReleasesAsync(services.Mods, metadata);
             var compatibility = Borea.Core.Game.Compatibility.Evaluate(metadata, installed, _gameReleases);
             ThrowIfIncompatible(metadata, compatibility, pinned, installed);
+            ThrowIfForumsGone(pinned, instance);
 
             var reasons = PackWarnings(selected, metadata, compatibility);
             var yanked = new HashSet<string>(ModIds.Comparer);
@@ -675,6 +680,20 @@ public partial class MainViewModel
 
         if (reasons.Count > 0)
             throw new InvalidOperationException(string.Join(" ", reasons));
+    }
+
+    /// <summary>
+    /// Blocks the install when the forums thread of a pinned listing is gone (RFC 0110) and the instance does not hold that release yet,
+    /// because Borea offers no pack that pins such a listing for a new install. A copy that the instance holds stays.
+    /// </summary>
+    private void ThrowIfForumsGone(IEnumerable<ModVersionMetadata> pinned, Instance instance)
+    {
+        var gone = pinned
+            .Where(release => release.ForumsUnavailableSince is not null && !instance.Mods.Any(mod => ModIds.Equals(mod.ModId, release.ModId) && mod.Version == release.Version))
+            .Select(release => new PlanningMessage(release.ModId, PlanningMessageKind.ForumsGone) { Since = release.ForumsUnavailableSince })
+            .ToList();
+        if (gone.Count > 0)
+            throw new InvalidOperationException(Describe(gone));
     }
 
     /// <summary>Names a pinned release with the bound that keeps it from fitting the installed game, or returns null when it fits.</summary>
@@ -944,6 +963,12 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     /// <summary>When the pack came into the index, or null when the index does not say.</summary>
     public DateTimeOffset? ListedAt { get; }
 
+    /// <summary>When the forums thread of the pack was found gone (RFC 0110), or null while it is fine.</summary>
+    internal DateTimeOffset? ForumsUnavailableSince { get; }
+
+    /// <summary>The warning of the pack page that Borea offers the pack for no new install, or null while the thread is fine.</summary>
+    public string? ForumsGoneText => ForumsUnavailableSince is { } since ? _owner.Localization.FormatContentForumsGone(MainViewModel.DateText(since)) : null;
+
     public string TypeText => _owner.Localization.ContentTypeModPack;
 
     public IReadOnlyList<AuthorLink> AuthorLinks => AuthorLink.Of(Metadata.Authors, ContentType.ModPack, _owner.Localization);
@@ -984,7 +1009,11 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(CanStartInstance))]
     private bool _isInstalling;
+
+    /// <summary>Whether the page offers a new instance from the pack, which a pack whose forums thread is gone does not get (RFC 0110).</summary>
+    public bool CanStartInstance => !IsInstalling && ForumsUnavailableSince is null;
 
     [ObservableProperty]
     private double _progress;
@@ -1072,7 +1101,8 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public bool HasResults => Results.Count > 0;
 
-    public bool CanInstall => !IsInstalled && !IsInstalling;
+    /// <summary>A pack whose forums thread is gone gets no new install (RFC 0110).</summary>
+    public bool CanInstall => !IsInstalled && !IsInstalling && ForumsUnavailableSince is null;
 
     public string InstalledAutomationName => _owner.Localization.FormatDiscoverInstalledMod(Name);
 
@@ -1093,6 +1123,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         AllTags = DiscoverItem.DisplayTags(owner, ContentType.ModPack, metadata.Tags);
         PublishedAt = indexEntry?.PublishedAt;
         ListedAt = indexEntry?.ListedAt;
+        ForumsUnavailableSince = indexEntry?.ForumsUnavailableSince;
         _isFavorite = owner.IsFavoritePack(metadata.ModPackId);
     }
 
@@ -1147,6 +1178,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         OnPropertyChanged(nameof(ReleasedDateText));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
+        OnPropertyChanged(nameof(ForumsGoneText));
         OnPropertyChanged(nameof(LinkRequestText));
         OnPropertyChanged(nameof(FavoriteText));
         OnPropertyChanged(nameof(InstalledAutomationName));
@@ -1254,6 +1286,11 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
 
     /// <summary>Since when the download of the pinned release is gone from its host, or null while it downloads.</summary>
     public string? GoneText => _unavailableSince is { } since ? _owner.Localization.FormatContentVersionGone(MainViewModel.DateText(since)) : null;
+
+    private readonly DateTimeOffset? _forumsUnavailableSince;
+
+    /// <summary>Since when the forums thread of the listing of the pinned release is gone (RFC 0110), or null while it is fine.</summary>
+    public string? ForumsGoneText => _forumsUnavailableSince is { } since ? _owner.Localization.FormatPackMemberForumsGone(MainViewModel.DateText(since)) : null;
 
     public bool CanOpen => _listing is not null;
 
@@ -1485,7 +1522,7 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     public string? FitText => _release is null ? null : _owner.PinFitText(_release, _game);
 
     /// <summary>True while the row shows a chip about the pinned release, so that an empty chip line takes no room.</summary>
-    public bool HasFitChips => FitText is not null || IsYanked || GoneText is not null || IsUnlisted;
+    public bool HasFitChips => FitText is not null || IsYanked || GoneText is not null || ForumsGoneText is not null || IsUnlisted;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
 
@@ -1500,6 +1537,7 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
         IsYanked = release?.Yanked == true;
         YankedReason = IsYanked ? release!.YankedReason : null;
         _unavailableSince = release?.Download.UnavailableSince;
+        _forumsUnavailableSince = release?.ForumsUnavailableSince;
         RefreshCompatibility(installed);
     }
 
@@ -1586,6 +1624,7 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(AddedModsToolTip));
         OnPropertyChanged(nameof(PlanSteps));
         OnPropertyChanged(nameof(GoneText));
+        OnPropertyChanged(nameof(ForumsGoneText));
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(FitText));
     }
@@ -1619,7 +1658,7 @@ public sealed partial class PackVersionItem : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     private bool _isInstalled;
 
-    public bool CanInstall => !IsInstalled;
+    public bool CanInstall => !IsInstalled && Pack.ForumsUnavailableSince is null;
 
     public PackVersionItem(MainViewModel owner, PackItem pack, ModPackMetadata metadata)
     {

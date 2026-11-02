@@ -999,6 +999,12 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     /// <summary>When the listing came into the index, or null when the index does not say.</summary>
     public DateTimeOffset? ListedAt { get; }
 
+    /// <summary>When the forums thread of the listing was found gone (RFC 0110), or null while it is fine.</summary>
+    internal DateTimeOffset? ForumsUnavailableSince { get; }
+
+    /// <summary>The warning of the listing page that Borea offers the listing for no new install, or null while the thread is fine.</summary>
+    public string? ForumsGoneText => ForumsUnavailableSince is { } since ? _owner.Localization.FormatContentForumsGone(MainViewModel.DateText(since)) : null;
+
     /// <summary>The date of the newest release in the saved release channel, the one Add installs. Null when the channel has none.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdatedText))]
@@ -1130,9 +1136,9 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     public string? LinkRequestText => _linkRequest?.Invoke();
 
     /// <summary>
-    /// Mods, vehicles and saves install into an instance; a loader is set up from the settings.
+    /// Mods, vehicles and saves install into an instance; a loader is set up from the settings. A listing whose forums thread is gone gets no new install (RFC 0110).
     /// </summary>
-    public bool CanInstall => !IsInstalled && !IsInstalling && (Type == ContentType.Mod || Type.IsVehicleOrSave());
+    public bool CanInstall => !IsInstalled && !IsInstalling && (Type == ContentType.Mod || Type.IsVehicleOrSave()) && ForumsUnavailableSince is null;
 
     /// <summary>
     /// A loader has no version to pick, because its Versions table offers no install button.
@@ -1184,6 +1190,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
         DownloadCounts = indexEntry?.Downloads;
         PublishedAt = indexEntry?.PublishedAt;
         ListedAt = indexEntry?.ListedAt;
+        ForumsUnavailableSince = indexEntry?.ForumsUnavailableSince;
         _isFavorite = owner.IsFavoriteMod(listing.ModId);
     }
 
@@ -1246,6 +1253,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
         OnPropertyChanged(nameof(PreviewStillNote));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
+        OnPropertyChanged(nameof(ForumsGoneText));
         OnPropertyChanged(nameof(UpdatedText));
         OnPropertyChanged(nameof(UpdatedDateText));
         OnPropertyChanged(nameof(ConfirmInstallText));

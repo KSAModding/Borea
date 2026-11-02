@@ -239,6 +239,45 @@ public sealed class ContentDatesParserTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadAsync_ForumsMark_AttachesToTheListingAndEachRelease_SoNoReleaseIsOffered()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", "\"forums\": { \"unavailable_since\": \"2026-09-20T08:30:00Z\" }")));
+
+        var snapshot = await new ContentIndexReader(_paths).ReadAsync();
+
+        var listing = Assert.Single(snapshot.Listings);
+        Assert.Equal(Listed, listing.ForumsUnavailableSince);
+        var release = Assert.Single(listing.Releases);
+        Assert.Equal(Listed, release.ForumsUnavailableSince);
+        Assert.False(release.IsOffered);
+        Assert.Empty(snapshot.Diagnostics);
+    }
+
+    [Fact]
+    public async Task ReadAsync_ForumsMarkOfAPack_AttachesToThePack()
+    {
+        await WriteIndexAsync(Snapshot("", Pack("\"forums\": { \"unavailable_since\": \"2026-09-20T08:30:00Z\" }")));
+
+        var snapshot = await new ContentIndexReader(_paths).ReadAsync();
+
+        Assert.Equal(Listed, Assert.Single(snapshot.Packs).ForumsUnavailableSince);
+        Assert.Empty(snapshot.Diagnostics);
+    }
+
+    [Theory]
+    [InlineData("\"gone\"", "The forums value is unreadable. It must be an object, but was String.")]
+    [InlineData("{ \"unavailable_since\": \"2026-09-20\" }", "The unavailable_since value is unreadable.")]
+    public void Parse_InvalidForumsMark_DropsOnlyTheMark(string rawValue, string reason)
+    {
+        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", $"\"forums\": {rawValue}")));
+
+        var listing = Assert.Single(result.ValidListings);
+        Assert.Null(listing.ForumsUnavailableSince);
+        Assert.True(Assert.Single(listing.ValidReleases).IsOffered);
+        Assert.Contains(reason, Assert.Single(listing.DatesErrors).Reason);
+    }
+
+    [Fact]
     public async Task ReadAsync_MalformedDates_KeepTheContentAndAddDiagnostics()
     {
         await WriteIndexAsync(Snapshot(Listing("test-mod", "\"updated_at\": \"2026-09-02\""), Pack("\"published_at\": false")));

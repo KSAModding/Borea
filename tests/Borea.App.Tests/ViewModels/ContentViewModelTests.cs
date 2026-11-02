@@ -145,6 +145,24 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
+    public async Task Content_ListingWhoseForumsThreadIsGone_WarnsWithTheDate_AndOffersNoInstall()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.MarkForumsGone("AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var item = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        await item.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatContentForumsGone(MainViewModel.DateText(ViewModelHarness.ForumsGoneSince)), viewModel.SelectedContent!.ForumsGoneText);
+        Assert.False(item.CanInstall);
+        Assert.NotEmpty(viewModel.ContentVersions);
+        Assert.All(viewModel.ContentVersions, row => Assert.False(row.CanInstall));
+        Assert.Null(viewModel.DiscoverItems.Single(other => other.ModId == "MeasureTools").ForumsGoneText);
+    }
+
+    [Fact]
     public async Task Versions_WithoutAGame_AreUnknown()
     {
         using var harness = await ViewModelHarness.CreateAsync();

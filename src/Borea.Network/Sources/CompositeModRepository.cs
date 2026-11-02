@@ -180,5 +180,6 @@ public sealed class CompositeModRepository : IModRepository
         original.Yanked,
         original.YankedReason,
         source,
-        original.Manages);
+        original.Manages,
+        forumsUnavailableSince: original.ForumsUnavailableSince);
 }

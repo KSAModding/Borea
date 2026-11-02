@@ -132,6 +132,8 @@
                         <StackPanel Spacing="4">
                             <TextBlock Classes="heading-lg" Text="{Binding SelectedContent.Name}" TextWrapping="Wrap" />
                             <TextBlock Classes="body-md secondary" Text="{Binding SelectedContent.Abstract}" TextWrapping="Wrap" LineHeight="18" />
+                            <!-- RFC 0110: the forums thread of the listing is gone, so the page offers no install -->
+                            <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Margin="0,8,0,0" Text="{Binding SelectedContent.ForumsGoneText}" IsVisible="{Binding SelectedContent.ForumsGoneText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
                             <ContentControl Margin="0,8,0,0" Content="{Binding SelectedContent.Choices}" IsVisible="{Binding SelectedContent.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding SelectedContent.PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!SelectedContent.PlanSteps.Count, FallbackValue={x:False}}" />
                             <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingInstall}">

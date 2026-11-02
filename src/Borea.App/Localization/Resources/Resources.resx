@@ -6420,4 +6420,16 @@
   <data name="InstallChoicesSuggestedHint" xml:space="preserve">
     <value>Borea does not add these mods. You can install them later from Discover.</value>
   </data>
+  <data name="ContentForumsGoneFormat" xml:space="preserve">
+    <value>The forums thread of this content is gone since {0}, so Borea does not offer it for new installs. Installed copies stay and keep working.</value>
+  </data>
+  <data name="PackMemberForumsGone" xml:space="preserve">
+    <value>Forums thread gone</value>
+  </data>
+  <data name="PackMemberForumsGoneFormat" xml:space="preserve">
+    <value>The forums thread of this listing is gone since {0}, so Borea installs no new copy of it.</value>
+  </data>
+  <data name="InstallMessageForumsGoneFormat" xml:space="preserve">
+    <value>The forums thread of this listing is gone since {0}, so Borea installs no new copy of it. An installed copy stays.</value>
+  </data>
 </root>

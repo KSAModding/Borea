@@ -140,6 +140,8 @@ internal sealed class ModPackUserContent(IUserContentInstaller? installer, IModS
             warning = new PlanningMessage(pin.ContentId, PlanningMessageKind.YankedPin) { Value = release.YankedReason };
         else if (release.Download.UnavailableSince is { } since)
             warning = new PlanningMessage(pin.ContentId, PlanningMessageKind.Unavailable) { Version = release.Version, Since = since };
+        else if (release.ForumsUnavailableSince is { } forumsGone)
+            warning = new PlanningMessage(pin.ContentId, PlanningMessageKind.ForumsGone) { Since = forumsGone };
         else if (Compatibility.IsAboveUpperBound(release, gameVersion))
             warning = new PlanningMessage(pin.ContentId, PlanningMessageKind.AboveGameMax) { Value = release.GameMax };
         else if (Compatibility.Evaluate(release, gameVersion) == GameCompatibility.Incompatible)

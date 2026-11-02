@@ -88,7 +88,7 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
                 .Select(version => new ContentIndexPackVersion(version.Metadata, version.IndexStatus, version.Images) { VersionText = version.VersionText })
                 .ToArray();
 
-            packs.Add(new ContentIndexPack(pack.Id, versions, pack.IndexStatus, pack.PublishedAt, pack.UpdatedAt, pack.ListedAt));
+            packs.Add(new ContentIndexPack(pack.Id, versions, pack.IndexStatus, pack.PublishedAt, pack.UpdatedAt, pack.ListedAt, pack.ForumsUnavailableSince));
             AddMalformed(diagnostics, pack.IndexStatusError, ContentIndexDiagnosticScope.IndexStatus);
             AddMalformed(diagnostics, pack.DatesErrors, ContentIndexDiagnosticScope.Dates);
             AddUnsupportedStatus(diagnostics, pack.IndexStatus, pack.Id);
@@ -150,7 +150,8 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
                 listing.Images,
                 listing.PublishedAt,
                 listing.UpdatedAt,
-                listing.ListedAt));
+                listing.ListedAt,
+                listing.ForumsUnavailableSince));
 
             AddMalformed(diagnostics, listing.IndexStatusError, ContentIndexDiagnosticScope.IndexStatus);
             AddUnsupportedStatus(diagnostics, listing.IndexStatus, listing.Id);

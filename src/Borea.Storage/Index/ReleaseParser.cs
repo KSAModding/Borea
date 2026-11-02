@@ -17,6 +17,7 @@ public static class ReleaseParser
         string source,
         ModMetadata? authored,
         string? changelogText = null,
+        DateTimeOffset? forumsUnavailableSince = null,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -61,7 +62,7 @@ public static class ReleaseParser
                     $"Release type '{release.Type}' does not agree with the type of listing '{listingId}'."));
             }
 
-            return ParseOutcome<ModVersionMetadata>.Valid(DtoMapper.MapRelease(release, source, authored, changelogText));
+            return ParseOutcome<ModVersionMetadata>.Valid(DtoMapper.MapRelease(release, source, authored, changelogText, forumsUnavailableSince));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

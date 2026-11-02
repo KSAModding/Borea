@@ -79,6 +79,7 @@ public static class ListingParser
                 ? ContentImagesParser.Parse(authoredElement, listing.Id)
                 : (null, Array.Empty<RejectedIndexEntry>());
             var (publishedAt, updatedAt, listedAt, datesErrors) = ContentDatesParser.Parse(element, listing.Id);
+            var (forumsUnavailableSince, forumsErrors) = ContentDatesParser.ParseForums(element, listing.Id);
 
             var validReleases = new List<ModVersionMetadata>();
             var rejectedReleases = new List<RejectedIndexEntry>();
@@ -100,7 +101,7 @@ public static class ListingParser
                 }
 
                 var (changelogText, changelogTextError) = ChangelogTextParser.Parse(releaseElement, listing.Id, rawVersion);
-                var outcome = ReleaseParser.Parse(releaseElement, listing.Id, source, authored, changelogText, cancellationToken);
+                var outcome = ReleaseParser.Parse(releaseElement, listing.Id, source, authored, changelogText, forumsUnavailableSince, cancellationToken);
                 switch (outcome.Kind)
                 {
                     case ParseOutcomeKind.Valid:
@@ -119,7 +120,8 @@ public static class ListingParser
 
             return ParseOutcome<ParsedListing>.Valid(new ParsedListing(
                 listing.Id, authored, validReleases, rejectedReleases, unknownReleases, indexStatus, indexStatusError,
-                downloads, downloadsErrors, images, imagesErrors, publishedAt, updatedAt, datesErrors, changelogTextErrors, listedAt));
+                downloads, downloadsErrors, images, imagesErrors, publishedAt, updatedAt, [.. datesErrors, .. forumsErrors], changelogTextErrors, listedAt,
+                forumsUnavailableSince));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

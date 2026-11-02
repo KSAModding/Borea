@@ -164,6 +164,13 @@ public partial class MainViewModel
             return;
         }
 
+        // RFC 0110: a listing whose forums thread is gone offers no release, so the link says why instead of planning
+        if (row.ForumsUnavailableSince is not null)
+        {
+            ShowErrorToast(() => row.ForumsGoneText ?? string.Empty);
+            return;
+        }
+
         Func<string> Request(ModVersionMetadata release) => () => WithNote(note, Localization.FormatLinkInstall($"{row.Name} {release.Version}", instance.Name));
 
         if (row.Type.IsVehicleOrSave())
@@ -202,6 +209,10 @@ public partial class MainViewModel
 
         if (release.Yanked)
             return (null, () => Localization.FormatLinkVersionYanked(text));
+
+        // the download still works and no newer release is offered, so the version-gone text would be false
+        if (release.ForumsUnavailableSince is { } since)
+            return (null, () => Localization.FormatContentForumsGone(DateText(since)));
 
         if (!release.IsOffered)
             return (null, () => Localization.FormatLinkVersionGone(text));

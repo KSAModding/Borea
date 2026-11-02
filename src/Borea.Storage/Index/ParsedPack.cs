@@ -30,8 +30,11 @@ public sealed class ParsedPack
     /// <summary>When the entry came into the index (RFC 0092). Null when the snapshot does not say.</summary>
     public DateTimeOffset? ListedAt { get; }
 
-    /// <summary>The dates that cannot be read. The pack stays usable.</summary>
+    /// <summary>The dates that cannot be read, forums.unavailable_since included. The pack stays usable.</summary>
     public IReadOnlyList<RejectedIndexEntry> DatesErrors { get; }
+
+    /// <summary>When the forums thread of the pack was found gone (RFC 0110). Null when the snapshot carries no mark.</summary>
+    public DateTimeOffset? ForumsUnavailableSince { get; }
 
     public ParsedPack(
         string id,
@@ -43,7 +46,8 @@ public sealed class ParsedPack
         DateTimeOffset? publishedAt = null,
         DateTimeOffset? updatedAt = null,
         IReadOnlyList<RejectedIndexEntry>? datesErrors = null,
-        DateTimeOffset? listedAt = null)
+        DateTimeOffset? listedAt = null,
+        DateTimeOffset? forumsUnavailableSince = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -57,6 +61,7 @@ public sealed class ParsedPack
         UpdatedAt = updatedAt;
         ListedAt = listedAt;
         DatesErrors = datesErrors ?? Array.Empty<RejectedIndexEntry>();
+        ForumsUnavailableSince = forumsUnavailableSince;
     }
 }
 

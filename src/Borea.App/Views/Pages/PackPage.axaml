@@ -154,6 +154,8 @@
                         <StackPanel Spacing="4">
                             <TextBlock Classes="heading-lg" Text="{Binding SelectedPack.Name}" TextWrapping="Wrap" />
                             <TextBlock Classes="body-md secondary" Text="{Binding SelectedPack.Abstract}" TextWrapping="Wrap" LineHeight="18" />
+                            <!-- RFC 0110: the forums thread of the pack is gone, so the page offers no install -->
+                            <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Margin="0,8,0,0" Text="{Binding SelectedPack.ForumsGoneText}" IsVisible="{Binding SelectedPack.ForumsGoneText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
                             <!-- the members with a newer release, which the Mods tab names -->
                             <Button Classes="plain" Command="{Binding ShowPackModsCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" IsVisible="{Binding SelectedPack.HasNewerReleases, FallbackValue={x:False}}">
                                 <Grid ColumnDefinitions="Auto,4,*">
@@ -199,7 +201,7 @@
                             <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalled}" ToolTip.Tip="{Binding InstalledInText}">
                                 <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
                             </Border>
-                            <Button Classes="text" Content="{Binding Localization.PackNewInstance}" Command="{Binding SelectedPack.NewInstanceCommand}" IsVisible="{Binding !SelectedPack.IsInstalling, FallbackValue={x:False}}" VerticalAlignment="Center" />
+                            <Button Classes="text" Content="{Binding Localization.PackNewInstance}" Command="{Binding SelectedPack.NewInstanceCommand}" IsVisible="{Binding SelectedPack.CanStartInstance, FallbackValue={x:False}}" VerticalAlignment="Center" />
                             <Button Classes="icon" VerticalAlignment="Center" AutomationProperties.Name="{Binding Localization.LibraryMoreActions}">
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
@@ -362,6 +364,9 @@
                                                         <Border Classes="chip untested" IsVisible="{Binding GoneText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding GoneText}">
                                                             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberGone}" />
                                                         </Border>
+                                                        <Border Classes="chip untested" IsVisible="{Binding ForumsGoneText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ForumsGoneText}">
+                                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberForumsGone}" />
+                                                        </Border>
                                                         <Border Classes="chip untested" IsVisible="{Binding IsUnlisted}">
                                                             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberUnlisted}" />
                                                         </Border>
@@ -492,7 +497,7 @@
                                                 <TextBlock Grid.Column="2" Classes="body-md secondary hide-small" Width="120" Text="{Binding PublishedText}" ToolTip.Tip="{Binding PublishedDateText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding ModCount}" VerticalAlignment="Center" />
                                                 <Grid Grid.Column="4" ColumnDefinitions="32,32" ColumnSpacing="8" HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding !Pack.IsInstalling}">
-                                                    <Button Classes="icon" Command="{Binding NewInstanceCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}">
+                                                    <Button Classes="icon" Command="{Binding NewInstanceCommand}" IsVisible="{Binding Pack.CanStartInstance}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}">
                                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Library}" />
                                                     </Button>
                                                     <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanAddToActiveInstance}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">

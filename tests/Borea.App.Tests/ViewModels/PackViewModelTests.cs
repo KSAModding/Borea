@@ -456,6 +456,56 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task Install_MemberWhoseForumsThreadIsGone_NamesItWithTheDate_AndInstallsNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => ViewModelHarness.MarkForumsGone("MeasureTools")(
+            WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(snapshot)));
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        var date = MainViewModel.DateText(ViewModelHarness.ForumsGoneSince);
+
+        await pack.OpenCommand.ExecuteAsync(null);
+        var member = Assert.Single(viewModel.PackMembers);
+        Assert.Equal(harness.Localization.FormatPackMemberForumsGone(date), member.ForumsGoneText);
+        Assert.True(member.HasFitChips);
+
+        await pack.InstallCommand.ExecuteAsync(null);
+
+        Assert.Contains(string.Format(CultureInfo.CurrentCulture, Resources.InstallMessageForumsGoneFormat, date), pack.InstallError);
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri == MeasureToolsUrl);
+    }
+
+    [Fact]
+    public async Task Install_PackWhoseForumsThreadIsGone_WarnsWithTheDate_AndInstallsNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+        {
+            var root = JsonNode.Parse(WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(snapshot))!;
+            root["packs"]![0]!["forums"] = new JsonObject { ["unavailable_since"] = "2026-10-30T06:00:00Z" };
+            return root.ToJsonString();
+        });
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        var warning = harness.Localization.FormatContentForumsGone(MainViewModel.DateText(ViewModelHarness.ForumsGoneSince));
+
+        await pack.OpenCommand.ExecuteAsync(null);
+        Assert.Equal(warning, pack.ForumsGoneText);
+        Assert.False(pack.CanInstall);
+        Assert.False(pack.CanStartInstance);
+
+        await pack.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(warning, pack.InstallError);
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri == MeasureToolsUrl);
+    }
+
+    [Fact]
     public async Task Install_UnlistedMember_NamesItInTheTaskAndTheLogAndInstallsNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(

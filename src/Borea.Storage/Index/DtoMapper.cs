@@ -46,7 +46,8 @@ public static class DtoMapper
             provides: dto.Provides is null ? null : MapProvides(dto.Provides)));
     }
 
-    public static ModVersionMetadata MapRelease(ReleasesEntryDto dto, string? source, ModMetadata? authored, string? changelogText = null)
+    /// <param name="forumsUnavailableSince">The forums mark of the listing (RFC 0110), which every release of the listing carries.</param>
+    public static ModVersionMetadata MapRelease(ReleasesEntryDto dto, string? source, ModMetadata? authored, string? changelogText = null, DateTimeOffset? forumsUnavailableSince = null)
     {
         ArgumentNullException.ThrowIfNull(dto);
         var type = MapContentType(dto.Type);
@@ -76,7 +77,8 @@ public static class DtoMapper
             yankedReason: dto.YankedReason,
             source: source,
             manages: authored?.Install?.Manages,
-            platformDownloads: type is ContentType.Mod or ContentType.ModLoader ? MapPlatformDownloads(dto.PlatformDownloads) : null));
+            platformDownloads: type is ContentType.Mod or ContentType.ModLoader ? MapPlatformDownloads(dto.PlatformDownloads) : null,
+            forumsUnavailableSince: forumsUnavailableSince));
     }
 
     public static ModPackMetadata MapPackVersion(PackAuthoredDto dto, string source)

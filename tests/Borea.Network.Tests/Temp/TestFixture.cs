@@ -111,5 +111,6 @@ internal static class TestFixtures
                 "Description at stamp time."),
             yanked: true,
             yankedReason: "Broken above revision 5117.",
-            source: source);
+            source: source,
+            forumsUnavailableSince: new DateTimeOffset(2026, 10, 30, 6, 0, 0, TimeSpan.Zero));
 }
