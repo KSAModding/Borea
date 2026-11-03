@@ -2,21 +2,27 @@ using Borea.Core.Game;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Storage.Files;
+using Borea.Storage.Launch;
 
 namespace Borea.Storage.Game;
 
 public sealed class InstallDetector : IInstallDetector
 {
-    private const string GameExecutableFileName = "KSA.exe";
-
     private readonly IInstallCandidateSource _candidates;
     private readonly ILoaderAdopter _loaderAdopter;
     private readonly string _loadersRoot;
     private readonly string _gameBuildsRoot;
+    private readonly OsPlatform? _host;
 
     /// <param name="loadersRoot">The folder Borea installs loaders into. Each loader's own folder there is a candidate too.</param>
     /// <param name="gameBuildsRoot">The folder of the game builds that instances keep. A loader names a kept build there while an instance on it runs, and such a copy is never offered as an install.</param>
     public InstallDetector(IInstallCandidateSource candidates, ILoaderAdopter loaderAdopter, string loadersRoot, string gameBuildsRoot)
+        : this(candidates, loaderAdopter, loadersRoot, gameBuildsRoot, SharedProfileLauncher.CurrentPlatform())
+    {
+    }
+
+    /// <param name="host">The system Borea runs on. It decides which program file a game folder must hold.</param>
+    internal InstallDetector(IInstallCandidateSource candidates, ILoaderAdopter loaderAdopter, string loadersRoot, string gameBuildsRoot, OsPlatform? host)
     {
         _candidates = candidates ?? throw new ArgumentNullException(nameof(candidates));
         _loaderAdopter = loaderAdopter ?? throw new ArgumentNullException(nameof(loaderAdopter));
@@ -24,6 +30,7 @@ public sealed class InstallDetector : IInstallDetector
         ArgumentException.ThrowIfNullOrWhiteSpace(gameBuildsRoot);
         _loadersRoot = loadersRoot;
         _gameBuildsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameBuildsRoot));
+        _host = host;
     }
 
     public async Task<InstallDetection> DetectAsync(IReadOnlyList<ModMetadata> loaders, CancellationToken cancellationToken = default)
@@ -66,7 +73,7 @@ public sealed class InstallDetector : IInstallDetector
         var games = new List<DetectedGame>();
         foreach (var directory in ExistingDirectories(gameDirectories))
         {
-            if (IsSameOrInside(directory, _gameBuildsRoot) || !File.Exists(Path.Combine(directory, GameExecutableFileName)))
+            if (IsSameOrInside(directory, _gameBuildsRoot) || !GameFolder.HoldsProgram(directory, _host))
                 continue;
 
             if (InstalledGameVersionProvider.Read(directory) is { } version)

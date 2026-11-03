@@ -61,9 +61,15 @@ public static class GameFolder
         return found is not null && InstalledGameVersionProvider.Read(found) is { } version ? new DetectedGame(found, version) : null;
     }
 
-    private static bool HoldsGame(string directory, OsPlatform? host) =>
-        File.Exists(Path.Combine(directory, GameAssemblyFileName))
-        && GamePlatform.Of(host, directory) is { } platform
+    /// <summary>
+    /// Whether <paramref name="directory"/> holds the program file of the game build that <paramref name="host"/> starts
+    /// there, KSA.exe for the Windows build and KSA for the native Linux build.
+    /// </summary>
+    internal static bool HoldsProgram(string directory, OsPlatform? host) =>
+        GamePlatform.Of(host, directory) is { } platform
         && GameExecutable.FileName(platform) is { } program
         && File.Exists(Path.Combine(directory, program));
+
+    private static bool HoldsGame(string directory, OsPlatform? host) =>
+        File.Exists(Path.Combine(directory, GameAssemblyFileName)) && HoldsProgram(directory, host);
 }

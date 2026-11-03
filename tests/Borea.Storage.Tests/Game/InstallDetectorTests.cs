@@ -85,6 +85,22 @@ public sealed class InstallDetectorTests : IDisposable
         Assert.Empty(detection.Games);
     }
 
+    [Theory]
+    [InlineData(OsPlatform.Linux, true)]
+    [InlineData(OsPlatform.Windows, false)]
+    public async Task DetectAsync_NativeLinuxBuild_IsFoundWhereItsProgramStarts(OsPlatform host, bool expected)
+    {
+        // the Linux build ships the program file KSA without an extension and no KSA.exe
+        var game = PlaceGame("KSA", RealBuildFixture, program: "KSA");
+        _candidates.Games.Add(game);
+        var paths = new TestGamePathProvider(_tempRoot);
+        var detector = new InstallDetector(_candidates, new FileLoaderAdopter(_settings, new LoaderConfigurator()), _loadersRoot, paths.GetGameBuildsRoot(), host);
+
+        var detection = await detector.DetectAsync([]);
+
+        Assert.Equal(expected ? new[] { game } : Array.Empty<string>(), detection.Games.Select(found => found.Directory));
+    }
+
     [Fact]
     public async Task DetectAsync_StarMap_IsFoundAndOffersItsConfiguredGame()
     {
@@ -140,10 +156,10 @@ public sealed class InstallDetectorTests : IDisposable
         Assert.Empty(detection.Games);
     }
 
-    private string PlaceGame(string name, string fixture)
+    private string PlaceGame(string name, string fixture, string program = "KSA.exe")
     {
         var directory = Directory.CreateDirectory(Path.Combine(_tempRoot, name)).FullName;
-        File.WriteAllText(Path.Combine(directory, "KSA.exe"), "game");
+        File.WriteAllText(Path.Combine(directory, program), "game");
         File.Copy(Path.Combine(AppContext.BaseDirectory, fixture), Path.Combine(directory, "KSA.dll"));
         return directory;
     }
