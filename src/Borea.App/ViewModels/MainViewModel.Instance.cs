@@ -128,6 +128,7 @@ public partial class MainViewModel
 
     /// <summary>True when the last launch found no KSA.dll in the game folder, for the link to the Game tab.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsLaunchFailureClose))]
     private bool _isLaunchNotGameFolder;
 
     [ObservableProperty]
@@ -166,7 +167,7 @@ public partial class MainViewModel
         : null;
 
     /// <summary>False while the modal leads with an action, because the X closes it too.</summary>
-    public bool ShowsLaunchFailureClose => !CanDisableBlamedMod && _launchLoaderOffer is null;
+    public bool ShowsLaunchFailureClose => !CanDisableBlamedMod && _launchLoaderOffer is null && !IsLaunchNotGameFolder;
 
     [RelayCommand]
     internal async Task OpenInstanceAsync(InstanceItem item)
@@ -1036,6 +1037,7 @@ public partial class MainViewModel
         else if (result.CrashCause == LoaderCrashCause.GameNotFound)
         {
             LaunchMessage = Localization.FormatLaunchGameNotFound(loaderName);
+            IsLaunchNotGameFolder = true;
         }
         else if (blamed is null)
         {
@@ -1111,6 +1113,14 @@ public partial class MainViewModel
 
     [RelayCommand]
     private void CloseLaunchFailure() => IsLaunchFailureOpen = false;
+
+    /// <summary>"Set up game" of the launch modal, which closes so that it does not wait behind the settings.</summary>
+    [RelayCommand]
+    private Task SetUpGameForLaunchAsync()
+    {
+        IsLaunchFailureOpen = false;
+        return OpenGameSetupAsync();
+    }
 
     [RelayCommand]
     private void ToggleLaunchOutput() => IsLaunchOutputShown = !IsLaunchOutputShown;

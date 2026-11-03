@@ -6001,7 +6001,7 @@
     <value>{0} stopped right after starting (exit code {1}). The details show what it wrote.</value>
   </data>
   <data name="LaunchGameNotFoundFormat" xml:space="preserve">
-    <value>{0} found no KSA.dll at the game path of its configuration, so it started no game. The details show the path it tried. Choose the KSA folder on the Game tab of Settings.</value>
+    <value>{0} found no KSA.dll in the game folder it was given, so the game did not start. The details show the path it tried. Choose the KSA folder on the Game tab of Settings.</value>
   </data>
   <data name="LaunchNotGameFolderFormat" xml:space="preserve">
     <value>The game folder {0} holds no KSA.dll, so the mod loader would find no game there. Borea starts nothing. Choose the KSA folder on the Game tab of Settings.</value>

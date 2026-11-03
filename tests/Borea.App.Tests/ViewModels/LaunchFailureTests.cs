@@ -31,6 +31,10 @@ public sealed class LaunchFailureTests
     /// <summary>A harness with StarMap recorded and a loader process that has already crashed with <see cref="KsArmoryCrash"/>.</summary>
     internal static Task<ViewModelHarness> CreateAsync(int exitCode = UnhandledException) => CreateAsync(new CrashingStarter(exitCode, KsArmoryCrash));
 
+    /// <summary>A harness with StarMap recorded and a loader that stopped because it found no KSA.dll.</summary>
+    internal static Task<ViewModelHarness> CreateGameNotFoundAsync() =>
+        CreateAsync(new CrashingStarter(0, ["StarMap - Could not find KSA.dll. Make sure the folder or file path is correct:", "/home/player/Documents/ahwoo/KSA.dll"]));
+
     /// <summary>A harness with StarMap recorded that starts its processes through <paramref name="starter"/>.</summary>
     internal static Task<ViewModelHarness> CreateAsync(IProcessStarter starter) =>
         ViewModelHarness.CreateAsync(
@@ -136,7 +140,7 @@ public sealed class LaunchFailureTests
     [Fact]
     public async Task Play_LoaderFindsNoKsaDll_SaysSoInPlainWordsAndKeepsTheRawLine()
     {
-        using var harness = await CreateAsync(new CrashingStarter(0, ["StarMap - Could not find KSA.dll. Make sure the folder or file path is correct:", "/home/player/Documents/ahwoo/KSA.dll"]));
+        using var harness = await CreateGameNotFoundAsync();
         var viewModel = harness.ViewModel;
         await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
         await viewModel.LoadAsync();
@@ -148,6 +152,26 @@ public sealed class LaunchFailureTests
         Assert.Equal(harness.Localization.FormatLaunchGameNotFound("StarMap"), viewModel.LaunchMessage);
         Assert.Contains("/home/player/Documents/ahwoo/KSA.dll", viewModel.LaunchOutputText);
         Assert.False(viewModel.CanDisableBlamedMod);
+    }
+
+    [Fact]
+    public async Task Play_LoaderFindsNoKsaDll_SetUpGameClosesTheModalAndOpensTheGameTab()
+    {
+        using var harness = await CreateGameNotFoundAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.PlayCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchNotGameFolder);
+        Assert.False(viewModel.ShowsLaunchFailureClose);
+
+        await viewModel.SetUpGameForLaunchCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsLaunchFailureOpen);
+        Assert.True(viewModel.IsSettingsOpen);
+        Assert.True(viewModel.IsGameTab);
     }
 
     [Fact]

@@ -440,6 +440,9 @@ public partial class MainViewModel : ViewModelBase
 
         InstalledVersionText = installed?.RawVersion;
 
+        // a KSA.dll that came or went changes whether the saved folder is the KSA folder
+        RefreshGameSetup();
+
         // a new build is a new shape, so the assumptions are checked again
         await RefreshGameShapeAsync();
 

@@ -5992,7 +5992,7 @@
     <value>{0} wurde direkt nach dem Start beendet (Exit-Code {1}). Die Details zeigen, was ausgegeben wurde.</value>
   </data>
   <data name="LaunchGameNotFoundFormat" xml:space="preserve">
-    <value>{0} hat am Spielpfad seiner Konfiguration keine KSA.dll gefunden und darum kein Spiel gestartet. Die Details zeigen den Pfad, den es versucht hat. Wähle den KSA-Ordner im Tab Spiel der Einstellungen.</value>
+    <value>{0} hat im übergebenen Spielordner keine KSA.dll gefunden, darum startete das Spiel nicht. Die Details zeigen den Pfad, den es versucht hat. Wähle den KSA-Ordner im Tab Spiel der Einstellungen.</value>
   </data>
   <data name="LaunchNotGameFolderFormat" xml:space="preserve">
     <value>Der Spielordner {0} enthält keine KSA.dll, darum fände der Mod-Loader dort kein Spiel. Borea startet nichts. Wähle den KSA-Ordner im Tab Spiel der Einstellungen.</value>

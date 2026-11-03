@@ -597,7 +597,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 exitCode.Value,
                 output,
                 blamedModId: null,
-                $"{start.LoaderName} found no KSA.dll at the game path of its configuration, so it started no game. Its output names the path it tried. Set the folder that holds KSA.dll with 'borea settings set game <folder>', or on the Game tab of Settings in the desktop App.",
+                $"{start.LoaderName} found no KSA.dll in the game folder it was given, so the game did not start. Its output names the path it tried. Set the folder that holds KSA.dll with 'borea settings set game <folder>', or on the Game tab of Settings in the desktop App.",
                 LoaderCrashCause.GameNotFound);
         }
 

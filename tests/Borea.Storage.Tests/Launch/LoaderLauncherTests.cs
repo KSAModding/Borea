@@ -1921,7 +1921,7 @@ public sealed class LoaderLauncherTests : IDisposable
         var result = await watch;
         Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
         Assert.Equal(LoaderCrashCause.GameNotFound, result.CrashCause);
-        Assert.Contains("StarMap found no KSA.dll at the game path of its configuration", result.Message);
+        Assert.Contains("StarMap found no KSA.dll in the game folder it was given", result.Message);
         Assert.Equal(output, result.Output);
         Assert.Contains(output[1], File.ReadAllText(_paths.GetInstanceLaunchLogPath(_instance.InstanceId)));
     }

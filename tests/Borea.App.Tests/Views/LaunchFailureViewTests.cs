@@ -98,6 +98,38 @@ public sealed class LaunchFailureViewTests
         Assert.DoesNotContain(harness.Localization.LaunchShowDetails, shown);
     }
 
+    [Fact]
+    public async Task LoaderFoundNoKsaDll_TheStatusLineAndTheModalLeadToTheGameTab()
+    {
+        using var harness = await LaunchFailureTests.CreateGameNotFoundAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.PlayCommand.ExecuteAsync(null);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var localization = harness.Localization;
+
+        var shown = await HeadlessApp.Session.Dispatch(() =>
+        {
+            var page = new InstancePage { DataContext = viewModel };
+            var modal = new LaunchFailureModal { DataContext = viewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = new Panel { Children = { page, modal } } };
+            window.Show();
+            window.UpdateLayout();
+            // the two links of the status line, each with the place where it shows
+            var links = page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible
+                    && (text.Text == localization.LaunchShowDetails || text.Text == localization.SetupBannerAction))
+                .Select(text => new Rect(text.TranslatePoint(default, page)!.Value, text.Bounds.Size)).ToList();
+            return (Links: links, Modal: Texts(modal));
+        }, timeout.Token);
+
+        Assert.Equal(2, shown.Links.Count);
+        Assert.False(shown.Links[0].Intersects(shown.Links[1]));
+        Assert.Contains(localization.SetupBannerAction, shown.Modal);
+        Assert.DoesNotContain(localization.ModalClose, shown.Modal);
+    }
+
     /// <summary>The texts that show, which includes the text of each shown button.</summary>
     private static List<string?> Texts(Control root)
         => root.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
