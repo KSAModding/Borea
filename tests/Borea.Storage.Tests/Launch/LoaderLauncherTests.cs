@@ -895,11 +895,11 @@ public sealed class LoaderLauncherTests : IDisposable
 
     private string SettingsGame => Path.GetFullPath(_paths.GetGameDirectoryPath()!);
 
-    /// <summary>A real game assembly as KSA.dll in <paramref name="folder"/>, which reads as <see cref="KeptVersion"/>.</summary>
+    /// <summary>A real game assembly as KSA.dll in <paramref name="folder"/>, which reads as <see cref="KeptVersion"/>. It replaces the empty KSA.dll of a placed build.</summary>
     private static string PlaceGameAssembly(string folder)
     {
         Directory.CreateDirectory(folder);
-        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(folder, "KSA.dll"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(folder, "KSA.dll"), overwrite: true);
         return Path.GetFullPath(folder);
     }
 
