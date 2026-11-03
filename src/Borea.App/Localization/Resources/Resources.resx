@@ -1635,6 +1635,9 @@
   <data name="HomeSetupFolderMissing" xml:space="preserve">
     <value>The game folder is gone.</value>
   </data>
+  <data name="HomeSetupNotGameFolder" xml:space="preserve">
+    <value>The game folder holds no KSA.dll.</value>
+  </data>
   <data name="HomeNoInstance" xml:space="preserve">
     <value>No instance yet</value>
   </data>
@@ -5493,6 +5496,12 @@
   <data name="SetupDirectoryMissing" xml:space="preserve">
     <value>Saved, but this folder does not exist yet.</value>
   </data>
+  <data name="SetupNotGameFolder" xml:space="preserve">
+    <value>This folder holds no KSA.dll, so it is not the KSA folder. Choose the folder that holds KSA.dll.</value>
+  </data>
+  <data name="SetupGameFolderBelowFormat" xml:space="preserve">
+    <value>KSA is in a subfolder: {0}. Use it?</value>
+  </data>
   <data name="SetupNoLoaderSelected" xml:space="preserve">
     <value>Pick a mod loader first.</value>
   </data>
@@ -5675,6 +5684,9 @@
   </data>
   <data name="SetupBannerFolderMissing" xml:space="preserve">
     <value>The saved game folder does not exist any more. Point Borea at Kitten Space Agency again.</value>
+  </data>
+  <data name="SetupBannerNotGameFolder" xml:space="preserve">
+    <value>The saved game folder holds no KSA.dll, so it is not the KSA folder. Point Borea at the folder of Kitten Space Agency that holds KSA.dll.</value>
   </data>
   <data name="SetupBannerAction" xml:space="preserve">
     <value>Set up game</value>
@@ -5987,6 +5999,12 @@
   </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} stopped right after starting (exit code {1}). The details show what it wrote.</value>
+  </data>
+  <data name="LaunchGameNotFoundFormat" xml:space="preserve">
+    <value>{0} found no KSA.dll in the game folder it was given, so the game did not start. The details show the path it tried. Choose the KSA folder on the Game tab of Settings.</value>
+  </data>
+  <data name="LaunchNotGameFolderFormat" xml:space="preserve">
+    <value>The game folder {0} holds no KSA.dll, so the mod loader would find no game there. Borea starts nothing. Choose the KSA folder on the Game tab of Settings.</value>
   </data>
   <data name="LaunchStoppedLoadingModsFormat" xml:space="preserve">
     <value>{0} stopped while it loaded mods (exit code {1}). A mod of this instance is the likely cause. The details show what it wrote.</value>

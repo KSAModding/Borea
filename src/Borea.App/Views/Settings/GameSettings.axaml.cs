@@ -18,7 +18,7 @@ public partial class GameSettings : UserControl
     {
         var folder = await PickFolderAsync();
         if (folder is not null && DataContext is MainViewModel viewModel)
-            viewModel.GameDirectoryInput = folder;
+            await viewModel.ChooseGameDirectoryAsync(folder);
     }
 
     private async void BrowseLoaderDirectory(object? sender, RoutedEventArgs e)

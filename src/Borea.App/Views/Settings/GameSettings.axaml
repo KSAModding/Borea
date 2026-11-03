@@ -31,6 +31,12 @@
                 </ListBox.ItemTemplate>
             </ListBox>
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupFoundGame}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding IsGameDirectorySuggested}" />
+            <!-- a folder above KSA: say so, and offer the one game below it -->
+            <TextBlock Classes="body-sm danger" Text="{Binding GameFolderProblemText}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding GameFolderProblemText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <Grid ColumnDefinitions="*,8,Auto" Margin="0,2,0,0" IsVisible="{Binding GameFolderBelowText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Classes="body-sm secondary" Text="{Binding GameFolderBelowText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="2" Classes="text primary" Content="{Binding Localization.SetupUseThisFolder}" Command="{Binding UseGameFolderBelowCommand}" VerticalAlignment="Center" />
+            </Grid>
             <Border Classes="chip" HorizontalAlignment="Left" Margin="0,6,0,0">
                 <Panel>
                     <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNotNull}}">

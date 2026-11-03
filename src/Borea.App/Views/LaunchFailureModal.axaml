@@ -38,6 +38,9 @@
                         <Button Grid.Column="1" Classes="cta" Command="{Binding InstallLaunchLoaderOfferCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding LaunchLoaderInstallText, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Classes="action-lg" Text="{Binding LaunchLoaderInstallText}" VerticalAlignment="Center" />
                         </Button>
+                        <Button Grid.Column="1" Classes="cta" Command="{Binding SetUpGameForLaunchCommand}" IsVisible="{Binding IsLaunchNotGameFolder}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.SetupBannerAction}" VerticalAlignment="Center" />
+                        </Button>
                         <Button Grid.Column="1" Classes="text tall" Content="{Binding Localization.ModalClose}" Command="{Binding CloseLaunchFailureCommand}" IsVisible="{Binding ShowsLaunchFailureClose}" VerticalAlignment="Center" />
                     </Grid>
                 </StackPanel>

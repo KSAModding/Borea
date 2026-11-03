@@ -25,7 +25,9 @@ public sealed class LoaderPromptTests
                 .Replace("BC9510994DAF56FD826B734EF0F2704C8E4D1B91BCF010C76733E168CC23604A", Convert.ToHexString(SHA256.HashData(StarMapArchive)), StringComparison.Ordinal)
                 .Replace("\"size\": 891020", $"\"size\": {StarMapArchive.Length}", StringComparison.Ordinal),
             processStarter: starter);
-        harness.ViewModel.GameDirectoryInput = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
+        var game = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
+        File.WriteAllBytes(Path.Combine(game, "KSA.dll"), []);
+        harness.ViewModel.GameDirectoryInput = game;
         await harness.ViewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
         return harness;
     }

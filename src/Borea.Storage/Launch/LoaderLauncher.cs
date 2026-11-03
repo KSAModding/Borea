@@ -141,6 +141,9 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 return LaunchResult.GameBuildMissing(instance, _pathProvider.GetGameBuildFolder(missing));
 
             var gameDirectory = game.GameDirectory;
+            if (GameFolder.LacksGame(gameDirectory))
+                return LaunchResult.NotGameFolder(gameDirectory!, GameFolder.FindBelow(gameDirectory!, _platform)?.Directory);
+
             var hostStart = WindowsBuildOnHost.Check(_platform, gameDirectory, _wine);
             if (hostStart.Refusal is { } refusal)
                 return LaunchResult.Failed(LaunchOutcome.WindowsBuild, refusal, wine: hostStart.Wine);
@@ -540,9 +543,9 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                     break;
                 }
 
-                // a loader that exits with 0 may have restarted itself, so the log decides;
+                // a loader that exits with 0 may have restarted itself, so the log decides, unless it found no game;
                 // an error exit needs no more waiting, unless the launcher of a wrapper made it
-                if (ended && process.ExitCode is not 0 && wrapped is null)
+                if (ended && wrapped is null && (process.ExitCode is not 0 || LoaderCrashReport.FoundNoGame(process.RecentOutput)))
                     break;
             }
 
@@ -586,6 +589,17 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
         // nothing watches the exit of a start that stopped early
         RestoreGameFolder(instance, process.Id);
+
+        if (LoaderCrashReport.FoundNoGame(output))
+        {
+            return LaunchResult.ExitedEarly(
+                started.Plan,
+                exitCode.Value,
+                output,
+                blamedModId: null,
+                $"{start.LoaderName} found no KSA.dll in the game folder it was given, so the game did not start. Its output names the path it tried. Set the folder that holds KSA.dll with 'borea settings set game <folder>', or on the Game tab of Settings in the desktop App.",
+                LoaderCrashCause.GameNotFound);
+        }
 
         // StarMap also exits with 0 when it cannot start at all, for example without a game path
         if (exitCode == 0)

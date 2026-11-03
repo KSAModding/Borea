@@ -1,3 +1,4 @@
+using Borea.App.ViewModels;
 using Borea.Core.Game;
 
 namespace Borea.App.Tests.ViewModels;
@@ -38,6 +39,23 @@ public sealed class GameUpdateTests
 
         Assert.Equal("2026.8.3.5117", viewModel.InstalledVersionText);
         Assert.Contains(viewModel.DiscoverItems, item => item.Compatibility != GameCompatibility.Unknown);
+    }
+
+    [Fact]
+    public async Task KsaDllArrivesWhileOpen_TheBannerSaysTheFolderIsReady()
+    {
+        var (harness, game) = await CreateAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        Assert.Equal(GameSetupState.NotGameFolder, viewModel.GameSetupState);
+
+        PutGameAssembly(game, GameBuild);
+        await viewModel.RefreshInstalledGameAsync();
+
+        Assert.Equal(GameSetupState.Ready, viewModel.GameSetupState);
+        Assert.Null(viewModel.GameSetupBannerText);
+        Assert.Null(viewModel.HomeSetupText);
     }
 
     [Fact]

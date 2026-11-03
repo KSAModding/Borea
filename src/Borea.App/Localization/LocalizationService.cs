@@ -1516,6 +1516,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeSetupFolderMissing => Resources.HomeSetupFolderMissing;
 
+    public string HomeSetupNotGameFolder => Resources.HomeSetupNotGameFolder;
+
     public string HomeNoInstance => Resources.HomeNoInstance;
 
     public string HomeNoActiveInstance => Resources.HomeNoActiveInstance;
@@ -3608,6 +3610,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupBannerFolderMissing => Resources.SetupBannerFolderMissing;
 
+    public string SetupBannerNotGameFolder => Resources.SetupBannerNotGameFolder;
+
     public string SetupBannerAction => Resources.SetupBannerAction;
 
     public string SharedProfileCreateInstance => Resources.SharedProfileCreateInstance;
@@ -3658,6 +3662,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string SetupSaved => Resources.SetupSaved;
 
     public string SetupDirectoryMissing => Resources.SetupDirectoryMissing;
+
+    public string SetupNotGameFolder => Resources.SetupNotGameFolder;
+
+    public string FormatSetupGameFolderBelow(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SetupGameFolderBelowFormat, folder);
 
     public string SetupNoLoaderSelected => Resources.SetupNoLoaderSelected;
 
@@ -4771,6 +4780,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLaunchExitedEarly(string loader, int exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitedEarlyFormat, loader, exitCode);
+
+    public string FormatLaunchGameNotFound(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchGameNotFoundFormat, loader);
+
+    public string FormatLaunchNotGameFolder(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchNotGameFolderFormat, folder);
 
     public string FormatLaunchStoppedLoadingMods(string loader, int exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStoppedLoadingModsFormat, loader, exitCode);

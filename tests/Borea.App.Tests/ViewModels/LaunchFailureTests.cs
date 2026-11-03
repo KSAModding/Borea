@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Borea.App.ViewModels;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Instances;
@@ -29,6 +30,10 @@ public sealed class LaunchFailureTests
 
     /// <summary>A harness with StarMap recorded and a loader process that has already crashed with <see cref="KsArmoryCrash"/>.</summary>
     internal static Task<ViewModelHarness> CreateAsync(int exitCode = UnhandledException) => CreateAsync(new CrashingStarter(exitCode, KsArmoryCrash));
+
+    /// <summary>A harness with StarMap recorded and a loader that stopped because it found no KSA.dll.</summary>
+    internal static Task<ViewModelHarness> CreateGameNotFoundAsync() =>
+        CreateAsync(new CrashingStarter(0, ["StarMap - Could not find KSA.dll. Make sure the folder or file path is correct:", "/home/player/Documents/ahwoo/KSA.dll"]));
 
     /// <summary>A harness with StarMap recorded that starts its processes through <paramref name="starter"/>.</summary>
     internal static Task<ViewModelHarness> CreateAsync(IProcessStarter starter) =>
@@ -130,6 +135,70 @@ public sealed class LaunchFailureTests
         Assert.Equal(harness.Localization.FormatLaunchExitedEarly("StarMap", 3), viewModel.LaunchMessage);
         Assert.True(viewModel.HasLaunchOutput);
         Assert.False(viewModel.CanDisableBlamedMod);
+    }
+
+    [Fact]
+    public async Task Play_LoaderFindsNoKsaDll_SaysSoInPlainWordsAndKeepsTheRawLine()
+    {
+        using var harness = await CreateGameNotFoundAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.PlayCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchGameNotFound("StarMap"), viewModel.LaunchMessage);
+        Assert.Contains("/home/player/Documents/ahwoo/KSA.dll", viewModel.LaunchOutputText);
+        Assert.False(viewModel.CanDisableBlamedMod);
+    }
+
+    [Fact]
+    public async Task Play_LoaderFindsNoKsaDll_SetUpGameClosesTheModalAndOpensTheGameTab()
+    {
+        using var harness = await CreateGameNotFoundAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.PlayCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchNotGameFolder);
+        Assert.False(viewModel.ShowsLaunchFailureClose);
+
+        await viewModel.SetUpGameForLaunchCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsLaunchFailureOpen);
+        Assert.True(viewModel.IsSettingsOpen);
+        Assert.True(viewModel.IsGameTab);
+    }
+
+    [Fact]
+    public async Task PlayActiveInstance_GameFolderWithoutKsaDll_StartsNothingAndLeadsToTheGameTab()
+    {
+        var starter = new RunningStarter();
+        string game = null!;
+        using var harness = await ViewModelHarness.CreateAsync(
+            services =>
+            {
+                game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "ahwoo")).FullName;
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game).WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap")));
+            },
+            processStarter: starter);
+        var viewModel = harness.ViewModel;
+
+        await PlayActiveInstanceAsync(harness);
+
+        Assert.Equal(harness.Localization.FormatLaunchNotGameFolder(MainViewModel.WithoutUserProfile(game)), viewModel.LaunchMessage);
+        Assert.True(viewModel.HasLaunchFailed);
+        Assert.True(viewModel.IsLaunchNotGameFolder);
+        Assert.Empty(starter.Plans);
+
+        await viewModel.OpenGameSetupCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsGameTab);
+        Assert.Equal(harness.Localization.SetupNotGameFolder, viewModel.GameFolderProblemText);
     }
 
     [Fact]
@@ -503,7 +572,7 @@ public sealed class LaunchFailureTests
         Assert.Empty(starter.Plans);
     }
 
-    /// <summary>A game folder that holds only KSA.exe, inside a Wine prefix when asked.</summary>
+    /// <summary>A game folder that holds KSA.exe and KSA.dll and no Linux app host, inside a Wine prefix when asked.</summary>
     private static Task<ViewModelHarness> CreateWithWindowsBuildAsync(IProcessStarter starter, bool inPrefix) =>
         ViewModelHarness.CreateAsync(
             services =>
@@ -517,6 +586,7 @@ public sealed class LaunchFailureTests
 
                 var game = Directory.CreateDirectory(Path.Combine(root, "Game")).FullName;
                 File.WriteAllBytes(Path.Combine(game, "KSA.exe"), []);
+                File.WriteAllBytes(Path.Combine(game, "KSA.dll"), []);
                 var settings = services.Settings.WithGameDirectory(game).WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap"));
                 return services.SettingsRepository.SaveAsync(settings);
             },

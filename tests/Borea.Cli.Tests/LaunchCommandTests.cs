@@ -74,7 +74,7 @@ public sealed class LaunchCommandTests : IDisposable
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
         var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        var game = Path.Combine(_host.Root, "Game");
+        var game = PlaceGameFolder();
         Directory.CreateDirectory(Path.Combine(game, "Content"));
         await File.WriteAllTextAsync(Path.Combine(game, "Content", "manifest.toml"), "[[mods]]\nid = \"Core\"\nenabled = true\n");
         await _host.RunAsync("settings", "set", "game", game);
@@ -97,7 +97,7 @@ public sealed class LaunchCommandTests : IDisposable
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
         var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        var game = Path.Combine(_host.Root, "Game");
+        var game = PlaceGameFolder();
         await WriteContentAsync(game, "SettingsContent");
         await _host.RunAsync("settings", "set", "game", game);
         await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
@@ -141,6 +141,24 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.Empty(_host.ProcessStarter.Plans);
         var entries = await new FileModStateRepository(_host.Paths).GetEntriesAsync(instance.InstanceId);
         Assert.Equal(new[] { "KSArmory" }, entries.Select(entry => entry.ModId));
+    }
+
+    [Fact]
+    public async Task Launch_GameFolderWithoutKsaDll_StartsNothingAndSaysHowToSetTheGameFolder()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        var game = Directory.CreateDirectory(Path.Combine(_host.Root, "ahwoo")).FullName;
+        await _host.RunAsync("settings", "set", "game", game);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains($"The game folder '{game}' holds no KSA.dll", run.Error);
+        Assert.Contains("'borea settings set game <folder>'", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
     }
 
     [Fact]
@@ -632,7 +650,7 @@ public sealed class LaunchCommandTests : IDisposable
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
         var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "game", Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName);
+        await _host.RunAsync("settings", "set", "game", PlaceGameFolder());
         await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
         await _host.RunAsync("instance", "create", "Flight Test");
         Directory.Delete(loaderDirectory, recursive: true);
@@ -737,7 +755,7 @@ public sealed class LaunchCommandTests : IDisposable
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
         var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
-        await _host.RunAsync("settings", "set", "game", Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName);
+        await _host.RunAsync("settings", "set", "game", PlaceGameFolder());
         await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
         return Path.Combine(loaderDirectory, "StarMapConfig.json");
     }
@@ -749,6 +767,14 @@ public sealed class LaunchCommandTests : IDisposable
             .ToList();
         var instance = Instance.FromExisting(Guid.NewGuid(), "Flight Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, isFavorite: false);
         await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
+    }
+
+    /// <summary>A game folder with a KSA.dll, which the launch needs before it starts the loader.</summary>
+    private string PlaceGameFolder()
+    {
+        var game = Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName;
+        File.WriteAllBytes(Path.Combine(game, "KSA.dll"), []);
+        return game;
     }
 
     private static Task WriteContentAsync(string gameDirectory, string contentId)

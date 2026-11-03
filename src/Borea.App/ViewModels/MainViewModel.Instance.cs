@@ -18,6 +18,7 @@ using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Preferences;
 using Borea.Core.Planning;
+using Borea.Storage.Game;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -125,6 +126,11 @@ public partial class MainViewModel
     [ObservableProperty]
     private InstanceItem? _launchGameBuildMissingItem;
 
+    /// <summary>True when the last launch found no KSA.dll in the game folder, for the link to the Game tab.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsLaunchFailureClose))]
+    private bool _isLaunchNotGameFolder;
+
     [ObservableProperty]
     private bool _isLaunchOutputShown;
 
@@ -161,7 +167,7 @@ public partial class MainViewModel
         : null;
 
     /// <summary>False while the modal leads with an action, because the X closes it too.</summary>
-    public bool ShowsLaunchFailureClose => !CanDisableBlamedMod && _launchLoaderOffer is null;
+    public bool ShowsLaunchFailureClose => !CanDisableBlamedMod && _launchLoaderOffer is null && !IsLaunchNotGameFolder;
 
     [RelayCommand]
     internal async Task OpenInstanceAsync(InstanceItem item)
@@ -793,6 +799,14 @@ public partial class MainViewModel
                 return;
             }
 
+            // a loader started on a folder without KSA.dll finds no game, and the loader choice would rate against no build
+            if (GameFolder.LacksGame(game.GameDirectory))
+            {
+                services.Log.Write($"Launch of instance {instance.InstanceId} did not start, the game folder '{game.GameDirectory}' holds no KSA.dll.");
+                RefuseNotGameFolder(game.GameDirectory!);
+                return;
+            }
+
             InstanceLoaderResolution resolution;
             try
             {
@@ -919,6 +933,12 @@ public partial class MainViewModel
             Toasts.ShowMessage(ToastKind.Error, () => text);
     }
 
+    private void RefuseNotGameFolder(string folder)
+    {
+        RefuseLaunch(Localization.FormatLaunchNotGameFolder(WithoutUserProfile(folder)));
+        IsLaunchNotGameFolder = true;
+    }
+
     /// <summary>Names the kept build and its folder. Null without services.</summary>
     internal string? GameBuildMissingText(GameVersion build) => _services is { Paths: var paths }
         ? Localization.FormatLaunchGameBuildMissing(build.ToString(), KeptBuildFolderText(paths, build))
@@ -1014,6 +1034,11 @@ public partial class MainViewModel
             LaunchMessage = tooOld;
             LaunchLoaderReleases = new ContentLink(Localization.FormatLaunchLoaderReleases(loaderName), LoaderCrashReport.ReleasesPage(loader));
         }
+        else if (result.CrashCause == LoaderCrashCause.GameNotFound)
+        {
+            LaunchMessage = Localization.FormatLaunchGameNotFound(loaderName);
+            IsLaunchNotGameFolder = true;
+        }
         else if (blamed is null)
         {
             LaunchMessage = loadingMods
@@ -1055,6 +1080,7 @@ public partial class MainViewModel
         IsLaunchFailureOpen = false;
         HasLaunchFailed = false;
         LaunchGameBuildMissingItem = null;
+        IsLaunchNotGameFolder = false;
         LaunchFailureError = null;
         LaunchOutputText = null;
         IsLaunchOutputShown = false;
@@ -1087,6 +1113,14 @@ public partial class MainViewModel
 
     [RelayCommand]
     private void CloseLaunchFailure() => IsLaunchFailureOpen = false;
+
+    /// <summary>"Set up game" of the launch modal, which closes so that it does not wait behind the settings.</summary>
+    [RelayCommand]
+    private Task SetUpGameForLaunchAsync()
+    {
+        IsLaunchFailureOpen = false;
+        return OpenGameSetupAsync();
+    }
 
     [RelayCommand]
     private void ToggleLaunchOutput() => IsLaunchOutputShown = !IsLaunchOutputShown;

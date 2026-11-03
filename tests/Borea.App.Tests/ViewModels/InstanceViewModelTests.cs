@@ -355,6 +355,7 @@ public sealed class InstanceViewModelTests
             File.WriteAllBytes(Path.Combine(loader, "StarMap.exe"), []);
             var game = Directory.CreateDirectory(Path.Combine(root, "Game", "Content")).Parent!.FullName;
             File.WriteAllText(Path.Combine(game, "Content", "manifest.toml"), "[[mods]]\nid = \"Core\"\nenabled = true\n");
+            File.WriteAllBytes(Path.Combine(game, "KSA.dll"), []);
             return services.SettingsRepository.SaveAsync(services.Settings
                 .WithLoaderInstallation("StarMap", new Borea.Core.ModLoaders.LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false))
                 .WithGameDirectory(game));

@@ -57,6 +57,15 @@ public sealed class LoaderCrashReportTests
     }
 
     [Theory]
+    [InlineData("StarMap - Could not find KSA.dll. Make sure the folder or file path is correct:", true)]
+    [InlineData("Could not load file or assembly 'KSA, Version=2026.10.25.5707'.", false)]
+    [InlineData("StarMap - The 'GameLocation' property in StarMapConfig.json is either empty or points to a non-existing file.", false)]
+    public void FoundNoGame_TellsAMissingKsaDllFromOtherErrors(string line, bool expected)
+    {
+        Assert.Equal(expected, LoaderCrashReport.FoundNoGame(["StarMap - Using Instance Path: Main", line, "/home/player/Documents/ahwoo/KSA.dll"]));
+    }
+
+    [Theory]
     [InlineData("KSA", true)]
     [InlineData("Brutal.Core.Numerics", true)]
     [InlineData("brutal.numerics", true)]

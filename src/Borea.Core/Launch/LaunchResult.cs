@@ -129,4 +129,15 @@ public sealed class LaunchResult
             LaunchOutcome.GameBuildMissing,
             $"Instance '{instance.Name}' runs on KSA {instance.GameBuild}, and '{buildFolder}' is gone or holds another build. Borea starts nothing, so the instance does not start on another build. To use the game folder of the settings instead, select \"Use the current game build\" in the instance menu of the desktop App, or remove GameBuild from the instance.toml of the instance.");
     }
+
+    /// <summary>The refusal of a game folder without KSA.dll, also for a caller that stops before the launch.</summary>
+    /// <param name="gameFolderBelow">The one folder below <paramref name="gameDirectory"/> that holds KSA, or null.</param>
+    public static LaunchResult NotGameFolder(string gameDirectory, string? gameFolderBelow)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gameDirectory);
+        var below = gameFolderBelow is null ? string.Empty : $" KSA is in a subfolder: '{gameFolderBelow}'.";
+        return Failed(
+            LaunchOutcome.NotGameFolder,
+            $"The game folder '{gameDirectory}' holds no KSA.dll, so it is not the KSA folder, and the mod loader would find no game there. Borea starts nothing.{below} Set the folder that holds KSA.dll with 'borea settings set game <folder>', or on the Game tab of Settings in the desktop App.");
+    }
 }

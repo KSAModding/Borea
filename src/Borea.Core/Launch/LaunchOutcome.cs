@@ -73,4 +73,7 @@ public enum LaunchOutcome
 
     /// <summary>Borea cannot read or parse the loader's configuration, so it cannot tell which game folder the file names.</summary>
     LoaderConfigurationUnreadable = 23,
+
+    /// <summary>The game folder of the instance holds no KSA.dll, so the loader would find no game there.</summary>
+    NotGameFolder = 24,
 }
