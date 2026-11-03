@@ -1099,6 +1099,8 @@ public partial class MainViewModel : ViewModelBase
         _stewardPage?.RefreshText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(HomeSetupText));
+        OnPropertyChanged(nameof(GameFolderProblemText));
+        OnPropertyChanged(nameof(GameFolderBelowText));
         OnPropertyChanged(nameof(FoundGameText));
         OnPropertyChanged(nameof(LoaderPromptText));
         OnPropertyChanged(nameof(SharedProfileBannerText));

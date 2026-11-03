@@ -36,6 +36,7 @@ public sealed class GameSetupPromptTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         var game = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
+        File.WriteAllBytes(Path.Combine(game, "KSA.dll"), []);
 
         viewModel.GameDirectoryInput = game;
         await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
@@ -60,6 +61,22 @@ public sealed class GameSetupPromptTests
         Assert.Equal(harness.Localization.SetupBannerFolderMissing, viewModel.GameSetupBannerText);
         Assert.Equal(harness.Localization.HomeSetupFolderMissing, viewModel.HomeSetupText);
         Assert.False(viewModel.IsSettingsOpen);
+    }
+
+    [Fact]
+    public async Task SavedFolderWithoutKsaDll_SaysItIsNotTheKsaFolder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        viewModel.GameDirectoryInput = Directory.CreateDirectory(Path.Combine(harness.Root, "ahwoo")).FullName;
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+
+        Assert.Equal(GameSetupState.NotGameFolder, viewModel.GameSetupState);
+        Assert.Equal(harness.Localization.SetupBannerNotGameFolder, viewModel.GameSetupBannerText);
+        Assert.Equal(harness.Localization.HomeSetupNotGameFolder, viewModel.HomeSetupText);
+        Assert.Equal(harness.Localization.SetupNotGameFolder, viewModel.GameFolderProblemText);
+        Assert.Null(viewModel.GameFolderBelowText);
     }
 
     [Fact]

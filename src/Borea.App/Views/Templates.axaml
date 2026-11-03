@@ -9,7 +9,7 @@
     </DataTemplate>
     <!-- what the last launch said, on Home, in the Library and on the instance page -->
     <DataTemplate x:Key="LaunchStatus" x:DataType="vm:MainViewModel">
-        <!-- one line, and the way out: the launch modal when the loader stopped, the use-current modal when the kept build is not found -->
+        <!-- one line, and the way out: the launch modal when the loader stopped, the use-current modal when the kept build is not found, the Game tab when the game folder holds no KSA.dll -->
         <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
             <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" VerticalAlignment="Center" Classes.danger="{Binding HasLaunchFailed}" />
             <Button Grid.Column="1" Classes="link" Margin="16,0,0,0" VerticalAlignment="Center" Command="{Binding ShowLaunchFailureCommand}" IsVisible="{Binding HasLaunchOutput}">
@@ -17,6 +17,9 @@
             </Button>
             <Button Grid.Column="1" Classes="link" Margin="16,0,0,0" VerticalAlignment="Center" Command="{Binding LaunchGameBuildMissingItem.BeginUseCurrentGameBuildCommand}" IsVisible="{Binding LaunchGameBuildMissingItem, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <TextBlock Classes="action-md" Text="{Binding Localization.InstanceUseCurrentGameBuild}" />
+            </Button>
+            <Button Grid.Column="1" Classes="link" Margin="16,0,0,0" VerticalAlignment="Center" Command="{Binding OpenGameSetupCommand}" IsVisible="{Binding IsLaunchNotGameFolder}">
+                <TextBlock Classes="action-md" Text="{Binding Localization.SetupBannerAction}" />
             </Button>
         </Grid>
     </DataTemplate>

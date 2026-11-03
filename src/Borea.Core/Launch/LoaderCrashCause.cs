@@ -14,4 +14,7 @@ public enum LoaderCrashCause
 
     /// <summary>The loader could not load an assembly of the game while it started itself, so it was made for another game build.</summary>
     GameAssembly = 3,
+
+    /// <summary>The loader found no KSA.dll at the game path of its configuration, so it started no game.</summary>
+    GameNotFound = 4,
 }

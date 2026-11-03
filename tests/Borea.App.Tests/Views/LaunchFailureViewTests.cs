@@ -74,6 +74,30 @@ public sealed class LaunchFailureViewTests
         Assert.Equal(steps, shown.Where(steps.Contains));
     }
 
+    [Fact]
+    public async Task NotGameFolder_TheStatusLineHasTheWayToTheGameTab()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.LaunchMessage = harness.Localization.FormatLaunchNotGameFolder("~/Documents/ahwoo");
+        viewModel.HasLaunchFailed = true;
+        viewModel.IsLaunchNotGameFolder = true;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        var shown = await HeadlessApp.Session.Dispatch(() =>
+        {
+            var page = new InstancePage { DataContext = viewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page };
+            window.Show();
+            window.UpdateLayout();
+            return Texts(page);
+        }, timeout.Token);
+
+        Assert.Single(shown, text => text == viewModel.LaunchMessage);
+        Assert.Single(shown, text => text == harness.Localization.SetupBannerAction);
+        Assert.DoesNotContain(harness.Localization.LaunchShowDetails, shown);
+    }
+
     /// <summary>The texts that show, which includes the text of each shown button.</summary>
     private static List<string?> Texts(Control root)
         => root.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();

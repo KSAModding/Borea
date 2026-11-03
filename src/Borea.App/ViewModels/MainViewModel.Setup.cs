@@ -11,6 +11,7 @@ using Borea.Core.History;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Storage.Game;
 using Borea.Storage.ModLoaders;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -30,6 +31,9 @@ public enum GameSetupState
     Ready,
     NotSaved,
     FolderMissing,
+
+    /// <summary>The saved folder holds no KSA.dll, so the loader finds no game there.</summary>
+    NotGameFolder,
 }
 
 /// <summary>
@@ -76,6 +80,20 @@ public partial class MainViewModel
     [ObservableProperty]
     private bool _isLoaderDirectorySuggested;
 
+    /// <summary>The folder in the field when Borea checked it and found no KSA.dll there, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GameFolderProblemText))]
+    private string? _folderWithoutGame;
+
+    /// <summary>The one game below <see cref="FolderWithoutGame"/>, which the offer saves, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GameFolderBelowText))]
+    private DetectedGame? _gameFolderBelow;
+
+    public string? GameFolderProblemText => FolderWithoutGame is null ? null : Localization.SetupNotGameFolder;
+
+    public string? GameFolderBelowText => GameFolderBelow is { } below ? Localization.FormatSetupGameFolderBelow(WithoutUserProfile(below.Directory)) : null;
+
     private IReadOnlyList<DetectedLoader> _detectedLoaders = [];
 
     /// <summary>
@@ -92,6 +110,7 @@ public partial class MainViewModel
     {
         GameSetupState.NotSaved => Localization.SetupBannerNotSaved,
         GameSetupState.FolderMissing => Localization.SetupBannerFolderMissing,
+        GameSetupState.NotGameFolder => Localization.SetupBannerNotGameFolder,
         _ => null,
     };
 
@@ -100,6 +119,7 @@ public partial class MainViewModel
     {
         GameSetupState.NotSaved => Localization.HomeSetupNotSaved,
         GameSetupState.FolderMissing => Localization.HomeSetupFolderMissing,
+        GameSetupState.NotGameFolder => Localization.HomeSetupNotGameFolder,
         _ => null,
     };
 
@@ -120,9 +140,11 @@ public partial class MainViewModel
     private void RefreshGameSetup()
     {
         var directory = _services?.Settings.GameDirectoryPath;
-        GameSetupState = _services is null || directory is not null && Directory.Exists(directory)
-            ? GameSetupState.Ready
-            : directory is null ? GameSetupState.NotSaved : GameSetupState.FolderMissing;
+        GameSetupState = _services is null ? GameSetupState.Ready
+            : directory is null ? GameSetupState.NotSaved
+            : !Directory.Exists(directory) ? GameSetupState.FolderMissing
+            : GameFolder.LacksGame(directory) ? GameSetupState.NotGameFolder
+            : GameSetupState.Ready;
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(HomeSetupText));
 
@@ -217,7 +239,43 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(ShowLoaderChoice));
         SelectedLoader = Loaders.FirstOrDefault(loader => loaderId is not null && ModIds.Equals(loader.ModId, loaderId)) ?? Loaders.FirstOrDefault();
         await DetectInstallsAsync(_services);
+        await CheckGameFolderAsync(GameDirectoryInput);
         await RefreshLoaderStateAsync();
+    }
+
+    /// <summary>
+    /// Says when the folder in the field holds no KSA.dll, and offers the one game up to two levels below it. A player
+    /// who chose the folder above the game gets the folder that StarMap can start.
+    /// </summary>
+    internal async Task CheckGameFolderAsync(string folder)
+    {
+        folder = folder.Trim();
+        var lacksGame = GameFolder.LacksGame(folder);
+        var below = lacksGame ? await Task.Run(() => GameFolder.FindBelow(folder)) : null;
+
+        // a field that changed while Borea looked keeps no answer for the old folder
+        if (!SameDirectory(GameDirectoryInput.Trim(), folder))
+            return;
+
+        FolderWithoutGame = lacksGame ? folder : null;
+        GameFolderBelow = below;
+    }
+
+    /// <summary>Puts the folder that the player picked into the field and checks it.</summary>
+    internal Task ChooseGameDirectoryAsync(string folder)
+    {
+        GameDirectoryInput = folder;
+        return CheckGameFolderAsync(folder);
+    }
+
+    [RelayCommand]
+    private async Task UseGameFolderBelowAsync()
+    {
+        if (GameFolderBelow is not { } below)
+            return;
+
+        GameDirectoryInput = below.Directory;
+        await SaveGameDirectoryAsync();
     }
 
     /// <summary>
@@ -273,7 +331,16 @@ public partial class MainViewModel
             GameDirectoryInput = value.Directory;
     }
 
-    partial void OnGameDirectoryInputChanged(string value) => RefreshSuggestions();
+    partial void OnGameDirectoryInputChanged(string value)
+    {
+        if (FolderWithoutGame is { } checkedFolder && !SameDirectory(checkedFolder, value.Trim()))
+        {
+            FolderWithoutGame = null;
+            GameFolderBelow = null;
+        }
+
+        RefreshSuggestions();
+    }
 
     partial void OnLoaderDirectoryInputChanged(string value) => RefreshSuggestions();
 
@@ -524,7 +591,11 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private Task SaveGameDirectoryAsync() => RunSetupAsync(services => ChangeGameDirectoryAsync(services, GameDirectoryInput.Trim()));
+    private async Task SaveGameDirectoryAsync()
+    {
+        await RunSetupAsync(services => ChangeGameDirectoryAsync(services, GameDirectoryInput.Trim()));
+        await CheckGameFolderAsync(GameDirectoryInput);
+    }
 
     /// <summary>
     /// Saves the game directory and writes it into the configuration of each

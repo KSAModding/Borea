@@ -13,6 +13,8 @@ public static partial class LoaderCrashReport
 {
     private const string InstancePathReport = "StarMap - Using Instance Path:";
 
+    private const string GameNotFoundReport = "Could not find KSA.dll";
+
     // what Windows does not allow in a file name, with the wildcards of a file search
     private static readonly SearchValues<char> NotInAFileName = SearchValues.Create(
         "\"*:<>?|" + string.Concat(Enumerable.Range(0, 32).Select(code => (char)code)));
@@ -62,6 +64,16 @@ public static partial class LoaderCrashReport
             name = name[..^".dll".Length].TrimEnd();
 
         return name.Trim('.').Length == 0 || name.AsSpan().ContainsAny(NotInAFileName) ? null : name;
+    }
+
+    /// <summary>
+    /// Whether the loader found no KSA.dll at its game path. StarMap writes "StarMap - Could not find KSA.dll" and then
+    /// the path it tried, and stops without an error code (LoaderConfig.TryLoadConfig).
+    /// </summary>
+    public static bool FoundNoGame(IEnumerable<string> output)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+        return output.Any(line => line?.Contains(GameNotFoundReport, StringComparison.OrdinalIgnoreCase) == true);
     }
 
     /// <summary>

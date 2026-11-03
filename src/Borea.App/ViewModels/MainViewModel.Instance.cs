@@ -18,6 +18,7 @@ using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Preferences;
 using Borea.Core.Planning;
+using Borea.Storage.Game;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -124,6 +125,10 @@ public partial class MainViewModel
     /// <summary>The instance whose kept build the last launch did not find, for the link that leaves that build. Null for every other line.</summary>
     [ObservableProperty]
     private InstanceItem? _launchGameBuildMissingItem;
+
+    /// <summary>True when the last launch found no KSA.dll in the game folder, for the link to the Game tab.</summary>
+    [ObservableProperty]
+    private bool _isLaunchNotGameFolder;
 
     [ObservableProperty]
     private bool _isLaunchOutputShown;
@@ -793,6 +798,14 @@ public partial class MainViewModel
                 return;
             }
 
+            // a loader started on a folder without KSA.dll finds no game, and the loader choice would rate against no build
+            if (GameFolder.LacksGame(game.GameDirectory))
+            {
+                services.Log.Write($"Launch of instance {instance.InstanceId} did not start, the game folder '{game.GameDirectory}' holds no KSA.dll.");
+                RefuseNotGameFolder(game.GameDirectory!);
+                return;
+            }
+
             InstanceLoaderResolution resolution;
             try
             {
@@ -919,6 +932,12 @@ public partial class MainViewModel
             Toasts.ShowMessage(ToastKind.Error, () => text);
     }
 
+    private void RefuseNotGameFolder(string folder)
+    {
+        RefuseLaunch(Localization.FormatLaunchNotGameFolder(WithoutUserProfile(folder)));
+        IsLaunchNotGameFolder = true;
+    }
+
     /// <summary>Names the kept build and its folder. Null without services.</summary>
     internal string? GameBuildMissingText(GameVersion build) => _services is { Paths: var paths }
         ? Localization.FormatLaunchGameBuildMissing(build.ToString(), KeptBuildFolderText(paths, build))
@@ -1014,6 +1033,10 @@ public partial class MainViewModel
             LaunchMessage = tooOld;
             LaunchLoaderReleases = new ContentLink(Localization.FormatLaunchLoaderReleases(loaderName), LoaderCrashReport.ReleasesPage(loader));
         }
+        else if (result.CrashCause == LoaderCrashCause.GameNotFound)
+        {
+            LaunchMessage = Localization.FormatLaunchGameNotFound(loaderName);
+        }
         else if (blamed is null)
         {
             LaunchMessage = loadingMods
@@ -1055,6 +1078,7 @@ public partial class MainViewModel
         IsLaunchFailureOpen = false;
         HasLaunchFailed = false;
         LaunchGameBuildMissingItem = null;
+        IsLaunchNotGameFolder = false;
         LaunchFailureError = null;
         LaunchOutputText = null;
         IsLaunchOutputShown = false;

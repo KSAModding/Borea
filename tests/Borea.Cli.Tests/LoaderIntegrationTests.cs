@@ -17,6 +17,7 @@ public sealed class LoaderIntegrationTests : IDisposable
     {
         var oldGame = Directory.CreateDirectory(Path.Combine(_root, "OldGame")).FullName;
         var newGame = Directory.CreateDirectory(Path.Combine(_root, "NewGame")).FullName;
+        File.WriteAllBytes(Path.Combine(newGame, "KSA.dll"), []);
         var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _root, oldGame);
 
         Assert.Equal(0, (await RunAsync("settings", "set", "game", oldGame)).ExitCode);

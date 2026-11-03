@@ -5,6 +5,7 @@ using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Storage.Game;
 
 namespace Borea.Cli.Commands;
 
@@ -32,6 +33,10 @@ internal static class LaunchCommand
             // a kept build that is not there has no version to rate a loader against
             if (game is { Problem: not KeptBuildProblem.None, KeptBuild: { } missing })
                 throw new InvalidOperationException(LaunchResult.GameBuildMissing(target, cli.Paths.GetGameBuildFolder(missing)).Message);
+
+            // a loader started on a folder without KSA.dll finds no game, and the loader choice would rate against no build
+            if (GameFolder.LacksGame(game.GameDirectory))
+                throw new InvalidOperationException(LaunchResult.NotGameFolder(game.GameDirectory!, GameFolder.FindBelow(game.GameDirectory!)?.Directory).Message);
 
             var installed = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
             var resolution = await LoaderLookup.ResolveAsync(cli, target, installed, game.Version?.Version, givenLoaderId, ct).ConfigureAwait(false);

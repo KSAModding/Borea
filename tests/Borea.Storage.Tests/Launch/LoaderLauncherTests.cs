@@ -183,13 +183,32 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(Path.GetFullPath(StarMapDirectory), plan.WorkingDirectory);
     }
 
-    /// <summary>KSA.exe in the game folder, and the Linux app host too when asked.</summary>
+    /// <summary>KSA.exe and KSA.dll in the game folder, and the Linux app host too when asked.</summary>
     private static void PlaceWindowsBuild(TestGamePathProvider paths, bool linuxAppHost = false)
     {
         var game = Directory.CreateDirectory(paths.GetGameDirectoryPath()!).FullName;
         File.WriteAllBytes(Path.Combine(game, "KSA.exe"), Array.Empty<byte>());
+        File.WriteAllBytes(Path.Combine(game, "KSA.dll"), Array.Empty<byte>());
         if (linuxAppHost)
             File.WriteAllBytes(Path.Combine(game, "KSA"), Array.Empty<byte>());
+    }
+
+    [Fact]
+    public void Launch_GameFolderWithoutKsaDll_StartsNothingAndNamesTheGameBelow()
+    {
+        PlaceStarMap();
+        var game = Directory.CreateDirectory(_paths.GetGameDirectoryPath()!).FullName;
+        var below = PlaceGameAssembly(Path.Combine(game, "KSA"));
+        File.WriteAllBytes(Path.Combine(below, "KSA.exe"), []);
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.Equal(LaunchOutcome.NotGameFolder, result.Outcome);
+        Assert.Contains($"The game folder '{game}' holds no KSA.dll", result.Message);
+        Assert.Contains($"KSA is in a subfolder: '{below}'.", result.Message);
+        Assert.Empty(_starter.Plans);
+        Assert.False(File.Exists(ConfigFile));
+        Assert.False(_launcher.IsRunning(_instance.InstanceId));
     }
 
     [Fact]
@@ -624,7 +643,7 @@ public sealed class LoaderLauncherTests : IDisposable
         var assembly = PlaceStarMap("StarMap.dll");
         var dotnet = PlaceDotnet();
         var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.MacOs] = new("StarMap.dll", "dotnet") };
-        Directory.CreateDirectory(_paths.GetGameDirectoryPath()!);
+        PlaceGameAssembly(_paths.GetGameDirectoryPath()!);
         using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.MacOs, () => dotnet, LoaderLauncher.DefaultStartupWindow, wine: PlaceWrapperProbeWithoutTheGame());
 
         var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
@@ -1882,6 +1901,29 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Null(result.BlamedModId);
         Assert.Contains("stopped without starting the game", result.Message);
         Assert.Equal(["GameLocation is empty in StarMapConfig.json."], result.Output);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoaderFindsNoKsaDll_SaysSoAtOnceAndKeepsTheRawLine()
+    {
+        PlaceStarMap();
+        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromHours(1));
+        var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        string[] output = ["StarMap - Could not find KSA.dll. Make sure the folder or file path is correct:", "/home/player/Documents/ahwoo/KSA.dll"];
+        process.Output.AddRange(output);
+        process.HasExited = true;
+        process.ExitCode = 0;
+
+        var watch = launcher.WatchStartAsync(_instance, started);
+
+        Assert.True(await Task.WhenAny(watch, Task.Delay(TimeSpan.FromSeconds(10))) == watch, "The watch waited for the startup window.");
+        var result = await watch;
+        Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
+        Assert.Equal(LoaderCrashCause.GameNotFound, result.CrashCause);
+        Assert.Contains("StarMap found no KSA.dll at the game path of its configuration", result.Message);
+        Assert.Equal(output, result.Output);
+        Assert.Contains(output[1], File.ReadAllText(_paths.GetInstanceLaunchLogPath(_instance.InstanceId)));
     }
 
     [Fact]

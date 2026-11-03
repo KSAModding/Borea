@@ -246,7 +246,9 @@ public sealed class SharedProfileBannerTests
 
     private static async Task SaveGameDirectoryAsync(ViewModelHarness harness)
     {
-        harness.ViewModel.GameDirectoryInput = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
+        var game = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
+        File.WriteAllBytes(Path.Combine(game, "KSA.dll"), []);
+        harness.ViewModel.GameDirectoryInput = game;
         await harness.ViewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
     }
 }

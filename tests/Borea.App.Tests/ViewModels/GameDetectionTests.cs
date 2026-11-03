@@ -56,7 +56,9 @@ public sealed class GameDetectionTests
         using var release = new ManualResetEventSlim();
         using var harness = await CreateWithHeldDetectionAsync(release);
         var viewModel = harness.ViewModel;
-        viewModel.GameDirectoryInput = Directory.CreateDirectory(Path.Combine(harness.Root, "saved")).FullName;
+        var saved = Directory.CreateDirectory(Path.Combine(harness.Root, "saved")).FullName;
+        File.WriteAllBytes(Path.Combine(saved, "KSA.dll"), []);
+        viewModel.GameDirectoryInput = saved;
 
         await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
         release.Set();
@@ -435,6 +437,87 @@ public sealed class GameDetectionTests
 
         Assert.Equal(string.Empty, viewModel.LoaderDirectoryInput);
         Assert.False(viewModel.IsLoaderDirectorySuggested);
+    }
+
+    /// <summary>A saved game folder one level above the game that <paramref name="game"/> names.</summary>
+    private static Task<ViewModelHarness> CreateWithFolderAboveTheGameAsync(Action<string> game)
+    {
+        string root = null!;
+        return ViewModelHarness.CreateAsync(
+            services => services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(Path.Combine(root, "ahwoo"))),
+            candidates: h =>
+            {
+                root = h.Root;
+                game(PlaceGame(h, Path.Combine("ahwoo", "KSA")));
+            });
+    }
+
+    [Fact]
+    public async Task FirstStart_SavedFolderAboveTheGame_OffersTheGameBelowIt()
+    {
+        string game = null!;
+        using var harness = await CreateWithFolderAboveTheGameAsync(placed => game = placed);
+        var viewModel = harness.ViewModel;
+
+        Assert.Equal(GameSetupState.NotGameFolder, viewModel.GameSetupState);
+        Assert.True(viewModel.IsFoundGameModalOpen);
+        Assert.Equal(harness.Localization.FormatSetupFoundGame("2026.8.3.5117", MainViewModel.WithoutUserProfile(game)), viewModel.FoundGameText);
+
+        await viewModel.UseFoundGameCommand.ExecuteAsync(null);
+
+        Assert.Equal(game, harness.Services.Settings.GameDirectoryPath);
+        Assert.False(viewModel.NeedsGameSetup);
+    }
+
+    [Fact]
+    public async Task GameTab_SavedFolderAboveTheGame_SaysSoAndUsesTheGameBelowIt()
+    {
+        string game = null!;
+        using var harness = await CreateWithFolderAboveTheGameAsync(placed => game = placed);
+        var viewModel = harness.ViewModel;
+        viewModel.DismissFoundGameCommand.Execute(null);
+
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.SetupNotGameFolder, viewModel.GameFolderProblemText);
+        Assert.Equal(harness.Localization.FormatSetupGameFolderBelow(MainViewModel.WithoutUserProfile(game)), viewModel.GameFolderBelowText);
+
+        await viewModel.UseGameFolderBelowCommand.ExecuteAsync(null);
+
+        Assert.Equal(game, harness.Services.Settings.GameDirectoryPath);
+        Assert.Equal(game, viewModel.GameDirectoryInput);
+        Assert.Null(viewModel.GameFolderProblemText);
+        Assert.Null(viewModel.GameFolderBelowText);
+        Assert.Equal(GameSetupState.Ready, viewModel.GameSetupState);
+    }
+
+    [Fact]
+    public async Task GameTab_PickedFolderAboveTheGame_SaysSoBeforeASave()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var game = PlaceGame(harness, Path.Combine("ahwoo", "KSA"));
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        await viewModel.ChooseGameDirectoryAsync(Path.GetDirectoryName(game)!);
+
+        Assert.Equal(harness.Localization.SetupNotGameFolder, viewModel.GameFolderProblemText);
+        Assert.Equal(harness.Localization.FormatSetupGameFolderBelow(MainViewModel.WithoutUserProfile(game)), viewModel.GameFolderBelowText);
+        Assert.Null(harness.Services.Settings.GameDirectoryPath);
+    }
+
+    [Fact]
+    public async Task GameTab_FieldChangedAfterTheCheck_HidesTheAnswerForTheOldFolder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var game = PlaceGame(harness, Path.Combine("ahwoo", "KSA"));
+        await viewModel.ChooseGameDirectoryAsync(Path.GetDirectoryName(game)!);
+
+        viewModel.GameDirectoryInput = Path.Combine(harness.Root, "other");
+
+        Assert.Null(viewModel.GameFolderProblemText);
+        Assert.Null(viewModel.GameFolderBelowText);
     }
 
     /// <summary>A first start that finds one game, with the detection held in its first read of the folders until <paramref name="release"/> is set.</summary>

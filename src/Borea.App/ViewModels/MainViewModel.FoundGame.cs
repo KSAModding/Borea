@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Mods;
+using Borea.Storage.Game;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -43,9 +44,19 @@ public partial class MainViewModel
     private async Task OfferFoundGamesAsync(BoreaServices services)
     {
         var detection = await FindInstallsAsync(services);
+        var games = detection?.Games.ToList() ?? [];
+
+        // a saved folder above KSA holds no game, and the one game below it is likely the folder the player meant
+        if (GameSetupState == GameSetupState.NotGameFolder
+            && services.Settings.GameDirectoryPath is { } saved
+            && await Task.Run(() => GameFolder.FindBelow(saved)) is { } below
+            && !games.Any(game => SameDirectory(game.Directory, below.Directory)))
+        {
+            games.Add(below);
+        }
 
         // a player who saved a folder, looked at the Game tab or is in another modal keeps the banner as the reminder
-        if (detection is not { Games.Count: > 0 } || !NeedsGameSetup || _gameTabShown || IsSettingsOpen || IsNameModalOpen || IsDeleteModalOpen || IsKeepGameBuildModalOpen || IsUseCurrentGameBuildModalOpen || IsReviewingModList || IsLoaderPromptOpen || IsRuntimePromptOpen || IsLaunchArgumentsModalOpen || IsLaunchFailureOpen || IsToastDetailsOpen || IsReleaseNotesOpen)
+        if (games.Count == 0 || !NeedsGameSetup || _gameTabShown || IsSettingsOpen || IsNameModalOpen || IsDeleteModalOpen || IsKeepGameBuildModalOpen || IsUseCurrentGameBuildModalOpen || IsReviewingModList || IsLoaderPromptOpen || IsRuntimePromptOpen || IsLaunchArgumentsModalOpen || IsLaunchFailureOpen || IsToastDetailsOpen || IsReleaseNotesOpen)
             return;
 
         // the loader modal of an instance keeps its error line, which this modal would clear
@@ -53,7 +64,7 @@ public partial class MainViewModel
             return;
 
         FoundGames.Clear();
-        foreach (var game in detection.Games)
+        foreach (var game in games)
             FoundGames.Add(new FoundGameItem(game));
         SelectedFoundGame = FoundGames.Count == 1 ? FoundGames[0] : null;
         OnPropertyChanged(nameof(HasSeveralFoundGames));
