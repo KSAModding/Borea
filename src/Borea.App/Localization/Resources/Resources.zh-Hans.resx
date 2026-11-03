@@ -2652,6 +2652,45 @@
   <data name="DiscoverLicense" xml:space="preserve">
     <value>许可证</value>
   </data>
+  <data name="DiscoverLicenseFree" xml:space="preserve">
+    <value>自由许可（可商用）</value>
+  </data>
+  <data name="DiscoverLicenseFreeChip" xml:space="preserve">
+    <value>自由许可</value>
+  </data>
+  <data name="DiscoverLicenseFreeMeaning" xml:space="preserve">
+    <value>你可以使用、修改和分享，也可以用于自己的模组或商业用途。这类许可证大多要求注明作者，部分还要求修改后的版本沿用同一许可证。</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercial" xml:space="preserve">
+    <value>不可商用</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercialChip" xml:space="preserve">
+    <value>非商业用途</value>
+  </data>
+  <data name="DiscoverLicenseNonCommercialMeaning" xml:space="preserve">
+    <value>你可以使用、修改和分享，但不能用于商业用途。这一限制可能仅适用于部分内容，例如美术素材。请在内容页面查看具体许可证。</value>
+  </data>
+  <data name="DiscoverLicenseOther" xml:space="preserve">
+    <value>其他条款</value>
+  </data>
+  <data name="DiscoverLicenseOtherMeaning" xml:space="preserve">
+    <value>作者自行规定了使用条款，或 Borea 无法确定许可证允许哪些行为。其中有些许可证不允许修改。修改或分享前，请先阅读内容页面上的许可证。</value>
+  </data>
+  <data name="DiscoverLicenseExact" xml:space="preserve">
+    <value>具体许可证</value>
+  </data>
+  <data name="DiscoverLicensesChosenFormat" xml:space="preserve">
+    <value>{0} 种许可证</value>
+  </data>
+  <data name="DiscoverLicenseClear" xml:space="preserve">
+    <value>清除具体许可证选择</value>
+  </data>
+  <data name="DiscoverLicenseListAll" xml:space="preserve">
+    <value>勾选许可证后，仅显示采用该许可证的条目。若条目采用多种许可证，则按决定其分组的许可证统计。</value>
+  </data>
+  <data name="DiscoverLicenseListInGroups" xml:space="preserve">
+    <value>所选分组包含的许可证。勾选许可证后，仅显示这些分组中采用该许可证的条目。</value>
+  </data>
   <data name="DiscoverAuthorFilterFormat" xml:space="preserve">
     <value>作者：{0}</value>
   </data>
@@ -6419,5 +6458,17 @@
   </data>
   <data name="InstallChoicesSuggestedHint" xml:space="preserve">
     <value>Borea 不会添加这些模组。你可以稍后从“发现”安装。</value>
+  </data>
+  <data name="ContentForumsGoneFormat" xml:space="preserve">
+    <value>此内容的论坛帖子自 {0} 起已失效，因此 Borea 不再允许安装新副本。已安装的副本会保留，且仍可正常使用。</value>
+  </data>
+  <data name="PackMemberForumsGone" xml:space="preserve">
+    <value>论坛帖子已失效</value>
+  </data>
+  <data name="PackMemberForumsGoneFormat" xml:space="preserve">
+    <value>此条目的论坛帖子自 {0} 起已失效，因此 Borea 不再安装其新副本。</value>
+  </data>
+  <data name="InstallMessageForumsGoneFormat" xml:space="preserve">
+    <value>此条目的论坛帖子自 {0} 起已失效，因此 Borea 不再安装其新副本。已安装的副本会保留。</value>
   </data>
 </root>
