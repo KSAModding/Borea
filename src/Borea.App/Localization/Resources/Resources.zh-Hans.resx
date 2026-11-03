@@ -1635,6 +1635,9 @@
   <data name="HomeSetupFolderMissing" xml:space="preserve">
     <value>游戏文件夹已不存在。</value>
   </data>
+  <data name="HomeSetupNotGameFolder" xml:space="preserve">
+    <value>游戏文件夹中没有 KSA.dll。</value>
+  </data>
   <data name="HomeNoInstance" xml:space="preserve">
     <value>尚无实例</value>
   </data>
@@ -5493,6 +5496,12 @@
   <data name="SetupDirectoryMissing" xml:space="preserve">
     <value>已保存，但此文件夹尚不存在。</value>
   </data>
+  <data name="SetupNotGameFolder" xml:space="preserve">
+    <value>此文件夹中没有 KSA.dll，因此不是 KSA 游戏文件夹。请选择包含 KSA.dll 的文件夹。</value>
+  </data>
+  <data name="SetupGameFolderBelowFormat" xml:space="preserve">
+    <value>KSA 位于子文件夹中：{0}。是否使用该文件夹？</value>
+  </data>
   <data name="SetupNoLoaderSelected" xml:space="preserve">
     <value>请先选择模组加载器。</value>
   </data>
@@ -5675,6 +5684,9 @@
   </data>
   <data name="SetupBannerFolderMissing" xml:space="preserve">
     <value>保存的游戏文件夹已不存在，请重新为 Borea 指定 Kitten Space Agency 的位置。</value>
+  </data>
+  <data name="SetupBannerNotGameFolder" xml:space="preserve">
+    <value>保存的游戏文件夹中没有 KSA.dll，因此不是 KSA 游戏文件夹。请为 Borea 指定包含 KSA.dll 的 Kitten Space Agency 文件夹。</value>
   </data>
   <data name="SetupBannerAction" xml:space="preserve">
     <value>设置游戏</value>
@@ -5987,6 +5999,12 @@
   </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} 启动后立即停止（退出码 {1}），输出内容见详细信息。</value>
+  </data>
+  <data name="LaunchGameNotFoundFormat" xml:space="preserve">
+    <value>{0} 在指定的游戏文件夹中未找到 KSA.dll，因此游戏未能启动。详细信息中显示了尝试访问的路径。请在“设置”的“游戏”选项卡中选择 KSA 游戏文件夹。</value>
+  </data>
+  <data name="LaunchNotGameFolderFormat" xml:space="preserve">
+    <value>游戏文件夹 {0} 中没有 KSA.dll，因此模组加载器无法在其中找到游戏。Borea 不会启动任何程序。请在“设置”的“游戏”选项卡中选择 KSA 游戏文件夹。</value>
   </data>
   <data name="LaunchStoppedLoadingModsFormat" xml:space="preserve">
     <value>{0} 在加载模组时停止（退出码 {1}），此实例中的某个模组可能是原因。输出内容见详细信息。</value>
