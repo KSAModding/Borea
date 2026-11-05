@@ -307,6 +307,19 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_LastSeenBoreaVersion_RestoresTheVersion()
+    {
+        Assert.Null(AppPreferences.Empty.LastSeenBoreaVersion);
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithLastSeenBoreaVersion("0.7.0-dev.3").WithDismissedLoaderUpdate("StarMap 0.4.8"), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("0.7.0-dev.3", result.Preferences.LastSeenBoreaVersion);
+        Assert.Equal("0.7.0-dev.3", result.Preferences.WithSelectedThemeName("Light").WithStaySignedInToGitHub(false).LastSeenBoreaVersion);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheDismissedGameRevision()
     {
         var preferences = AppPreferences.Empty.WithDismissedGameRevision(5438)

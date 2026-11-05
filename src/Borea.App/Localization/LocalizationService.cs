@@ -1380,6 +1380,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string UpdateNoNotes => Resources.UpdateNoNotes;
 
+    public string UpdateNotesUnknown => Resources.UpdateNotesUnknown;
+
+    public string WhatsNewTitle => Resources.WhatsNewTitle;
+
     public string SelfUpdateNow => Resources.SelfUpdateNow;
 
     public string FormatSelfUpdateDownloading(string version, int percent)
@@ -3001,6 +3005,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string AboutOpenLogFolder => Resources.AboutOpenLogFolder;
 
     public string AboutCopyDiagnostics => Resources.AboutCopyDiagnostics;
+
+    public string AboutWhatsNew => Resources.AboutWhatsNew;
 
     public string AboutCopyPath => Resources.AboutCopyPath;
 

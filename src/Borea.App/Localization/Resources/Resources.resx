@@ -1440,6 +1440,12 @@
   <data name="UpdateNoNotes" xml:space="preserve">
     <value>This release has no notes.</value>
   </data>
+  <data name="UpdateNotesUnknown" xml:space="preserve">
+    <value>Borea could not load the notes of this version.</value>
+  </data>
+  <data name="WhatsNewTitle" xml:space="preserve">
+    <value>What's new in Borea</value>
+  </data>
   <data name="SelfUpdateNow" xml:space="preserve">
     <value>Update now</value>
   </data>
@@ -5615,6 +5621,9 @@
   </data>
   <data name="AboutCopyDiagnostics" xml:space="preserve">
     <value>Copy diagnostics</value>
+  </data>
+  <data name="AboutWhatsNew" xml:space="preserve">
+    <value>What's new</value>
   </data>
   <data name="AboutCopied" xml:space="preserve">
     <value>Copied to the clipboard.</value>
