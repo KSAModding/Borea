@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main, "feature/**"]
+  # The dependabot-lockfiles workflow starts this run after it commits to a Dependabot branch, because a push with the workflow token starts no workflow run.
+  workflow_dispatch:
 
 permissions:
   contents: read
