@@ -37,13 +37,13 @@
       },
       "Markdig": {
         "type": "Transitive",
-        "resolved": "1.5.1",
-        "contentHash": "NtHwU5t5yKr6Gnylhs8/hlR0mOAftTFQURDz2ID8bkunxps1neOzKw0dYKKlwNuwiYIGLHjJTXK91f809Ko1ww=="
+        "resolved": "1.6.0",
+        "contentHash": "rJEpDfPM8wrfXUgkNejjg2bJN9bciy44uVyRwKUI+92CnSmbaLeJTLPYcCdvgM4RFsKrhs8d2H2hO78yZpMl3g=="
       },
       "Tomlyn": {
         "type": "Transitive",
-        "resolved": "2.10.1",
-        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
+        "resolved": "2.10.2",
+        "contentHash": "phQ8NSO4T9BDJu5hwmWcBA0rj2u1MgwY5YtmRqf4GOkPfo2Gc1POTpspUY09XvbT6Sr1y/X1Aeq1NLUARMLFlQ=="
       },
       "borea.composition": {
         "type": "Project",
@@ -56,7 +56,7 @@
       "borea.core": {
         "type": "Project",
         "dependencies": {
-          "Markdig": "[1.5.1, )"
+          "Markdig": "[1.6.0, )"
         }
       },
       "borea.network": {
@@ -70,7 +70,7 @@
         "dependencies": {
           "Borea.Core": "[1.0.0, )",
           "JsonSchema.Net": "[9.6.0, )",
-          "Tomlyn": "[2.10.1, )"
+          "Tomlyn": "[2.10.2, )"
         }
       }
     },
