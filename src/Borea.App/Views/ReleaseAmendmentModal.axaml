@@ -269,7 +269,7 @@
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                             <TextBlock Classes="body-md" Text="{Binding Localization.StewardAmendPreviewing}" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Classes="body-md danger" Text="{Binding Refusal}" TextWrapping="Wrap" IsVisible="{Binding Refusal, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding Refusal}" TextWrapping="Wrap" IsVisible="{Binding Refusal, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding RefusalDetails}" TextWrapping="Wrap" IsVisible="{Binding RefusalDetails, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md" Text="{Binding Notice}" TextWrapping="Wrap" IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
@@ -288,7 +288,7 @@
                                         <Border Classes="card" Padding="24,16">
                                             <StackPanel Spacing="8">
                                                 <WrapPanel ItemSpacing="12" LineSpacing="4">
-                                                    <TextBlock Classes="label-md" Text="{Binding File.Path}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    <SelectableTextBlock Classes="label-md" Text="{Binding File.Path}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                                     <TextBlock Classes="body-sm secondary" Text="{Binding UnchangedText}" VerticalAlignment="Center" IsVisible="{Binding !IsChanged}" />
                                                 </WrapPanel>
                                                 <Border Background="{StaticResource Brush.Window}" CornerRadius="8" Padding="12" IsVisible="{Binding IsChanged}">
@@ -313,7 +313,7 @@
                             <TextBlock Classes="body-md" Text="{Binding Localization.StewardOpening}" VerticalAlignment="Center" />
                         </StackPanel>
                         <TextBlock Classes="body-md" Text="{Binding OpenedText}" TextWrapping="Wrap" IsVisible="{Binding IsOpened}" />
-                        <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>

@@ -160,7 +160,7 @@
                                     <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.SourceProgress}" VerticalAlignment="Center" />
                                     <Button Grid.Column="2" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelCommand}" />
                                 </Grid>
-                                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.SourceError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.SourceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <SelectableTextBlock Classes="body-sm danger" Text="{Binding ListingEditor.SourceError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.SourceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 <Button Classes="link" Command="{Binding ListingEditor.StartEmptyCommand}" HorizontalAlignment="Left" IsEnabled="{Binding !ListingEditor.IsBusy}">
                                     <TextBlock Classes="action-md" Text="{Binding Localization.ListingStartEmpty}" />
                                 </Button>
@@ -213,7 +213,7 @@
                                     </ListBox.ItemTemplate>
                                 </ListBox>
                                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedOrPackMatch}" IsVisible="{Binding ListingEditor.HasNoListedMatch}" />
-                                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ListedError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ListedError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <SelectableTextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ListedError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ListedError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -242,7 +242,7 @@
                         <Grid ColumnDefinitions="*,16,Auto">
                             <Panel VerticalAlignment="Center">
                                 <TextBlock Classes="heading-lg" Text="{Binding ListingEditor.NewTitle}" IsVisible="{Binding ListingEditor.IsNew}" />
-                                <TextBlock Classes="heading-lg" Text="{Binding ListingEditor.Id}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ListingEditor.HasFixedId}" />
+                                <SelectableTextBlock Classes="heading-lg" Text="{Binding ListingEditor.Id}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ListingEditor.HasFixedId}" />
                             </Panel>
                             <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingStartOver}" Command="{Binding ListingEditor.StartOverCommand}" />
                         </Grid>
@@ -664,7 +664,7 @@
                                                             </Panel>
                                                         </WrapPanel>
                                                         <TextBlock Classes="body-sm secondary" Text="{Binding KindText}" TextWrapping="Wrap" IsVisible="{Binding HasKindText}" />
-                                                        <TextBlock Classes="body-sm danger" Text="{Binding ErrorText}" TextWrapping="Wrap" IsVisible="{Binding HasErrors}" />
+                                                        <SelectableTextBlock Classes="body-sm danger" Text="{Binding ErrorText}" TextWrapping="Wrap" IsVisible="{Binding HasErrors}" />
                                                         <TextBlock Classes="body-sm" Text="{Binding NoteText}" TextWrapping="Wrap" IsVisible="{Binding HasNotes}" />
                                                     </StackPanel>
                                                     <Button Grid.Column="2" Classes="icon" Command="{Binding RemoveCommand}" VerticalAlignment="Top" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
@@ -831,7 +831,7 @@
                                     <TextBlock Classes="action-md" Text="{Binding Localization.ListingOpenInBrowser}" />
                                 </Button>
                                 <TextBlock Classes="body-sm danger" Text="{Binding Localization.ListingFixErrors}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasErrors}" />
-                                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.PublishError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.PublishError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <SelectableTextBlock Classes="body-sm danger" Text="{Binding ListingEditor.PublishError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.PublishError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 <TextBlock Classes="body-sm" Text="{Binding ListingEditor.OutputMessage}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.OutputMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
                                 <!-- the opened pull request, followed while the page is open -->
@@ -845,7 +845,7 @@
                                         </Grid>
                                         <TextBlock Classes="body-md" Classes.positive="{Binding ListingEditor.IsPullRequestGood}" Classes.danger="{Binding ListingEditor.IsPullRequestBad}" Text="{Binding ListingEditor.PullRequestStateText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.PullRequestStateText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                         <views:MarkdownView Markdown="{Binding ListingEditor.PullRequestVerdict}" IsVisible="{Binding ListingEditor.PullRequestVerdict, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                        <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.StatusError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.StatusError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <SelectableTextBlock Classes="body-sm danger" Text="{Binding ListingEditor.StatusError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.StatusError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                         <Button Classes="link" Command="{Binding ListingEditor.SignInCommand}" HorizontalAlignment="Left" IsVisible="{Binding ListingEditor.NeedsSignInToFollow}">
                                             <TextBlock Classes="action-md" Text="{Binding Localization.ListingSignIn}" />
                                         </Button>

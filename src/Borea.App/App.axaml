@@ -188,7 +188,7 @@
             <Setter Property="Background" Value="{StaticResource Brush.Window}" />
             <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
         </Style>
-        <Style Selector="TextBlock">
+        <Style Selector="TextBlock, SelectableTextBlock">
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
         </Style>
         <Style Selector="ScrollViewer">
@@ -293,17 +293,17 @@
         </Style>
 
         <!-- Type scale from the Figma file: label-* are IBM Plex Mono, heading-*/action-* IBM Plex Sans SemiBold -->
-        <Style Selector="TextBlock.label-sm">
+        <Style Selector="TextBlock.label-sm, SelectableTextBlock.label-sm">
             <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
         </Style>
-        <Style Selector="TextBlock.label-md">
+        <Style Selector="TextBlock.label-md, SelectableTextBlock.label-md">
             <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
         </Style>
-        <Style Selector="TextBlock.label-lg">
+        <Style Selector="TextBlock.label-lg, SelectableTextBlock.label-lg">
             <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
@@ -320,7 +320,7 @@
             <Setter Property="FontSize" Value="16" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
-        <Style Selector="TextBlock.body-md">
+        <Style Selector="TextBlock.body-md, SelectableTextBlock.body-md">
             <Setter Property="FontSize" Value="14" />
         </Style>
         <Style Selector="TextBlock.action-md">
@@ -343,16 +343,16 @@
         <Style Selector="TextBlock.secondary, SelectableTextBlock.secondary">
             <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
         </Style>
-        <Style Selector="TextBlock.positive">
+        <Style Selector="TextBlock.positive, SelectableTextBlock.positive">
             <Setter Property="Foreground" Value="{StaticResource Brush.Positive}" />
         </Style>
-        <Style Selector="TextBlock.heading">
+        <Style Selector="TextBlock.heading, SelectableTextBlock.heading">
             <Setter Property="Foreground" Value="{StaticResource Brush.TextHeading}" />
         </Style>
-        <Style Selector="TextBlock.muted">
+        <Style Selector="TextBlock.muted, SelectableTextBlock.muted">
             <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}" />
         </Style>
-        <Style Selector="TextBlock.danger">
+        <Style Selector="TextBlock.danger, SelectableTextBlock.danger">
             <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
         </Style>
 

@@ -23,7 +23,7 @@
                         <Button Classes="link" HorizontalAlignment="Left" Command="{Binding OpenAnnouncementLinkCommand}" ToolTip.Tip="{Binding CurrentAnnouncement.Link}" IsVisible="{Binding CurrentAnnouncement.Link, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Classes="action-md" Text="{Binding Localization.AnnouncementOpenLink}" />
                         </Button>
-                        <TextBlock Classes="body-md danger" Text="{Binding AnnouncementLinkError}" TextWrapping="Wrap" IsVisible="{Binding AnnouncementLinkError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding AnnouncementLinkError}" TextWrapping="Wrap" IsVisible="{Binding AnnouncementLinkError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>

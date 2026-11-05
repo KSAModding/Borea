@@ -38,7 +38,7 @@
                         </Border>
                     </Grid>
                     <StackPanel Spacing="4" IsVisible="{Binding IsFailed}">
-                        <TextBlock Classes="body-sm danger" Text="{Binding FailureReason}" TextWrapping="Wrap" />
+                        <SelectableTextBlock Classes="body-sm danger" Text="{Binding FailureReason}" TextWrapping="Wrap" />
                         <Button Classes="text primary" HorizontalAlignment="Left" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverIndexRetry}" Command="{Binding RetryCommand}" IsVisible="{Binding HasRetry}" />
                     </StackPanel>
                 </StackPanel>

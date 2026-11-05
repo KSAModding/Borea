@@ -18,7 +18,7 @@
             <TextBlock Classes="body-md" Text="{Binding ListingEditor.ShareDoneStateText}" TextWrapping="Wrap" />
             <Grid ColumnDefinitions="Auto,8,*" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" />
-                <TextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" />
+                <SelectableTextBlock Grid.Column="2" Classes="body-md danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" />
             </Grid>
             <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.ShareDoneDiscoverText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareDoneDiscoverText, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
@@ -54,7 +54,7 @@
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Top" IsVisible="{Binding HasError}" />
                                 <StackPanel Grid.Column="2" Spacing="2">
                                     <TextBlock Classes="body-sm" Text="{Binding Name}" TextWrapping="Wrap" />
-                                    <TextBlock Classes="body-sm danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
+                                    <SelectableTextBlock Classes="body-sm danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
                                 </StackPanel>
                             </Grid>
                         </DataTemplate>

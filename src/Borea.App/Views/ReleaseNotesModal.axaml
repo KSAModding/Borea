@@ -29,7 +29,7 @@
                             <DataTemplate x:DataType="vm:BoreaReleaseNotesItem">
                                 <StackPanel Spacing="8">
                                     <WrapPanel ItemSpacing="8" LineSpacing="4">
-                                        <TextBlock Classes="heading-md" Text="{Binding Version}" VerticalAlignment="Center" />
+                                        <SelectableTextBlock Classes="heading-md" Text="{Binding Version}" VerticalAlignment="Center" />
                                         <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}">
                                             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateInstalled}" />
                                         </Border>

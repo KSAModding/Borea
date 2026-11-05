@@ -34,7 +34,7 @@
                         <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardActionSending}" VerticalAlignment="Center" />
                     </StackPanel>
                     <TextBlock Classes="body-md" Text="{Binding DoneText}" TextWrapping="Wrap" IsVisible="{Binding IsDone}" />
-                    <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                         <Button Classes="text tall" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CloseCommand}" VerticalAlignment="Center" IsVisible="{Binding !IsDone}" />
                         <Button Classes="cta" Command="{Binding SendCommand}" IsVisible="{Binding IsSendShown}">

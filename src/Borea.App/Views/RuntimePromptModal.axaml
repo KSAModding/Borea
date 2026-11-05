@@ -28,7 +28,7 @@
                         <TextBlock Grid.Row="2" Classes="body-md" Text="3." />
                         <TextBlock Grid.Row="2" Grid.Column="1" Classes="body-md" Text="{Binding Localization.LaunchRuntimeCheckStep}" TextWrapping="Wrap" />
                     </Grid>
-                    <TextBlock Classes="body-md danger" Text="{Binding RuntimePromptError}" TextWrapping="Wrap" IsVisible="{Binding RuntimePromptError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding RuntimePromptError}" TextWrapping="Wrap" IsVisible="{Binding RuntimePromptError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                         <Button Classes="text tall" Content="{Binding Localization.ModalClose}" Command="{Binding CloseRuntimePromptCommand}" VerticalAlignment="Center" />
                         <Button Classes="cta" Command="{Binding CheckRuntimeAgainCommand}" IsEnabled="{Binding !IsLaunching}">

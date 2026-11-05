@@ -44,8 +44,8 @@
                         </ItemsControl>
                     </ScrollViewer>
                     <TextBlock Classes="body-md secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <TextBlock Classes="body-md danger" Text="{Binding PlanError}" TextWrapping="Wrap" IsVisible="{Binding PlanError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <TextBlock Classes="body-md danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding PlanError}" TextWrapping="Wrap" IsVisible="{Binding PlanError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Spacing="4" IsVisible="{Binding IsInstalling}">
                         <ProgressBar Height="6" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" />

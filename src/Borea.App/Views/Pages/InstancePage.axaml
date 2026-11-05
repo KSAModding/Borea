@@ -51,7 +51,7 @@
                         <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding ReplaceWarningText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
                         <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <Panel Grid.Column="3" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <ProgressBar Width="38" MinWidth="0" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsChecking}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
@@ -137,7 +137,7 @@
                         <TextBlock Classes="body-sm danger" Text="{Binding DeleteConfirmText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingDelete}" />
                         <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" TextWrapping="Wrap" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding ReplaceText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
                     </StackPanel>
                     <Border Grid.Column="3" Classes="chip untested" Margin="24,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding IsOlderBuild}" ToolTip.Tip="{Binding OlderBuildText}">
@@ -323,7 +323,7 @@
                             <views:InfoButton Grid.Column="4" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameProfileInfoText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.MoreInformation}" IsVisible="{Binding !IsChoosingFromProfile}" />
                         </Grid>
                     </Border>
-                    <TextBlock Classes="body-sm danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-sm danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Spacing="8" Margin="16,8" IsVisible="{Binding IsChoosingFromProfile}">
                         <TextBlock Classes="body-sm secondary" Text="{Binding CopyNoteText}" TextWrapping="Wrap" IsVisible="{Binding CopyNoteText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveProfileEmpty}" IsVisible="{Binding !HasProfileItems}" />
@@ -525,7 +525,7 @@
                         <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.ProgressStatus}" TextWrapping="Wrap" VerticalAlignment="Center" />
                         <TextBlock Classes="label-md" Text="{Binding UpdateAll.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding UpdateAll.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </WrapPanel>
-                    <TextBlock Classes="body-md danger" Text="{Binding UpdateAll.InstallError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding UpdateAll.InstallError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-md secondary" Text="{Binding PackDifferenceText}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding PackDifferenceText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <!-- a newer version of the pack the instance was created from -->
                     <StackPanel Margin="0,16,0,0" IsVisible="{Binding PackUpdate, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -578,7 +578,7 @@
                             <TextBlock Classes="body-md secondary" Margin="0,8,0,0" Text="{Binding PackUpdate.InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding PackUpdate.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </StackPanel>
                         <ContentControl Margin="0,12,0,0" Content="{Binding PackUpdate.Choices}" IsVisible="{Binding PackUpdate.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <TextBlock Classes="body-md danger" Text="{Binding PackUpdate.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding PackUpdate.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <!-- mods the instance records whose folder is gone -->
                     <StackPanel Margin="0,16,0,0" IsVisible="{Binding MissingContent, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -618,7 +618,7 @@
                                 <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding MissingContent.CancelInstallCommand}" />
                             </StackPanel>
                         </Grid>
-                        <TextBlock Classes="body-md danger" Text="{Binding MissingContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding MissingContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding MissingContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding MissingContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -642,7 +642,7 @@
                             <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                                 <TextBlock Classes="body-md secondary" Text="{Binding Localization.InstanceTabGameData}" />
                             </Border>
-                            <TextBlock Classes="body-sm danger" Text="{Binding GameDataError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding GameDataError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-sm danger" Text="{Binding GameDataError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding GameDataError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <ItemsControl ItemsSource="{Binding GameDataItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:GameDataItem">
@@ -673,7 +673,7 @@
                             <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                                 <TextBlock Classes="body-md secondary" Text="{Binding Localization.BackupsTitle}" />
                             </Border>
-                            <TextBlock Classes="body-sm danger" Text="{Binding BackupsError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding BackupsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-sm danger" Text="{Binding BackupsError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding BackupsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <TextBlock Classes="body-md muted" Text="{Binding Localization.BackupsEmpty}" Margin="16,12" IsVisible="{Binding ShowNoBackups}" />
                             <ItemsControl ItemsSource="{Binding BackupItems}" ItemTemplate="{StaticResource BackupRow}" />
                         </StackPanel>
@@ -684,7 +684,7 @@
                     <StackPanel>
                         <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                             <Grid ColumnDefinitions="*,16,Auto">
-                                <TextBlock Classes="body-md secondary" Text="{Binding GameLogPathText}" ToolTip.Tip="{Binding GameLogPathText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <SelectableTextBlock Classes="body-md secondary" Text="{Binding GameLogPathText}" ToolTip.Tip="{Binding GameLogPathText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                                     <Button Classes="link" Command="{Binding ReloadGameLogCommand}">
                                         <TextBlock Classes="action-md" Text="{Binding Localization.GameLogReload}" />
@@ -698,7 +698,7 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <TextBlock Classes="body-sm danger" Text="{Binding GameLogError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding GameLogError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-sm danger" Text="{Binding GameLogError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding GameLogError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md muted" Text="{Binding Localization.GameLogMissing}" TextWrapping="Wrap" Margin="16,12" IsVisible="{Binding IsGameLogMissing}" />
                         <!-- one text for every line, so a selection can span lines -->
                         <views:GameLogView Classes="log-line" TextWrapping="Wrap" Margin="16,12" Lines="{Binding GameLogLines}" IsVisible="{Binding HasGameLog}" />
@@ -739,7 +739,7 @@
                                     <views:InfoButton Grid.Column="4" Text="{Binding Localization.ManualInstallsInfo}" AutomationProperties.Name="{Binding Localization.MoreInformation}" />
                                 </Grid>
                             </Border>
-                            <TextBlock Classes="body-sm danger" Text="{Binding ManualInstallsError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding ManualInstallsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-sm danger" Text="{Binding ManualInstallsError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding ManualInstallsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <TextBlock Classes="body-md muted" Text="{Binding Localization.ManualInstallsEmptyHint}" TextWrapping="Wrap" Margin="16,12" IsVisible="{Binding !ShowManualInstalls}" />
                             <ItemsControl ItemsSource="{Binding ManualInstallItems}" ItemTemplate="{StaticResource ManualInstallRow}" />
                         </StackPanel>
