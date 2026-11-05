@@ -155,6 +155,7 @@ public sealed class StewardStatisticsViewModelTests
         Assert.True(report.BuildFit.BlockedMods.IsEmpty);
         Assert.Equal(3, report.Upkeep.Columns.Count);
         Assert.DoesNotContain(report.Upkeep.Columns, column => column.Title == harness.Localization.StewardStatisticsNoCurrentRelease);
+        Assert.DoesNotContain(report.Upkeep.Columns, column => column.Title == harness.Localization.StewardStatisticsPackNoCurrentFit);
     }
 
     [Fact]
@@ -165,10 +166,29 @@ public sealed class StewardStatisticsViewModelTests
         var upkeep = (await OpenAsync(harness.ViewModel)).Report!.Upkeep;
 
         var rows = upkeep.Rows.ShownRows.Cast<StewardStatisticsUpkeepRow>().ToList();
-        Assert.Equal(["No release for the build", "No update for 180 days", "No image", "No forums thread"], upkeep.Columns.Select(column => column.Title));
-        Assert.Equal(["1", "-", "4", "-"], upkeep.Columns.Select(column => column.Count.Text));
+        Assert.Equal(["No release for the build", "Pack does not fit the build", "No update for 180 days", "No image", "No forums thread"], upkeep.Columns.Select(column => column.Title));
+        Assert.Equal(["1", "-", "-", "4", "-"], upkeep.Columns.Select(column => column.Count.Text));
         Assert.All(rows, row => Assert.Equal(upkeep.Columns.Select(column => column.Title), row.Cells.Select(cell => cell.Problem)));
-        Assert.Equal([true, false, true, false], rows[0].Cells.Select(cell => cell.HasProblem));
+        Assert.Equal([true, false, false, true, false], rows[0].Cells.Select(cell => cell.HasProblem));
+    }
+
+    // Issue #1162: a pack has no release of its own, so it gets its own column, and its mark names the pins that do not fit.
+    [Fact]
+    public async Task PackThatPinsAnOldRelease_IsMarkedInItsOwnColumn_WithThePinsThatDoNotFit()
+    {
+        using var harness = await CreateAsync(json =>
+        {
+            var root = JsonNode.Parse(json)!;
+            root["packs"] = JsonNode.Parse(OldPinsPack);
+            return root.ToJsonString();
+        });
+
+        var upkeep = (await OpenAsync(harness.ViewModel)).Report!.Upkeep;
+
+        var pack = upkeep.Rows.ShownRows.Cast<StewardStatisticsUpkeepRow>().Single(row => row.Name == "Old Pins Pack");
+        Assert.Equal([false, true], pack.Cells.Take(2).Select(cell => cell.HasProblem));
+        Assert.Equal("Pins releases that do not fit the build: Advanced Flight Computer 0.7.3", pack.Cells[1].Tip);
+        Assert.Equal(["-", "1"], upkeep.Columns.Take(2).Select(column => column.Count.Text));
     }
 
     [Fact]
@@ -240,7 +260,7 @@ public sealed class StewardStatisticsViewModelTests
 
         harness.Localization.TrySetCulture("de");
 
-        Assert.Equal("Kein Bild", tab.Report!.Upkeep.Columns[2].Title);
+        Assert.Equal("Kein Bild", tab.Report!.Upkeep.Columns[3].Title);
     }
 
     [Fact]
@@ -255,6 +275,8 @@ public sealed class StewardStatisticsViewModelTests
         Assert.StartsWith("Cannot read the content index. ", tab.Error, StringComparison.Ordinal);
         Assert.Null(tab.Report);
     }
+
+    private const string OldPinsPack = """[{ "id": "old-pins-pack", "versions": [{ "authored": { "spec_version": 1, "id": "old-pins-pack", "type": "modpack", "name": "Old Pins Pack", "authors": ["Pack Author"], "abstract": "A pack.", "license": "MIT", "version": "1.0.0", "released_at": "2026-09-01T12:00:00Z", "links": { "forums": "https://forums.example.com/old-pins-pack" }, "compatibility": { "game_min": "2026.8.19.5261" }, "mods": [{ "id": "AdvancedFlightComputer", "version": "0.7.3" }, { "id": "MeasureTools", "version": "1.1.10" }] } }] }]""";
 
     private static async Task<StewardStatisticsTab> OpenAsync(MainViewModel viewModel)
     {

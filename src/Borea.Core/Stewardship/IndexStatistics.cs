@@ -15,7 +15,8 @@ namespace Borea.Core.Stewardship;
 /// <param name="ModsBlocked">The other mods, by name, so also a mod without a release that Borea offers.</param>
 /// <param name="MostDependencies">The listings with the most direct dependencies, the most first.</param>
 /// <param name="MostDependedOn">The ids that the most listings depend on directly, the most first.</param>
-/// <param name="NoCurrentRelease">The content of every type that does not fit the current build, by name.</param>
+/// <param name="NoCurrentRelease">The content of every type except a pack that does not fit the current build, by name.</param>
+/// <param name="PacksNoCurrentFit">The packs that do not fit the current build, by name. A pack has no release of its own, so it does not fit because of its bounds or because it pins releases that do not fit.</param>
 /// <param name="NoRecentUpdate">The listings whose last update is older than <see cref="NoUpdateDays"/>, by name. A listing whose date the index does not report is not in it.</param>
 /// <param name="NoForumsThread">The listings whose type requires a forums thread and whose forums link names no thread, by name.</param>
 /// <param name="ReleaseHosts">The hosts of the [releases] table. A listing whose releases enter the index by pull request has none.</param>
@@ -27,6 +28,7 @@ public sealed record IndexStatistics(
     IReadOnlyList<IndexStatistics.DependencyCount> MostDependencies,
     IReadOnlyList<IndexStatistics.DependencyCount> MostDependedOn,
     IReadOnlyList<IndexStatistics.Listing> NoCurrentRelease,
+    IReadOnlyList<IndexStatistics.UnfitPack> PacksNoCurrentFit,
     IReadOnlyList<IndexStatistics.Listing> NoRecentUpdate,
     IReadOnlyList<IndexStatistics.Listing> NoImage,
     IReadOnlyList<IndexStatistics.Listing> NoForumsThread,
@@ -56,12 +58,20 @@ public sealed record IndexStatistics(
 
     public sealed record DownloadCount(string Id, string Name, long Total);
 
-    public sealed record UpkeepRow(string Id, string Name, bool NoCurrentRelease, bool NoRecentUpdate, bool NoImage, bool NoForumsThread)
+    /// <param name="IsOutsideItsBounds">True when the game bounds of the pack version do not allow the build.</param>
+    /// <param name="UnfitPins">The pinned releases whose bounds do not allow the build, in the order of the pack file.</param>
+    public sealed record UnfitPack(string Id, string Name, bool IsOutsideItsBounds, IReadOnlyList<Pin> UnfitPins);
+
+    /// <param name="Name">The name of the pinned listing.</param>
+    public sealed record Pin(string Id, string Name, string Version);
+
+    public sealed record UpkeepRow(string Id, string Name, bool NoCurrentRelease, bool PackNoCurrentFit, bool NoRecentUpdate, bool NoImage, bool NoForumsThread)
     {
-        public int ProblemCount => (NoCurrentRelease ? 1 : 0) + (NoRecentUpdate ? 1 : 0) + (NoImage ? 1 : 0) + (NoForumsThread ? 1 : 0);
+        public int ProblemCount => (NoCurrentRelease ? 1 : 0) + (PackNoCurrentFit ? 1 : 0) + (NoRecentUpdate ? 1 : 0) + (NoImage ? 1 : 0) + (NoForumsThread ? 1 : 0);
     }
 
-    private sealed record Entry(string Id, string Name, ContentType Type, IReadOnlyList<string> Tags, string License, string? ForumUrl, ContentImages? Images, DateTimeOffset? UpdatedAt, GameCompatibility Compatibility);
+    /// <param name="Unfit">Why a pack does not fit the build, or null for a listing and for a pack that fits or that the snapshot cannot rate.</param>
+    private sealed record Entry(string Id, string Name, ContentType Type, IReadOnlyList<string> Tags, string License, string? ForumUrl, ContentImages? Images, DateTimeOffset? UpdatedAt, GameCompatibility Compatibility, UnfitPack? Unfit = null);
 
     private sealed record DirectDependency(IReadOnlyList<string> Ids, bool IsRequired);
 
@@ -93,7 +103,8 @@ public sealed record IndexStatistics(
                 listing.Direct.Count(dependency => !dependency.IsRequired),
                 IsListed: true))),
             Ranked(DependedOn(dependencies.Select(listing => listing.Direct), names)),
-            Rows(entries.Where(entry => entry.Compatibility == GameCompatibility.Incompatible)),
+            Rows(entries.Where(entry => entry.Type != ContentType.ModPack && entry.Compatibility == GameCompatibility.Incompatible)),
+            [.. entries.Select(entry => entry.Unfit).OfType<UnfitPack>()],
             Rows(entries.Where(entry => now - entry.UpdatedAt > TimeSpan.FromDays(NoUpdateDays))),
             Rows(entries.Where(entry => entry.Images is null or { Icon: null, Description.Count: 0 })),
             Rows(entries.Where(entry => !entry.Type.IsVehicleOrSave() && ForumsThreadLink.ThreadOf(entry.ForumUrl) is null)),
@@ -113,15 +124,17 @@ public sealed record IndexStatistics(
     /// <summary>One row per listing that has a problem in the upkeep lists, the most problems first, so a listing that is in several lists shows once.</summary>
     public IReadOnlyList<UpkeepRow> UpkeepRows()
     {
+        var packs = PacksNoCurrentFit.Select(pack => new Listing(pack.Id, pack.Name)).ToList();
         var noCurrentRelease = Ids(NoCurrentRelease);
+        var packNoCurrentFit = Ids(packs);
         var noRecentUpdate = Ids(NoRecentUpdate);
         var noImage = Ids(NoImage);
         var noForumsThread = Ids(NoForumsThread);
         return
         [
-            .. NoCurrentRelease.Concat(NoRecentUpdate).Concat(NoImage).Concat(NoForumsThread)
+            .. NoCurrentRelease.Concat(packs).Concat(NoRecentUpdate).Concat(NoImage).Concat(NoForumsThread)
                 .DistinctBy(listing => listing.Id, ModIds.Comparer)
-                .Select(listing => new UpkeepRow(listing.Id, listing.Name, noCurrentRelease.Contains(listing.Id), noRecentUpdate.Contains(listing.Id), noImage.Contains(listing.Id), noForumsThread.Contains(listing.Id)))
+                .Select(listing => new UpkeepRow(listing.Id, listing.Name, noCurrentRelease.Contains(listing.Id), packNoCurrentFit.Contains(listing.Id), noRecentUpdate.Contains(listing.Id), noImage.Contains(listing.Id), noForumsThread.Contains(listing.Id)))
                 .OrderByDescending(row => row.ProblemCount)
                 .ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase),
         ];
@@ -154,9 +167,20 @@ public sealed record IndexStatistics(
 
         var pinned = metadata.Mods
             .Select(pin => ListingPackMembers.Pinned(snapshot, new ListingPackMember(pin.ContentId, pin.Version.ToString())))
-            .OfType<ModVersionMetadata>();
-        return new Entry(pack.Id, metadata.Name, ContentType.ModPack, metadata.Tags, metadata.License, metadata.ForumUrl, newest.Images, pack.UpdatedAt, Compatibility.Evaluate(metadata, pinned, build, releases));
+            .OfType<ModVersionMetadata>()
+            .ToList();
+        var compatibility = Compatibility.Evaluate(metadata, pinned, build, releases);
+        var unfit = compatibility != GameCompatibility.Incompatible ? null
+            : new UnfitPack(
+                pack.Id,
+                metadata.Name,
+                Compatibility.Evaluate(metadata, build, releases) == GameCompatibility.Incompatible,
+                [.. pinned.Where(release => Compatibility.Evaluate(release, build) == GameCompatibility.Incompatible).Select(release => PinOf(snapshot, release))]);
+        return new Entry(pack.Id, metadata.Name, ContentType.ModPack, metadata.Tags, metadata.License, metadata.ForumUrl, newest.Images, pack.UpdatedAt, compatibility, unfit);
     }
+
+    private static Pin PinOf(ContentIndexSnapshot snapshot, ModVersionMetadata release) =>
+        new(release.ModId, ListingPackMembers.Listing(snapshot, release.ModId)?.Authored?.Name ?? release.ModId, release.Version.ToString());
 
     /// <summary>
     /// The entries of the newest release that is not yanked and still downloads, or of the authored document without such a release.

@@ -56,6 +56,7 @@ public sealed class IndexStatisticsTests
         Assert.Equal(0, statistics.ModsNotBlocked);
         Assert.Empty(statistics.ModsBlocked);
         Assert.Empty(statistics.NoCurrentRelease);
+        Assert.Empty(statistics.PacksNoCurrentFit);
     }
 
     [Fact]
@@ -160,10 +161,10 @@ public sealed class IndexStatisticsTests
 
         Assert.Equal(
             [
-                new IndexStatistics.UpkeepRow("Worst", "Worst", true, true, true, true),
-                new IndexStatistics.UpkeepRow("Two", "Two", true, false, true, false),
-                new IndexStatistics.UpkeepRow("Alpha", "alpha", true, false, false, false),
-                new IndexStatistics.UpkeepRow("Beta", "Beta", true, false, false, false),
+                new IndexStatistics.UpkeepRow("Worst", "Worst", true, false, true, true, true),
+                new IndexStatistics.UpkeepRow("Two", "Two", true, false, false, true, false),
+                new IndexStatistics.UpkeepRow("Alpha", "alpha", true, false, false, false, false),
+                new IndexStatistics.UpkeepRow("Beta", "Beta", true, false, false, false, false),
             ],
             statistics.UpkeepRows());
     }
@@ -263,7 +264,7 @@ public sealed class IndexStatisticsTests
             1,
             [
                 Listing("Fits", images: Icon, releases: [Release("Fits", "1.0.0")]),
-                Listing("TooOld", images: Icon, releases: [Release("TooOld", "1.0.0", gameMax: (Older, OlderRevision))]),
+                Listing("TooOld", name: "Too old mod", images: Icon, releases: [Release("TooOld", "1.0.0", gameMax: (Older, OlderRevision))]),
             ],
             [
                 new ContentIndexPack("Pinned", [retracted, PackVersion("Pinned", "2.0.0", pins: [new ModPackEntry("TooOld", ModVersion.Parse("1.0.0"))]), PackVersion("Pinned", "1.0.0", images: Icon)], null),
@@ -274,8 +275,43 @@ public sealed class IndexStatisticsTests
 
         var statistics = IndexStatistics.From(snapshot, Now);
 
-        Assert.Equal(["Pinned", "TooOld"], statistics.NoCurrentRelease.Select(row => row.Id));
+        var pack = Assert.Single(statistics.PacksNoCurrentFit);
+        Assert.Equal(("Pinned", "Pinned", false), (pack.Id, pack.Name, pack.IsOutsideItsBounds));
+        Assert.Equal([new IndexStatistics.Pin("TooOld", "Too old mod", "1.0.0")], pack.UnfitPins);
         Assert.Equal(["Pinned"], statistics.NoImage.Select(row => row.Id));
+    }
+
+    // Issue #1162: a pack has no release of its own, so it never counts as a listing without a release for the build.
+    [Fact]
+    public void PackThatDoesNotFit_IsNoListingWithoutARelease_AndSaysWhetherItsBoundsOrItsPinsExcludeTheBuild()
+    {
+        var snapshot = new ContentIndexSnapshot(
+            1,
+            [
+                Listing("Fits", images: Icon, releases: [Release("Fits", "1.0.0")]),
+                Listing("TooOld", name: "Too old mod", images: Icon, releases: [Release("TooOld", "1.0.0", gameMax: (Older, OlderRevision))]),
+            ],
+            [
+                new ContentIndexPack("Bounded", [PackVersion("Bounded", "1.0.0", pins: [new ModPackEntry("Fits", ModVersion.Parse("1.0.0"))], images: Icon, gameMax: Older)], null),
+                new ContentIndexPack("OldPins", [PackVersion("OldPins", "1.0.0", pins: [new ModPackEntry("Fits", ModVersion.Parse("1.0.0")), new ModPackEntry("TooOld", ModVersion.Parse("1.0.0"))], images: Icon)], null),
+            ],
+            Versions,
+            []);
+
+        var statistics = IndexStatistics.From(snapshot, Now);
+
+        Assert.Equal(["TooOld"], statistics.NoCurrentRelease.Select(row => row.Id));
+        Assert.Equal(
+            [("Bounded", true, 0), ("OldPins", false, 1)],
+            statistics.PacksNoCurrentFit.Select(pack => (pack.Id, pack.IsOutsideItsBounds, pack.UnfitPins.Count)));
+        Assert.Equal("TooOld", Assert.Single(statistics.PacksNoCurrentFit[1].UnfitPins).Id);
+        Assert.Equal(
+            [
+                new IndexStatistics.UpkeepRow("Bounded", "Bounded", false, true, false, false, false),
+                new IndexStatistics.UpkeepRow("OldPins", "OldPins", false, true, false, false, false),
+                new IndexStatistics.UpkeepRow("TooOld", "Too old mod", true, false, false, false, false),
+            ],
+            statistics.UpkeepRows());
     }
 
     [Fact]
@@ -365,7 +401,7 @@ public sealed class IndexStatisticsTests
 
     private static ContentIndexPack Pack(string id, string version) => new(id, [PackVersion(id, version, images: Icon)], null);
 
-    private static ContentIndexPackVersion PackVersion(string id, string version, bool retracted = false, IReadOnlyList<ModPackEntry>? pins = null, ContentImages? images = null) => new(
+    private static ContentIndexPackVersion PackVersion(string id, string version, bool retracted = false, IReadOnlyList<ModPackEntry>? pins = null, ContentImages? images = null, string? gameMax = null) => new(
         new ModPackMetadata(
             1,
             id,
@@ -378,7 +414,8 @@ public sealed class IndexStatisticsTests
             "2026.1",
             ModVersion.Parse(version),
             DateTimeOffset.UnixEpoch,
-            pins ?? [new ModPackEntry("Member", ModVersion.Parse("1.0.0"))]),
+            pins ?? [new ModPackEntry("Member", ModVersion.Parse("1.0.0"))],
+            gameMax: gameMax),
         retracted ? new IndexStatus(IndexStatusState.Retracted, "retracted") : null,
         images);
 }

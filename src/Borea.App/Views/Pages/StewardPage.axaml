@@ -742,7 +742,7 @@
                                                                         <ItemsControl.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:StewardStatisticsUpkeepCell">
                                                                                 <Panel>
-                                                                                    <Border Classes="stat-mark" ToolTip.Tip="{Binding Problem}" AutomationProperties.Name="{Binding Problem}" IsVisible="{Binding HasProblem}">
+                                                                                    <Border Classes="stat-mark" ToolTip.Tip="{Binding Tip}" AutomationProperties.Name="{Binding Tip}" IsVisible="{Binding HasProblem}">
                                                                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
                                                                                     </Border>
                                                                                 </Panel>
