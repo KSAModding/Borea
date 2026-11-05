@@ -66,6 +66,9 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>The loader release whose update banner was closed, as "id version".</summary>
     public string? DismissedLoaderUpdate { get; set; }
 
+    /// <summary>The Borea version that last showed its release notes at start, such as "0.7.0" or "0.7.0-dev.3".</summary>
+    public string? LastSeenBoreaVersion { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 
     /// <summary>

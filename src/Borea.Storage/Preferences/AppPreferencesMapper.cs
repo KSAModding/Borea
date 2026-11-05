@@ -58,6 +58,7 @@ internal static class AppPreferencesMapper
         DismissedUntestedGameRevision = preferences.DismissedUntestedGameRevision,
         StaySignedInToGitHub = preferences.StaySignedInToGitHub,
         DismissedLoaderUpdate = preferences.DismissedLoaderUpdate,
+        LastSeenBoreaVersion = preferences.LastSeenBoreaVersion,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
@@ -82,7 +83,8 @@ internal static class AppPreferencesMapper
         dismissedUntestedGameRevision: dto.DismissedUntestedGameRevision is >= 0 ? dto.DismissedUntestedGameRevision : null,
         markUntranslatedTexts: dto.MarkUntranslatedTexts ?? false,
         staySignedInToGitHub: dto.StaySignedInToGitHub ?? true,
-        dismissedLoaderUpdate: dto.DismissedLoaderUpdate);
+        dismissedLoaderUpdate: dto.DismissedLoaderUpdate,
+        lastSeenBoreaVersion: dto.LastSeenBoreaVersion);
 
     private static DateTimeOffset? ReadFirstStartedAt(string? text)
         => DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var at) ? at : null;

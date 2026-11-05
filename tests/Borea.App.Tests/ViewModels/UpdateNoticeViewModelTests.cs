@@ -662,6 +662,120 @@ public sealed class UpdateNoticeViewModelTests
         Assert.False(entry.HasRetry);
     }
 
+    private const string InstalledNotes = "## Fixed\n\n- Installs no longer stop at the checksum.";
+
+    /// <summary>Writes the preferences of an install that last showed the notes of <paramref name="seen"/>, or of none.</summary>
+    private static Func<BoreaServices, Task> UsedBefore(string? seen, bool checkForUpdates = true) =>
+        services => services.AppPreferences.SaveAsync(
+            AppPreferences.Empty.WithFirstStartedAt(new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero)).WithLastSeenBoreaVersion(seen).WithCheckForUpdatesAtStart(checkForUpdates),
+            MainViewModel.BundledThemeNames);
+
+    private static async Task<string?> SavedLastSeenAsync(ViewModelHarness harness, MainViewModel viewModel)
+    {
+        await viewModel.WhenPreferencesSavedAsync();
+        return (await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames)).Preferences.LastSeenBoreaVersion;
+    }
+
+    [Fact]
+    public async Task Load_FirstStartAfterAnUpdate_ShowsTheWholeNotesOfTheInstalledVersionOnce()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(UsedBefore("0.9.0"), Releases(Release("v999.0.0"), Release("v" + MainViewModel.BoreaVersion, body: InstalledNotes)));
+        var viewModel = harness.ViewModel;
+
+        await viewModel.WhenReleaseNotesAtStartShownAsync();
+
+        Assert.True(viewModel.IsReleaseNotesOpen);
+        Assert.True(viewModel.IsWhatsNew);
+        var item = Assert.Single(viewModel.ReleaseNotes);
+        Assert.Equal(MainViewModel.BoreaVersion, item.Version);
+        Assert.True(item.IsInstalled);
+        Assert.Equal(InstalledNotes, item.Notes);
+        Assert.Equal(MainViewModel.BoreaVersion, await SavedLastSeenAsync(harness, viewModel));
+
+        var saved = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
+        var restarted = harness.NewViewModel(harness.Services.AppPreferences, saved.Preferences, harness.Services);
+        await restarted.LoadAsync();
+        await restarted.WhenReleaseNotesAtStartShownAsync();
+        Assert.False(restarted.IsReleaseNotesOpen);
+    }
+
+    [Fact]
+    public async Task Load_NewInstall_RecordsTheVersionAndShowsNoNotes()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: Releases(Release("v" + MainViewModel.BoreaVersion, body: InstalledNotes)));
+        var viewModel = harness.ViewModel;
+
+        await viewModel.WhenUpdateCheckedAsync();
+        await viewModel.WhenReleaseNotesAtStartShownAsync();
+
+        Assert.False(viewModel.IsReleaseNotesOpen);
+        Assert.Equal(MainViewModel.BoreaVersion, await SavedLastSeenAsync(harness, viewModel));
+    }
+
+    [Fact]
+    public async Task Load_CheckWithoutTheInstalledRelease_ShowsNothingAndTriesAgainAtTheNextStart()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(UsedBefore("0.9.0"), ReleaseAt("v999.0.0"));
+        var viewModel = harness.ViewModel;
+
+        await viewModel.WhenReleaseNotesAtStartShownAsync();
+
+        Assert.False(viewModel.IsReleaseNotesOpen);
+        Assert.Equal("0.9.0", await SavedLastSeenAsync(harness, viewModel));
+    }
+
+    [Fact]
+    public async Task OpenReleaseNotes_AfterWhatsNew_ShowsTheNewerReleasesUnderTheirOwnTitle()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(UsedBefore("0.9.0"), Releases(Release("v999.0.0"), Release("v" + MainViewModel.BoreaVersion, body: InstalledNotes)));
+        var viewModel = harness.ViewModel;
+        await viewModel.WhenReleaseNotesAtStartShownAsync();
+        viewModel.CloseReleaseNotesCommand.Execute(null);
+
+        viewModel.OpenReleaseNotesCommand.Execute(null);
+
+        Assert.True(viewModel.IsReleaseNotesOpen);
+        Assert.False(viewModel.IsWhatsNew);
+        Assert.Equal(["999.0.0", MainViewModel.BoreaVersion], viewModel.ReleaseNotes.Select(item => item.Version));
+    }
+
+    [Fact]
+    public async Task OpenWhatsNew_CheckOff_AsksForEveryReleaseOnceAndShowsTheInstalledNotes()
+    {
+        var check = new HeldReleaseCheck();
+        using var harness = await ViewModelHarness.CreateAsync(UsedBefore(MainViewModel.BoreaVersion, checkForUpdates: false), releaseCheck: check);
+        var viewModel = harness.ViewModel;
+        viewModel.IsSettingsOpen = true;
+
+        var open = viewModel.OpenWhatsNewCommand.ExecuteAsync(null);
+        check.Answer(0, ReleaseOf("999.0.0"), new BoreaRelease(ModVersion.Parse(MainViewModel.BoreaVersion), "v" + MainViewModel.BoreaVersion, "https://github.com/KSAModding/Borea/releases/tag/v" + MainViewModel.BoreaVersion, InstalledNotes));
+        await open;
+
+        Assert.Equal([BoreaUpdateChannel.Dev], check.Channels);
+        Assert.False(viewModel.IsSettingsOpen);
+        Assert.True(viewModel.IsReleaseNotesOpen);
+        Assert.True(viewModel.IsWhatsNew);
+        var item = Assert.Single(viewModel.ReleaseNotes);
+        Assert.Equal(InstalledNotes, item.Notes);
+        Assert.False(item.HasUnknownNotes);
+    }
+
+    [Fact]
+    public async Task OpenWhatsNew_Offline_SaysThatTheNotesAreNotKnown()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(UsedBefore(MainViewModel.BoreaVersion));
+        var viewModel = harness.ViewModel;
+        await viewModel.WhenUpdateCheckedAsync();
+
+        await viewModel.OpenWhatsNewCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsReleaseNotesOpen);
+        var item = Assert.Single(viewModel.ReleaseNotes);
+        Assert.Null(item.Notes);
+        Assert.True(item.HasUnknownNotes);
+        Assert.False(item.HasNoNotes);
+    }
+
     private static StagedSelfUpdate Staged(BoreaRelease release, Action install)
     {
         var folder = Path.Combine(Path.GetTempPath(), "BoreaSelfUpdateTest");

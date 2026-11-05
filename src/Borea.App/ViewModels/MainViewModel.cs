@@ -404,6 +404,7 @@ public partial class MainViewModel : ViewModelBase
         StartLinkRegistration();
         StartGitHubResume();
         StartUpdateCheck();
+        StartReleaseNotesAtStart();
         StartBackupCleanup();
         RecordFirstStart();
         StartAnnouncementCheck();
@@ -1017,6 +1018,7 @@ public partial class MainViewModel : ViewModelBase
             && left.DismissedUntestedGameRevision == right.DismissedUntestedGameRevision
             && left.StaySignedInToGitHub == right.StaySignedInToGitHub
             && string.Equals(left.DismissedLoaderUpdate, right.DismissedLoaderUpdate, StringComparison.Ordinal)
+            && string.Equals(left.LastSeenBoreaVersion, right.LastSeenBoreaVersion, StringComparison.Ordinal)
             && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.History;
 using Borea.Core.Mods;
+using Borea.Core.Preferences;
 using Borea.Core.Updates;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -114,6 +115,14 @@ public partial class MainViewModel
     /// <summary>The newer releases, newest first, and the installed one last.</summary>
     [ObservableProperty]
     private IReadOnlyList<BoreaReleaseNotesItem> _releaseNotes = [];
+
+    /// <summary>Whether the release notes show only the installed version, as after an update and from the About settings.</summary>
+    [ObservableProperty]
+    private bool _isWhatsNew;
+
+    private Task _releaseNotesAtStart = Task.CompletedTask;
+
+    private bool _releaseNotesAtStartChecked;
 
     /// <summary>The switch in the General settings. Turning it on checks for a Borea release and a newer game build at once.</summary>
     public bool CheckForUpdatesAtStart
@@ -390,11 +399,99 @@ public partial class MainViewModel
         }
 
         ReleaseNotes = notes;
+        IsWhatsNew = false;
         IsReleaseNotesOpen = true;
     }
 
     [RelayCommand]
     private void CloseReleaseNotes() => IsReleaseNotesOpen = false;
+
+    /// <summary>
+    /// Shows the notes of the installed version once, at the first start after an update. A new install
+    /// only records its version, because the player has not used an older one. A start whose release check
+    /// did not return the installed release records nothing, so the next start tries again.
+    /// </summary>
+    private void StartReleaseNotesAtStart()
+    {
+        if (_releaseNotesAtStartChecked)
+            return;
+
+        _releaseNotesAtStartChecked = true;
+        if (!ModVersion.TryParse(BoreaInformationalVersion, out var running)
+            || PreferencesLoadStatus is not (AppPreferencesLoadStatus.Loaded or AppPreferencesLoadStatus.NotFound))
+        {
+            return;
+        }
+
+        if (ModVersion.TryParse(_appPreferences.LastSeenBoreaVersion, out var seen) && seen >= running)
+            return;
+
+        // The first start records FirstStartedAt, so preferences without it come from a new install.
+        if (_appPreferences.FirstStartedAt is null)
+        {
+            RecordSeenBoreaVersion(running);
+            return;
+        }
+
+        _releaseNotesAtStart = ShowReleaseNotesAfterUpdateAsync(running);
+    }
+
+    /// <summary>Completes when the start has shown the notes of an update, or decided not to.</summary>
+    internal Task WhenReleaseNotesAtStartShownAsync() => _releaseNotesAtStart;
+
+    private async Task ShowReleaseNotesAfterUpdateAsync(ModVersion running)
+    {
+        await _updateCheck;
+        if (InstalledRelease(_releases, running) is not { } installed)
+            return;
+
+        RecordSeenBoreaVersion(running);
+        if (installed.Notes is not null)
+            ShowInstalledReleaseNotes(running, installed);
+    }
+
+    private void RecordSeenBoreaVersion(ModVersion version)
+    {
+        var text = version.ToString();
+        QueuePreferenceSave(preferences => preferences.WithLastSeenBoreaVersion(text));
+    }
+
+    /// <summary>
+    /// The "What's new" action of the About settings. When the release check did not return the installed
+    /// release, because it is off or the update channel does not offer that release, it asks once for every release.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenWhatsNewAsync()
+    {
+        if (!ModVersion.TryParse(BoreaInformationalVersion, out var running))
+            return;
+
+        var installed = InstalledRelease(_releases, running);
+        if (installed is null && _services is { } services)
+        {
+            try
+            {
+                installed = InstalledRelease(await services.ReleaseCheck.GetReleasesAsync(BoreaUpdateChannel.Dev), running);
+            }
+            catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or ObjectDisposedException)
+            {
+                // the window then says that the notes could not be loaded
+            }
+        }
+
+        IsSettingsOpen = false;
+        ShowInstalledReleaseNotes(running, installed);
+    }
+
+    private static BoreaRelease? InstalledRelease(IReadOnlyList<BoreaRelease> releases, ModVersion running)
+        => releases.FirstOrDefault(release => release.Version.CompareTo(running) == 0);
+
+    private void ShowInstalledReleaseNotes(ModVersion running, BoreaRelease? installed)
+    {
+        ReleaseNotes = [new BoreaReleaseNotesItem(running, installed, isInstalled: true)];
+        IsWhatsNew = true;
+        IsReleaseNotesOpen = true;
+    }
 
     [RelayCommand]
     private void DismissReleaseBanner()
@@ -444,6 +541,9 @@ public sealed class BoreaReleaseNotesItem : ObservableObject
     public string? Notes => _release?.Notes;
 
     public bool HasNoNotes => _release is not null && _release.Notes is null;
+
+    /// <summary>Whether the release check did not return the installed release, so its notes are not known.</summary>
+    public bool HasUnknownNotes => IsInstalled && _release is null;
 
     public string? PageUrl => IsInstalled ? null : _release?.PageUrl;
 
