@@ -1,0 +1,109 @@
+name: dependabot-lockfiles
+
+# Dependabot updates the lock file of the project that references a bumped package, but not the lock files of the projects that reference that project.
+# The build restores in locked mode, so such a pull request fails with NU1004 until all lock files agree.
+# This workflow restores the whole solution on the branch of a Dependabot NuGet pull request, commits the changed lock files and starts the build again.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions: {}
+
+# A new push by Dependabot makes the result of an older run useless.
+concurrency:
+  group: dependabot-lockfiles-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # This job runs the restore and has only a read token, because a restore evaluates the project files of the branch.
+  refresh:
+    name: refresh lock files
+    # Only a pull request that Dependabot opened from its own NuGet branch in this repository, and only when Dependabot pushed the head.
+    # A push by a person or by this workflow does not start it again.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]'
+      && github.actor == 'dependabot[bot]'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && startsWith(github.event.pull_request.head.ref, 'dependabot/nuget/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+      # Without RestoreLockedMode, the restore writes every lock file again from the project references.
+      - run: dotnet restore Borea.slnx --force-evaluate
+      - name: Keep the changed lock files as a patch
+        id: diff
+        run: |
+          git diff --binary -- '*packages.lock.json' > "$RUNNER_TEMP/lockfiles.patch"
+          if [ -s "$RUNNER_TEMP/lockfiles.patch" ]; then
+            git diff --name-only
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "All lock files agree with the project references."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: lockfiles-patch
+          path: ${{ runner.temp }}/lockfiles.patch
+          retention-days: 1
+
+  # This job may write, so it runs no code from the branch.
+  # It applies the patch only when the patch changes nothing but existing lock files.
+  commit:
+    name: commit lock files
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      # To push the commit to the Dependabot branch.
+      contents: write
+      # To start the build workflow on the new commit, because a push with the workflow token starts no workflow run.
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: lockfiles-patch
+          path: ${{ runner.temp }}/lockfiles
+      - name: Apply the patch to the lock files only
+        run: |
+          git apply "$RUNNER_TEMP/lockfiles/lockfiles.patch"
+          unexpected=$(git status --porcelain=v1 --untracked-files=all | grep -vE '^ M (src|tests)/[A-Za-z0-9._/-]+/packages\.lock\.json$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "The patch changes more than existing lock files:"
+            echo "$unexpected"
+            exit 1
+          fi
+          git status --short
+      # The skip tag lets Dependabot still rebase the pull request over this commit, and the rebase starts this workflow again.
+      - name: Commit and push to the Dependabot branch
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --all --message "Update the lock files of the dependent projects [dependabot skip]"
+          # Not forced, so the push fails when Dependabot moved the branch in the meantime, and the run for that push takes over.
+          git push origin "HEAD:refs/heads/$HEAD_REF"
+      - name: Start the build on the new commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: gh workflow run build.yml --repo "$REPO" --ref "$HEAD_REF"
