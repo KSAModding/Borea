@@ -172,6 +172,61 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAsync_KeyOfANewerBorea_LoadsTheOtherPreferencesAndLeavesTheFile()
+    {
+        const string text = """{ "formatVersion": 1, "selectedTheme": "Light", "newerSetting": { "mode": "fast", "steps": [1, 2] } }""";
+        await WriteAsync(text);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("Light", result.Preferences.SelectedThemeName);
+        Assert.Equal(text, await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+    }
+
+    [Fact]
+    public async Task SaveAsync_OtherSettingAfterALoadWithAKeyOfANewerBorea_WritesTheKeyBack()
+    {
+        await WriteAsync("""{ "formatVersion": 1, "selectedTheme": "Light", "newerSetting": { "mode": "fast", "steps": [1, 2] }, "newerSwitch": true }""");
+        var loaded = await _repository.GetAsync(BundledThemeNames);
+
+        await _repository.SaveAsync(loaded.Preferences.WithFetchAnnouncements(false), BundledThemeNames);
+
+        using var document = await ReadSavedDocumentAsync();
+        var root = document.RootElement;
+        using var expected = JsonDocument.Parse("""{ "mode": "fast", "steps": [1, 2] }""");
+        Assert.True(JsonElement.DeepEquals(expected.RootElement, root.GetProperty("newerSetting")));
+        Assert.True(root.GetProperty("newerSwitch").GetBoolean());
+        Assert.False(root.GetProperty("fetchAnnouncements").GetBoolean());
+        Assert.Equal("Light", root.GetProperty("selectedTheme").GetString());
+    }
+
+    [Fact]
+    public async Task GetAsync_DismissedBoreaReleaseNextToAKeyOfANewerBorea_RemovesOnlyTheRetiredKey()
+    {
+        await WriteAsync("""{ "formatVersion": 1, "dismissedBoreaRelease": "0.1.0", "newerSwitch": true }""");
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        using var document = await ReadSavedDocumentAsync();
+        Assert.False(document.RootElement.TryGetProperty("dismissedBoreaRelease", out _));
+        Assert.True(document.RootElement.GetProperty("newerSwitch").GetBoolean());
+    }
+
+    [Fact]
+    public async Task SaveAsync_OverAFileOfAnotherFormatVersion_KeepsNoKeyOfIt()
+    {
+        await WriteAsync("""{ "formatVersion": 2, "newerSwitch": true }""");
+
+        await _repository.SaveAsync(new AppPreferences("Dark"), BundledThemeNames);
+
+        using var document = await ReadSavedDocumentAsync();
+        Assert.Equal(1, document.RootElement.GetProperty("formatVersion").GetInt32());
+        Assert.False(document.RootElement.TryGetProperty("newerSwitch", out _));
+    }
+
+    [Fact]
     public async Task SaveThenGet_DismissedGameRevision_RestoresTheRevision()
     {
         Assert.Null(AppPreferences.Empty.DismissedGameRevision);
@@ -663,8 +718,9 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         """
         {
           "formatVersion": 1,
-          "customThemes": [],
-          "unknown": true
+          "customThemes": [
+            { "name": "Mission", "mainColor": "#102030", "secondaryColor": "#405060", "globalPanelsColor": "#708090", "textColor": "#abcdef", "unknown": true }
+          ]
         }
         """,
     };
