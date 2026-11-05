@@ -42,7 +42,7 @@
                                 <KeyBinding Gesture="Escape" Command="{Binding CancelNameModalCommand}" />
                             </TextBox.KeyBindings>
                         </TextBox>
-                        <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <!-- Game Settings Preset -->
                     <StackPanel Grid.Row="1" Spacing="6" Margin="0,16,0,0" IsVisible="{Binding CanPickGameSettingsPreset}">

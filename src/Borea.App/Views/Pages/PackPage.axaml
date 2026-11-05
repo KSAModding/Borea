@@ -107,7 +107,7 @@
                             <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersionText" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberFit" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
+                        <SelectableTextBlock Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
                     </Grid>
                     <WrapPanel Grid.Column="2" Classes="member-cell" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center">
                         <Border Classes="chip positive" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
@@ -152,8 +152,8 @@
                             </views:ListingImageView>
                         </Border>
                         <StackPanel Spacing="4">
-                            <TextBlock Classes="heading-lg" Text="{Binding SelectedPack.Name}" TextWrapping="Wrap" />
-                            <TextBlock Classes="body-md secondary" Text="{Binding SelectedPack.Abstract}" TextWrapping="Wrap" LineHeight="18" />
+                            <SelectableTextBlock Classes="heading-lg" Text="{Binding SelectedPack.Name}" TextWrapping="Wrap" />
+                            <SelectableTextBlock Classes="body-md secondary" Text="{Binding SelectedPack.Abstract}" TextWrapping="Wrap" LineHeight="18" />
                             <!-- RFC 0110: the forums thread of the pack is gone, so the page offers no install -->
                             <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Margin="0,8,0,0" Text="{Binding SelectedPack.ForumsGoneText}" IsVisible="{Binding SelectedPack.ForumsGoneText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
                             <!-- the members with a newer release, which the Mods tab names -->
@@ -178,7 +178,7 @@
                                 <TextBlock Classes="body-sm secondary" Text="{Binding SelectedPack.ProgressStatus}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <TextBlock Classes="label-md" Text="{Binding SelectedPack.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </WrapPanel>
-                            <TextBlock Classes="body-sm danger" Text="{Binding SelectedPack.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-sm danger" Text="{Binding SelectedPack.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <TextBlock Classes="body-sm secondary" Text="{Binding SelectedPack.InstallNote}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallNote, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <!-- what the authors of the members still ask for after an install, until the player dismisses it -->
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.HasInstallStepsNotice, FallbackValue={x:False}}">
@@ -253,7 +253,7 @@
                             <WrapPanel ItemSpacing="16" LineSpacing="8" VerticalAlignment="Center" IsVisible="{Binding SelectedPack, Converter={x:Static ObjectConverters.IsNotNull}}">
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
-                                    <TextBlock Classes="label-md" Text="{Binding SelectedPack.Version}" VerticalAlignment="Center" />
+                                    <SelectableTextBlock Classes="label-md" Text="{Binding SelectedPack.Version}" VerticalAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding SelectedPack.ReleasedDateText}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
@@ -272,13 +272,13 @@
                                 <DataTemplate x:DataType="vm:PackResultItem">
                                     <Border Padding="16,8" MinHeight="40">
                                         <Grid ColumnDefinitions="200,Auto,*">
-                                            <TextBlock Classes="heading-sm" Text="{Binding ModId}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Classes="body-md secondary hide-small" Width="120" Text="{Binding Version}" VerticalAlignment="Center" />
+                                            <SelectableTextBlock Classes="heading-sm" Text="{Binding ModId}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <SelectableTextBlock Grid.Column="1" Classes="body-md secondary hide-small" Width="120" Text="{Binding Version}" VerticalAlignment="Center" />
                                             <WrapPanel Grid.Column="2" ItemSpacing="8" LineSpacing="4" VerticalAlignment="Center">
                                                 <Border Classes="chip" Classes.positive="{Binding IsSuccess}" Classes.incompatible="{Binding IsProblem}" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding StatusText}" />
                                                 </Border>
-                                                <TextBlock Classes="body-sm secondary" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="260" VerticalAlignment="Center" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                <SelectableTextBlock Classes="body-sm secondary" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="260" VerticalAlignment="Center" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                             </WrapPanel>
                                         </Grid>
                                     </Border>
@@ -287,7 +287,7 @@
                         </ItemsControl>
                     </Border>
 
-                    <TextBlock Classes="body-md danger" Text="{Binding PackDetailError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding PackDetailError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding PackDetailError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding PackDetailError, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
                     <!-- c/inner-nav-bar -->
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
@@ -353,7 +353,7 @@
                                                         <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersionText" />
                                                         <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberFit" />
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                    <SelectableTextBlock Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
                                                     <WrapPanel Classes="member-fit" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center" IsVisible="{Binding HasFitChips}">
                                                         <Border Classes="chip" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding FitText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding FitText}">
                                                             <TextBlock Text="{Binding CompatibilityText}" />
@@ -433,7 +433,7 @@
                                                         <Button Classes="text" Content="{Binding Run.PauseText}" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding IsInstalling}" />
                                                         <Button Classes="text" Content="{Binding Run.StopText}" Command="{Binding Run.StopCommand}" IsVisible="{Binding IsInstalling}" />
                                                     </WrapPanel>
-                                                    <TextBlock Classes="body-sm danger" Margin="0,6,0,0" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                    <SelectableTextBlock Classes="body-sm danger" Margin="0,6,0,0" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
@@ -489,7 +489,7 @@
                                                     <Border DockPanel.Dock="Right" Classes="chip positive" Margin="8,0,0,0" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
                                                         <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
                                                     </Border>
-                                                    <TextBlock Classes="heading-sm" Text="{Binding Version}" ToolTip.Tip="{Binding Version}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    <SelectableTextBlock Classes="heading-sm" Text="{Binding Version}" ToolTip.Tip="{Binding Version}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 </DockPanel>
                                                 <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding GameVersionText}" />
@@ -630,7 +630,7 @@
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ContentDetails}" />
                         <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding Localization.DiscoverLicense}">
                             <Path Classes="icon size-16" Data="{StaticResource Icon.Scales}" />
-                            <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.License}" VerticalAlignment="Center" />
+                            <SelectableTextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.License}" VerticalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding SelectedPack.PublishedDateText}" IsVisible="{Binding SelectedPack.PublishedText, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <Path Classes="icon size-16" Data="{StaticResource Icon.CalendarBlank}" />
@@ -639,7 +639,7 @@
                         <!-- the credit the icon's license asks for -->
                         <Grid ColumnDefinitions="Auto,8,*" ToolTip.Tip="{Binding Localization.ContentIconCredit}" IsVisible="{Binding SelectedPack.IconAttribution, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <Path Classes="icon size-16" Data="{StaticResource Icon.Image}" VerticalAlignment="Top" />
-                            <TextBlock Grid.Column="2" Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.IconAttribution}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <SelectableTextBlock Grid.Column="2" Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.IconAttribution}" TextWrapping="Wrap" VerticalAlignment="Center" />
                         </Grid>
                         <Button Classes="filter" Command="{Binding SelectedPack.Icon.OpenSourceCommand}" ToolTip.Tip="{Binding SelectedPack.IconSource}" IsVisible="{Binding SelectedPack.IconSource, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <StackPanel Orientation="Horizontal" Spacing="8">

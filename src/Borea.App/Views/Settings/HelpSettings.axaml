@@ -22,7 +22,7 @@
                 <Button Classes="text" Content="{Binding Localization.AboutOpenBoreaLog}" Command="{Binding OpenBoreaLogCommand}" />
             </WrapPanel>
             <TextBlock Classes="body-md secondary" Text="{Binding AboutMessage}" TextWrapping="Wrap" IsVisible="{Binding AboutMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            <TextBlock Classes="body-md danger" Text="{Binding AboutError}" TextWrapping="Wrap" IsVisible="{Binding AboutError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <SelectableTextBlock Classes="body-md danger" Text="{Binding AboutError}" TextWrapping="Wrap" IsVisible="{Binding AboutError, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

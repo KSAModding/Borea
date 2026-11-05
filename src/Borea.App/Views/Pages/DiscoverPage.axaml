@@ -184,16 +184,16 @@
                     </DockPanel>
 
                     <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverLoading}" Margin="8,24,0,0" IsVisible="{Binding IsDiscoverLoading}" />
-                    <TextBlock Classes="body-md danger" Text="{Binding DiscoverError}" TextWrapping="Wrap" Margin="8,24,0,0">
-                        <TextBlock.IsVisible>
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding DiscoverError}" TextWrapping="Wrap" Margin="8,24,0,0">
+                        <SelectableTextBlock.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                 <Binding Path="DiscoverError" Converter="{x:Static ObjectConverters.IsNotNull}" />
                                 <Binding Path="!IsIndexUnreachable" />
                             </MultiBinding>
-                        </TextBlock.IsVisible>
-                    </TextBlock>
+                        </SelectableTextBlock.IsVisible>
+                    </SelectableTextBlock>
                     <StackPanel Spacing="8" Margin="8,24,0,0" IsVisible="{Binding IsIndexUnreachable}">
-                        <TextBlock Classes="body-md danger" Text="{Binding IndexFailureText}" TextWrapping="Wrap" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding IndexFailureText}" TextWrapping="Wrap" />
                         <Button Classes="link" Command="{Binding RetryContentIndexCommand}" HorizontalAlignment="Left">
                             <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverIndexRetry}" />
                         </Button>

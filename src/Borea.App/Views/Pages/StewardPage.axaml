@@ -262,7 +262,7 @@
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                                 <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardQueueLoading}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <ItemsControl ItemsSource="{Binding Failures}" Margin="0,16,0,0" IsVisible="{Binding !!Failures.Count}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="x:String">
@@ -335,7 +335,7 @@
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                                 <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportsLoading}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <TextBlock Classes="body-md muted" Text="{Binding EmptyText}" Margin="0,16,0,0" IsVisible="{Binding IsEmpty}" />
 
                             <ItemsControl ItemsSource="{Binding Reports}" Margin="0,16,0,0">
@@ -356,7 +356,7 @@
                                                     <Button Classes="link" Command="{Binding OpenContentCommand}" IsVisible="{Binding CanOpenContent}">
                                                         <TextBlock Classes="heading-md" Text="{Binding ContentName}" />
                                                     </Button>
-                                                    <TextBlock Classes="heading-md" Text="{Binding Report.Id}" VerticalAlignment="Center" IsVisible="{Binding IsIdUnknown}" />
+                                                    <SelectableTextBlock Classes="heading-md" Text="{Binding Report.Id}" VerticalAlignment="Center" IsVisible="{Binding IsIdUnknown}" />
                                                     <TextBlock Classes="body-sm secondary" Text="{Binding VersionText}" VerticalAlignment="Center" IsVisible="{Binding HasVersion}" />
                                                     <TextBlock Classes="body-sm muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardWatcherUnknownListing}" VerticalAlignment="Center" IsVisible="{Binding IsIdUnknown}" />
                                                 </WrapPanel>
@@ -432,7 +432,7 @@
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                             <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatusLoading}" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatusEmpty}" Margin="0,16,0,0" IsVisible="{Binding IsStatusEmpty}" />
 
                         <ItemsControl ItemsSource="{Binding StatusEntries}" Margin="0,16,0,0">
@@ -447,7 +447,7 @@
                                         <Grid ColumnDefinitions="*,16,Auto">
                                             <StackPanel Spacing="4">
                                                 <WrapPanel ItemSpacing="12" LineSpacing="4">
-                                                    <TextBlock Classes="heading-md" Text="{Binding Id}" VerticalAlignment="Center" />
+                                                    <SelectableTextBlock Classes="heading-md" Text="{Binding Id}" VerticalAlignment="Center" />
                                                     <Border Classes="chip" VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding StateText}" />
                                                     </Border>
@@ -499,7 +499,7 @@
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                                 <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardWatcherLoading}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <ItemsControl ItemsSource="{Binding Failures}" Margin="0,16,0,0" IsVisible="{Binding !!Failures.Count}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="x:String">
@@ -551,7 +551,7 @@
                                                     <Button Classes="link" Command="{Binding OpenListingCommand}" IsVisible="{Binding CanOpenListing}">
                                                         <TextBlock Classes="heading-md" Text="{Binding ListingName}" />
                                                     </Button>
-                                                    <TextBlock Classes="heading-md" Text="{Binding Issue.ListingId}" VerticalAlignment="Center" IsVisible="{Binding IsListingUnknown}" />
+                                                    <SelectableTextBlock Classes="heading-md" Text="{Binding Issue.ListingId}" VerticalAlignment="Center" IsVisible="{Binding IsListingUnknown}" />
                                                     <TextBlock Classes="body-sm muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardWatcherUnknownListing}" VerticalAlignment="Center" IsVisible="{Binding IsListingUnknown}" />
                                                     <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardWatcherNoListing}" VerticalAlignment="Center" IsVisible="{Binding HasNoListing}" />
                                                 </WrapPanel>
@@ -585,7 +585,7 @@
                                                 <Button Classes="link" Command="{Binding OpenListingCommand}" IsVisible="{Binding CanOpenListing}">
                                                     <TextBlock Classes="heading-md" Text="{Binding Name}" />
                                                 </Button>
-                                                <TextBlock Classes="heading-md" Text="{Binding Name}" IsVisible="{Binding IsListingUnknown}" />
+                                                <SelectableTextBlock Classes="heading-md" Text="{Binding Name}" IsVisible="{Binding IsListingUnknown}" />
                                                 <ItemsControl ItemsSource="{Binding Releases}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
@@ -617,7 +617,7 @@
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                                 <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsLoading}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <Panel Margin="0,16,0,0" IsVisible="{Binding Report, Converter={x:Static ObjectConverters.IsNotNull}}">
                                 <StackPanel DataContext="{Binding Report}" x:DataType="vm:StewardStatisticsReport" Spacing="8">
                                     <!-- the headline numbers -->
@@ -839,7 +839,7 @@
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                             <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReviewLoading}" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
                         <!-- the head commit, validate on it, and the checks to run again -->
                         <Border Classes="card" Padding="24,16" Margin="0,16,0,0" IsVisible="{Binding CommitText, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -901,7 +901,7 @@
                                         <Border Classes="card" Padding="24">
                                             <StackPanel Spacing="16">
                                                 <WrapPanel ItemSpacing="8" LineSpacing="4">
-                                                    <TextBlock Classes="label-md" Text="{Binding Path}" VerticalAlignment="Center" />
+                                                    <SelectableTextBlock Classes="label-md" Text="{Binding Path}" VerticalAlignment="Center" />
                                                     <Border Classes="chip" VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding KindText}" />
                                                     </Border>
@@ -920,9 +920,9 @@
                                                             <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(1.5)" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                         </Border>
                                                         <StackPanel Grid.Column="2" Spacing="4">
-                                                            <TextBlock Classes="heading-lg" Text="{Binding Name}" TextWrapping="Wrap" />
+                                                            <SelectableTextBlock Classes="heading-lg" Text="{Binding Name}" TextWrapping="Wrap" />
                                                             <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextWrapping="Wrap" IsVisible="{Binding AuthorsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                                            <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" LineHeight="18" IsVisible="{Binding Abstract, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                            <SelectableTextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" LineHeight="18" IsVisible="{Binding Abstract, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                             <WrapPanel ItemSpacing="8" LineSpacing="4" Margin="0,8,0,0">
                                                                 <Border Classes="chip" IsVisible="{Binding VersionText, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                                     <TextBlock Text="{Binding VersionText}" />
@@ -932,7 +932,7 @@
                                                                 </Border>
                                                                 <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverLicense}" IsVisible="{Binding License, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Scales}" />
-                                                                    <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding License}" VerticalAlignment="Center" />
+                                                                    <SelectableTextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding License}" VerticalAlignment="Center" />
                                                                 </StackPanel>
                                                             </WrapPanel>
                                                             <ItemsControl ItemsSource="{Binding Tags}" Margin="0,8,0,0">
@@ -1055,7 +1055,7 @@
                                         <Border Classes="card" Padding="24">
                                             <StackPanel Spacing="8">
                                                 <WrapPanel ItemSpacing="8" LineSpacing="4">
-                                                    <TextBlock Classes="label-md" Text="{Binding Path}" VerticalAlignment="Center" />
+                                                    <SelectableTextBlock Classes="label-md" Text="{Binding Path}" VerticalAlignment="Center" />
                                                     <Border Classes="chip" VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding KindText}" />
                                                     </Border>
@@ -1092,7 +1092,7 @@
                                             <StackPanel Spacing="8">
                                                 <Grid ColumnDefinitions="*,16,Auto">
                                                     <WrapPanel ItemSpacing="12" LineSpacing="4">
-                                                        <TextBlock Classes="label-md" Text="{Binding File.Path}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                        <SelectableTextBlock Classes="label-md" Text="{Binding File.Path}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                                         <TextBlock Classes="body-sm secondary" Text="{Binding StatusText}" VerticalAlignment="Center" />
                                                         <TextBlock Classes="body-sm secondary" Text="{Binding ChangesText}" VerticalAlignment="Center" />
                                                     </WrapPanel>

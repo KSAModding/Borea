@@ -43,7 +43,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <SelectableTextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
         </Border>
     </Panel>

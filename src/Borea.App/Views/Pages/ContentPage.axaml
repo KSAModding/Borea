@@ -130,8 +130,8 @@
                             </views:ListingImageView>
                         </Border>
                         <StackPanel Spacing="4">
-                            <TextBlock Classes="heading-lg" Text="{Binding SelectedContent.Name}" TextWrapping="Wrap" />
-                            <TextBlock Classes="body-md secondary" Text="{Binding SelectedContent.Abstract}" TextWrapping="Wrap" LineHeight="18" />
+                            <SelectableTextBlock Classes="heading-lg" Text="{Binding SelectedContent.Name}" TextWrapping="Wrap" />
+                            <SelectableTextBlock Classes="body-md secondary" Text="{Binding SelectedContent.Abstract}" TextWrapping="Wrap" LineHeight="18" />
                             <!-- RFC 0110: the forums thread of the listing is gone, so the page offers no install -->
                             <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Margin="0,8,0,0" Text="{Binding SelectedContent.ForumsGoneText}" IsVisible="{Binding SelectedContent.ForumsGoneText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
                             <ContentControl Margin="0,8,0,0" Content="{Binding SelectedContent.Choices}" IsVisible="{Binding SelectedContent.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -160,7 +160,7 @@
                                 <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.ProgressStatus}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <TextBlock Classes="label-md" Text="{Binding SelectedContent.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </WrapPanel>
-                            <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <SelectableTextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <!-- what the author still asks for after an install and where a new vehicle or save is in the game, until the player dismisses it -->
                             <StackPanel Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
                                 <ItemsControl ItemsSource="{Binding SelectedContent.InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
@@ -272,7 +272,7 @@
                             <WrapPanel ItemSpacing="16" LineSpacing="8" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion, Converter={x:Static ObjectConverters.IsNotNull}}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
-                                    <TextBlock Classes="label-md" Text="{Binding LatestVersion.Version}" VerticalAlignment="Center" />
+                                    <SelectableTextBlock Classes="label-md" Text="{Binding LatestVersion.Version}" VerticalAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion.DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}" ToolTip.Tip="{Binding Localization.ContentDownloadSize}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
@@ -314,7 +314,7 @@
                             <TextBlock Classes="action-md" Text="{Binding Localization.NavigationSettings}" />
                         </Button>
                     </WrapPanel>
-                    <TextBlock Classes="body-md danger" Text="{Binding ContentDetailError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentDetailError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding ContentDetailError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentDetailError, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
                     <!-- c/inner-nav-bar -->
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
@@ -611,7 +611,7 @@
                                                         <Border DockPanel.Dock="Right" Classes="chip positive" Margin="8,0,0,0" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
                                                             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
                                                         </Border>
-                                                        <TextBlock Classes="heading-sm" Text="{Binding Version}" ToolTip.Tip="{Binding Version}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                        <SelectableTextBlock Classes="heading-sm" Text="{Binding Version}" ToolTip.Tip="{Binding Version}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                     </DockPanel>
                                                     <Panel Grid.Column="1" Classes="hide-narrow" Width="76">
                                                         <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" Classes.testing="{Binding IsTesting}" Classes.dev="{Binding IsDev}">
@@ -673,7 +673,7 @@
                                                         <Button Classes="text" Content="{Binding Run.PauseText}" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding IsInstalling}" />
                                                         <Button Classes="text" Content="{Binding Run.StopText}" Command="{Binding Run.StopCommand}" IsVisible="{Binding IsInstalling}" />
                                                     </WrapPanel>
-                                                    <TextBlock Grid.Row="2" Grid.ColumnSpan="8" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                    <SelectableTextBlock Grid.Row="2" Grid.ColumnSpan="8" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                     <StackPanel Grid.Row="3" Grid.ColumnSpan="8" Margin="0,8,0,4" IsVisible="{Binding IsChangelogExpanded}">
                                                         <views:MarkdownView Markdown="{Binding Changelog.Text}" IsVisible="{Binding Changelog.Text, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <Button Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding Changelog.Link}" ToolTip.Tip="{Binding Changelog.Link.Url}" IsVisible="{Binding Changelog.Link, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -707,7 +707,7 @@
                                 <TextBlock Text="{Binding SelectedContent.CompatibilityText}" />
                             </StackPanel>
                         </Border>
-                        <TextBlock Classes="body-sm secondary" Text="{Binding ContentFileBuildText}" TextWrapping="Wrap" IsVisible="{Binding ContentFileBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-sm secondary" Text="{Binding ContentFileBuildText}" TextWrapping="Wrap" IsVisible="{Binding ContentFileBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}">
                         <Border.IsVisible>
@@ -818,7 +818,7 @@
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ContentDetails}" />
                         <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding Localization.DiscoverLicense}">
                             <Path Classes="icon size-16" Data="{StaticResource Icon.Scales}" />
-                            <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedContent.License}" VerticalAlignment="Center" />
+                            <SelectableTextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedContent.License}" VerticalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding SelectedContent.PublishedDateText}" IsVisible="{Binding SelectedContent.PublishedText, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <Path Classes="icon size-16" Data="{StaticResource Icon.CalendarBlank}" />
@@ -827,7 +827,7 @@
                         <!-- the credit the icon's license asks for -->
                         <Grid ColumnDefinitions="Auto,8,*" ToolTip.Tip="{Binding Localization.ContentIconCredit}" IsVisible="{Binding SelectedContent.IconAttribution, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <Path Classes="icon size-16" Data="{StaticResource Icon.Image}" VerticalAlignment="Top" />
-                            <TextBlock Grid.Column="2" Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedContent.IconAttribution}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <SelectableTextBlock Grid.Column="2" Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedContent.IconAttribution}" TextWrapping="Wrap" VerticalAlignment="Center" />
                         </Grid>
                         <Button Classes="filter" Command="{Binding SelectedContent.Icon.OpenSourceCommand}" ToolTip.Tip="{Binding SelectedContent.IconSource}" IsVisible="{Binding SelectedContent.IconSource, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <StackPanel Orientation="Horizontal" Spacing="8">

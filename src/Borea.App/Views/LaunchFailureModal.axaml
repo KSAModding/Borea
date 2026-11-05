@@ -25,7 +25,7 @@
                             <SelectableTextBlock Classes="log-line" Text="{Binding LaunchOutputText}" TextWrapping="Wrap" />
                         </ScrollViewer>
                     </Border>
-                    <TextBlock Classes="body-md danger" Text="{Binding LaunchFailureError}" TextWrapping="Wrap" IsVisible="{Binding LaunchFailureError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <SelectableTextBlock Classes="body-md danger" Text="{Binding LaunchFailureError}" TextWrapping="Wrap" IsVisible="{Binding LaunchFailureError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <!-- the text buttons wrap, so a long cta keeps the right edge of the text above it -->
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Center">

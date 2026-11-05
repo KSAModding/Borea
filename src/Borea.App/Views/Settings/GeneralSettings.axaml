@@ -22,7 +22,7 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Classes="body-md danger" Text="{Binding PreferenceSaveError}" TextWrapping="Wrap" IsVisible="{Binding PreferenceSaveError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <SelectableTextBlock Classes="body-md danger" Text="{Binding PreferenceSaveError}" TextWrapping="Wrap" IsVisible="{Binding PreferenceSaveError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsThemeLabel}" Margin="0,18,0,0" />
             <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" Width="340" Margin="0,4,0,0" />
             <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsUpdatesLabel}" Margin="0,18,0,0" />
@@ -83,7 +83,7 @@
                 </Grid>
             </StackPanel>
             <TextBlock Classes="body-md secondary" Text="{Binding LibraryFolderMessage}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            <TextBlock Classes="body-md danger" Text="{Binding LibraryFolderError}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <SelectableTextBlock Classes="body-md danger" Text="{Binding LibraryFolderError}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md" Text="{Binding Localization.SettingsBackupRetentionLabel}" Margin="0,12,0,0" />
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsBackupRetentionHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
             <ComboBox ItemsSource="{Binding BackupRetentionOptions}" SelectedItem="{Binding SelectedBackupRetention, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsBackupRetentionLabel}" Width="340" Margin="0,4,0,0">
@@ -99,7 +99,7 @@
             </Grid>
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsSharedModStoreHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
             <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedModStoreTurningOff}" TextWrapping="Wrap" IsVisible="{Binding IsChangingSharedModStore}" />
-            <TextBlock Classes="body-md danger" Text="{Binding SharedModStoreError}" TextWrapping="Wrap" IsVisible="{Binding SharedModStoreError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <SelectableTextBlock Classes="body-md danger" Text="{Binding SharedModStoreError}" TextWrapping="Wrap" IsVisible="{Binding SharedModStoreError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <StackPanel Spacing="6" Margin="0,18,0,0" IsVisible="{Binding IsGitHubAccountAvailable}">
                 <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsGitHubLabel}" />
                 <StackPanel Spacing="6" IsVisible="{Binding !IsGitHubSignedIn}">
@@ -125,7 +125,7 @@
                 </Grid>
                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsGitHubStaySignedInHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
                 <TextBlock Classes="body-sm secondary" Text="{Binding GitHubKeepSignedInProblemText}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" IsVisible="{Binding GitHubKeepSignedInProblemText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                <TextBlock Classes="body-md danger" Text="{Binding GitHubAccountError}" TextWrapping="Wrap" IsVisible="{Binding GitHubAccountError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <SelectableTextBlock Classes="body-md danger" Text="{Binding GitHubAccountError}" TextWrapping="Wrap" IsVisible="{Binding GitHubAccountError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

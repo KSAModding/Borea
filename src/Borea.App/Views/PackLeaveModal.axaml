@@ -64,7 +64,7 @@
                             <SelectableTextBlock Classes="body-md" Text="{Binding Reason}" TextWrapping="Wrap" />
                         </StackPanel>
 
-                        <TextBlock Classes="body-md danger" Text="{Binding Refusal}" TextWrapping="Wrap" IsVisible="{Binding Refusal, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding Refusal}" TextWrapping="Wrap" IsVisible="{Binding Refusal, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md" Text="{Binding OwnerText}" TextWrapping="Wrap" IsVisible="{Binding OwnerText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md" Text="{Binding OpenPullRequestsText}" TextWrapping="Wrap" IsVisible="{Binding OpenPullRequestsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding MentionText}" TextWrapping="Wrap" IsVisible="{Binding MentionText, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -73,7 +73,7 @@
                             <TextBlock Classes="body-md" Text="{Binding Localization.StewardOpening}" VerticalAlignment="Center" />
                         </StackPanel>
                         <TextBlock Classes="body-md" Text="{Binding OpenedText}" TextWrapping="Wrap" IsVisible="{Binding IsOpened}" />
-                        <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <SelectableTextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>
