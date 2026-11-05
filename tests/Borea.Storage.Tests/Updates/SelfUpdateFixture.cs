@@ -24,14 +24,15 @@ internal sealed class FakeReleaseFiles : IBoreaReleaseFiles
 
     public static string Url(string name) => "https://github.com/KSAModding/Borea/releases/download/v0.2.0/" + name;
 
-    public Task<string?> ReadTextAsync(string url, CancellationToken cancellationToken = default)
+    public Task<string?> ReadTextAsync(BoreaReleaseAsset asset, CancellationToken cancellationToken = default)
     {
-        Requested.Add(url);
-        return Task.FromResult(_files.TryGetValue(url, out var content) ? Encoding.UTF8.GetString(content) : null);
+        Requested.Add(asset.Url);
+        return Task.FromResult(_files.TryGetValue(asset.Url, out var content) ? Encoding.UTF8.GetString(content) : null);
     }
 
-    public async Task<string> DownloadAsync(string url, string path, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<string> DownloadAsync(BoreaReleaseAsset asset, string path, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
     {
+        var url = asset.Url;
         Requested.Add(url);
         if (DownloadFailure is not null)
             throw DownloadFailure;

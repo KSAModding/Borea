@@ -681,7 +681,7 @@ public sealed class BoreaServices : IDisposable
             SharedProfileLauncher = new LoggingSharedProfileLauncher(sharedProfileLauncher ?? new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter(), launches), log),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = releaseCheck ?? new BoreaReleaseCheck(http),
-            SelfUpdater = selfUpdater ?? BuildSelfUpdater(new BoreaReleaseFiles(http), log, fromCommandLine: logSource == BoreaLogSource.Cli),
+            SelfUpdater = selfUpdater ?? BuildSelfUpdater(new BoreaReleaseFiles(http, log), log, fromCommandLine: logSource == BoreaLogSource.Cli),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
             InstanceGames = instanceGames,
