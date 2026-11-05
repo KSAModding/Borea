@@ -849,6 +849,15 @@
   <data name="StewardStatisticsNoCurrentRelease" xml:space="preserve">
     <value>No release for the build</value>
   </data>
+  <data name="StewardStatisticsPackNoCurrentFit" xml:space="preserve">
+    <value>Pack does not fit the build</value>
+  </data>
+  <data name="StewardStatisticsPackOutsideBounds" xml:space="preserve">
+    <value>The game bounds of the pack do not allow the build.</value>
+  </data>
+  <data name="StewardStatisticsPackUnfitPinsFormat" xml:space="preserve">
+    <value>Pins releases that do not fit the build: {0}</value>
+  </data>
   <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
     <value>No update for {0} days</value>
   </data>

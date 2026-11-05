@@ -153,22 +153,38 @@ public sealed partial class StewardStatisticsTab : ObservableObject
     private StewardStatisticsUpkeep Upkeep(IndexStatistics statistics, IReadOnlyList<IndexStatistics.UpkeepRow> rows)
     {
         var text = _owner.Localization;
-        var problems = new (string Title, int Count, Func<IndexStatistics.UpkeepRow, bool> HasProblem)[]
+        var packs = statistics.PacksNoCurrentFit.ToDictionary(pack => pack.Id, ModIds.Comparer);
+        var problems = new (string Title, int Count, Func<IndexStatistics.UpkeepRow, bool> HasProblem, Func<IndexStatistics.UpkeepRow, string?> Detail)[]
         {
-            (text.StewardStatisticsNoCurrentRelease, statistics.NoCurrentRelease.Count, row => row.NoCurrentRelease),
-            (text.FormatStewardStatisticsNoUpdate(Number(IndexStatistics.NoUpdateDays)), statistics.NoRecentUpdate.Count, row => row.NoRecentUpdate),
-            (text.StewardStatisticsNoImage, statistics.NoImage.Count, row => row.NoImage),
-            (text.StewardStatisticsNoForumsThread, statistics.NoForumsThread.Count, row => row.NoForumsThread),
+            (text.StewardStatisticsNoCurrentRelease, statistics.NoCurrentRelease.Count, row => row.NoCurrentRelease, _ => null),
+            (text.StewardStatisticsPackNoCurrentFit, statistics.PacksNoCurrentFit.Count, row => row.PackNoCurrentFit, row => packs.TryGetValue(row.Id, out var pack) ? UnfitText(pack) : null),
+            (text.FormatStewardStatisticsNoUpdate(Number(IndexStatistics.NoUpdateDays)), statistics.NoRecentUpdate.Count, row => row.NoRecentUpdate, _ => null),
+            (text.StewardStatisticsNoImage, statistics.NoImage.Count, row => row.NoImage, _ => null),
+            (text.StewardStatisticsNoForumsThread, statistics.NoForumsThread.Count, row => row.NoForumsThread, _ => null),
         };
 
         // without a build nothing was rated, so a column for it would claim a zero that nobody checked
-        var rated = statistics.CurrentBuild is null ? problems[1..] : problems;
+        var rated = statistics.CurrentBuild is null ? problems[2..] : problems;
         return new StewardStatisticsUpkeep(
             [.. rated.Select(problem => new StewardStatisticsUpkeepColumn(problem.Title, Count(problem.Count)))],
             new StewardStatisticsList(_owner, text.StewardStatisticsUpkeep,
             [
-                .. rows.Select(row => new StewardStatisticsUpkeepRow(_owner, row.Name, row.Id, [.. rated.Select(problem => new StewardStatisticsUpkeepCell(problem.Title, problem.HasProblem(row)))])),
+                .. rows.Select(row => new StewardStatisticsUpkeepRow(_owner, row.Name, row.Id, [.. rated.Select(problem => new StewardStatisticsUpkeepCell(problem.Title, problem.HasProblem(row), problem.Detail(row)))])),
             ], FirstUpkeepRows));
+    }
+
+    /// <summary>Why a pack does not fit the build, one reason per line, so a steward sees which pins the author has to move.</summary>
+    private string UnfitText(IndexStatistics.UnfitPack pack)
+    {
+        var text = _owner.Localization;
+        var pins = string.Join(", ", pack.UnfitPins.Select(pin => $"{pin.Name} {pin.Version}"));
+        return string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                pack.IsOutsideItsBounds ? text.StewardStatisticsPackOutsideBounds : null,
+                pack.UnfitPins.Count > 0 ? text.FormatStewardStatisticsPackUnfitPins(pins) : null,
+            }.OfType<string>());
     }
 
     private string TypeText(ContentType type) => type switch
@@ -245,7 +261,12 @@ public sealed record StewardStatisticsUpkeep(IReadOnlyList<StewardStatisticsUpke
 
 public sealed record StewardStatisticsUpkeepColumn(string Title, StewardStatisticsCount Count);
 
-public sealed record StewardStatisticsUpkeepCell(string Problem, bool HasProblem);
+/// <param name="Detail">The reason behind a marked cell when the column title alone does not say what to fix, such as the pins of a pack that do not fit.</param>
+public sealed record StewardStatisticsUpkeepCell(string Problem, bool HasProblem, string? Detail = null)
+{
+    /// <summary>The tooltip and the name for a screen reader.</summary>
+    public string Tip => Detail ?? Problem;
+}
 
 /// <summary>
 /// The rows of a table or a ranked list.

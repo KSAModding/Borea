@@ -944,6 +944,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardStatisticsNoCurrentRelease => Resources.StewardStatisticsNoCurrentRelease;
 
+    public string StewardStatisticsPackNoCurrentFit => Resources.StewardStatisticsPackNoCurrentFit;
+
+    public string StewardStatisticsPackOutsideBounds => Resources.StewardStatisticsPackOutsideBounds;
+
+    public string FormatStewardStatisticsPackUnfitPins(string pins)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsPackUnfitPinsFormat, pins);
+
     public string FormatStewardStatisticsNoUpdate(string days)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardStatisticsNoUpdateFormat, days);
 

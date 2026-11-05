@@ -849,6 +849,15 @@
   <data name="StewardStatisticsNoCurrentRelease" xml:space="preserve">
     <value>Kein Release für den Build</value>
   </data>
+  <data name="StewardStatisticsPackNoCurrentFit" xml:space="preserve">
+    <value>Pack passt nicht zum Build</value>
+  </data>
+  <data name="StewardStatisticsPackOutsideBounds" xml:space="preserve">
+    <value>Die Spielversionsgrenzen des Packs erlauben den Build nicht.</value>
+  </data>
+  <data name="StewardStatisticsPackUnfitPinsFormat" xml:space="preserve">
+    <value>Legt Releases fest, die nicht zum Build passen: {0}</value>
+  </data>
   <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
     <value>Seit {0} Tagen kein Update</value>
   </data>
