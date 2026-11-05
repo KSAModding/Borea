@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Borea.Core.Paths;
 using Borea.Core.Preferences;
 using Borea.Storage.Files;
@@ -15,7 +14,6 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         WriteIndented = true,
     };
 
@@ -88,7 +86,9 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
         if (!string.IsNullOrEmpty(directory))
             Directory.CreateDirectory(directory);
 
-        var text = JsonSerializer.Serialize(AppPreferencesMapper.ToDto(preferences), JsonOptions) + "\n";
+        var document = AppPreferencesMapper.ToDto(preferences);
+        document.UnknownKeys = await ReadUnknownKeysAsync(path, cancellationToken).ConfigureAwait(false);
+        var text = JsonSerializer.Serialize(document, JsonOptions) + "\n";
         var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
 
         try
@@ -117,6 +117,35 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
+        }
+    }
+
+    /// <summary>
+    /// Reads the keys of the saved file that this build does not know, so that a save keeps a setting of a newer Borea.
+    /// A missing file, a file that is not valid JSON, a file with a duplicate key and a file of another format version give no keys, because the load rejects such a file before it reads a setting.
+    /// </summary>
+    private static async Task<Dictionary<string, JsonElement>?> ReadUnknownKeysAsync(string path, CancellationToken cancellationToken)
+    {
+        string text;
+        try
+        {
+            text = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            RejectDuplicateProperties(document.RootElement);
+            var saved = document.Deserialize<AppPreferencesDocumentDto>(JsonOptions);
+            return saved?.FormatVersion == CurrentFormatVersion ? saved.UnknownKeys : null;
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException or ArgumentException)
+        {
+            return null;
         }
     }
 

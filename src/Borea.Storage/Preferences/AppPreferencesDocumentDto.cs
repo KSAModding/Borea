@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Borea.Storage.Preferences;
@@ -35,7 +36,7 @@ internal sealed class AppPreferencesDocumentDto
 
     /// <summary>
     /// Written by Borea before 0.2.0, when a closed update banner stayed closed.
-    /// Accepted so that such a file loads, never acted on, and removed when the file is read.
+    /// It is a known key so that it does not stay with the unknown keys, it is never acted on, and it is removed when the file is read.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? DismissedBoreaRelease { get; set; }
@@ -66,8 +67,20 @@ internal sealed class AppPreferencesDocumentDto
     public string? DismissedLoaderUpdate { get; set; }
 
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
+
+    /// <summary>
+    /// The keys that this build does not know, such as a setting that a newer Borea added.
+    /// They are written back unchanged on every save, so an older Borea loads such a file and does not remove the key.
+    /// </summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? UnknownKeys { get; set; }
 }
 
+/// <summary>
+/// A custom theme is saved from its mapped values only, so it cannot keep an unknown key.
+/// An unknown key in a theme makes the file invalid, because a save would otherwise remove it.
+/// </summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed class CustomThemePreferenceDto
 {
     public required string Name { get; set; }
