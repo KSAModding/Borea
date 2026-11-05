@@ -849,6 +849,15 @@
   <data name="StewardStatisticsNoCurrentRelease" xml:space="preserve">
     <value>没有适用于此构建版本的发布版本</value>
   </data>
+  <data name="StewardStatisticsPackNoCurrentFit" xml:space="preserve">
+    <value>整合包不适用于此构建版本</value>
+  </data>
+  <data name="StewardStatisticsPackOutsideBounds" xml:space="preserve">
+    <value>整合包支持的游戏版本范围不包含此构建版本。</value>
+  </data>
+  <data name="StewardStatisticsPackUnfitPinsFormat" xml:space="preserve">
+    <value>固定了不适用于此构建版本的发布版本：{0}</value>
+  </data>
   <data name="StewardStatisticsNoUpdateFormat" xml:space="preserve">
     <value>已 {0} 天未更新</value>
   </data>
@@ -1439,6 +1448,12 @@
   </data>
   <data name="UpdateNoNotes" xml:space="preserve">
     <value>此发布版本没有说明。</value>
+  </data>
+  <data name="UpdateNotesUnknown" xml:space="preserve">
+    <value>Borea 无法加载此版本的更新说明。</value>
+  </data>
+  <data name="WhatsNewTitle" xml:space="preserve">
+    <value>Borea 更新内容</value>
   </data>
   <data name="SelfUpdateNow" xml:space="preserve">
     <value>立即更新</value>
@@ -5615,6 +5630,9 @@
   </data>
   <data name="AboutCopyDiagnostics" xml:space="preserve">
     <value>复制诊断信息</value>
+  </data>
+  <data name="AboutWhatsNew" xml:space="preserve">
+    <value>更新内容</value>
   </data>
   <data name="AboutCopied" xml:space="preserve">
     <value>已复制到剪贴板。</value>
