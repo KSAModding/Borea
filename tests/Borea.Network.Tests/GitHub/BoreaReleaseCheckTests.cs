@@ -79,6 +79,27 @@ public sealed class BoreaReleaseCheckTests
     }
 
     [Fact]
+    public async Task GetReleasesAsync_TheApiAddressOfAnAsset_IsKeptOnlyForItsOwnIdInThisRepository()
+    {
+        var assets = """
+            ,"assets":[
+              {"id":713012505,"url":"https://api.github.com/repos/KSAModding/Borea/releases/assets/713012505","name":"SHA256SUMS.txt","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/SHA256SUMS.txt"},
+              {"id":713012506,"url":"https://example.com/repos/KSAModding/Borea/releases/assets/713012506","name":"a.zip","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/a.zip"},
+              {"id":713012507,"url":"https://api.github.com/repos/KSAModding/Borea/releases/assets/1","name":"b.zip","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/b.zip"},
+              {"url":"https://api.github.com/repos/KSAModding/Borea/releases/assets/0","name":"c.zip","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/c.zip"},
+              {"id":713012508,"name":"d.zip","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/d.zip"}
+            ]
+            """;
+        var check = CheckAnswering(ReleasesJson(WithAssets(ReleaseJson("v0.4.0"), assets)), out _);
+
+        var release = Assert.Single(await check.GetReleasesAsync());
+
+        Assert.Equal(
+            ["https://api.github.com/repos/KSAModding/Borea/releases/assets/713012505", null, null, null, null],
+            release.Assets.Select(asset => asset.ApiUrl));
+    }
+
+    [Fact]
     public async Task GetReleasesAsync_ReleaseWithoutAssets_HasNone()
     {
         var check = CheckAnswering(ReleasesJson(ReleaseJson("v0.4.0")), out _);

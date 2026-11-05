@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -20,6 +21,9 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
 
     /// <summary>Where the release files of this repository are served from. Only these URLs are fetched.</summary>
     internal const string DownloadUrlPrefix = "https://github.com/KSAModding/Borea/releases/download/";
+
+    /// <summary>The API address of one release file of this repository, followed by the numeric id of the file.</summary>
+    internal const string AssetApiUrlPrefix = "https://api.github.com/repos/KSAModding/Borea/releases/assets/";
 
     private readonly HttpClient _httpClient;
 
@@ -118,9 +122,25 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
 
         var url = dto.BrowserDownloadUrl;
         return url is not null && url.StartsWith(DownloadUrlPrefix, StringComparison.Ordinal)
-            ? new BoreaReleaseAsset(name, url, dto.Size < 0 ? 0 : dto.Size)
+            ? new BoreaReleaseAsset(name, url, dto.Size < 0 ? 0 : dto.Size) { ApiUrl = ToAssetApiUrl(dto) }
             : null;
     }
+
+    /// <summary>
+    /// The API address of the file, kept only when it is the address of the file's own id in this
+    /// repository, so that the fallback download never goes to another host or another file.
+    /// </summary>
+    private static string? ToAssetApiUrl(AssetDto dto)
+        => dto.Id > 0 && string.Equals(dto.ApiUrl, AssetApiUrlPrefix + dto.Id.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            ? dto.ApiUrl
+            : null;
+
+    /// <summary>Whether <paramref name="url"/> is the API address of one release file of this repository.</summary>
+    internal static bool IsAssetApiUrl(string? url)
+        => url is not null
+            && url.StartsWith(AssetApiUrlPrefix, StringComparison.Ordinal)
+            && url.Length > AssetApiUrlPrefix.Length
+            && !url.AsSpan(AssetApiUrlPrefix.Length).ContainsAnyExceptInRange('0', '9');
 }
 
 internal sealed class ReleaseDto
@@ -149,6 +169,12 @@ internal sealed class ReleaseDto
 
 internal sealed class AssetDto
 {
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("url")]
+    public string? ApiUrl { get; set; }
+
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 

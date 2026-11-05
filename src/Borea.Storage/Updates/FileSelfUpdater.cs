@@ -145,7 +145,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
                 $"Borea {release.Version} publishes no {BoreaArchive.ChecksumsFileName}, so the download cannot be checked.");
 
         // A listing that did not arrive is a failed download, and not an archive that does not match.
-        var listing = await files.ReadTextAsync(checksums.Url, cancellationToken).ConfigureAwait(false)
+        var listing = await files.ReadTextAsync(checksums, cancellationToken).ConfigureAwait(false)
             ?? throw new SelfUpdateFailedException(
                 SelfUpdateFailure.Download,
                 $"The {BoreaArchive.ChecksumsFileName} of Borea {release.Version} could not be downloaded, so the archive cannot be checked.");
@@ -167,7 +167,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
         string hash;
         try
         {
-            hash = await files.DownloadAsync(archive.Url, archivePath, new DownloadReport(progress), cancellationToken).ConfigureAwait(false);
+            hash = await files.DownloadAsync(archive, archivePath, new DownloadReport(progress), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException)
         {
