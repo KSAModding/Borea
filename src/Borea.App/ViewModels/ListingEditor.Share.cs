@@ -56,7 +56,10 @@ public sealed partial class ListingEditor
         ? Localization.FormatListingShareArchiveSaved(saved.File, saved.Archive.Sha256, MainViewModel.SizeText(saved.Archive.Size))
         : null;
 
-    /// <summary>Opens the share steps on a new document of the type, named after meta.toml, with the proposed dependencies. It carries no game_min, which the index takes from the archive.</summary>
+    /// <summary>
+    /// Opens the share steps on a new document of the type, named after meta.toml, with the proposed dependencies. It carries no game_min, which the index takes from the archive.
+    /// A listing that the player chose before the item makes the share a new version of it at once.
+    /// </summary>
     internal void StartShare(GameSaveShareStart share)
     {
         StartOver();
@@ -75,6 +78,12 @@ public sealed partial class ListingEditor
         _share = share;
         ShareFlowStep = ShareFlowStep.Describe;
         Step = ListingStep.Share;
+        if (ShareTargetOf(share) is { } target)
+        {
+            _shareListing = target;
+            Id = target.Id;
+        }
+
         LookUpShareListing(share);
         RefreshShare();
         StartShareHosts();
@@ -85,6 +94,7 @@ public sealed partial class ListingEditor
     {
         _share = null;
         _shareListing = null;
+        _isShareListingClaimed = false;
         _askedShareListing = null;
         _declinedShareListings.Clear();
         _refusedShareId = null;
@@ -113,6 +123,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(IsNewVersionShare));
         OnPropertyChanged(nameof(IsAskingShareListing));
         OnPropertyChanged(nameof(ShowsShareFields));
+        OnPropertyChanged(nameof(ShowsShareAsNewListing));
         OnPropertyChanged(nameof(ShowsPreviewCard));
         OnPropertyChanged(nameof(ShareLooksLikeText));
         OnPropertyChanged(nameof(ShareVersionOnlineText));

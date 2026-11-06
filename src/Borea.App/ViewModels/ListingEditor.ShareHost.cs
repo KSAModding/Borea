@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Composition;
 using Borea.Core.GitHub;
 using Borea.Core.Instances;
 using Borea.Core.Listings;
@@ -43,6 +44,9 @@ public sealed partial class ListingEditor
     private CancellationTokenSource? _signInRun;
     private ShareErrorAction _shareErrorAction;
 
+    /// <summary>A second way forward that some errors offer next to <see cref="_shareErrorAction"/>.</summary>
+    private ShareErrorAction _shareOtherAction;
+
     /// <summary>The version that the host refused at a publish, until the player changes it. The upload stays, because only the version has to change.</summary>
     private string? _refusedShareVersion;
 
@@ -53,6 +57,9 @@ public sealed partial class ListingEditor
         BackToDescription,
         SignOut,
         OpenHost,
+
+        /// <summary>Uploads again as a new version of the listing whose short name the host refused, because the player says it is theirs.</summary>
+        NewVersionOfTakenId,
     }
 
     /// <summary>The sections whose values a share host does not take.</summary>
@@ -186,11 +193,16 @@ public sealed partial class ListingEditor
 
     public bool CanCancelShareHost => IsSharing && !IsSendingSharePublish;
 
-    public string? ShareErrorActionText => _shareErrorAction switch
+    public string? ShareErrorActionText => ShareActionText(_shareErrorAction);
+
+    public string? ShareOtherActionText => ShareActionText(_shareOtherAction);
+
+    private string? ShareActionText(ShareErrorAction action) => action switch
     {
         ShareErrorAction.BackToDescription => Localization.ShareBackToDescription,
         ShareErrorAction.SignOut when _checkedHost is { } host => Localization.FormatShareSignOut(host.Name),
         ShareErrorAction.OpenHost when _checkedHost is { } host => Localization.FormatShareOpenHost(host.Name),
+        ShareErrorAction.NewVersionOfTakenId when _refusedShareId is { } id => Localization.FormatShareErrorIdTakenIsMine(id),
         _ => null,
     };
 
@@ -323,6 +335,7 @@ public sealed partial class ListingEditor
     {
         OnPropertyChanged(nameof(ShowsShareCheckButton));
         OnPropertyChanged(nameof(ShareErrorActionText));
+        OnPropertyChanged(nameof(ShareOtherActionText));
         OnPropertyChanged(nameof(ShareSignedInText));
         OnPropertyChanged(nameof(ShareSignOutText));
     }
@@ -332,6 +345,7 @@ public sealed partial class ListingEditor
     {
         ShareHostErrorDetail = null;
         _shareErrorAction = ShareErrorAction.None;
+        _shareOtherAction = ShareErrorAction.None;
         RefreshShareErrorAction();
     }
 
@@ -771,6 +785,17 @@ public sealed partial class ListingEditor
         ShareHostError = text;
         ShareHostErrorDetail = detail;
         _shareErrorAction = action;
+
+        // A short name can be taken by a listing of the player that the index does not hold yet, or that another computer shared,
+        // and a refused new version can be checked on the site of the host. The host still decides with not_owner, and a refused
+        // claim of a short name goes back to the step whose link makes the share a new listing again.
+        _shareOtherAction = (action, exception.Error) switch
+        {
+            (ShareErrorAction.BackToDescription, "id_taken") when !IsNewVersionShare => ShareErrorAction.NewVersionOfTakenId,
+            (ShareErrorAction.SignOut, "not_owner") when IsNewVersionShare && _isShareListingClaimed => ShareErrorAction.BackToDescription,
+            (ShareErrorAction.SignOut, "not_owner") when IsNewVersionShare => ShareErrorAction.OpenHost,
+            _ => ShareErrorAction.None,
+        };
         RefreshShareErrorAction();
 
         switch (exception.Error)
@@ -792,11 +817,26 @@ public sealed partial class ListingEditor
                 // Borea has no text for what is wrong in the file, so the message stays one click away.
                 ShareHostFileDetail = exception.Message;
                 break;
-            case "not_owner" when _owner.Services is { } services:
+            case "not_owner" when _owner.Services is { } services && await IsRecordOfRefusedListingAsync(services, host, share):
                 await services.SharedContent.RemoveAsync(share.Entry.Kind.ToContentType(), host.Key, share.Entry.FolderName);
                 await _owner.ShowSharedContentAsync(share.Entry.Kind);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Whether the record of the folder on this host names the listing that the host refused. Only that record goes, because a share
+    /// from the page of a listing or a claimed short name can send a folder that this computer shared to another listing of the player.
+    /// </summary>
+    private async Task<bool> IsRecordOfRefusedListingAsync(BoreaServices services, ShareHost host, GameSaveShareStart share)
+    {
+        if (_shareListing is not { } refused)
+            return false;
+
+        var type = share.Entry.Kind.ToContentType();
+        var recorded = (await services.SharedContent.ListAsync())
+            .LastOrDefault(entry => entry.Type == type && entry.HostKey == host.Key && string.Equals(entry.FolderName, share.Entry.FolderName, StringComparison.OrdinalIgnoreCase));
+        return recorded is not null && (ModIds.Equals(recorded.ListingId, refused.Id) || ModIds.Equals(recorded.ListingId, refused.Reference));
     }
 
     /// <summary>
@@ -840,9 +880,38 @@ public sealed partial class ListingEditor
     };
 
     [RelayCommand]
-    private void RunShareErrorAction()
+    private void RunShareErrorAction() => RunShareAction(_shareErrorAction);
+
+    [RelayCommand]
+    private Task RunShareOtherActionAsync()
     {
-        switch (_shareErrorAction)
+        if (_shareOtherAction == ShareErrorAction.NewVersionOfTakenId)
+            return ShareAsNewVersionOfTakenIdAsync();
+
+        RunShareAction(_shareOtherAction);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The item goes up again for the listing with the refused short name on the same host, which then checks that the account owns it.</summary>
+    private async Task ShareAsNewVersionOfTakenIdAsync()
+    {
+        if (_refusedShareId is not { } id || _checkedHost is not { } host)
+            return;
+
+        _shareListing = new ShareListing(id, Draft.Name, host.Key, host.Name, id, Version: null, HoldsTheName: false);
+        _isShareListingClaimed = true;
+        RefreshShare();
+        Refresh();
+        if (ShareHostRows.FirstOrDefault(row => row.Host.Key == host.Key) is { } row)
+        {
+            SelectedShareHostRow = row;
+            await UploadToShareHostCommand.ExecuteAsync(row);
+        }
+    }
+
+    private void RunShareAction(ShareErrorAction action)
+    {
+        switch (action)
         {
             case ShareErrorAction.BackToDescription:
                 BackToShareDescribe();

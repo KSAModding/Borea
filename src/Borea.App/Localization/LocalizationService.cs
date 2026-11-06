@@ -2353,6 +2353,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ShareManageDoneHint => Resources.ShareManageDoneHint;
 
+    public string ShareNewVersionButton => Resources.ShareNewVersionButton;
+
+    public string ShareManageMaybeYoursHeading => Resources.ShareManageMaybeYoursHeading;
+
+    public string ShareAsNewListingInstead => Resources.ShareAsNewListingInstead;
+
+    public string ShareDoneLaterHint => Resources.ShareDoneLaterHint;
+
     public string ShareManageChange => Resources.ShareManageChange;
 
     public string ShareManageTakeDown => Resources.ShareManageTakeDown;
@@ -4291,6 +4299,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatShareManageOnHost(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageOnHostFormat, host);
+
+    public string FormatShareManageMaybeYoursHint(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageMaybeYoursHintFormat, host);
+
+    public string FormatShareNewVersionChooseVehicle(string listing)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareNewVersionChooseVehicleFormat, listing);
+
+    public string FormatShareNewVersionChooseSave(string listing)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareNewVersionChooseSaveFormat, listing);
+
+    public string FormatShareErrorIdTakenIsMine(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareErrorIdTakenIsMineFormat, id);
 
     public string FormatShareManageChangeTitle(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ShareManageChangeTitleFormat, name);

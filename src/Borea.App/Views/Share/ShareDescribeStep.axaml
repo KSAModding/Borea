@@ -23,6 +23,11 @@
                 <!-- a new version keeps the description of its listing -->
                 <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.ShareNewVersionText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsNewVersionShare}" />
 
+                <!-- a share that started from its listing asked no question, so it offers the other answer here -->
+                <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.ShareAsNewListingInsteadCommand}" IsVisible="{Binding ListingEditor.ShowsShareAsNewListing}">
+                    <TextBlock Classes="action-md" Text="{Binding Localization.ShareAsNewListingInstead}" />
+                </Button>
+
                 <!-- the answer decides which fields follow, and a name of any length wraps inside the button -->
                 <StackPanel Spacing="8" Margin="0,10,0,0" IsVisible="{Binding ListingEditor.IsAskingShareListing}">
                     <TextBlock Classes="heading-md" Text="{Binding ListingEditor.ShareLooksLikeText}" TextWrapping="Wrap" />

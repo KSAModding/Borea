@@ -166,14 +166,14 @@
                             </Button>
                             <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
                         </StackPanel>
-                        <Button Classes="text" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShare}" Command="{Binding ShareCommand}" IsVisible="{Binding ShowsShareButton}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShareTip}" />
+                        <Button Classes="text" VerticalAlignment="Center" Content="{Binding ShareText}" Command="{Binding ShareCommand}" IsVisible="{Binding ShowsShareButton}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShareTip}" />
                         <Button Classes="icon" IsVisible="{Binding IsIdle}" AutomationProperties.Name="{Binding Name}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveBackUp}" Command="{Binding BackUpCommand}" />
                                     <!-- only once the index accepts the type, see GameSaveSection.CanShare -->
-                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShare}" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}" />
+                                    <MenuItem Header="{Binding ShareText}" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyToInstance}" Command="{Binding BeginCopyCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />

@@ -757,6 +757,12 @@
                     <StackPanel Spacing="10" IsVisible="{Binding CanManageContent}">
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ShareManageHeading}" />
                         <StackPanel Spacing="6">
+                            <Button Classes="filter" Command="{Binding ShareNewContentVersionCommand}" IsVisible="{Binding CanShareNewContentVersion}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowUp}" />
+                                    <TextBlock Text="{Binding Localization.ShareNewVersionButton}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                             <Button Classes="filter" Command="{Binding ChangeContentOnHostCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Pencil}" />
@@ -767,6 +773,26 @@
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
                                     <TextBlock Text="{Binding Localization.ShareManageTakeDown}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="filter" Command="{Binding OpenContentManagePageCommand}" IsVisible="{Binding ContentManageOnHostText, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.ControlTypeOverride="Hyperlink">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.LinkSimple}" />
+                                    <TextBlock Text="{Binding ContentManageOnHostText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                    <!-- a listing on a share host with no record on this computer, which may still be the player's from another computer or the site of the host -->
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding ShowsContentMaybeYours}" />
+                    <StackPanel Spacing="10" IsVisible="{Binding ShowsContentMaybeYours}">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ShareManageMaybeYoursHeading}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ContentMaybeYoursHint}" TextWrapping="Wrap" />
+                        <StackPanel Spacing="6">
+                            <Button Classes="filter" Command="{Binding ShareNewContentVersionCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowUp}" />
+                                    <TextBlock Text="{Binding Localization.ShareNewVersionButton}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
                             <Button Classes="filter" Command="{Binding OpenContentManagePageCommand}" IsVisible="{Binding ContentManageOnHostText, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.ControlTypeOverride="Hyperlink">

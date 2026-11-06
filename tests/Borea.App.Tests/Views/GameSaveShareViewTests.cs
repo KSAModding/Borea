@@ -10,6 +10,7 @@ using Borea.App.Views.Pages;
 using Borea.App.Views.Share;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Sharing;
 using ContentPage = Borea.App.Views.Pages.ContentPage;
 
 namespace Borea.App.Tests.Views;
@@ -649,10 +650,68 @@ public sealed class GameSaveShareViewTests
         });
 
         Assert.Contains(localization.ShareManageHeading, texts);
+        Assert.Contains(localization.ShareNewVersionButton, texts);
         Assert.Contains(localization.ShareManageChange, texts);
         Assert.Contains(localization.ShareManageTakeDown, texts);
         Assert.Contains(localization.FormatShareManageOnHost("ksamods.gg"), texts);
+        Assert.DoesNotContain(localization.ShareManageMaybeYoursHeading, texts);
     }
+
+    [Fact]
+    public async Task ContentPage_ListingWithoutRecord_AsksWhetherThePlayerSharedIt_AndOffersANewVersion()
+    {
+        using var harness = await ShareHostShareTests.PageWithoutRecordHarnessAsync();
+        var localization = harness.Localization;
+
+        var texts = await ContentPageTextsAsync(harness);
+
+        Assert.Contains(localization.ShareManageMaybeYoursHeading, texts);
+        Assert.Contains(localization.FormatShareManageMaybeYoursHint("ksamods.gg"), texts);
+        Assert.Contains(localization.ShareNewVersionButton, texts);
+        Assert.Contains(localization.FormatShareManageOnHost("ksamods.gg"), texts);
+        Assert.DoesNotContain(localization.ShareManageHeading, texts);
+        Assert.DoesNotContain(localization.ShareManageChange, texts);
+        Assert.DoesNotContain(localization.ShareManageTakeDown, texts);
+    }
+
+    [Fact]
+    public async Task NewVersionFromThePage_ShowsItsLineAndTheWayToANewListing()
+    {
+        using var harness = await ShareHostShareTests.NewVersionFromPageHarnessAsync();
+        var editor = harness.ViewModel.ListingEditor;
+
+        var texts = await PageTextsAsync(harness);
+
+        Assert.Contains(editor.ShareNewVersionText, texts);
+        Assert.Contains(harness.Localization.ShareAsNewListingInstead, texts);
+        Assert.DoesNotContain(harness.Localization.ShareIsDifferentVehicle, texts);
+    }
+
+    [Fact]
+    public async Task VehicleMenu_OfAnOwnShare_SaysShareANewVersion()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "ExampleRover", "Example Rover", "1.0.0", null), author: null);
+        await GameSaveShareTests.OpenAsync(harness);
+
+        var menu = await VehicleMenuAsync(harness);
+
+        Assert.Contains(harness.Localization.ShareNewVersionButton, menu);
+        Assert.DoesNotContain(harness.Localization.GameSaveShare, menu);
+    }
+
+    private static Task<List<string?>> ContentPageTextsAsync(ViewModelHarness harness) =>
+        HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ContentPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var shown = page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+            window.Close();
+            return Task.FromResult(shown);
+        });
 
     [Fact]
     public async Task ManageModal_TakeDown_ShowsTheWarningOnceAVersionIsChosen_AndTheButtonStaysOffUntilThen()

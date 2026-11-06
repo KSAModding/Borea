@@ -25,6 +25,7 @@
             <!-- the host took the publish from this account, so the player owns the listing -->
             <StackPanel Spacing="4" Margin="0,8,0,0">
                 <TextBlock Classes="body-md secondary" Text="{Binding Localization.ShareManageDoneHint}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-md secondary" Text="{Binding Localization.ShareDoneLaterHint}" TextWrapping="Wrap" />
                 <WrapPanel ItemSpacing="8" LineSpacing="4" Margin="-8,0,0,0">
                     <Button Classes="link" Command="{Binding ListingEditor.ChangeShareDoneOnHostCommand}">
                         <TextBlock Classes="action-md" Text="{Binding Localization.ShareManageChange}" />

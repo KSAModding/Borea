@@ -133,6 +133,9 @@
                         <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.RunShareErrorActionCommand}" IsVisible="{Binding ListingEditor.ShareErrorActionText, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareErrorActionText}" />
                         </Button>
+                        <Button Classes="link" Margin="-8,0,0,0" HorizontalAlignment="Left" Command="{Binding ListingEditor.RunShareOtherActionCommand}" IsVisible="{Binding ListingEditor.ShareOtherActionText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="action-md" Text="{Binding ListingEditor.ShareOtherActionText}" TextWrapping="Wrap" />
+                        </Button>
                     </StackPanel>
                 </Grid>
 
