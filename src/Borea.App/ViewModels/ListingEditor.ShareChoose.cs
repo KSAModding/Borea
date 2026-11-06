@@ -106,14 +106,15 @@ public sealed partial class ListingEditor
         return LoadShareChooseAsync(kind, select, problem);
     }
 
-    /// <summary>Opens the step for a new version of a listing that the player chose on its page, with the item that most likely belongs to it selected.</summary>
-    internal Task OpenShareNewVersionAsync(GameSaveKind kind, ShareListing target)
+    /// <summary>Opens the step for a new version of a listing that the player chose, with the item that most likely belongs to it selected.</summary>
+    /// <param name="select">The row that the player clicked, which goes before the item that the step would select.</param>
+    internal Task OpenShareNewVersionAsync(GameSaveKind kind, ShareListing target, (Guid InstanceId, string FolderName)? select = null)
     {
         if (IsShareDone)
             ForgetShare();
 
         SetShareTarget((kind, target));
-        return OpenShareChooseAsync(kind);
+        return OpenShareChooseAsync(kind, select);
     }
 
     /// <summary>The link for mod authors leads to the start or to the draft behind the list, because a list with nothing picked holds no work. A share that has begun stays, and "Start over" is there for it.</summary>
@@ -168,7 +169,7 @@ public sealed partial class ListingEditor
                     return;
 
                 foreach (var item in items)
-                    ShareChooseRows.Add(new ShareChooseRow(Localization, item, instance, item == items[0], ShareSourceName(item.Record), IsShareTargetRecord(item.Record)));
+                    ShareChooseRows.Add(new ShareChooseRow(Localization, item, instance, item == items[0], ShareSourceName(item.Record), IsOwnCopyOfShareTarget(item)));
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
@@ -183,10 +184,12 @@ public sealed partial class ListingEditor
 
         _hasShareProfileItems = hasProfileItems;
         IsLoadingShareChoose = false;
+
+        // With a chosen listing, the one row is selected by itself only when it fits, because the heading says that the row belongs to the listing.
         SelectedShareRow = ShareChooseRows.FirstOrDefault(row => row.Item.InstanceId == select?.InstanceId && string.Equals(row.Item.FolderName, select?.FolderName, StringComparison.OrdinalIgnoreCase))
             ?? SelectedShareRow
             ?? targetRow
-            ?? (ShareChooseRows.Count == 1 ? ShareChooseRows[0] : null);
+            ?? (_shareTarget is null && ShareChooseRows.Count == 1 ? ShareChooseRows[0] : null);
         ShareChooseError = problem;
     }
 
@@ -216,9 +219,13 @@ public sealed partial class ListingEditor
 
     private IReadOnlyList<ContentIndexListing>? ShareChooseListings() => IsShareChooseSave ? _snapshot?.Saves : _snapshot?.Vehicles;
 
-    /// <summary>Whether the row is an installed copy of the listing that the player chose to add a version to.</summary>
-    private bool IsShareTargetRecord(InstalledContentRecord? record) =>
-        record is not null && _shareTarget is { Listing: var target } && ModIds.Equals(record.ListingId, target.Id);
+    /// <summary>
+    /// Whether the row is an installed copy of the listing that the player chose to add a version to, and this computer shared that listing.
+    /// Without a record of the share, the page of any listing on a share host leads here, so the copy keeps its warning about the author.
+    /// </summary>
+    private bool IsOwnCopyOfShareTarget(GameSaveItem item) =>
+        item.Record is { } record && _shareTarget is { Listing: var target } && ModIds.Equals(record.ListingId, target.Id)
+        && (item.SharedListingIds.Contains(target.Id) || item.SharedListingIds.Contains(target.Reference));
 
     /// <summary>
     /// The row of the item that a new version of the chosen listing most likely comes from: a folder that this computer shared to it,
@@ -349,7 +356,7 @@ public sealed partial class ShareChooseRow : ObservableObject
     private readonly string? _sourceName;
     private readonly bool _isOfTargetListing;
 
-    /// <param name="isOfTargetListing">Whether the row is an installed copy of the listing that the player chose to add a version to, which the player says is theirs.</param>
+    /// <param name="isOfTargetListing">Whether the row is an installed copy of the listing that the player chose to add a version to, and this computer shared that listing.</param>
     internal ShareChooseRow(LocalizationService text, GameSaveItem item, InstanceItem instance, bool isFirstOfInstance, string? sourceName, bool isOfTargetListing)
     {
         _text = text;
@@ -384,7 +391,7 @@ public sealed partial class ShareChooseRow : ObservableObject
 
     internal bool BlocksNext => Item.Record is not null && IsUnchangedCopy != false;
 
-    /// <summary>What the install record says about the selected row. A changed copy of the chosen listing gets no warning, because the player said that the listing is theirs.</summary>
+    /// <summary>What the install record says about the selected row. A changed copy of the chosen listing gets no warning when this computer shared that listing, because the copy is then the player's own.</summary>
     public string? NoteText =>
         !IsSelected || _sourceName is not { } source || IsUnchangedCopy is not { } unchanged ? null
         : unchanged ? _text.FormatShareUnchangedCopy(source)

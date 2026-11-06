@@ -2677,10 +2677,17 @@ public sealed class ShareHostShareTests
     }
 
     /// <summary>Starts a new version from the open listing page and goes on with the item that the step selected.</summary>
-    private static async Task<ListingEditor> ShareNewVersionFromPageAsync(ViewModelHarness harness)
+    /// <param name="pickTheOneRow">Whether the one row fits no rule of the listing, so the step selects nothing and the player picks it.</param>
+    private static async Task<ListingEditor> ShareNewVersionFromPageAsync(ViewModelHarness harness, bool pickTheOneRow = false)
     {
         await harness.ViewModel.ShareNewContentVersionCommand.ExecuteAsync(null);
         var editor = harness.ViewModel.ListingEditor;
+        if (pickTheOneRow)
+        {
+            Assert.Null(editor.SelectedShareRow);
+            editor.SelectedShareRow = Assert.Single(editor.ShareChooseRows);
+        }
+
         await editor.ShareRowCompare;
         await editor.ContinueShareChooseCommand.ExecuteAsync(null);
         await editor.ShareHostsLoad;
@@ -2817,7 +2824,7 @@ public sealed class ShareHostShareTests
         var host = new FakeHost();
         using var harness = await OwnedPageAsync(host, record: null, vehicle: "Example Rover Mk2");
 
-        var editor = await ShareNewVersionFromPageAsync(harness);
+        var editor = await ShareNewVersionFromPageAsync(harness, pickTheOneRow: true);
 
         Assert.Equal("Example Rover Mk2", editor.Name);
         Assert.True(editor.IsNewVersionShare);
@@ -2887,13 +2894,19 @@ public sealed class ShareHostShareTests
         Assert.Equal("Example Rover", editor.SelectedShareRow?.Item.FolderName);
     }
 
-    /// <summary>A changed installed copy of the chosen listing is the player's own, so the warning about the author of the source does not show, and an unchanged one still says why Next stays off.</summary>
+    /// <summary>
+    /// A changed installed copy of the chosen listing is the player's own when this computer shared that listing, so the warning about the author of the source does not show.
+    /// Without that record, the page of any listing on a share host leads here, so the warning stays, and an unchanged copy still says why Next stays off.
+    /// </summary>
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task NewVersionFromThePage_InstalledCopyOfTheListing_HasNoWarningAboutItsAuthor(bool isChanged)
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public async Task NewVersionFromThePage_InstalledCopyOfTheListing_HasNoWarningAboutItsAuthorOnlyWhenThePlayerSharedIt(bool isChanged, bool isShared)
     {
-        using var harness = await OwnedPageAsync(new FakeHost(), record: null, vehicle: "Example Rover");
+        var record = isShared ? OwnRecord with { FolderName = "Rover of Maxi" } : null;
+        using var harness = await OwnedPageAsync(new FakeHost(), record, vehicle: "Example Rover");
         var instance = harness.ViewModel.Instances.Single().InstanceId;
         var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Example Rover");
         await GameSaveShareTests.RecordAsync(harness, instance, folder);
@@ -2905,7 +2918,10 @@ public sealed class ShareHostShareTests
         await editor.ShareRowCompare;
 
         var row = editor.SelectedShareRow;
-        Assert.Equal(isChanged ? null : harness.Localization.FormatShareUnchangedCopy("Example Rover"), row?.NoteText);
+        var note = !isChanged ? harness.Localization.FormatShareUnchangedCopy("Example Rover")
+            : isShared ? null
+            : harness.Localization.FormatShareChangedVehicle("Example Rover");
+        Assert.Equal(note, row?.NoteText);
         Assert.Equal(isChanged, editor.CanContinueShareChoose);
     }
 
@@ -2944,7 +2960,7 @@ public sealed class ShareHostShareTests
         using var harness = await OwnedPageAsync(host, record: null, vehicle: "Example Rover Mk2");
         var opened = new List<string>();
         harness.ViewModel.OpenWithSystem = opened.Add;
-        var editor = await ShareNewVersionFromPageAsync(harness);
+        var editor = await ShareNewVersionFromPageAsync(harness, pickTheOneRow: true);
         editor.ContinueShareCommand.Execute(null);
         var row = Assert.Single(editor.ShareHostRows);
         await editor.UploadToShareHostCommand.ExecuteAsync(row);
@@ -2969,6 +2985,65 @@ public sealed class ShareHostShareTests
 
         Assert.NotNull(editor.ShareErrorActionText);
         Assert.Null(editor.ShareOtherActionText);
+    }
+
+    /// <summary>
+    /// A share from the page of a listing can send a folder that this computer shared to another listing of the player.
+    /// A not_owner for the listing of the page then keeps that record, and only a record of the refused listing goes.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NotOwnerOfANewVersionFromThePage_RemovesOnlyARecordOfTheRefusedListing(bool recordNamesTheListing)
+    {
+        var host = new FakeHost { UploadFailure = new ShareHostException(ShareHostFailure.Host, "Not yours.", "not_owner") };
+        var record = new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", recordNamesTheListing ? "ExampleRover" : "OtherRover", "Example Rover Mk2", "1.0.0", null);
+        using var harness = await OwnedPageAsync(host, record, vehicle: "Example Rover Mk2");
+        var editor = await ShareNewVersionFromPageAsync(harness, pickTheOneRow: !recordNamesTheListing);
+        Assert.True(editor.IsNewVersionShare);
+        editor.ContinueShareCommand.Execute(null);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal("ExampleRover", Assert.Single(host.Uploads).ListingId);
+        Assert.Equal(harness.Localization.FormatShareSignOut("ksamods.gg"), editor.ShareErrorActionText);
+        var left = await harness.Services.SharedContent.ListAsync();
+        if (recordNamesTheListing)
+            Assert.Empty(left);
+        else
+            Assert.Equal("OtherRover", Assert.Single(left).ListingId);
+    }
+
+    /// <summary>A short name that the player claimed and the host then refuses with not_owner leads back to the step whose link makes the share a new listing again.</summary>
+    [Fact]
+    public async Task ClaimedShortNameThatTheHostRefuses_CanBecomeANewListingAgain()
+    {
+        var host = new FakeHost { PublishFailure = new ShareHostException(ShareHostFailure.Host, "Refused.", "id_taken") };
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: host);
+        var editor = await ShareWithFieldsAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        await editor.PublishToShareHostCommand.ExecuteAsync(null);
+
+        host.PublishFailure = null;
+        host.UploadFailure = new ShareHostException(ShareHostFailure.Host, "Not yours.", "not_owner");
+        await editor.RunShareOtherActionCommand.ExecuteAsync(null);
+
+        Assert.True(editor.IsNewVersionShare);
+        Assert.Equal(harness.Localization.FormatShareSignOut("ksamods.gg"), editor.ShareErrorActionText);
+        Assert.Equal(harness.Localization.ShareBackToDescription, editor.ShareOtherActionText);
+
+        await editor.RunShareOtherActionCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.True(editor.ShowsShareAsNewListing);
+
+        editor.ShareAsNewListingInsteadCommand.Execute(null);
+
+        Assert.False(editor.IsNewVersionShare);
+        Assert.False(editor.ShowsShareAsNewListing);
+        Assert.True(editor.ShowsShareFields);
+        Assert.Equal("ExampleRover", editor.Id);
+        Assert.Equal(harness.Localization.FormatShareIdHeld("ExampleRover"), editor.ShareIdError);
     }
 
     [Theory]

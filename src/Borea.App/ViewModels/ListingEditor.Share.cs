@@ -94,6 +94,7 @@ public sealed partial class ListingEditor
     {
         _share = null;
         _shareListing = null;
+        _isShareListingClaimed = false;
         _askedShareListing = null;
         _declinedShareListings.Clear();
         _refusedShareId = null;

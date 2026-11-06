@@ -90,6 +90,7 @@ public partial class MainViewModel
 
     /// <summary>
     /// A click on an item. A row with an install record goes to the list, because the note there says whose it is.
+    /// An installed copy of a listing that this computer shared goes to the list as a new version of that listing, because the button said so.
     /// The records are read here, because a row of the instance page shows its record only after the index answered.
     /// </summary>
     internal async Task ShareGameSaveAsync(GameSaveItem item)
@@ -98,10 +99,17 @@ public partial class MainViewModel
         ListingEditor.ForgetShareTarget();
         var type = item.Entry.Kind.ToContentType();
         var record = RecordOfFolder(await InstalledContentOfAsync(item.InstanceId), type, item.FolderName);
-        if (record is not null && !ListingEditor.IsSharing)
-            await OpenShareChooseOnAsync(item);
-        else
+        if (record is null || ListingEditor.IsSharing)
+        {
             await GoOnWithShareAsync(item);
+            return;
+        }
+
+        var shared = _services is { } services ? (await services.SharedContent.ListAsync()).LastOrDefault(entry => entry.Type == type && ModIds.Equals(entry.ListingId, record.ListingId)) : null;
+        if (shared is not null)
+            await OpenShareNewVersionAsync(item.Entry.Kind, ListingEditor.RecordedShareListing(shared, item.Entry.Kind, item.ListingName ?? shared.ListingId), (item.InstanceId, item.FolderName));
+        else
+            await OpenShareChooseOnAsync(item);
     }
 
     /// <summary>
@@ -146,8 +154,9 @@ public partial class MainViewModel
         await choose;
     }
 
-    /// <summary>The way into a new version of a listing from its page. A running share stays, because a new one would cancel it, so this only goes back to it.</summary>
-    internal async Task OpenShareNewVersionAsync(GameSaveKind kind, ShareListing target)
+    /// <summary>The way into a new version of a listing from its page or from a row. A running share stays, because a new one would cancel it, so this only goes back to it.</summary>
+    /// <param name="select">The row that the player clicked, or null for the item that the step selects.</param>
+    internal async Task OpenShareNewVersionAsync(GameSaveKind kind, ShareListing target, (Guid InstanceId, string FolderName)? select = null)
     {
         StartShareSchemaLoad();
         if (ListingEditor.IsSharing)
@@ -156,7 +165,7 @@ public partial class MainViewModel
             return;
         }
 
-        var choose = ListingEditor.OpenShareNewVersionAsync(kind, target);
+        var choose = ListingEditor.OpenShareNewVersionAsync(kind, target, select);
         await OpenListingAsync();
         await choose;
     }

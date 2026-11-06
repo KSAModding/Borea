@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Composition;
 using Borea.Core.GitHub;
 using Borea.Core.Instances;
 using Borea.Core.Listings;
@@ -786,10 +787,12 @@ public sealed partial class ListingEditor
         _shareErrorAction = action;
 
         // A short name can be taken by a listing of the player that the index does not hold yet, or that another computer shared,
-        // and a refused new version can be checked on the site of the host. The host still decides with not_owner.
+        // and a refused new version can be checked on the site of the host. The host still decides with not_owner, and a refused
+        // claim of a short name goes back to the step whose link makes the share a new listing again.
         _shareOtherAction = (action, exception.Error) switch
         {
             (ShareErrorAction.BackToDescription, "id_taken") when !IsNewVersionShare => ShareErrorAction.NewVersionOfTakenId,
+            (ShareErrorAction.SignOut, "not_owner") when IsNewVersionShare && _isShareListingClaimed => ShareErrorAction.BackToDescription,
             (ShareErrorAction.SignOut, "not_owner") when IsNewVersionShare => ShareErrorAction.OpenHost,
             _ => ShareErrorAction.None,
         };
@@ -814,11 +817,26 @@ public sealed partial class ListingEditor
                 // Borea has no text for what is wrong in the file, so the message stays one click away.
                 ShareHostFileDetail = exception.Message;
                 break;
-            case "not_owner" when _owner.Services is { } services:
+            case "not_owner" when _owner.Services is { } services && await IsRecordOfRefusedListingAsync(services, host, share):
                 await services.SharedContent.RemoveAsync(share.Entry.Kind.ToContentType(), host.Key, share.Entry.FolderName);
                 await _owner.ShowSharedContentAsync(share.Entry.Kind);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Whether the record of the folder on this host names the listing that the host refused. Only that record goes, because a share
+    /// from the page of a listing or a claimed short name can send a folder that this computer shared to another listing of the player.
+    /// </summary>
+    private async Task<bool> IsRecordOfRefusedListingAsync(BoreaServices services, ShareHost host, GameSaveShareStart share)
+    {
+        if (_shareListing is not { } refused)
+            return false;
+
+        var type = share.Entry.Kind.ToContentType();
+        var recorded = (await services.SharedContent.ListAsync())
+            .LastOrDefault(entry => entry.Type == type && entry.HostKey == host.Key && string.Equals(entry.FolderName, share.Entry.FolderName, StringComparison.OrdinalIgnoreCase));
+        return recorded is not null && (ModIds.Equals(recorded.ListingId, refused.Id) || ModIds.Equals(recorded.ListingId, refused.Reference));
     }
 
     /// <summary>
@@ -881,6 +899,7 @@ public sealed partial class ListingEditor
             return;
 
         _shareListing = new ShareListing(id, Draft.Name, host.Key, host.Name, id, Version: null, HoldsTheName: false);
+        _isShareListingClaimed = true;
         RefreshShare();
         Refresh();
         if (ShareHostRows.FirstOrDefault(row => row.Host.Key == host.Key) is { } row)

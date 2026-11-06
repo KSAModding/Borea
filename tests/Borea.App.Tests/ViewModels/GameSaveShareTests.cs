@@ -369,6 +369,37 @@ public sealed class GameSaveShareTests
         Assert.Equal(isShared ? harness.Localization.ShareNewVersionButton : harness.Localization.GameSaveShare, row.ShareText);
     }
 
+    /// <summary>The button of an installed copy of an own listing says Share a new version, so its click leads to a new version of that listing without the note about the author or the question.</summary>
+    [Fact]
+    public async Task InstalledCopyOfAnOwnListing_RowClick_SharesANewVersionWithoutTheNoteOrTheQuestion()
+    {
+        using var harness = await ShareHostShareTests.ListedRoverHarnessAsync();
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Example Rover");
+        await RecordAsync(harness, instance, folder);
+        File.WriteAllText(Path.Combine(folder, "vehicle.xml"), "<VehicleSaveData Id=\"Example Rover\" />");
+        await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "ExampleRover", "Rover of Maxi", "1.0.0", null), author: null);
+        await OpenAsync(harness);
+
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        var editor = harness.ViewModel.ListingEditor;
+        await editor.ShareRowCompare;
+        Assert.Equal(ShareFlowStep.Choose, editor.ShareFlowStep);
+        Assert.Equal(harness.Localization.FormatShareNewVersionChooseVehicle("Example Rover"), editor.ShareChooseHeadingText);
+        Assert.Equal("Example Rover", editor.SelectedShareRow?.Item.FolderName);
+        Assert.Null(editor.SelectedShareRow?.NoteText);
+        Assert.True(editor.CanContinueShareChoose);
+
+        await editor.ContinueShareChooseCommand.ExecuteAsync(null);
+        await editor.ShareHostsLoad;
+
+        Assert.Equal(ShareFlowStep.Describe, editor.ShareFlowStep);
+        Assert.False(editor.IsAskingShareListing);
+        Assert.True(editor.IsNewVersionShare);
+        Assert.Equal("ExampleRover", editor.Id);
+    }
+
     [Fact]
     public async Task RowBeforeTheIndexAnswered_StillFindsItsRecord()
     {
