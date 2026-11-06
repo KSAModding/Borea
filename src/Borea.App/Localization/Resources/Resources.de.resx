@@ -4185,6 +4185,30 @@
   <data name="ShareManageDoneHint" xml:space="preserve">
     <value>Du kannst die Seite später ändern oder eine Version entfernen.</value>
   </data>
+  <data name="ShareNewVersionButton" xml:space="preserve">
+    <value>Neue Version teilen</value>
+  </data>
+  <data name="ShareNewVersionChooseVehicleFormat" xml:space="preserve">
+    <value>Wähle das Fahrzeug für eine neue Version von {0}</value>
+  </data>
+  <data name="ShareNewVersionChooseSaveFormat" xml:space="preserve">
+    <value>Wähle den Spielstand für eine neue Version von {0}</value>
+  </data>
+  <data name="ShareManageMaybeYoursHeading" xml:space="preserve">
+    <value>Hast du das geteilt?</value>
+  </data>
+  <data name="ShareManageMaybeYoursHintFormat" xml:space="preserve">
+    <value>Nur das Konto, das es geteilt hat, kann eine Version hinzufügen. {0} prüft das.</value>
+  </data>
+  <data name="ShareAsNewListingInstead" xml:space="preserve">
+    <value>Stattdessen eigenständig teilen</value>
+  </data>
+  <data name="ShareErrorIdTakenIsMineFormat" xml:space="preserve">
+    <value>Das ist meins: als neue Version von {0} teilen</value>
+  </data>
+  <data name="ShareDoneLaterHint" xml:space="preserve">
+    <value>Für eine neue Version teilst du es später einfach noch einmal, oder du öffnest seine Seite und wählst „Neue Version teilen“.</value>
+  </data>
   <data name="ShareManageChange" xml:space="preserve">
     <value>Seite ändern</value>
   </data>

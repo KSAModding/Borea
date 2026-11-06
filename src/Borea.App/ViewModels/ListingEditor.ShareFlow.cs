@@ -55,6 +55,12 @@ public sealed partial class ListingEditor
     /// <summary>The listing that the item looks like, until the player says whether it belongs to it.</summary>
     private ShareListing? _askedShareListing;
 
+    /// <summary>
+    /// The listing that the player chose on its page before the item, with the kind of item it takes. A share of an item of that kind
+    /// adds a version to it without the question. Only an entry with no listing in mind clears it, so that Back, a rename and the list keep it.
+    /// </summary>
+    private (GameSaveKind Kind, ShareListing Listing)? _shareTarget;
+
     /// <summary>The listings that the player said this item is not. A listing that installs under the name of the item still counts, because the checks of the index refuse that folder.</summary>
     private readonly HashSet<string> _declinedShareListings = new(ModIds.Comparer);
 
@@ -145,6 +151,9 @@ public sealed partial class ListingEditor
     public bool IsAskingShareListing => _askedShareListing is not null;
 
     public bool ShowsShareFields => !IsNewVersionShare && !IsAskingShareListing;
+
+    /// <summary>A new version that the player started from its listing never asked the question, so the step offers the other answer.</summary>
+    public bool ShowsShareAsNewListing => _shareTarget is not null && IsNewVersionShare;
 
     public string? ShareLooksLikeText => _askedShareListing is { } asked ? Localization.FormatShareLooksLike(asked.Name, ShareHostNameOf(asked)) : null;
 
@@ -286,10 +295,28 @@ public sealed partial class ListingEditor
     /// Why the item cannot start as it is named, because a listing that Borea cannot add a version to installs under its name.
     /// A listing on a share host asks its question instead. This compares in Borea and never waits for an answer of a host.
     /// </summary>
-    internal string? ShareNameTakenText(GameSaveShareStart share) =>
-        FindShareListing(share, ListingShareId.From(share.Content.Name)) is null && ShareListingsOf(share).Any(listing => HoldsShareName(listing, share.Content.Name))
-            ? ShareFolderTakenText(share)
-            : null;
+    internal string? ShareNameTakenText(GameSaveShareStart share)
+    {
+        var name = share.Content.Name;
+        var isTaken = ShareTargetOf(share) is { } target
+            ? ShareListingsOf(share).Any(listing => !ModIds.Equals(listing.Id, target.Id) && HoldsShareName(listing, name))
+            : FindShareListing(share, ListingShareId.From(name)) is null && ShareListingsOf(share).Any(listing => HoldsShareName(listing, name));
+        return isTaken ? ShareFolderTakenText(share) : null;
+    }
+
+    /// <summary>The listing that the player chose for an item of this kind, whose own install folder is no conflict, or null.</summary>
+    private ShareListing? ShareTargetOf(GameSaveShareStart share) =>
+        _shareTarget is { } target && target.Kind == share.Entry.Kind ? target.Listing : null;
+
+    private void SetShareTarget((GameSaveKind Kind, ShareListing Listing)? target)
+    {
+        _shareTarget = target;
+        OnPropertyChanged(nameof(ShowsShareAsNewListing));
+        OnPropertyChanged(nameof(ShareChooseHeadingText));
+    }
+
+    /// <summary>An entry with no listing in mind starts a share that looks for its listing again.</summary>
+    internal void ForgetShareTarget() => SetShareTarget(null);
 
     private string ShareFolderTakenText(GameSaveShareStart share) => share.Entry.Kind == GameSaveKind.Save
         ? Localization.FormatShareFolderTakenSave(share.Content.Name)
@@ -298,7 +325,7 @@ public sealed partial class ListingEditor
     /// <summary>A share on the publish step that only now finds its listing goes back, because the question stands on the step before.</summary>
     private void LookUpShareListing(GameSaveShareStart share)
     {
-        _askedShareListing = FindShareListing(share, Id.Trim());
+        _askedShareListing = ShareTargetOf(share) is null ? FindShareListing(share, Id.Trim()) : null;
         if (IsAskingShareListing && IsSharePublish)
             BackToShareDescribe();
 
@@ -315,6 +342,25 @@ public sealed partial class ListingEditor
         _askedShareListing = null;
         _shareListing = asked;
         Id = asked.Id;
+        RefreshShare();
+        Refresh();
+    }
+
+    /// <summary>
+    /// Makes a share that started from its listing a new listing. The share looks for a listing again without the one the player left,
+    /// so an item that still has the install folder of that listing gets the question, whose other answer opens the rename.
+    /// </summary>
+    [RelayCommand]
+    private void ShareAsNewListingInstead()
+    {
+        if (_share is not { } share || _shareListing is not { } listed)
+            return;
+
+        SetShareTarget(null);
+        _shareListing = null;
+        _declinedShareListings.Add(listed.Id);
+        Id = ListingShareId.From(share.Content.Name);
+        LookUpShareListing(share);
         RefreshShare();
         Refresh();
     }
@@ -529,6 +575,7 @@ public sealed partial class ListingEditor
         if (_shareListing is { } listed && !ModIds.Equals(listed.Id, Id.Trim()))
         {
             _shareListing = null;
+            SetShareTarget(null);
             RefreshShare();
         }
 

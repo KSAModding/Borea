@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Sharing;
 using Borea.Storage.Listings;
 
 namespace Borea.App.Tests.ViewModels;
@@ -327,6 +328,45 @@ public sealed class GameSaveShareTests
         row!.IsUnchangedCopy = null;
         Assert.False(editor.CanContinueShareChoose);
         Assert.True(editor.IsComparingShareRow);
+    }
+
+    /// <summary>Issue #1179: a share of a folder that this computer shared before adds a version, and the row says so.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OwnSharedRow_SaysShareANewVersion(bool isShared)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await CreateInstanceAsync(harness, "Example Rover");
+        if (isShared)
+            await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "ExampleRover", "Example Rover", "1.0.0", null), author: null);
+
+        await OpenAsync(harness);
+
+        var row = Assert.Single(harness.ViewModel.VehiclesSection.Items);
+        Assert.Equal(isShared, row.IsOwnShare);
+        Assert.True(row.ShowsShareButton);
+        Assert.Equal(isShared ? harness.Localization.ShareNewVersionButton : harness.Localization.GameSaveShare, row.ShareText);
+    }
+
+    /// <summary>An installed copy of a listing that this computer shared from another folder is the player's own, so it keeps the button.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InstalledCopy_ShowsTheButtonOnlyForAListingThatThePlayerShared(bool isShared)
+    {
+        using var harness = await ShareHostShareTests.ListedRoverHarnessAsync();
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        await RecordAsync(harness, instance, Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance), "Example Rover"));
+        if (isShared)
+            await harness.Services.SharedContent.RecordAsync(new SharedContentEntry(ContentType.Vehicle, "ksamods", "ksamods.gg", "ExampleRover", "Rover of Maxi", "1.0.0", null), author: null);
+
+        await OpenAsync(harness);
+
+        var row = Assert.Single(harness.ViewModel.VehiclesSection.Items);
+        Assert.True(row.HasRecord);
+        Assert.Equal(isShared, row.ShowsShareButton);
+        Assert.Equal(isShared ? harness.Localization.ShareNewVersionButton : harness.Localization.GameSaveShare, row.ShareText);
     }
 
     [Fact]

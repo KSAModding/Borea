@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Core.Index;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Sharing;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -31,9 +32,25 @@ public partial class MainViewModel
     /// <summary>The record of a share comes from a publish that the host took, and the host still decides with not_owner.</summary>
     public bool CanManageContent => _contentOwnEntry is not null && _contentShareHost is not null;
 
+    /// <summary>
+    /// Any vehicle or save on a share host offers a new version, also without a record of a share, because the record is missing on another
+    /// computer and after a share on the site of the host. Borea cannot tell the owner before the upload, and the host decides with not_owner.
+    /// </summary>
+    public bool CanShareNewContentVersion => _contentShareHost is not null && SelectedContent?.Type switch
+    {
+        ContentType.Vehicle => VehiclesSection.CanShare,
+        ContentType.Save => SavesSection.CanShare,
+        _ => false,
+    };
+
+    /// <summary>The quiet block for a listing on a share host with no record of a share on this computer.</summary>
+    public bool ShowsContentMaybeYours => CanShareNewContentVersion && !CanManageContent;
+
+    public string? ContentMaybeYoursHint => _contentShareHost is { } host ? Localization.FormatShareManageMaybeYoursHint(host.Name) : null;
+
     /// <summary>The page of the listing from the record, else the homepage of the listing while it is on the host, which writes that link. Borea never builds this address.</summary>
-    private Uri? ContentManagePage => _contentOwnEntry is null || _contentShareHost is not { } host ? null
-        : _contentOwnEntry.Page ?? (SelectedContent?.Links.TryGetValue("homepage", out var homepage) == true ? host.PageOnHost(homepage) : null);
+    private Uri? ContentManagePage => _contentShareHost is not { } host ? null
+        : _contentOwnEntry?.Page ?? (SelectedContent?.Links.TryGetValue("homepage", out var homepage) == true ? host.PageOnHost(homepage) : null);
 
     public string? ContentManageOnHostText => ContentManagePage is not null ? Localization.FormatShareManageOnHost(_contentShareHost!.Name) : null;
 
@@ -68,6 +85,9 @@ public partial class MainViewModel
     private void RefreshContentManage()
     {
         OnPropertyChanged(nameof(CanManageContent));
+        OnPropertyChanged(nameof(CanShareNewContentVersion));
+        OnPropertyChanged(nameof(ShowsContentMaybeYours));
+        OnPropertyChanged(nameof(ContentMaybeYoursHint));
         OnPropertyChanged(nameof(ContentManageOnHostText));
     }
 
@@ -80,6 +100,22 @@ public partial class MainViewModel
 
         _contentOwnEntry = entries.LastOrDefault(entry => entry.Type == item.Type && entry.HostKey == host.Key && ModIds.Equals(entry.ListingId, reference ?? item.ModId));
         RefreshContentManage();
+    }
+
+    /// <summary>
+    /// Opens the share steps for a new version of the open listing, which the player then picks the item for. A record of a share
+    /// names the version that the index may not hold yet, and the reference on the host comes from the listing.
+    /// </summary>
+    [RelayCommand]
+    private Task ShareNewContentVersionAsync()
+    {
+        if (!CanShareNewContentVersion || SelectedContent is not { } item || _contentShareHost is not { } host)
+            return Task.CompletedTask;
+
+        var reference = item.Listing.Releases?.Hosts.FirstOrDefault(listed => listed.Kind == ReleaseHostKind.Share && listed.Host == host.Key)?.Reference ?? item.ModId;
+        var recorded = _contentOwnEntry is { Version.Length: > 0 } entry ? entry.Version : null;
+        var target = new ShareListing(item.ModId, item.Name, host.Key, host.Name, reference, recorded, HoldsTheName: false);
+        return OpenShareNewVersionAsync(item.Type == ContentType.Save ? GameSaveKind.Save : GameSaveKind.Vehicle, target);
     }
 
     [RelayCommand]

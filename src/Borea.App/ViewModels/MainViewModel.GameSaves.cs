@@ -84,6 +84,8 @@ public partial class MainViewModel
         VehiclesSection.RefreshShare();
         SavesSection.RefreshShare();
         OnPropertyChanged(nameof(ShowsDiscoverShare));
+        OnPropertyChanged(nameof(CanShareNewContentVersion));
+        OnPropertyChanged(nameof(ShowsContentMaybeYours));
     }
 
     /// <summary>
@@ -93,6 +95,7 @@ public partial class MainViewModel
     internal async Task ShareGameSaveAsync(GameSaveItem item)
     {
         item.CloseEdits();
+        ListingEditor.ForgetShareTarget();
         var type = item.Entry.Kind.ToContentType();
         var record = RecordOfFolder(await InstalledContentOfAsync(item.InstanceId), type, item.FolderName);
         if (record is not null && !ListingEditor.IsSharing)
@@ -132,7 +135,28 @@ public partial class MainViewModel
         StartShareSchemaLoad();
 
         // The step shows first, because the page can wait a long time for the index and the schema, and it reads the rows again when they answer.
-        var choose = ListingEditor.HasShareOnTheWay ? Task.CompletedTask : ListingEditor.OpenShareChooseAsync(kind);
+        var choose = Task.CompletedTask;
+        if (!ListingEditor.HasShareOnTheWay)
+        {
+            ListingEditor.ForgetShareTarget();
+            choose = ListingEditor.OpenShareChooseAsync(kind);
+        }
+
+        await OpenListingAsync();
+        await choose;
+    }
+
+    /// <summary>The way into a new version of a listing from its page. A running share stays, because a new one would cancel it, so this only goes back to it.</summary>
+    internal async Task OpenShareNewVersionAsync(GameSaveKind kind, ShareListing target)
+    {
+        StartShareSchemaLoad();
+        if (ListingEditor.IsSharing)
+        {
+            await OpenListingAsync();
+            return;
+        }
+
+        var choose = ListingEditor.OpenShareNewVersionAsync(kind, target);
         await OpenListingAsync();
         await choose;
     }
@@ -160,9 +184,10 @@ public partial class MainViewModel
         var entries = await services.GameSaves.ListAsync(instance.InstanceId, kind);
         var records = await InstalledContentOfAsync(instance.InstanceId);
         var shared = await services.SharedContent.ListAsync();
+        var sharedListings = SharedListingIds(shared, type);
         return entries.Select(entry =>
         {
-            var item = new GameSaveItem(this, section, instance.InstanceId, entry, installed: null) { SharedHostName = SharedHostName(shared, type, entry.FolderName) };
+            var item = new GameSaveItem(this, section, instance.InstanceId, entry, installed: null) { SharedHostName = SharedHostName(shared, type, entry.FolderName), SharedListingIds = sharedListings };
             if (RecordOfFolder(records, type, entry.FolderName) is { } record)
                 item.ShowRecord(record, listing: null, newer: null);
             return item;
@@ -408,12 +433,19 @@ public partial class MainViewModel
         var section = kind == GameSaveKind.Vehicle ? VehiclesSection : SavesSection;
         var type = kind.ToContentType();
         var entries = await services.SharedContent.ListAsync();
+        var sharedListings = SharedListingIds(entries, type);
         foreach (var item in section.Items)
+        {
             item.SharedHostName = SharedHostName(entries, type, item.FolderName);
+            item.SharedListingIds = sharedListings;
+        }
     }
 
     private static string? SharedHostName(IReadOnlyList<SharedContentEntry> entries, ContentType type, string folderName) =>
         SharedEntryOfFolder(entries, type, folderName)?.HostName;
+
+    private static HashSet<string> SharedListingIds(IReadOnlyList<SharedContentEntry> entries, ContentType type) =>
+        entries.Where(entry => entry.Type == type).Select(entry => entry.ListingId).ToHashSet(ModIds.Comparer);
 
     /// <summary>How long the row of a new vehicle or save shows its border.</summary>
     internal static readonly TimeSpan GameSaveMarkDuration = TimeSpan.FromSeconds(2);
@@ -978,7 +1010,22 @@ public sealed partial class GameSaveItem : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SharedOnText))]
     [NotifyPropertyChangedFor(nameof(ShowsListingLine))]
+    [NotifyPropertyChangedFor(nameof(IsOwnShare))]
+    [NotifyPropertyChangedFor(nameof(ShareText))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
     private string? _sharedHostName;
+
+    /// <summary>The listings that this computer shared items of this kind to.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOwnShare))]
+    [NotifyPropertyChangedFor(nameof(ShareText))]
+    [NotifyPropertyChangedFor(nameof(ShowsShareButton))]
+    private IReadOnlySet<string> _sharedListingIds = new HashSet<string>();
+
+    /// <summary>This computer shared the folder, or the row is an installed copy of a listing that it shared, so a share of the row adds a version.</summary>
+    public bool IsOwnShare => SharedHostName is not null || (Record is { } record && SharedListingIds.Contains(record.ListingId));
+
+    public string ShareText => IsOwnShare ? _owner.Localization.ShareNewVersionButton : _owner.Localization.GameSaveShare;
 
     public string? SharedOnText => SharedHostName is { } host ? _owner.Localization.FormatContentSharedOn(host) : null;
 
@@ -1022,8 +1069,11 @@ public sealed partial class GameSaveItem : ObservableObject
     /// <summary>An item of an instance, of a type that the index accepts.</summary>
     public bool CanShare => InstanceId != Guid.Empty && Section.CanShare;
 
-    /// <summary>A row with a record has no button, because a share of the file of someone else ends in a refusal, and its menu entry leads to the note that says so.</summary>
-    public bool ShowsShareButton => CanShare && !HasRecord && IsIdle;
+    /// <summary>
+    /// A row with a record has no button, because a share of the file of someone else ends in a refusal, and its menu entry leads to the note that says so.
+    /// An installed copy of a listing that the player shared is theirs, so it keeps the button.
+    /// </summary>
+    public bool ShowsShareButton => CanShare && (!HasRecord || IsOwnShare) && IsIdle;
 
     internal void RefreshShare()
     {
@@ -1049,6 +1099,7 @@ public sealed partial class GameSaveItem : ObservableObject
         OnPropertyChanged(nameof(CopyNoteText));
         OnPropertyChanged(nameof(ReplaceText));
         OnPropertyChanged(nameof(SharedOnText));
+        OnPropertyChanged(nameof(ShareText));
         RefreshRecordText();
     }
 

@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -55,6 +57,10 @@ public sealed partial class ListingEditor
 
     public bool IsShareChooseSave => _shareChooseKind == GameSaveKind.Save;
 
+    public string ShareChooseHeadingText => _shareTarget is not { Listing: var target } ? Localization.ShareChooseHeading
+        : IsShareChooseSave ? Localization.FormatShareNewVersionChooseSave(target.Name)
+        : Localization.FormatShareNewVersionChooseVehicle(target.Name);
+
     public bool CanContinueShareChoose => !IsShareGameRunning && SelectedShareRow is { BlocksNext: false };
 
     public bool ShowsShareChooseFirst => SelectedShareRow is null && ShareChooseRows.Count > 0 && !IsLoadingShareChoose;
@@ -100,6 +106,16 @@ public sealed partial class ListingEditor
         return LoadShareChooseAsync(kind, select, problem);
     }
 
+    /// <summary>Opens the step for a new version of a listing that the player chose on its page, with the item that most likely belongs to it selected.</summary>
+    internal Task OpenShareNewVersionAsync(GameSaveKind kind, ShareListing target)
+    {
+        if (IsShareDone)
+            ForgetShare();
+
+        SetShareTarget((kind, target));
+        return OpenShareChooseAsync(kind);
+    }
+
     /// <summary>The link for mod authors leads to the start or to the draft behind the list, because a list with nothing picked holds no work. A share that has begun stays, and "Start over" is there for it.</summary>
     internal void LeaveShareStepWithNoShare()
     {
@@ -122,9 +138,14 @@ public sealed partial class ListingEditor
 
     private Task LoadShareChooseAsync(GameSaveKind kind, (Guid InstanceId, string FolderName)? select, string? problem)
     {
+        // The listing takes only items of its own kind, so a list of the other kind is an entry with no listing in mind.
+        if (_shareTarget is { } target && target.Kind != kind)
+            SetShareTarget(null);
+
         _shareChooseKind = kind;
         OnPropertyChanged(nameof(IsShareChooseVehicle));
         OnPropertyChanged(nameof(IsShareChooseSave));
+        OnPropertyChanged(nameof(ShareChooseHeadingText));
         return ShareChooseLoad = ReadShareChooseRowsAsync(++_shareChooseLoads, select, problem);
     }
 
@@ -147,7 +168,7 @@ public sealed partial class ListingEditor
                     return;
 
                 foreach (var item in items)
-                    ShareChooseRows.Add(new ShareChooseRow(Localization, item, instance, item == items[0], ShareSourceName(item.Record)));
+                    ShareChooseRows.Add(new ShareChooseRow(Localization, item, instance, item == items[0], ShareSourceName(item.Record), IsShareTargetRecord(item.Record)));
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
@@ -156,6 +177,7 @@ public sealed partial class ListingEditor
         }
 
         var hasProfileItems = ShareChooseRows.Count == 0 && await HasShareProfileItemsAsync();
+        var targetRow = await ShareTargetRowAsync();
         if (load != _shareChooseLoads)
             return;
 
@@ -163,6 +185,7 @@ public sealed partial class ListingEditor
         IsLoadingShareChoose = false;
         SelectedShareRow = ShareChooseRows.FirstOrDefault(row => row.Item.InstanceId == select?.InstanceId && string.Equals(row.Item.FolderName, select?.FolderName, StringComparison.OrdinalIgnoreCase))
             ?? SelectedShareRow
+            ?? targetRow
             ?? (ShareChooseRows.Count == 1 ? ShareChooseRows[0] : null);
         ShareChooseError = problem;
     }
@@ -188,8 +211,41 @@ public sealed partial class ListingEditor
         if (record is null)
             return null;
 
-        var listings = IsShareChooseSave ? _snapshot?.Saves : _snapshot?.Vehicles;
-        return listings?.FirstOrDefault(listing => ModIds.Equals(listing.Id, record.ListingId))?.Authored?.Name ?? record.ListingId;
+        return ShareChooseListings()?.FirstOrDefault(listing => ModIds.Equals(listing.Id, record.ListingId))?.Authored?.Name ?? record.ListingId;
+    }
+
+    private IReadOnlyList<ContentIndexListing>? ShareChooseListings() => IsShareChooseSave ? _snapshot?.Saves : _snapshot?.Vehicles;
+
+    /// <summary>Whether the row is an installed copy of the listing that the player chose to add a version to.</summary>
+    private bool IsShareTargetRecord(InstalledContentRecord? record) =>
+        record is not null && _shareTarget is { Listing: var target } && ModIds.Equals(record.ListingId, target.Id);
+
+    /// <summary>
+    /// The row of the item that a new version of the chosen listing most likely comes from: a folder that this computer shared to it,
+    /// then an installed copy of it, and then a folder that its releases install into. Null when no listing is chosen or no row fits.
+    /// </summary>
+    private async Task<ShareChooseRow?> ShareTargetRowAsync()
+    {
+        if (_shareTarget is not { Listing: var target } || _owner.Services is not { } services || ShareChooseRows.Count == 0)
+            return null;
+
+        var type = _shareChooseKind.ToContentType();
+        var shared = new List<string>();
+        try
+        {
+            shared.AddRange((await services.SharedContent.ListAsync())
+                .Where(entry => entry.Type == type && entry.HostKey == target.HostKey && (ModIds.Equals(entry.ListingId, target.Id) || ModIds.Equals(entry.ListingId, target.Reference)))
+                .Select(entry => entry.FolderName));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // The other two rules can still select the row, and the player can always pick one.
+        }
+
+        var folders = ShareChooseListings()?.FirstOrDefault(listing => ModIds.Equals(listing.Id, target.Id))?.Releases.Select(release => release.Install?.Folder).OfType<string>().ToList() ?? [];
+        return ShareChooseRows.FirstOrDefault(row => shared.Contains(row.Item.FolderName, StringComparer.OrdinalIgnoreCase))
+            ?? ShareChooseRows.FirstOrDefault(row => ModIds.Equals(row.Item.Record?.ListingId, target.Id))
+            ?? ShareChooseRows.FirstOrDefault(row => folders.Contains(row.Item.FolderName, StringComparer.OrdinalIgnoreCase));
     }
 
     partial void OnSelectedShareRowChanged(ShareChooseRow? oldValue, ShareChooseRow? newValue)
@@ -238,7 +294,7 @@ public sealed partial class ListingEditor
     [RelayCommand]
     private Task OpenShareProfileInstanceAsync() => ShareProfileInstance is { } instance ? _owner.OpenInstanceAsync(instance) : Task.CompletedTask;
 
-    /// <summary>The same item keeps the draft of a new listing. A new version starts again, so the question comes back and the player can change the answer. Another item starts a new share, or says why it cannot.</summary>
+    /// <summary>The same item keeps the draft of a new listing, unless the player chose a listing for it since. A new version starts again, so the question comes back and the player can change the answer. Another item starts a new share, or says why it cannot.</summary>
     [RelayCommand]
     private async Task ContinueShareChooseAsync()
     {
@@ -246,7 +302,7 @@ public sealed partial class ListingEditor
         if (!CanContinueShareChoose || SelectedShareRow is not { Item: var item })
             return;
 
-        if (!IsNewVersionShare && _share is { } share && share.InstanceId == item.InstanceId && share.Entry.Kind == item.Entry.Kind && string.Equals(share.Entry.FolderName, item.FolderName, StringComparison.OrdinalIgnoreCase))
+        if (!IsNewVersionShare && _shareTarget is null && _share is { } share && share.InstanceId == item.InstanceId && share.Entry.Kind == item.Entry.Kind && string.Equals(share.Entry.FolderName, item.FolderName, StringComparison.OrdinalIgnoreCase))
         {
             ShareFlowStep = ShareFlowStep.Describe;
             return;
@@ -271,11 +327,16 @@ public sealed partial class ListingEditor
     }
 
     [RelayCommand]
-    private void ShareAnother() => _ = OpenShareChooseAsync(_share?.Entry.Kind ?? _shareChooseKind);
+    private void ShareAnother()
+    {
+        ForgetShareTarget();
+        _ = OpenShareChooseAsync(_share?.Entry.Kind ?? _shareChooseKind);
+    }
 
     private void RefreshShareChooseText()
     {
         OnPropertyChanged(nameof(ShareChooseEmptyText));
+        OnPropertyChanged(nameof(ShareChooseHeadingText));
         foreach (var row in ShareChooseRows)
             row.RefreshText();
     }
@@ -286,11 +347,14 @@ public sealed partial class ShareChooseRow : ObservableObject
 {
     private readonly LocalizationService _text;
     private readonly string? _sourceName;
+    private readonly bool _isOfTargetListing;
 
-    internal ShareChooseRow(LocalizationService text, GameSaveItem item, InstanceItem instance, bool isFirstOfInstance, string? sourceName)
+    /// <param name="isOfTargetListing">Whether the row is an installed copy of the listing that the player chose to add a version to, which the player says is theirs.</param>
+    internal ShareChooseRow(LocalizationService text, GameSaveItem item, InstanceItem instance, bool isFirstOfInstance, string? sourceName, bool isOfTargetListing)
     {
         _text = text;
         _sourceName = sourceName;
+        _isOfTargetListing = isOfTargetListing;
         Item = item;
         InstanceName = isFirstOfInstance ? instance.Name : null;
         IsFirstOfActiveInstance = isFirstOfInstance && instance.IsActive;
@@ -320,10 +384,11 @@ public sealed partial class ShareChooseRow : ObservableObject
 
     internal bool BlocksNext => Item.Record is not null && IsUnchangedCopy != false;
 
-    /// <summary>What the install record says about the selected row.</summary>
+    /// <summary>What the install record says about the selected row. A changed copy of the chosen listing gets no warning, because the player said that the listing is theirs.</summary>
     public string? NoteText =>
         !IsSelected || _sourceName is not { } source || IsUnchangedCopy is not { } unchanged ? null
         : unchanged ? _text.FormatShareUnchangedCopy(source)
+        : _isOfTargetListing ? null
         : Item.IsVehicle ? _text.FormatShareChangedVehicle(source)
         : _text.FormatShareChangedSave(source);
 

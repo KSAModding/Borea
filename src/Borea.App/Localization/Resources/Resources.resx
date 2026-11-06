@@ -4185,6 +4185,30 @@
   <data name="ShareManageDoneHint" xml:space="preserve">
     <value>You can change the page or take down a version later.</value>
   </data>
+  <data name="ShareNewVersionButton" xml:space="preserve">
+    <value>Share a new version</value>
+  </data>
+  <data name="ShareNewVersionChooseVehicleFormat" xml:space="preserve">
+    <value>Choose the vehicle for a new version of {0}</value>
+  </data>
+  <data name="ShareNewVersionChooseSaveFormat" xml:space="preserve">
+    <value>Choose the save for a new version of {0}</value>
+  </data>
+  <data name="ShareManageMaybeYoursHeading" xml:space="preserve">
+    <value>Did you share this?</value>
+  </data>
+  <data name="ShareManageMaybeYoursHintFormat" xml:space="preserve">
+    <value>Only the account that shared it can add a version. {0} checks this.</value>
+  </data>
+  <data name="ShareAsNewListingInstead" xml:space="preserve">
+    <value>Share it on its own instead</value>
+  </data>
+  <data name="ShareErrorIdTakenIsMineFormat" xml:space="preserve">
+    <value>This is mine: share it as a new version of {0}</value>
+  </data>
+  <data name="ShareDoneLaterHint" xml:space="preserve">
+    <value>To share a new version later, share it again, or open its page and choose Share a new version.</value>
+  </data>
   <data name="ShareManageChange" xml:space="preserve">
     <value>Change the page</value>
   </data>

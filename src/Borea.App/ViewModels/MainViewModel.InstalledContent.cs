@@ -433,6 +433,8 @@ public sealed partial class GameSaveItem : IContentPlanRow
         Listing = listing;
         NewerRelease = newer;
         OnPropertyChanged(nameof(HasRecord));
+        OnPropertyChanged(nameof(IsOwnShare));
+        OnPropertyChanged(nameof(ShareText));
         OnPropertyChanged(nameof(ShowsShareButton));
         OnPropertyChanged(nameof(ShowsListingLine));
         OnPropertyChanged(nameof(ListingName));

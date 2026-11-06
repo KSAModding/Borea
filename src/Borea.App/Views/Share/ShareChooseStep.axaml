@@ -7,7 +7,7 @@
     <StackPanel Spacing="16">
         <Border Classes="card" Padding="24">
             <StackPanel Spacing="8">
-                <TextBlock Classes="heading-md" Text="{Binding Localization.ShareChooseHeading}" TextWrapping="Wrap" />
+                <TextBlock Classes="heading-md" Text="{Binding ListingEditor.ShareChooseHeadingText}" TextWrapping="Wrap" />
                 <TextBlock Classes="body-md secondary" Text="{Binding Localization.ShareChooseHint}" TextWrapping="Wrap" />
                 <WrapPanel ItemSpacing="4" LineSpacing="4" Margin="0,4,0,0">
                     <Button Classes="tab" Classes.active="{Binding ListingEditor.IsShareChooseVehicle}" Content="{Binding Localization.ContentTypeVehicle}" Command="{Binding ListingEditor.ShowShareChooseVehiclesCommand}" IsVisible="{Binding VehiclesSection.CanShare}" />
@@ -17,7 +17,7 @@
 
                 <views:Banner Kind="Outline" Margin="0,8,0,0" Message="{Binding Localization.ShareGameRunning}" ActionText="{Binding Localization.DiscoverIndexRetry}" ActionCommand="{Binding ListingEditor.CheckShareGameRunningCommand}" IsVisible="{Binding ListingEditor.IsShareGameRunning}" />
 
-                <ListBox ItemsSource="{Binding ListingEditor.ShareChooseRows}" SelectedItem="{Binding ListingEditor.SelectedShareRow}" Margin="0,8,0,0" AutomationProperties.Name="{Binding Localization.ShareChooseHeading}" IsVisible="{Binding !!ListingEditor.ShareChooseRows.Count}">
+                <ListBox ItemsSource="{Binding ListingEditor.ShareChooseRows}" SelectedItem="{Binding ListingEditor.SelectedShareRow}" Margin="0,8,0,0" AutomationProperties.Name="{Binding ListingEditor.ShareChooseHeadingText}" IsVisible="{Binding !!ListingEditor.ShareChooseRows.Count}">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:ShareChooseRow">
                             <StackPanel Spacing="6">
