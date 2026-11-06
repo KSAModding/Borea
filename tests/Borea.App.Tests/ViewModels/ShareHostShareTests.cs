@@ -2784,6 +2784,33 @@ public sealed class ShareHostShareTests
         Assert.False(viewModel.ShowsContentMaybeYours);
     }
 
+    /// <summary>Issue #1179: the page of a save on a share host also asks without a record, and its button opens the list of saves for a new version of that listing.</summary>
+    [Fact]
+    public async Task ContentPage_SaveWithoutRecord_OffersANewVersionOfTheSave()
+    {
+        var savesUrl = ContentIndexTypeFiles.Saves.AddressFrom(new Uri("https://ksamodding.github.io/content-index-releases/v1/index.json")).AbsoluteUri;
+        var saves = ListedRover
+            .Replace(ContentIndexTypeFiles.Vehicles.ArrayKey, ContentIndexTypeFiles.Saves.ArrayKey, StringComparison.Ordinal)
+            .Replace("\"type\": \"vehicle\"", "\"type\": \"save\"", StringComparison.Ordinal);
+        using var harness = await ViewModelHarness.CreateAsync(
+            editSnapshot: ViewModelHarness.ShareHosts(Hosts),
+            respond: request => request.RequestUri?.AbsoluteUri == savesUrl ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(saves) } : null,
+            shareHostClient: new FakeHost());
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverSavesCommand.Execute(null);
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CanShareNewContentVersion);
+        Assert.True(viewModel.ShowsContentMaybeYours);
+        Assert.False(viewModel.CanManageContent);
+
+        await viewModel.ShareNewContentVersionCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShareFlowStep.Choose, viewModel.ListingEditor.ShareFlowStep);
+        Assert.Equal(harness.Localization.FormatShareNewVersionChooseSave("Example Rover"), viewModel.ListingEditor.ShareChooseHeadingText);
+    }
+
     /// <summary>Issue #1179: the page of an own listing leads to a new version of it, which goes up with the id of the listing and publishes no listing.</summary>
     [Fact]
     public async Task ContentPageOfOwnListing_SharesANewVersionWithItsListingId_WithoutTheQuestion()

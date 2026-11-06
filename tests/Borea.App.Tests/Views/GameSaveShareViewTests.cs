@@ -671,6 +671,7 @@ public sealed class GameSaveShareViewTests
         Assert.Contains(localization.FormatShareManageOnHost("ksamods.gg"), texts);
         Assert.DoesNotContain(localization.ShareManageHeading, texts);
         Assert.DoesNotContain(localization.ShareManageChange, texts);
+        Assert.DoesNotContain(localization.ShareManageTakeDown, texts);
     }
 
     [Fact]
