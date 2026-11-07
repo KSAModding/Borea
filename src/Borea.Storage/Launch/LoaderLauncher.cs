@@ -624,7 +624,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         {
             cause = LoaderCrashCause.ModLoading;
             loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
-            var likely = LoaderCrashReport.LikelyLoadingMod(output, loadOrder);
+            var likely = LoaderCrashReport.LikelyLoadingMod(output, loadOrder, isWholeOutput: output.Count < ProcessStarter.OutputLines);
             blamed = (likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely)))
                 ?? (missing.Count > 0 ? AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing.Contains).FirstOrDefault() : null);
         }

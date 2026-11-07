@@ -103,8 +103,9 @@ public static partial class LoaderCrashReport
 
     /// <summary>
     /// Whether a stack frame in the output lies in StarMap's mod loading, which
-    /// is ModLoader.PrepareMods (ModsLoader in newer StarMap), RuntimeMod.TryCreateMod
-    /// or RuntimeMod.InitializeMod, after the game prepared the manifest.
+    /// is PrepareMods of ModLoader in StarMap 0.4 or of ModsLoader in StarMap 0.5,
+    /// RuntimeMod.TryCreateMod or RuntimeMod.InitializeMod, after the game prepared
+    /// the manifest.
     /// </summary>
     public static bool StoppedWhileLoadingMods(IEnumerable<string> output)
     {
@@ -145,11 +146,12 @@ public static partial class LoaderCrashReport
 
     /// <summary>
     /// The enabled mod StarMap was likely loading when it stopped, or null.
-    /// ModLoader.PrepareMods loads the mods in manifest order and reports each
-    /// one it loaded, skipped or delayed, so the first code mod it did not report
-    /// is the one it was loading.
+    /// PrepareMods loads the mods in manifest order and reports each one it
+    /// loaded, skipped or delayed, so the first code mod it did not report is the
+    /// one it was loading.
     /// </summary>
-    public static string? LikelyLoadingMod(IReadOnlyList<string> output, IReadOnlyList<LoadOrderMod> enabledMods)
+    /// <param name="isWholeOutput">Whether the output holds every line the loader wrote, because none was cut from its start.</param>
+    public static string? LikelyLoadingMod(IReadOnlyList<string> output, IReadOnlyList<LoadOrderMod> enabledMods, bool isWholeOutput = false)
     {
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(enabledMods);
@@ -157,12 +159,14 @@ public static partial class LoaderCrashReport
         if (!StoppedWhileLoadingMods(output))
             return null;
 
-        // StarMap prints the instance path right before it loads the mods, so
-        // without it the reports of the first mods may have left the output buffer
-        if (!output.Any(line => line?.TrimStart().StartsWith(InstancePathReport, StringComparison.Ordinal) == true))
-            return null;
-
         var (reported, settled, loadedFromManifest, delayed) = ReadModReports(output);
+
+        // The reports of the first mods may have left the output buffer. StarMap 0.4
+        // prints the instance path right before it loads the mods, which shows that
+        // they are all there. StarMap 0.5 prints nothing before them, so only the
+        // whole output shows that, and a report in it shows that Borea reads their format.
+        if (!output.Any(line => line?.TrimStart().StartsWith(InstancePathReport, StringComparison.Ordinal) == true) && !(isWholeOutput && reported.Count > 0))
+            return null;
 
         var waiting = delayed
             .Where(mod => !settled.Contains(mod.ModId))
@@ -180,8 +184,8 @@ public static partial class LoaderCrashReport
         if (next is not null)
             return next.ModId;
 
-        // ModLoader.TryLoadWaitingMods loads a waiting mod only when every
-        // dependency still missing is optional
+        // TryLoadWaitingMods loads a waiting mod only when every dependency
+        // still missing is optional
         return waiting.FirstOrDefault(mod => mod.Missing.All(id => mod.Mod!.OptionalDependencies.Contains(id, StringComparer.Ordinal))).Mod?.ModId;
     }
 
@@ -237,7 +241,9 @@ public static partial class LoaderCrashReport
     [GeneratedRegex(@"^\s*at\s+KSA\.ModLibrary\.PrepareManifest\b")]
     private static partial Regex PrepareManifestFramePattern();
 
-    [GeneratedRegex(@"^\s*StarMap - (?<report>Loaded mod|Not loading mod|Delaying load of mod|Failed to initialize mod|Failed to load mod):\s*(?<id>.+?)(?<manifest> from manifest)?(?: due to missing dependencies: (?<dependencies>.*)| because .*| after .*)?\s*$")]
+    // StarMap 0.4 writes a report as it is, and StarMap 0.5 quotes it after its
+    // level, as in "StarMap info: 'StarMap - Loaded mod: X from manifest'"
+    [GeneratedRegex(@"^\s*(?:StarMap (?<level>info|warning|error): ')?StarMap - (?<report>Loaded mod|Not loading mod|Delaying load of mod|Failed to initialize mod|Failed to load mod):\s*(?<id>.+?)(?<manifest> from manifest)?(?: due to missing dependencies: (?<dependencies>.*)| because .*| after .*)?(?(level)')\s*$")]
     private static partial Regex ModReportPattern();
 
     [GeneratedRegex(@"assembly '(?<name>[^',]+)(,|')", RegexOptions.IgnoreCase)]
