@@ -404,7 +404,7 @@ public sealed class BoreaServices : IDisposable
     /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
     /// <param name="images">Serves listing images. Null fetches them from the author hosts.</param>
     /// <param name="sharedProfileRoot">The game's own profile. Null means the one in My Games.</param>
-    /// <param name="isGameProcessRunning">Whether a KSA or StarMap process runs. Null looks for one.</param>
+    /// <param name="isGameProcessRunning">Whether a KSA process or the process of an installed mod loader runs. Null looks for one.</param>
     /// <param name="isOtherBoreaRunning">Whether another Borea App or command runs. Null looks for one.</param>
     /// <param name="gitHub">The GitHub session. Null builds one on this graph's client for <see cref="BoreaGitHubApp"/>.</param>
     /// <param name="listingPublisher">Opens the listing pull request. Null builds one on the GitHub session.</param>
@@ -592,7 +592,8 @@ public sealed class BoreaServices : IDisposable
         IInstallPlanner installPlanner = new LoggingInstallPlanner(new RecordedContentPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), installedContent, modState), log);
         if (wrapInstallPlanner is not null)
             installPlanner = wrapInstallPlanner(installPlanner);
-        isGameProcessRunning ??= RunningProcesses.IsGameRunning;
+        var loaderProcessNames = new LoaderProcessNames(offlineContentIndex, loaderVersions);
+        isGameProcessRunning ??= () => RunningProcesses.IsGameRunning(loaderProcessNames.Current);
         var channelOfflineMods = new ReleaseChannelModRepository(offlineMods, settings.ReleaseChannel);
 
         // The preview plans over the offline repository only, so opening a vehicle page never sends a request.
