@@ -108,6 +108,7 @@ public sealed class LoaderCrashReportTests
         { ["   at StarMap.Core.ModRepository.ModsLoader.PrepareMods()", .. LoaderStartFrames], false },
         { ["Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0'.", "File name: 'Brutal.Core.Numerics, Version=2026.9.0.0'"], false },
         { ["   at KSA.Program.Main(String[] args)", "   at StarMap.GameSurveyer.RunGame()", "   at StarMap.Program.Main(String[] args)"], false },
+        { StarMap050Crash, false },
     };
 
     [Theory]
@@ -303,6 +304,49 @@ public sealed class LoaderCrashReportTests
 
         Assert.True(LoaderCrashReport.StoppedWhileLoadingMods(output));
         Assert.Null(LoaderCrashReport.LikelyLoadingMod(output, [Code("ModMenu"), Code("KSArmory")]));
+    }
+
+    // StarMap 0.5 loads the mods in the constructor of StarMapCore, which GameSurveyer.TryLoadCoreAndGame calls through Activator.CreateInstance
+    private static readonly string[] StarMap050Crash =
+    [
+        "Unhandled exception. System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.",
+        " ---> System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+        "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
+        "   at System.Reflection.RuntimeModule.GetTypes(RuntimeModule module)",
+        "   at System.Reflection.RuntimeModule.GetTypes()",
+        "   at StarMap.Core.ModRepository.RuntimeMod.InitializeMod(ModRegistry modRegistry, IPatchManager patchManager, IServiceProviderService serviceProviderService)",
+        "   at StarMap.Core.ModRepository.ModsLoader.PrepareMods()",
+        "   at StarMap.Core.ModRepository.ModsLoader.Init()",
+        "   at StarMap.Core.Services.CoreService.Init()",
+        "   at StarMap.Core.StarMapCore..ctor(AssemblyLoadContext coreAssemblyLoadContext)",
+        "   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)",
+        "   --- End of inner exception stack trace ---",
+        "   at System.Reflection.RuntimeConstructorInfo.Invoke(BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)",
+        "   at System.RuntimeType.CreateInstanceImpl(BindingFlags bindingAttr, Binder binder, Object[] args, CultureInfo culture)",
+        "   at System.Activator.CreateInstance(Type type, Object[] args)",
+        "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+        "   at StarMap.Program.Main(String[] args)",
+        "   at StarMap.Program.<Main>(String[] args)",
+    ];
+
+    private static readonly string[] StarMap050Reports =
+    [
+        "StarMap info: 'StarMap - Delaying load of mod: KSArmory due to missing dependencies: ModMenu'",
+        "StarMap info: 'StarMap - Loaded mod: ModMenu from manifest'",
+    ];
+
+    public static TheoryData<string[], bool, string?> StarMap050Outputs => new()
+    {
+        { [.. StarMap050Reports, .. StarMap050Crash], true, "KSArmory" },
+        { [.. StarMap050Reports, .. StarMap050Crash], false, null },
+        { StarMap050Crash, true, null },
+    };
+
+    [Theory]
+    [MemberData(nameof(StarMap050Outputs))]
+    public void LikelyLoadingMod_StarMap050Output_NeedsTheWholeOutputWithReports(string[] output, bool isWholeOutput, string? expected)
+    {
+        Assert.Equal(expected, LoaderCrashReport.LikelyLoadingMod(output, [Code("KSArmory"), Code("ModMenu"), Code("MeasureTools")], isWholeOutput));
     }
 
     [Fact]
