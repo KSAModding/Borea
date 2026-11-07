@@ -404,8 +404,8 @@ public partial class MainViewModel
         return largest.Count() * 100 >= states.Count * CommonCompatibilityPercent ? largest.Key : null;
     }
 
-    /// <summary>The Loaders tab has no Sort by dropdown, so it keeps the name order.</summary>
-    private IEnumerable<DiscoverItem> SortDiscover(IEnumerable<DiscoverItem> items) => (IsLoadersTab ? DiscoverSortOrder.Name : DiscoverSort) switch
+    /// <summary>The Loaders tab has no Sort by dropdown, so it always shows the most downloaded loader first.</summary>
+    private IEnumerable<DiscoverItem> SortDiscover(IEnumerable<DiscoverItem> items) => (IsLoadersTab ? DiscoverSortOrder.Popularity : DiscoverSort) switch
     {
         DiscoverSortOrder.Popularity => MostDownloadedFirst(items),
         DiscoverSortOrder.RecentlyUpdated => items.OrderBy(item => item.UpdatedAt is null).ThenByDescending(item => item.UpdatedAt).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),

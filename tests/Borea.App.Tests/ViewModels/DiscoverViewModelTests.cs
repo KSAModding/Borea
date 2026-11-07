@@ -1400,8 +1400,9 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
-    public async Task Sort_LoadersTab_KeepsTheNameOrder()
+    public async Task Sort_LoadersTab_ShowsTheMostDownloadedFirst_WhateverTheModsTabSorts()
     {
+        // Test Loader comes after StarMap by name, and only Test Loader has a download count
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
         {
             var root = JsonNode.Parse(json)!;
@@ -1422,11 +1423,11 @@ public sealed class DiscoverViewModelTests
         });
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
-        Assert.Equal(DiscoverSortOrder.Popularity, viewModel.DiscoverSort);
+        viewModel.SelectDiscoverSortCommand.Execute(DiscoverSortOrder.Name);
 
         viewModel.ShowDiscoverLoadersCommand.Execute(null);
 
-        Assert.Equal(["StarMap", "TestLoader"], viewModel.DiscoverItems.Select(item => item.ModId));
+        Assert.Equal(["TestLoader", "StarMap"], viewModel.DiscoverItems.Select(item => item.ModId));
     }
 
     [Fact]
