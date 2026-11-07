@@ -14,14 +14,9 @@ public sealed class DriveFreeSpaceProbe : IFreeSpaceProbe
 
         try
         {
-            var full = Normalize(path);
-            DriveInfo? holder = null;
-            foreach (var drive in DriveInfo.GetDrives())
-            {
-                var root = Normalize(drive.RootDirectory.FullName);
-                if (IsSameOrInside(full, root) && (holder is null || root.Length > Normalize(holder.RootDirectory.FullName).Length))
-                    holder = drive;
-            }
+            var drives = DriveInfo.GetDrives();
+            var mountPoint = MountPointOf(path, drives.Select(drive => drive.RootDirectory.FullName));
+            var holder = mountPoint is null ? null : drives.First(drive => string.Equals(Normalize(drive.RootDirectory.FullName), mountPoint, PathComparison));
 
             return holder is { IsReady: true }
                 ? new FreeSpace(holder.Name, holder.AvailableFreeSpace)
@@ -31,6 +26,25 @@ public sealed class DriveFreeSpaceProbe : IFreeSpaceProbe
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// The longest of <paramref name="mountPoints"/> that holds the path, or null when none does.
+    /// Links in the path are resolved first, because the mount table holds real paths: on an atomic
+    /// Linux system /home is a link into /var, and the read-only root above it reports no free space.
+    /// </summary>
+    internal static string? MountPointOf(string path, IEnumerable<string> mountPoints)
+    {
+        var full = Normalize(FileSystemPaths.ResolveLinks(path));
+        string? holder = null;
+        foreach (var mountPoint in mountPoints)
+        {
+            var root = Normalize(mountPoint);
+            if (IsSameOrInside(full, root) && (holder is null || root.Length > holder.Length))
+                holder = root;
+        }
+
+        return holder;
     }
 
     private static string Normalize(string path) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
@@ -44,5 +58,5 @@ public sealed class DriveFreeSpaceProbe : IFreeSpaceProbe
         return path.Length > prefix.Length && path.StartsWith(prefix, PathComparison);
     }
 
-    private static StringComparison PathComparison => OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+    private static StringComparison PathComparison => FileSystemPaths.PathComparison;
 }
