@@ -4185,6 +4185,30 @@
   <data name="ShareManageDoneHint" xml:space="preserve">
     <value>之后你仍可修改页面或下架某个版本。</value>
   </data>
+  <data name="ShareNewVersionButton" xml:space="preserve">
+    <value>分享新版本</value>
+  </data>
+  <data name="ShareNewVersionChooseVehicleFormat" xml:space="preserve">
+    <value>选择要作为“{0}”新版本分享的载具</value>
+  </data>
+  <data name="ShareNewVersionChooseSaveFormat" xml:space="preserve">
+    <value>选择要作为“{0}”新版本分享的存档</value>
+  </data>
+  <data name="ShareManageMaybeYoursHeading" xml:space="preserve">
+    <value>这是你分享的吗？</value>
+  </data>
+  <data name="ShareManageMaybeYoursHintFormat" xml:space="preserve">
+    <value>只有分享此内容的账号才能添加新版本。{0} 会验证条目归属。</value>
+  </data>
+  <data name="ShareAsNewListingInstead" xml:space="preserve">
+    <value>改为单独分享</value>
+  </data>
+  <data name="ShareErrorIdTakenIsMineFormat" xml:space="preserve">
+    <value>这是我的条目，作为“{0}”的新版本分享</value>
+  </data>
+  <data name="ShareDoneLaterHint" xml:space="preserve">
+    <value>以后要分享新版本，可以再次分享此内容，也可以打开它的页面，选择“分享新版本”。</value>
+  </data>
   <data name="ShareManageChange" xml:space="preserve">
     <value>修改页面</value>
   </data>
