@@ -12,7 +12,6 @@ namespace Borea.Storage.Settings;
 public sealed class LibraryFolderChanger : ILibraryFolderChanger
 {
     private const int CopyBufferSize = 1 << 20;
-    private const int MaxLinkDepth = 32;
 
     private static readonly EnumerationOptions EveryEntry = new()
     {
@@ -592,9 +591,13 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         return leftVolume is not null && string.Equals(leftVolume, VolumeRoot(right), FileSystemPaths.PathComparison);
     }
 
-    /// <summary>The longest mount point that holds the path, or its root when the mount points cannot be read.</summary>
+    /// <summary>
+    /// The longest mount point that holds the path, or its root when the mount points cannot be read.
+    /// Links are resolved first, because a path such as /home on an atomic Linux system is a link into /var.
+    /// </summary>
     private static string? VolumeRoot(string path)
     {
+        path = Resolve(path);
         string? longest = null;
         try
         {
@@ -618,43 +621,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
 
     private static string Normalize(string path) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
 
-    /// <summary>The path with each link among its existing folders replaced by the folder it points to.</summary>
-    private static string Resolve(string path) => Resolve(path, depth: 0);
-
-    private static string Resolve(string path, int depth)
-    {
-        var root = Path.GetPathRoot(path);
-        if (string.IsNullOrEmpty(root) || depth > MaxLinkDepth)
-            return path;
-
-        var names = path[root.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-        var resolved = root;
-        for (var index = 0; index < names.Length; index++)
-        {
-            var next = Path.Combine(resolved, names[index]);
-            if (LinkTarget(next) is { } linked)
-                return Resolve(Path.Combine([Normalize(linked), .. names[(index + 1)..]]), depth + 1);
-
-            if (!Directory.Exists(next))
-                return Path.Combine([next, .. names[(index + 1)..]]);
-
-            resolved = next;
-        }
-
-        return resolved;
-    }
-
-    private static string? LinkTarget(string folder)
-    {
-        try
-        {
-            return new DirectoryInfo(folder).ResolveLinkTarget(returnFinalTarget: true)?.FullName;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return null;
-        }
-    }
+    private static string Resolve(string path) => FileSystemPaths.ResolveLinks(path);
 
     private static bool SamePath(string left, string right) => string.Equals(left, right, FileSystemPaths.PathComparison);
 
