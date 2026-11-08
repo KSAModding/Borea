@@ -1085,6 +1085,89 @@ public sealed class DiscoverViewModelTests
         Assert.Contains(viewModel.DiscoverItems, item => item.ModId == "KSArmory");
     }
 
+    [Theory]
+    [InlineData("2026.8.22.5348", GameCompatibility.Compatible)]
+    [InlineData("2026.9.7.5402", GameCompatibility.Incompatible)]
+    public async Task LoaderBound_IsMetOnlyByALoaderReleaseThatSupportsTheBuild(string build, GameCompatibility expected)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithStarMapBound);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var armory = viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory");
+        await armory.OpenCommand.ExecuteAsync(null);
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        await viewModel.RefreshCompatibilityAsync(GameVersion.Parse(build));
+
+        Assert.Equal(expected, armory.Compatibility);
+        Assert.Equal(expected, viewModel.ContentVersions.Single(version => version.Version == "0.8.44").Compatibility);
+        Assert.Equal(expected == GameCompatibility.Incompatible ? "This release needs StarMap 0.4.8, which does not run on this KSA build." : null, armory.CompatibilityToolTip);
+    }
+
+    [Fact]
+    public async Task LoaderBound_OutsideThePinnedLoaderVersion_IsIncompatibleAndAddWarns()
+    {
+        using var harness = await InstallStepsTests.CreateWithGameAsync(WithStarMapBound);
+        var instance = await InstallStepsTests.ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+        var armory = viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory");
+        Assert.Equal(GameCompatibility.Compatible, armory.Compatibility);
+
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, record =>
+        {
+            record.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.6")));
+            return true;
+        });
+        await viewModel.LoadAsync();
+        var release = (await harness.Services.Mods.GetLatestReleaseAsync("KSArmory"))!;
+        var row = new VersionItem(viewModel, release);
+        await viewModel.PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), exactVersion: null);
+
+        const string reason = "This release needs StarMap 0.4.8, which the mod loader setting or the other mods of this instance do not allow.";
+        Assert.Equal(GameCompatibility.Incompatible, armory.Compatibility);
+        Assert.Equal(reason, armory.CompatibilityToolTip);
+        Assert.NotNull(row.PendingPlan);
+        Assert.Contains(reason, row.InstallWarning);
+    }
+
+    /// <summary>
+    /// Adds StarMap 0.4.8, which supports the game up to 2026.8.22.5348, and StarMap 0.5.3, which needs 2026.9.7.5402, and lets
+    /// KSArmory need exactly StarMap 0.4.8 on every build from 2026.8.3.5117 on.
+    /// </summary>
+    private static string WithStarMapBound(string json)
+    {
+        var root = JsonNode.Parse(json)!;
+        var listings = root["listings"]!.AsArray();
+        var starMap = listings.Single(node => (string?)node!["id"] == "StarMap")!["releases"]!.AsArray();
+        starMap.Add(LoaderRelease(starMap[0]!, "0.4.8", "2026.8.3.5117", 5117, "2026.8.22.5348", 5348, 'A'));
+        starMap.Add(LoaderRelease(starMap[0]!, "0.5.3", "2026.9.7.5402", 5402, null, null, 'B'));
+        foreach (var release in listings.Single(node => (string?)node!["id"] == "KSArmory")!["releases"]!.AsArray())
+        {
+            release!["loader"] = new JsonObject { ["id"] = "StarMap", ["min"] = "0.4.8", ["max"] = "0.4.8", ["source"] = "authored" };
+            release["game_min"] = "2026.8.3.5117";
+            release["game_min_revision"] = 5117;
+        }
+
+        return root.ToJsonString();
+    }
+
+    private static JsonNode LoaderRelease(JsonNode template, string version, string gameMin, int gameMinRevision, string? gameMax, int? gameMaxRevision, char hash)
+    {
+        var release = template.DeepClone();
+        release["version"] = version;
+        release["game_min"] = gameMin;
+        release["game_min_revision"] = gameMinRevision;
+        if (gameMax is not null)
+        {
+            release["game_max"] = gameMax;
+            release["game_max_revision"] = gameMaxRevision;
+        }
+
+        release["download"]!["url"] = $"https://github.com/StarMapLoader/StarMap/releases/download/{version}/StarMap-{version}.zip";
+        release["download"]!["sha256"] = new string(hash, 64);
+        return release;
+    }
+
     [Fact]
     public async Task ShowFilters_CountAsFiltersAndClearAllTurnsThemOff()
     {

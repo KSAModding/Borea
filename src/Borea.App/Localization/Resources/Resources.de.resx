@@ -4746,6 +4746,12 @@
   <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
     <value>Der Spielstand {1} braucht {0}. Nach dieser Änderung lädt das Spiel die Fahrzeuge nicht, die diese Mod brauchen, und beim nächsten Speichern gehen sie verloren.</value>
   </data>
+  <data name="InstallMessageLoaderNotForGameFormat" xml:space="preserve">
+    <value>Diese Version braucht {0}, doch keine passende Version davon läuft auf diesem KSA-Build.</value>
+  </data>
+  <data name="InstallMessageLoaderNotAcceptedFormat" xml:space="preserve">
+    <value>Diese Version braucht {0}, was die Mod-Loader-Einstellung oder die anderen Mods dieser Instanz nicht zulassen.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} oder {1}</value>
   </data>

@@ -130,7 +130,8 @@ public sealed class LoaderUpdateTests
     public async Task NewestReleaseIsAboveTheMaximumOfAMod_OffersTheNewestTheModsAccept()
     {
         var mods = new FakeRepository(Release("0.4.7"), Release("0.4.8"), Release("0.4.9"));
-        var need = NeededLoader.From("StarMap", [NeedsStarMap("flight-tools", "0.4.0", "0.4.8")]);
+        var mod = NeedsStarMap("flight-tools", "0.4.0", "0.4.8");
+        var need = NeededLoader.From("StarMap", [(mod.ModId, mod.Metadata.Loader!)]);
 
         var update = await LoaderUpdate.FindAsync(mods, ReleaseChannel.Stable, "StarMap", Installed("0.4.7"), Build5638, need: need);
 

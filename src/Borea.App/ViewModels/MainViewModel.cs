@@ -626,9 +626,9 @@ public partial class MainViewModel : ViewModelBase
         if (CurrentWindowListing)
             await ListingEditor.ReloadEmptyShareChooseAsync();
 
-        // the chips follow the build of the active instance, so they are checked again only when that build changes
+        // the chips follow the build, the mods and the loader setting of the active instance, so they are checked again only when one of them changes
         var game = _services is null ? null : GameVersionOf(_services, activeGame);
-        if (game != _compatibilityGame)
+        if (game != _compatibilityGame || LoaderInputsOf(_activeInstanceEntity) != _compatibilityLoaderInputs)
             await RefreshCompatibilityAsync(game);
 
         // the instance page shows fresh rows after a change; any other page

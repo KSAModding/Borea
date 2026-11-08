@@ -54,6 +54,8 @@ public sealed class PlanningMessageTests
         { new("campaign", PlanningMessageKind.MissingForSave) { Dependency = Library, Value = "unsatisfied-dependency" }, "missing-for-save", "Required dependency on mod 'library' >= 1.0.0 cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles." },
         { new("library", PlanningMessageKind.BreaksVehicle) { Version = ModVersion.Parse("2.0.0"), Dependency = Library, Value = "Rover" }, "breaks-vehicle", "library 2.0.0 does not meet the Required dependency on mod 'library' >= 1.0.0 of the vehicle Rover, so the game refuses that vehicle." },
         { new("library", PlanningMessageKind.BreaksSave) { Version = ModVersion.Parse("2.0.0"), Dependency = Library, Value = "Career" }, "breaks-save", "library 2.0.0 does not meet the Required dependency on mod 'library' >= 1.0.0 of the save Career, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles." },
+        { new("A", PlanningMessageKind.LoaderNotForGame) { Dependency = new("StarMap", ModDependencyKind.Required, ModVersion.Parse("0.4.8"), ModVersion.Parse("0.4.8")) }, "loader-not-for-game", "The release needs StarMap 0.4.8, and no release of the channel in that range supports the target game." },
+        { new("A", PlanningMessageKind.LoaderNotAccepted) { Dependency = new("StarMap", ModDependencyKind.Required, ModVersion.Parse("0.4.5")) }, "loader-not-accepted", "The release needs StarMap >= 0.4.5, which the loader setting or the other mods of the instance do not allow." },
     };
 
     [Theory]

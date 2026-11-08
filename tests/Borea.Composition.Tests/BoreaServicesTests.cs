@@ -370,7 +370,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileModReplacer>(Assert.IsType<CheckedModReplacer>(Assert.IsType<LoggingModReplacer>(services.Replacer).Inner).Inner);
         Assert.IsType<FileModStateRepository>(Assert.IsType<CheckedModStateRepository>(services.ModState).Inner);
         Assert.IsType<GameShapeCheck>(services.GameShape);
-        Assert.IsType<RepositoryInstallPlanner>(Assert.IsType<Borea.Core.UserContent.RecordedContentPlanner>(Assert.IsType<LoggingInstallPlanner>(services.InstallPlanner).Inner).Inner);
+        Assert.IsType<RepositoryInstallPlanner>(Assert.IsType<Borea.Core.UserContent.RecordedContentPlanner>(Assert.IsType<Borea.Core.ModLoaders.LoaderNeedPlanner>(Assert.IsType<LoggingInstallPlanner>(services.InstallPlanner).Inner).Inner).Inner);
         Assert.IsType<Borea.Storage.ModPacks.ModPackInstaller>(Assert.IsType<LoggingModPackInstaller>(services.ModPackInstaller).Inner);
         Assert.IsType<FileGameLogReader>(services.GameLog);
         Assert.IsType<FileGameCrashReader>(services.GameCrashes);

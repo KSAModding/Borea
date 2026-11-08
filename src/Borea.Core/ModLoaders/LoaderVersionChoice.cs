@@ -183,6 +183,50 @@ public static class LoaderVersionChoice
             LoaderUpdate.FindAsync(index!, channel, loaderId, installation, game, cancellationToken, need);
     }
 
+    /// <summary>
+    /// Why no version of the loader can start an instance whose mods need <paramref name="need"/> on <paramref name="game"/>.
+    /// With a pin in <paramref name="setting"/> only the pinned version counts, else every offered release of the channel.
+    /// None when a version can, and also when Borea cannot tell, because the game is unknown or the index does not list the loader.
+    /// </summary>
+    /// <returns>
+    /// <see cref="LoaderVersionProblem.OutsideModRange"/> when the range is empty or leaves out the pin,
+    /// <see cref="LoaderVersionProblem.GameIncompatible"/> when the index rates the pin incompatible with the game, and
+    /// <see cref="LoaderVersionProblem.NoRelease"/> when no release of the channel inside the range supports the game.
+    /// </returns>
+    public static async Task<LoaderVersionProblem> CheckNeedAsync(
+        LoaderSetting setting,
+        NeededLoader need,
+        IModRepository mods,
+        ReleaseChannel channel,
+        GameVersion? game,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(setting);
+        ArgumentNullException.ThrowIfNull(need);
+        ArgumentNullException.ThrowIfNull(mods);
+
+        if (game is null)
+            return LoaderVersionProblem.None;
+
+        ModVersion? pin = setting.Version is { } version && ModIds.Equals(setting.LoaderId, need.LoaderId) ? version : null;
+        if (need.HasConflict || (pin is { } outside && !need.Accepts(outside)))
+            return LoaderVersionProblem.OutsideModRange;
+
+        if (pin is { } pinned)
+        {
+            return await mods.GetReleaseAsync(need.LoaderId, pinned, cancellationToken).ConfigureAwait(false) is { } release
+                && Compatibility.Evaluate(release, game) == GameCompatibility.Incompatible
+                ? LoaderVersionProblem.GameIncompatible
+                : LoaderVersionProblem.None;
+        }
+
+        if ((await mods.GetAvailableVersionsAsync(need.LoaderId, cancellationToken).ConfigureAwait(false)).Count == 0)
+            return LoaderVersionProblem.None;
+
+        var fitting = await LoaderUpdate.FindAsync(mods, channel, need.LoaderId, installation: null, game, cancellationToken, need).ConfigureAwait(false);
+        return fitting.Offer is null ? LoaderVersionProblem.NoRelease : LoaderVersionProblem.None;
+    }
+
     private static IEnumerable<InstalledLoaderVersion> Newest(IEnumerable<InstalledLoaderVersion> versions) =>
         versions.OrderByDescending(version => version.Version is not null).ThenByDescending(version => version.Version);
 }

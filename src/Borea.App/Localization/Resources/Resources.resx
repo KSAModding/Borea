@@ -4746,6 +4746,12 @@
   <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
     <value>The save {1} needs {0}. After this change, the game does not load the vehicles that need it, and saving again loses them.</value>
   </data>
+  <data name="InstallMessageLoaderNotForGameFormat" xml:space="preserve">
+    <value>This release needs {0}, which does not run on this KSA build.</value>
+  </data>
+  <data name="InstallMessageLoaderNotAcceptedFormat" xml:space="preserve">
+    <value>This release needs {0}, which the mod loader setting or the other mods of this instance do not allow.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
   </data>
