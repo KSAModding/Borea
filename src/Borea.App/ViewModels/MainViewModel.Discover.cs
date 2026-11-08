@@ -11,7 +11,10 @@ using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.History;
 using Borea.Core.Index;
+using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.Licenses;
+using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -44,6 +47,12 @@ public partial class MainViewModel
 
     private IReadOnlyList<DiscoverItem> _listings = [];
     private GameVersion? _compatibilityGame;
+
+    /// <summary>The loader setting and loader bounds of the active instance that the chips were checked against, see <see cref="LoaderInputsOf"/>.</summary>
+    private string _compatibilityLoaderInputs = string.Empty;
+
+    /// <summary>The loader checks of the last compatibility refresh, or null when the game is unknown or Borea holds no index.</summary>
+    private LoaderChecks? _loaderChecks;
     private Task? _discoverLoad;
     private CuratedTagVocabulary _categoryVocabulary = CuratedTagVocabulary.Empty;
     private DiscoverSortOrder? _discoverSort;
@@ -559,13 +568,17 @@ public partial class MainViewModel
             return;
 
         _compatibilityGame = installed;
+        _compatibilityLoaderInputs = LoaderInputsOf(_activeInstanceEntity);
+        _loaderChecks = installed is { } game && await HeldLoaderReleasesAsync(_services) is { } held
+            ? new LoaderChecks(_activeInstanceEntity, held, _services.Settings.ReleaseChannel, game)
+            : null;
         var previewBuild = PreviewStillBuild(_services);
         foreach (var item in _listings)
         {
             var latest = item.Source != "index" ? null
                 : item.Type.IsVehicleOrSave() ? await _services.UserContent.GetLatestReleaseAsync(item.ModId, _services.Settings.ReleaseChannel)
                 : await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel);
-            item.Compatibility = latest is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(latest, installed);
+            (item.Compatibility, item.LoaderProblem) = latest is null ? (GameCompatibility.Unknown, null) : await CompatibilityOfAsync(latest, installed);
 
             // the age on the row belongs to the same release as the chip and Add, so a newer release in another channel does not show there
             item.UpdatedAt = latest?.ReleaseDate;
@@ -581,7 +594,7 @@ public partial class MainViewModel
         RefreshContentDependencies();
 
         foreach (var release in _contentReleases)
-            release.RefreshCompatibility(installed);
+            (release.Compatibility, release.LoaderProblem) = await CompatibilityOfAsync(release.Release, installed);
 
         if (_packs.Count > 0)
         {
@@ -626,6 +639,59 @@ public partial class MainViewModel
         {
             tile.StillPath = null;
             tile.StillPath = services.PreviewThumbnails.TryGetPath(vehicleSha256, build);
+        }
+    }
+
+    /// <summary>
+    /// How <paramref name="release"/> fits the active instance on <paramref name="game"/>. Besides the game bounds, a release is
+    /// incompatible when no version of the loader it needs can start that instance, and then the warning says why.
+    /// </summary>
+    private async Task<(GameCompatibility Compatibility, PlanningMessage? LoaderProblem)> CompatibilityOfAsync(ModVersionMetadata release, GameVersion? game)
+    {
+        var compatibility = Borea.Core.Game.Compatibility.Evaluate(release, game);
+        if (compatibility == GameCompatibility.Incompatible || release.Loader is null || _loaderChecks is not { } checks)
+            return (compatibility, null);
+
+        return LoaderNeedPlanner.Warning(release, await checks.ProblemAsync(release)) is { } warning
+            ? (GameCompatibility.Incompatible, warning)
+            : (compatibility, null);
+    }
+
+    /// <summary>What the loader checks read of the active instance, so a change of its mods or its loader setting checks the chips again.</summary>
+    private static string LoaderInputsOf(Instance? instance) => instance is null
+        ? string.Empty
+        : $"{instance.Loader.LoaderId} {instance.Loader.Version}|" + string.Join("|", LoaderNeed.For(instance).Loaders
+            .SelectMany(loader => loader.Requirements.Select(requirement => $"{loader.LoaderId} {requirement.ModId} {requirement.MinVersion} {requirement.MaxVersion}")));
+
+    /// <summary>
+    /// The loader checks of one compatibility refresh. They read the index that Borea holds, so a row asks the network for nothing,
+    /// and each range of a loader is checked once, because most mods share their bounds.
+    /// </summary>
+    private sealed class LoaderChecks
+    {
+        private readonly Instance? _instance;
+        private readonly IModRepository _mods;
+        private readonly ReleaseChannel _channel;
+        private readonly GameVersion _game;
+        private readonly Dictionary<(string LoaderId, ModVersion Min, ModVersion? Max), LoaderVersionProblem> _answers = [];
+
+        public LoaderChecks(Instance? instance, IModRepository mods, ReleaseChannel channel, GameVersion game)
+        {
+            _instance = instance;
+            _mods = mods;
+            _channel = channel;
+            _game = game;
+        }
+
+        /// <summary>Why no loader version can start the instance with <paramref name="release"/> in place of its copy of that mod.</summary>
+        public async Task<LoaderVersionProblem> ProblemAsync(ModVersionMetadata release)
+        {
+            var need = LoaderNeed.With(_instance, [release]).Loaders.Single(loader => ModIds.Equals(loader.LoaderId, release.Loader!.LoaderId));
+            var key = (need.LoaderId.ToUpperInvariant(), need.MinVersion, need.MaxVersion);
+            if (!_answers.TryGetValue(key, out var problem))
+                _answers[key] = problem = await LoaderVersionChoice.CheckNeedAsync(_instance?.Loader ?? LoaderSetting.Automatic, need, _mods, _channel, _game);
+
+            return problem;
         }
     }
 
@@ -1157,6 +1223,14 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
 
+    /// <summary>The warning about the loader bounds that makes the newest release incompatible, or null when the loader is not the cause.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CompatibilityToolTip))]
+    private PlanningMessage? _loaderProblem;
+
+    /// <summary>Why the loader makes the release incompatible, or null when the chip needs no tooltip.</summary>
+    public string? CompatibilityToolTip => LoaderProblem is { } problem ? PlanningText.Message(problem) : null;
+
     /// <summary>False when most rows of the Discover list share this state, so the row leaves the chip out.</summary>
     [ObservableProperty]
     private bool _showsCompatibility = true;
@@ -1375,6 +1449,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
         OnPropertyChanged(nameof(AuthorLinks));
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
+        OnPropertyChanged(nameof(CompatibilityToolTip));
         OnPropertyChanged(nameof(DownloadsText));
         OnPropertyChanged(nameof(DownloadsExactText));
         OnPropertyChanged(nameof(PreviewStillNote));

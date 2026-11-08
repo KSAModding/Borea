@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Borea.App.Localization;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Index;
@@ -716,7 +717,7 @@ public partial class MainViewModel
             {
                 foreach (var release in releases)
                 {
-                    release.RefreshCompatibility(_compatibilityGame);
+                    (release.Compatibility, release.LoaderProblem) = await CompatibilityOfAsync(release.Release, _compatibilityGame);
                     release.RefreshInstalled(ActiveInstance);
                 }
 
@@ -894,6 +895,7 @@ public sealed partial class VersionItem : ObservableObject, IContentPlanRow
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityText))]
+    [NotifyPropertyChangedFor(nameof(CompatibilityToolTip))]
     [NotifyPropertyChangedFor(nameof(IsCompatible))]
     [NotifyPropertyChangedFor(nameof(IsIncompatible))]
     private GameCompatibility _compatibility = GameCompatibility.Unknown;
@@ -903,6 +905,14 @@ public sealed partial class VersionItem : ObservableObject, IContentPlanRow
     public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
+
+    /// <summary>The warning about the loader bounds that makes this release incompatible, or null when the loader is not the cause.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CompatibilityToolTip))]
+    private PlanningMessage? _loaderProblem;
+
+    /// <summary>Why the loader makes the release incompatible, else the state the chip shows.</summary>
+    public string CompatibilityToolTip => LoaderProblem is { } problem ? PlanningText.Message(problem) : CompatibilityText;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
@@ -1035,6 +1045,7 @@ public sealed partial class VersionItem : ObservableObject, IContentPlanRow
     {
         OnPropertyChanged(nameof(ChannelText));
         OnPropertyChanged(nameof(CompatibilityText));
+        OnPropertyChanged(nameof(CompatibilityToolTip));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
         OnPropertyChanged(nameof(DownloadsText));
@@ -1046,9 +1057,6 @@ public sealed partial class VersionItem : ObservableObject, IContentPlanRow
         OnPropertyChanged(nameof(PlanSteps));
         OnPropertyChanged(nameof(InstallToolTip));
     }
-
-    internal void RefreshCompatibility(GameVersion? installed)
-        => Compatibility = Borea.Core.Game.Compatibility.Evaluate(_release, installed);
 
     internal void RefreshInstalled(InstanceItem? instance)
     {

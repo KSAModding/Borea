@@ -1,4 +1,5 @@
 using Borea.Core.Instances;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
 namespace Borea.Core.Launch;
@@ -26,9 +27,27 @@ public sealed class LoaderNeed
     {
         ArgumentNullException.ThrowIfNull(instance);
 
-        var loaders = instance.Mods
-            .Where(mod => mod.Metadata.Loader is not null)
-            .GroupBy(mod => mod.Metadata.Loader!.LoaderId, ModIds.Comparer)
+        return Of(instance.Mods.Select(mod => (mod.ModId, mod.Metadata.Loader)));
+    }
+
+    /// <summary>
+    /// What the mods of <paramref name="instance"/> need once <paramref name="releases"/> are installed, each in place of the
+    /// installed copy of its mod. Without an instance only the releases count.
+    /// </summary>
+    public static LoaderNeed With(Instance? instance, IReadOnlyCollection<ModVersionMetadata> releases)
+    {
+        ArgumentNullException.ThrowIfNull(releases);
+
+        var kept = instance?.Mods.Where(mod => !releases.Any(release => ModIds.Equals(release.ModId, mod.ModId))) ?? [];
+        return Of(kept.Select(mod => (mod.ModId, mod.Metadata.Loader)).Concat(releases.Select(release => (release.ModId, release.Loader))));
+    }
+
+    private static LoaderNeed Of(IEnumerable<(string ModId, LoaderRequirement? Loader)> mods)
+    {
+        var loaders = mods
+            .Where(mod => mod.Loader is not null)
+            .Select(mod => (mod.ModId, Loader: mod.Loader!))
+            .GroupBy(mod => mod.Loader.LoaderId, ModIds.Comparer)
             .OrderBy(group => group.Key, ModIds.Comparer)
             .Select(group => NeededLoader.From(group.Key, group.ToList()))
             .ToList();
@@ -69,15 +88,15 @@ public sealed class NeededLoader
         NeededBy = requirements.Select(requirement => requirement.ModId).ToList();
     }
 
-    internal static NeededLoader From(string loaderId, IReadOnlyList<InstalledMod> mods)
+    internal static NeededLoader From(string loaderId, IReadOnlyList<(string ModId, LoaderRequirement Loader)> mods)
     {
-        var requirements = mods.Select(mod => mod.Metadata.Loader!).ToList();
+        var requirements = mods.Select(mod => mod.Loader).ToList();
         var min = requirements.Select(requirement => requirement.MinVersion).Max();
         var maxima = requirements.Select(requirement => requirement.MaxVersion).OfType<ModVersion>().ToList();
         var max = maxima.Count == 0 ? (ModVersion?)null : maxima.Min();
         var bounds = mods
             .OrderBy(mod => mod.ModId, ModIds.Comparer)
-            .Select(mod => new ModLoaderBounds(mod.ModId, mod.Metadata.Loader!.MinVersion, mod.Metadata.Loader.MaxVersion))
+            .Select(mod => new ModLoaderBounds(mod.ModId, mod.Loader.MinVersion, mod.Loader.MaxVersion))
             .ToList();
         return new NeededLoader(loaderId, min, max, bounds);
     }

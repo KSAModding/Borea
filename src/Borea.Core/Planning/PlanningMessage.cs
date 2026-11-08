@@ -59,6 +59,18 @@ public enum PlanningMessageKind
 
     /// <summary>The forums thread of the listing is gone (RFC 0110), so Borea installs no new copy of it. <see cref="PlanningMessage.Since"/> is when the watcher marked it.</summary>
     ForumsGone,
+
+    /// <summary>
+    /// No release of the loader that the release needs, inside the range of the planned instance, supports the target game.
+    /// <see cref="PlanningMessage.Dependency"/> holds the loader bounds of the release. A warning only (RFC 0031).
+    /// </summary>
+    LoaderNotForGame,
+
+    /// <summary>
+    /// The loader setting of the instance pins a version outside the range of the planned instance, or the mods of that
+    /// instance accept no common version. <see cref="PlanningMessage.Dependency"/> holds the loader bounds of the release. A warning only (RFC 0031).
+    /// </summary>
+    LoaderNotAccepted,
 }
 
 /// <summary>
@@ -128,6 +140,8 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.BreaksVehicle => "breaks-vehicle",
         PlanningMessageKind.BreaksSave => "breaks-save",
         PlanningMessageKind.ForumsGone => "forums-gone",
+        PlanningMessageKind.LoaderNotForGame => "loader-not-for-game",
+        PlanningMessageKind.LoaderNotAccepted => "loader-not-accepted",
         _ => throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "The planning message kind is not defined."),
     };
 
@@ -161,7 +175,17 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.BreaksVehicle => $"{Change} does not meet the {Dependency} of the vehicle {Value}, so the game refuses that vehicle.",
         PlanningMessageKind.BreaksSave => $"{Change} does not meet the {Dependency} of the save {Value}, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.",
         PlanningMessageKind.ForumsGone => $"The forums thread of {ModId} is gone since {Since:yyyy-MM-dd}, so Borea installs no new copy of it. An installed copy stays.",
+        PlanningMessageKind.LoaderNotForGame => $"The release needs {LoaderBounds}, and no release of the channel in that range supports the target game.",
+        PlanningMessageKind.LoaderNotAccepted => $"The release needs {LoaderBounds}, which the loader setting or the other mods of the instance do not allow.",
         _ => $"{Dependency}",
+    };
+
+    private string LoaderBounds => (Dependency?.MinVersion, Dependency?.MaxVersion) switch
+    {
+        ({ } min, { } max) when min == max => $"{Dependency!.ModId} {min}",
+        ({ } min, { } max) => $"{Dependency!.ModId} {min} - {max}",
+        ({ } min, null) => $"{Dependency!.ModId} >= {min}",
+        _ => $"{Dependency?.ModId}",
     };
 
     // A plan that removes the mod, as a pack update can, has no version for it.

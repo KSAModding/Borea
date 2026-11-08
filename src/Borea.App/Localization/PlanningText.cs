@@ -59,6 +59,8 @@ internal static class PlanningText
             PlanningMessageKind.MissingForSave => Fill(Resources.InstallMessageMissingForSaveFormat, dependency),
             PlanningMessageKind.BreaksVehicle => Fill(Resources.InstallMessageBreaksVehicleFormat, dependency, message.Value),
             PlanningMessageKind.BreaksSave => Fill(Resources.InstallMessageBreaksSaveFormat, dependency, message.Value),
+            PlanningMessageKind.LoaderNotForGame => Fill(Resources.InstallMessageLoaderNotForGameFormat, LoaderBounds(message.Dependency)),
+            PlanningMessageKind.LoaderNotAccepted => Fill(Resources.InstallMessageLoaderNotAcceptedFormat, LoaderBounds(message.Dependency)),
             _ => message.Message,
         };
     }
@@ -96,6 +98,12 @@ internal static class PlanningText
         var alternative = message.Dependency?.AnyOf?.FirstOrDefault(value => ModIds.Equals(value.ModId, message.Value));
         return alternative is null ? message.Value : Bounds(alternative.ModId, alternative.MinVersion, alternative.MaxVersion);
     }
+
+    /// <summary>"StarMap 0.4.8" for bounds that name one version, else as <see cref="Bounds(string, ModVersion?, ModVersion?)"/> writes them.</summary>
+    private static string LoaderBounds(ModDependency? loader)
+        => loader is null ? string.Empty
+            : loader.MinVersion is { } min && min == loader.MaxVersion ? $"{loader.ModId} {min}"
+            : Bounds(loader.ModId!, loader.MinVersion, loader.MaxVersion);
 
     public static string Bounds(string modId, ModVersion? min, ModVersion? max) => Bounds(modId, min?.ToString(), max?.ToString());
 

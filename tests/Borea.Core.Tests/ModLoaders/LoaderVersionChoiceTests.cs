@@ -158,7 +158,7 @@ public sealed class LoaderVersionChoiceTests
 
     private static LoaderSetting Pin(string version) => LoaderSetting.Pinned("StarMap", ModVersion.Parse(version));
 
-    private static NeededLoader Need(string max) => NeededLoader.From("StarMap", [NeedsStarMap("flight-tools", "0.4.0", max)]);
+    private static NeededLoader Need(string max) => NeededLoader.From("StarMap", [("flight-tools", NeedsStarMap("flight-tools", "0.4.0", max).Metadata.Loader!)]);
 
     private static Task<LoaderVersionResolution> ResolveAsync(LoaderSetting setting, IReadOnlyList<InstalledLoaderVersion> installed, IModRepository? mods, GameVersion game, NeededLoader? need = null, bool gameIsKept = false) =>
         LoaderVersionChoice.ResolveAsync(setting, "StarMap", need, installed, [Listing()], mods, ReleaseChannel.Stable, game, gameIsKept);
