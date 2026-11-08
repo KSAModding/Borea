@@ -395,7 +395,7 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     public bool IsInstalling => _owner.IsRowInstalling(_loaderId, _missing ?? _offer);
 
     /// <summary>
-    /// "Installing StarMap 0.4.7..." while this row installs, until the install reports its own progress text. A row
+    /// "Installing MyLoader 0.4.7..." while this row installs, until the install reports its own progress text. A row
     /// offers either an update or a missing version, never both, so the text names the release that it installs.
     /// </summary>
     public string? InstallingText => IsInstalling && (_missing ?? _offer) is { } release

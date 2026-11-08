@@ -5,8 +5,8 @@ using Borea.Storage.Launch;
 namespace Borea.Storage.Game;
 
 /// <summary>
-/// Whether a folder is the KSA folder. StarMap appends KSA.dll to a game path that names a folder and looks no deeper
-/// (LoaderConfig.TryLoadConfig), so a game folder one level above KSA starts no game.
+/// Whether a folder is the KSA folder. A loader can append KSA.dll to a game path that names a folder and look no
+/// deeper, so a game folder one level above KSA starts no game.
 /// </summary>
 public static class GameFolder
 {

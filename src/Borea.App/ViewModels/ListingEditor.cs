@@ -228,7 +228,7 @@ public sealed partial class ListingEditor : ObservableObject
     private bool _usesLoader;
 
     [ObservableProperty]
-    private string _loaderId = ListingPrefill.StarMapId;
+    private string _loaderId = string.Empty;
 
     [ObservableProperty]
     private string _loaderMin = string.Empty;
@@ -687,8 +687,8 @@ public sealed partial class ListingEditor : ObservableObject
             GameMin = draft.GameMin;
             GameMax = draft.GameMax ?? string.Empty;
             UsesLoader = draft.Loader is not null;
-            LoaderId = draft.Loader?.Id ?? ListingPrefill.StarMapId;
-            LoaderMin = draft.Loader?.Min ?? ListingPrefill.NewestStableVersion(_snapshot, ListingPrefill.StarMapId) ?? string.Empty;
+            LoaderId = draft.Loader?.Id ?? string.Empty;
+            LoaderMin = draft.Loader?.Min ?? string.Empty;
             LoaderMax = draft.Loader?.Max ?? string.Empty;
             IsDeprecated = draft.Status == "deprecated";
             SupersededBy = draft.SupersededBy ?? string.Empty;

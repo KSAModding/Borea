@@ -1,4 +1,5 @@
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.Paths;
 using Borea.Storage.Mods;
 using Borea.Storage.State;
@@ -14,7 +15,7 @@ namespace Borea.Storage.Launch;
 /// </summary>
 internal static class LoadOrderReader
 {
-    public static async Task<IReadOnlyList<LoadOrderMod>> ReadAsync(IGamePathProvider paths, Guid instanceId, CancellationToken cancellationToken)
+    public static async Task<IReadOnlyList<LoadOrderMod>> ReadAsync(IGamePathProvider paths, Guid instanceId, ILoaderProfile profile, CancellationToken cancellationToken)
     {
         ManifestDto? manifest;
         try
@@ -29,15 +30,16 @@ internal static class LoadOrderReader
         var modsFolder = paths.GetInstanceModsFolder(instanceId);
         return (manifest?.Mods ?? [])
             .Where(entry => entry.Enabled && !string.IsNullOrWhiteSpace(entry.Id))
-            .Select(entry => Read(modsFolder, entry.Id))
+            .Select(entry => Read(modsFolder, entry.Id, profile))
             .ToList();
     }
 
     /// <summary>
-    /// Reads the mod folder the way RuntimeMod.TryCreateMod does. The entry
-    /// assembly is [StarMap].EntryAssembly, or the mod id without that table.
+    /// Reads the mod folder the way the loader of <paramref name="profile"/> does.
+    /// The entry assembly is EntryAssembly in the loader's table of the mod.toml,
+    /// or the mod id without that table.
     /// </summary>
-    private static LoadOrderMod Read(string modsFolder, string modId)
+    private static LoadOrderMod Read(string modsFolder, string modId, ILoaderProfile profile)
     {
         string? folder;
         string definition;
@@ -67,9 +69,9 @@ internal static class LoadOrderReader
 
         string? entryAssembly = modId;
         var optional = new List<string>();
-        if (root.TryGetValue("StarMap", out var starMap))
+        if (profile.ModTomlSection is { } name && root.TryGetValue(name, out var section))
         {
-            var table = starMap as TomlTable;
+            var table = section as TomlTable;
             entryAssembly = table is not null && table.TryGetValue("EntryAssembly", out var value) ? value as string : null;
             if (table is not null && table.TryGetValue("ModDependencies", out var dependencies))
                 optional.AddRange(OptionalDependencies(dependencies));

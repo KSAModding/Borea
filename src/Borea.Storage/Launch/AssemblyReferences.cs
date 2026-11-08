@@ -20,8 +20,8 @@ internal static class AssemblyReferences
     /// <summary>
     /// Whether a .NET DLL in the folder, or with <paramref name="recurse"/> also
     /// in its subfolders, references one of the assemblies. An assembly that the
-    /// folder holds itself does not count, because StarMap resolves a reference
-    /// in the folder of the assembly that makes it.
+    /// folder holds itself does not count, because the loader resolves a
+    /// reference in the folder of the assembly that makes it.
     /// </summary>
     public static bool Referencing(string folder, IReadOnlyCollection<string> names, bool recurse = true)
     {

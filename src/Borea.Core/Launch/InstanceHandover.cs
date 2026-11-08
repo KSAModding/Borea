@@ -24,8 +24,8 @@ public sealed class InstanceHandover
 
     /// <summary>
     /// The first of <paramref name="arguments"/> that the loader reads as
-    /// <see cref="Flag"/>, or null. Case is ignored, the way StarMap reads its
-    /// flag in DocumentsPathPatches.TryGetOverride.
+    /// <see cref="Flag"/>, or null. Case is ignored, the way the known loaders
+    /// read their flag.
     /// </summary>
     public string? FlagIn(IEnumerable<string> arguments)
     {

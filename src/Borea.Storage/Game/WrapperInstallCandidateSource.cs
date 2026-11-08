@@ -1,10 +1,11 @@
 using System.Security;
 using Borea.Core.Game;
+using Borea.Core.ModLoaders;
 
 namespace Borea.Storage.Game;
 
 /// <summary>
-/// Finds the game and StarMap in the Wine prefixes of macOS wrapper apps in
+/// Finds the game and the known loaders in the Wine prefixes of macOS wrapper apps in
 /// the application folders and in their direct subfolders, such as
 /// ~/Applications/Sikarugir, where wrapper tools save their apps. It looks no
 /// deeper and never inside an app. It reads the uninstall entries that
@@ -23,7 +24,10 @@ public sealed class WrapperInstallCandidateSource : IInstallCandidateSource
     // The machine hive and the hive of the prefix user, where a per-user installer writes.
     private static readonly string[] RegistryFiles = ["system.reg", "user.reg"];
 
-    private static readonly string[] LoaderFolders = [@"C:\Program Files\StarMap", @"C:\Program Files (x86)\StarMap"];
+    private static readonly string[] LoaderFolders = LoaderProfiles.Known.All
+        .SelectMany(profile => profile.InstallFolderNames)
+        .SelectMany(name => new[] { $@"C:\Program Files\{name}", $@"C:\Program Files (x86)\{name}" })
+        .ToArray();
 
     private readonly IReadOnlyList<string> _applicationFolders;
     private readonly IWinePrefixProbe _wine;

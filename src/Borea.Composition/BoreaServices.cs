@@ -108,7 +108,7 @@ public sealed class BoreaServices : IDisposable
     /// <summary>Moves the Instances and Backups folders. Build the services again after a change.</summary>
     public required ILibraryFolderChanger LibraryFolderChanger { get; init; }
 
-    /// <summary>Whether a KSA or StarMap process runs, whoever started it.</summary>
+    /// <summary>Whether a KSA or mod loader process runs, whoever started it.</summary>
     public required Func<bool> IsGameProcessRunning { get; init; }
 
     public required IAppPreferencesRepository AppPreferences { get; init; }
@@ -600,7 +600,7 @@ public sealed class BoreaServices : IDisposable
         var previewThumbnails = new PreviewThumbnailCache(paths, log);
         var shareFiles = httpHandler is null ? ProcessShareFiles.Value : new HttpClient(httpHandler, disposeHandler: false);
         var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, instanceGames, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log, previewThumbnails, host => new ShareFileDownloader(shareFiles, host));
-        var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning, instanceGames, log), instances), log);
+        var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning, instanceGames, log, LoaderProfiles.Known), instances), log);
         // the index lists every loader, and the offline SpaceDock throws on a list of all mods, so the keeper reads only the cached index
         IGameBuildKeeper gameBuilds = new GameBuildKeeper(paths, instances, offlineContentIndex, loaderVersions, isGameProcessRunning, launcher.IsRunning);
         if (wrapGameBuilds is not null)

@@ -56,7 +56,7 @@ public sealed class ListingSourceTests
             [new ListingLink("forums", "https://forums.ahwoo.com/threads/my-mod.9/"), new ListingLink("repository", "https://github.com/owner/KSA-MyMod")],
             new ListingReleases("owner/KSA-MyMod", null),
             new ListingHostRelease("v1.0.0", "1.0.0", "https://example.com/MyMod.zip", 100, []));
-        var archive = new ListingArchiveFacts("MyMod", ["MyMod"], ModToml: true, EntryAssembly: "MyMod", IsCodeMod: true);
+        var archive = new ListingArchiveFacts("MyMod", ["MyMod"], ModToml: true, EntryAssembly: "MyMod", IsCodeMod: true) { LoaderId = "StarMap" };
 
         var draft = ListingPrefill.Apply(new ListingDraft(), new ListingSource(host, archive, null), Snapshot(), GameVersion.Parse("2026.9.10.5438"));
 
@@ -88,6 +88,17 @@ public sealed class ListingSourceTests
         var draft = ListingPrefill.Apply(new ListingDraft(), new ListingSource(host, archive, null), null, null);
 
         Assert.Equal(id, draft.Id);
+    }
+
+    [Fact]
+    public void Apply_CodeModWithoutAKnownLoader_LeavesTheLoaderToTheAuthor()
+    {
+        var host = new ListingHostFacts(new ListingSourceReference.SpaceDock(5), null, null, null, [], [], new ListingReleases(null, 5), null);
+        var archive = new ListingArchiveFacts("MyMod", ["MyMod"], ModToml: true, EntryAssembly: "MyMod", IsCodeMod: true);
+
+        var draft = ListingPrefill.Apply(new ListingDraft(), new ListingSource(host, archive, null), Snapshot(), null);
+
+        Assert.Null(draft.Loader);
     }
 
     [Fact]

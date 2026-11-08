@@ -67,7 +67,7 @@ public enum UserContentOutcome
     /// <summary>The player changed files since the install. <see cref="UserContentResult.Changes"/> names them.</summary>
     Changed,
 
-    /// <summary>A KSA or StarMap process runs, and Borea cannot tell which instance it uses.</summary>
+    /// <summary>A KSA or mod loader process runs, and Borea cannot tell which instance it uses.</summary>
     GameRunning,
 
     /// <summary>The record or its folder is gone.</summary>

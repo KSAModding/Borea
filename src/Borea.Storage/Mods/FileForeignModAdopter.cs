@@ -1,10 +1,11 @@
 using System.Security.Cryptography;
 using Borea.Core.Instances;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Storage.Files;
 using Tomlyn;
-using Tomlyn.Serialization;
+using Tomlyn.Model;
 
 namespace Borea.Storage.Mods;
 
@@ -309,14 +310,10 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
         try
         {
             var text = await File.ReadAllTextAsync(definitionPath, cancellationToken).ConfigureAwait(false);
-            var manifest = TomlSerializer.Deserialize<LocalModManifestDto>(text);
-            var dependencies = manifest?.StarMap?.ModDependencies?
-                .Where(dependency => !string.IsNullOrWhiteSpace(dependency.ModId))
-                .Select(dependency => new LocalModDependency(dependency.ModId, dependency.Optional))
-                .ToList() ?? new List<LocalModDependency>();
-            return new ForeignMod(folderName, dependencies);
+            var manifest = TomlSerializer.Deserialize<TomlTable>(text) ?? new TomlTable();
+            return new ForeignMod(folderName, LoaderDependencies(manifest));
         }
-        catch (Exception exception) when (exception is TomlException or IOException or UnauthorizedAccessException or ArgumentException)
+        catch (Exception exception) when (exception is TomlException or InvalidDataException or IOException or UnauthorizedAccessException or ArgumentException)
         {
             return new ForeignMod(folderName, dependencyReadError: exception.Message);
         }
@@ -328,24 +325,42 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
         return Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
     }
 
-    private sealed class LocalModManifestDto
+    /// <summary>
+    /// The [[ModDependencies]] blocks in the table of the first known loader that the mod.toml has, without the blocks
+    /// whose ModId is blank.
+    /// </summary>
+    /// <exception cref="InvalidDataException">The table or a block does not have the shape the loader reads.</exception>
+    private static List<LocalModDependency> LoaderDependencies(TomlTable manifest)
     {
-        [TomlPropertyName("StarMap")]
-        public LocalStarMapDto? StarMap { get; set; }
-    }
+        if (LoaderProfiles.Known.ForModToml(manifest.ContainsKey)?.ModTomlSection is not { } name)
+            return [];
+        if (manifest[name] is not TomlTable section)
+            throw new InvalidDataException($"[{name}] of the mod.toml is not a table.");
+        if (!section.TryGetValue("ModDependencies", out var value))
+            return [];
 
-    private sealed class LocalStarMapDto
-    {
-        [TomlPropertyName("ModDependencies")]
-        public List<LocalDependencyDto>? ModDependencies { get; set; }
-    }
+        IEnumerable<object?> blocks = value switch
+        {
+            TomlTableArray tables => tables,
+            TomlArray array => array,
+            _ => throw new InvalidDataException($"{name}.ModDependencies of the mod.toml is not a list of [[{name}.ModDependencies]] blocks."),
+        };
 
-    private sealed class LocalDependencyDto
-    {
-        [TomlPropertyName("ModId")]
-        public string ModId { get; set; } = string.Empty;
+        var dependencies = new List<LocalModDependency>();
+        foreach (var item in blocks)
+        {
+            if (item is not TomlTable block)
+                throw new InvalidDataException($"a [[{name}.ModDependencies]] block is not a table.");
 
-        [TomlPropertyName("Optional")]
-        public bool Optional { get; set; }
+            var modId = block.TryGetValue("ModId", out var id) ? id : null;
+            var optional = block.TryGetValue("Optional", out var flag) ? flag : false;
+            if (modId is not (null or string) || optional is not bool isOptional)
+                throw new InvalidDataException($"a [[{name}.ModDependencies]] block has a ModId that is not text or an Optional that is not true or false.");
+
+            if (modId is string text && !string.IsNullOrWhiteSpace(text))
+                dependencies.Add(new LocalModDependency(text, isOptional));
+        }
+
+        return dependencies;
     }
 }

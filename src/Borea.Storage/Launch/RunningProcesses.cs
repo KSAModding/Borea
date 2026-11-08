@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 
 namespace Borea.Storage.Launch;
 
@@ -9,19 +10,18 @@ namespace Borea.Storage.Launch;
 /// </summary>
 public static class RunningProcesses
 {
-    private const string StarMapProcessName = "StarMap";
     private static readonly string[] BoreaProcessNames = ["Borea.App", "borea"];
 
     private static readonly string? GameProcessName = SharedProfileLauncher.CurrentPlatform() is { } platform && GameExecutable.FileName(platform) is { } game
         ? Path.GetFileNameWithoutExtension(game)
         : null;
 
-    /// <summary>Whether a KSA or StarMap process runs. This knows no installed loader, see <see cref="IsGameRunning(Func{IReadOnlyList{string}}, Func{string, bool})"/>.</summary>
+    /// <summary>Whether a KSA process or a process of a known loader runs. This knows no installed loader, see <see cref="IsGameRunning(Func{IReadOnlyList{string}}, Func{string, bool})"/>.</summary>
     public static bool IsGameRunning() => IsGameRunning(() => [], IsOtherProcessRunning);
 
     /// <summary>
     /// Whether a KSA process or a process of an installed mod loader runs, because a loader runs the game inside its own process.
-    /// The StarMap name always counts too, because StarMap's GameSurveyer.TryLoadCoreAndGame loads the game assembly into its process and Borea may not list that StarMap as installed.
+    /// The process names of the known loader profiles always count too, because Borea may not list such a loader as installed.
     /// </summary>
     /// <param name="loaderProcessNames">The process names of the installed loaders, without extension.</param>
     /// <param name="isProcessRunning">Whether another process has that name. The default asks the system.</param>
@@ -35,7 +35,7 @@ public static class RunningProcesses
         if (GameProcessName is not null)
             names.Add(GameProcessName);
 
-        names.Add(StarMapProcessName);
+        names.AddRange(LoaderProfiles.Known.All.SelectMany(profile => profile.ProcessNames));
 
         return names.Distinct(StringComparer.OrdinalIgnoreCase).Any(isProcessRunning);
     }

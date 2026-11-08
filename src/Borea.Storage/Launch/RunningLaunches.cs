@@ -1,4 +1,5 @@
 using Borea.Core.Game;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
 namespace Borea.Storage.Launch;
@@ -19,7 +20,7 @@ public sealed class RunningLaunches
     /// </summary>
     internal Dictionary<Guid, IStartedProcess> Processes { get; } = new();
 
-    internal Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases)> Starts { get; } = new();
+    internal Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases, ILoaderProfile Profile)> Starts { get; } = new();
 
     /// <summary>
     /// The last launch per instance that ended, until the next launch of the

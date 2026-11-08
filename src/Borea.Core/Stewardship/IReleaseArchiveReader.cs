@@ -6,7 +6,7 @@ namespace Borea.Core.Stewardship;
 public interface IReleaseArchiveReader
 {
     /// <summary>
-    /// The [[StarMap.ModDependencies]] of the mod.toml at the stamped install root, read as derived_dependencies of the stamper reads them.
+    /// The [[ModDependencies]] blocks in the loader table of the mod.toml at the stamped install root, read as derived_dependencies of the stamper reads them.
     /// A release that is no mod, or an archive without a mod.toml there, declares none.
     /// </summary>
     /// <param name="releaseFileText">The stamped release file, which names the download URL, its mirrors, the sha256 and the install root.</param>

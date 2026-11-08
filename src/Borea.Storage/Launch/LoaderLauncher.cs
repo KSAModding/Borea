@@ -30,11 +30,12 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     private readonly Func<bool> _isGameRunning;
     private readonly IWinePrefixProbe _wine;
     private readonly LoaderConfigurator _configurator;
+    private readonly LoaderProfiles _profiles;
     private readonly IInstanceGameResolver _games;
     private readonly RunningLaunches _launches;
     private readonly object _gate;
     private readonly Dictionary<Guid, IStartedProcess> _running;
-    private readonly Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases)> _starts;
+    private readonly Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases, ILoaderProfile Profile)> _starts;
     private readonly Dictionary<Guid, (IStartedProcess Process, DateTime? CrashLogAtLaunch)> _ended;
     private readonly Dictionary<Guid, WineInstall> _wrappers;
     private readonly Dictionary<Guid, (int ProcessId, ModMetadata Loader, string LoaderDirectory, string GamePath, string? PlayerGamePath)> _keptBuilds;
@@ -61,18 +62,19 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     }
 
     /// <param name="startupWindow">How long <see cref="WatchStartAsync"/> watches at most.</param>
-    /// <param name="isGameRunning">Whether a KSA or StarMap process runs. Null looks for one.</param>
+    /// <param name="isGameRunning">Whether a KSA or mod loader process runs. Null looks for one.</param>
     public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, TimeSpan startupWindow, Func<bool>? isGameRunning = null)
         : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(SharedProfileLauncher.CurrentPlatform()), startupWindow, isGameRunning: isGameRunning)
     {
     }
 
     /// <param name="launches">The launches this launcher shares with others. Disposing the launcher keeps them.</param>
-    /// <param name="isGameRunning">Whether a KSA or StarMap process runs. Null looks for one.</param>
+    /// <param name="isGameRunning">Whether a KSA or mod loader process runs. Null looks for one.</param>
     /// <param name="games">The game folder of each instance. Null resolves it over <paramref name="pathProvider"/>.</param>
     /// <param name="log">Takes the problems that do not change a result. Null writes them nowhere.</param>
-    public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, RunningLaunches launches, Func<bool>? isGameRunning = null, IInstanceGameResolver? games = null, IBoreaLog? log = null)
-        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(SharedProfileLauncher.CurrentPlatform()), DefaultStartupWindow, launches ?? throw new ArgumentNullException(nameof(launches)), isGameRunning, games: games, log: log)
+    /// <param name="profiles">The profiles that read the output of each loader. Null takes <see cref="LoaderProfiles.Known"/>.</param>
+    public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, RunningLaunches launches, Func<bool>? isGameRunning = null, IInstanceGameResolver? games = null, IBoreaLog? log = null, LoaderProfiles? profiles = null)
+        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(SharedProfileLauncher.CurrentPlatform()), DefaultStartupWindow, launches ?? throw new ArgumentNullException(nameof(launches)), isGameRunning, games: games, log: log, profiles: profiles)
     {
     }
 
@@ -81,7 +83,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     {
     }
 
-    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null, Func<bool>? isGameRunning = null, TimeSpan? crashLogWait = null, IWinePrefixProbe? wine = null, IInstanceGameResolver? games = null, IBoreaLog? log = null)
+    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null, Func<bool>? isGameRunning = null, TimeSpan? crashLogWait = null, IWinePrefixProbe? wine = null, IInstanceGameResolver? games = null, IBoreaLog? log = null, LoaderProfiles? profiles = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _starter = starter ?? throw new ArgumentNullException(nameof(starter));
@@ -90,6 +92,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         _isGameRunning = isGameRunning ?? RunningProcesses.IsGameRunning;
         _wine = wine ?? new WinePrefixProbe(platform);
         _configurator = new LoaderConfigurator(_wine);
+        _profiles = profiles ?? LoaderProfiles.Known;
         _games = games ?? new InstanceGameResolver(pathProvider, new InstalledGameVersionProvider(pathProvider));
         if (startupWindow < TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(startupWindow), "The startup window cannot be negative.");
@@ -314,7 +317,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
             var gameLog = _pathProvider.GetInstanceGameLogPath(instance.InstanceId);
             _running[instance.InstanceId] = process;
-            _starts[instance.InstanceId] = (LastWrite(gameLog), LastCrashLogWrite(gameLog), loader.Name, LoaderCrashReport.ReleasesPage(loader));
+            _starts[instance.InstanceId] = (LastWrite(gameLog), LastCrashLogWrite(gameLog), loader.Name, LoaderCrashReport.ReleasesPage(loader), _profiles.For(loader.ModId));
             _ended.Remove(instance.InstanceId);
             if (wrapped is not null)
                 _wrappers[instance.InstanceId] = wrapped;
@@ -494,7 +497,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     internal static bool SameGamePath(string? held, string wanted) =>
         held is not null && string.Equals(GameFolderOf(held), GameFolderOf(wanted), FileSystemPaths.PathComparison);
 
-    // StarMap accepts the path of KSA.dll as well as the game folder, and a
+    // A loader can take the path of KSA.dll as well as the game folder, and a
     // Windows path of a Wine prefix is not a full path on the host
     private static string GameFolderOf(string path)
     {
@@ -511,7 +514,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             return started;
 
         IStartedProcess? process;
-        (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases) start;
+        (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases, ILoaderProfile Profile) start;
         WineInstall? wrapped;
         lock (_gate)
         {
@@ -545,7 +548,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
                 // a loader that exits with 0 may have restarted itself, so the log decides, unless it found no game;
                 // an error exit needs no more waiting, unless the launcher of a wrapper made it
-                if (ended && wrapped is null && (process.ExitCode is not 0 || LoaderCrashReport.FoundNoGame(process.RecentOutput)))
+                if (ended && wrapped is null && (process.ExitCode is not 0 || start.Profile.FoundNoGame(process.RecentOutput)))
                     break;
             }
 
@@ -590,7 +593,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         // nothing watches the exit of a start that stopped early
         RestoreGameFolder(instance, process.Id);
 
-        if (LoaderCrashReport.FoundNoGame(output))
+        if (start.Profile.FoundNoGame(output))
         {
             return LaunchResult.ExitedEarly(
                 started.Plan,
@@ -601,7 +604,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 LoaderCrashCause.GameNotFound);
         }
 
-        // StarMap also exits with 0 when it cannot start at all, for example without a game path
+        // a loader can also exit with 0 when it cannot start at all, for example without a game path
         if (exitCode == 0)
         {
             return LaunchResult.ExitedEarly(
@@ -620,38 +623,38 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         IReadOnlyList<LoadOrderMod>? loadOrder = null;
         var blamed = ModBlame.Find(instance, modsFolder, LoaderCrashReport.AssemblyNames(output));
         var cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
-        if (blamed is null && LoaderCrashReport.StoppedWhileLoadingMods(output))
+        if (blamed is null && start.Profile.StoppedWhileLoadingMods(output))
         {
             cause = LoaderCrashCause.ModLoading;
-            loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
-            var likely = LoaderCrashReport.LikelyLoadingMod(output, loadOrder, isWholeOutput: output.Count < ProcessStarter.OutputLines);
+            loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, start.Profile, cancellationToken).ConfigureAwait(false);
+            var likely = start.Profile.LikelyLoadingMod(output, loadOrder, isWholeOutput: output.Count < ProcessStarter.OutputLines);
             blamed = (likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely)))
                 ?? (missing.Count > 0 ? AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing.Contains).FirstOrDefault() : null);
         }
         else if (blamed is null && missing.Count > 0)
         {
-            // GameSurveyer.TryLoadCoreAndGame loads ./StarMap.Core.dll before any
-            // mod, so a missing assembly that a DLL in the loader folder needs
-            // stopped it first. Subfolders do not count, they can hold mods.
+            // A loader loads the DLLs of its own folder before any mod, so a
+            // missing assembly that one of them needs stopped it first.
+            // Subfolders do not count, they can hold mods.
             if (AssemblyReferences.Referencing(started.Plan.WorkingDirectory, missing, recurse: false))
             {
                 cause = LoaderCrashCause.GameAssembly;
             }
             else
             {
-                loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+                loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, start.Profile, cancellationToken).ConfigureAwait(false);
                 blamed = AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing.Contains).FirstOrDefault();
                 cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
             }
         }
 
-        if (blamed is null && cause == LoaderCrashCause.Unknown && LoaderCrashReport.StoppedWhileLoaderStarted(output) && LoaderCrashReport.NamesGameAssembly(output))
+        if (blamed is null && cause == LoaderCrashCause.Unknown && start.Profile.StoppedWhileLoaderStarted(output) && LoaderCrashReport.NamesGameAssembly(output))
             cause = LoaderCrashCause.GameAssembly;
 
         IReadOnlyList<InstalledMod> others = [];
         if (blamed is not null && missing.Count > 0)
         {
-            loadOrder ??= await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+            loadOrder ??= await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, start.Profile, cancellationToken).ConfigureAwait(false);
             var notInGame = GameAssemblyNotInGame(gameDirectory, modsFolder);
             others = AssemblyReferences.Mods(instance, modsFolder, loadOrder, name => missing.Contains(name) || notInGame(name)).Where(mod => mod != blamed).ToList();
         }

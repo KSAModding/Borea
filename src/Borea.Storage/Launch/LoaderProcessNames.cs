@@ -7,7 +7,7 @@ namespace Borea.Storage.Launch;
 
 /// <summary>
 /// The process names of the mod loaders that are installed, taken from the launch file of each loader listing.
-/// A loader such as StarMap or Oxidizer runs the game inside its own process, so that process name says the game runs.
+/// A loader runs the game inside its own process, so that process name says the game runs.
 /// The result is kept for a few seconds so that a polling caller does not read the settings and folders each time.
 /// A loader whose listing is not found is looked up again at most once a minute, so a later index load still resolves it.
 /// </summary>
