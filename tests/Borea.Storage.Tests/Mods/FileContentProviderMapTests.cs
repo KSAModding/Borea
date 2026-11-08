@@ -93,6 +93,22 @@ public sealed class FileContentProviderMapTests : IDisposable
         Assert.Equal([Path.Combine(folder, "Broken.xml"), Path.Combine(folder, "Missing.xml")], providers.UnreadableFiles);
     }
 
+    [Fact]
+    public async Task ReadAsync_SystemAssetInAnAssetFile_DefinesTheSystem_AndItsBodyRefsDefineNoBody()
+    {
+        Manifest(("Core", true), ("Systems", true));
+        Mod(_paths.GetInstanceModsFolder(_instanceId), "Systems", """
+            <TerrestrialBody Id="Moonlet" />
+            <System Id="Twin"><Bodies><Body Ref="Sol" /><Body Ref="Moonlet" /></Bodies></System>
+            <System Id="Sol" Modify="Patch"><Bodies Modify="Extend"><Body Ref="Moonlet" /></Bodies></System>
+            """);
+
+        var systems = (await _map.ReadAsync(_instanceId)).Mods[1];
+
+        Assert.Equal(["Twin"], systems.Defines.Of(ContentIdKind.System));
+        Assert.Equal(["Moonlet"], systems.Defines.Of(ContentIdKind.Body));
+    }
+
     [Theory]
     [InlineData("Part", "", true)]
     [InlineData("Part", " Modify=\"Replace\"", true)]

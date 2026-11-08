@@ -35,6 +35,11 @@
       "build": "2026.10.25.5707",
       "checked_on": "2026-10-29",
       "note": "Checked against the decompiled game diff from 2026.10.19.5638. The fixtures stay copies from 2026.9.10.5438."
+    },
+    {
+      "build": "2026.11.10.5801",
+      "checked_on": "2026-11-08",
+      "note": "Checked against the decompiled game diff from 2026.10.25.5707. The fixtures stay copies from 2026.9.10.5438."
     }
   ]
 }

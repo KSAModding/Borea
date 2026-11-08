@@ -114,6 +114,9 @@ public sealed class FileContentProviderMap : IContentProviderMap
 
         foreach (var asset in Strings(table, "assets"))
             ReadFile(Path.Combine(folder, asset), defines, system: false, unreadable);
+
+        // From build 2026.11.10.5801 on, the game reads a system only as a System asset in an asset file
+        // (GameContentTags.Build binds the System tag), but a mod for an older build lists its system files here.
         foreach (var system in Strings(table, "systems"))
             ReadFile(Path.Combine(folder, system), defines, system: true, unreadable);
 
@@ -132,7 +135,7 @@ public sealed class FileContentProviderMap : IContentProviderMap
 
     /// <summary>
     /// Reads the ids that the direct children of the root define, and the id of the root of a system file.
-    /// LoadFromLibrary in a system file is a reference to a body of an asset file, not a definition.
+    /// LoadFromLibrary in a system file and Body in the Bodies of a System asset are references to a body, not definitions.
     /// </summary>
     private static void ReadFile(string path, ContentIds defines, bool system, List<string> unreadable)
     {
@@ -161,6 +164,8 @@ public sealed class FileContentProviderMap : IContentProviderMap
                         found.Add(ContentIdKind.Part, isDefinition ? id : null);
                     else if (!system && element == "Character")
                         found.Add(ContentIdKind.Character, isDefinition ? id : null);
+                    else if (element == "System")
+                        found.Add(ContentIdKind.System, isDefinition ? id : null);
                     else if (BodyElements.Contains(element))
                         found.Add(ContentIdKind.Body, isDefinition ? id : null);
                 }
