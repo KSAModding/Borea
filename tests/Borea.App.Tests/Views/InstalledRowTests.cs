@@ -130,16 +130,17 @@ public sealed class InstalledRowTests
                 var row = page.GetVisualDescendants().OfType<Button>()
                     .Single(button => button.Classes.Contains("card-button") && ReferenceEquals(button.DataContext, item));
                 var card = row.GetVisualDescendants().OfType<Border>().First(border => border.Classes.Contains("card"));
+                // a mod row builds its disc only while the mod is installed
                 var disc = row.GetVisualDescendants().OfType<Button>()
-                    .Single(button => button.Classes.Contains("add") && button.Classes.Contains("installed"));
+                    .SingleOrDefault(button => button.Classes.Contains("add") && button.Classes.Contains("installed"));
                 var tags = row.GetVisualDescendants().OfType<TagChipRow>().Single();
                 var first = tags.Children.OfType<Border>()
                     .Where(chip => chip.Bounds.Width > 0)
                     .OrderBy(chip => chip.Bounds.X)
                     .FirstOrDefault();
-                var shown = disc.IsEffectivelyVisible;
-                var discColor = shown ? Fill(Presenter(disc).Background) : null;
-                var check = shown ? Fill(disc.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().Single().Stroke) : null;
+                var shown = disc?.IsEffectivelyVisible == true;
+                var discColor = shown ? Fill(Presenter(disc!).Background) : null;
+                var check = shown ? Fill(disc!.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().Single().Stroke) : null;
                 var cardColor = Fill(card.Background)!.Value;
                 var installedChips = row.GetVisualDescendants().OfType<Border>()
                     .Count(chip => chip.IsEffectivelyVisible && chip.Bounds.Width > 0 && chip.Classes.Contains("positive")
@@ -147,7 +148,7 @@ public sealed class InstalledRowTests
 
                 Color? over = null;
                 var hovered = false;
-                if (shown)
+                if (shown && disc is not null)
                 {
                     window.MouseMove(disc.TranslatePoint(new Point(disc.Bounds.Width / 2, disc.Bounds.Height / 2), window)!.Value);
                     window.UpdateLayout();
@@ -167,7 +168,7 @@ public sealed class InstalledRowTests
                     Token(page, "Color.Surface"),
                     Token(page, "Color.Compatible"),
                     Token(page, "Color.OnCompatible"),
-                    shown ? AutomationProperties.GetName(disc) : null,
+                    shown ? AutomationProperties.GetName(disc!) : null,
                     installedChips));
             }
             finally
