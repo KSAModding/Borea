@@ -38,8 +38,13 @@ public sealed class DiscoverScaleTests
     /// <summary>The icon files that the rows and the idle icons hold together, whatever the length of the list. The files of the whole list are about 14 MiB.</summary>
     private const long MaxIconBytes = 8L * 1024 * 1024;
 
-    /// <summary>What the list may allocate for each row that it shows again while it scrolls, so that a fast scroll does not keep the garbage collector busy.</summary>
-    private const long MaxBytesPerShownRow = 1024L * 1024;
+    /// <summary>
+    /// What the list may allocate for each row that it shows again while it scrolls, so that a fast scroll does not keep the garbage collector busy.
+    /// The panel takes a recycled row out of the tree and puts it back, and the row then takes the styles of the app again for each of its controls.
+    /// A row measured about 656 KB on Windows, and the allocation is the same on each run except for about a kilobyte that differs between the operating systems.
+    /// The limit is half as much again, so it does not fail by chance, but it fails when the row builds its hidden parts again, which cost about 1,047 KB.
+    /// </summary>
+    private const long MaxBytesPerShownRow = 960L * 1024;
 
     [Fact]
     public async Task LongList_KeepsItsRowsBitmapsAndIconFilesWithTheWindow()

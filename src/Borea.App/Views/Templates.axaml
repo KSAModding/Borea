@@ -413,54 +413,73 @@
                                 <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanAddToActiveInstance}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                                 </Button>
-                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
-                                    <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
-                                    <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
-                                        <Panel>
-                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
-                                            <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
-                                        </Panel>
-                                    </Button>
-                                    <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
-                                    </Button>
-                                    <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
-                                </StackPanel>
+                                <!-- the list styles every control of a row again each time it shows the row, so a part that only some rows show waits in a template, which a hidden content control does not build -->
+                                <ContentControl Content="{Binding}" IsVisible="{Binding IsInstalling}">
+                                    <ContentControl.ContentTemplate>
+                                        <DataTemplate x:DataType="vm:DiscoverItem">
+                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                                <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
+                                                    <Panel>
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
+                                                        <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
+                                                    </Panel>
+                                                </Button>
+                                                <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
+                                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                                </Button>
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ContentControl.ContentTemplate>
+                                </ContentControl>
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                                <Button Classes="add installed" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" AutomationProperties.Name="{Binding InstalledAutomationName}" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
-                                    <Button.IsVisible>
+                                <ContentControl Content="{Binding}">
+                                    <ContentControl.IsVisible>
                                         <MultiBinding Converter="{x:Static BoolConverters.And}">
                                             <Binding Path="IsInstalled" />
                                             <Binding Path="!IsRemoving" />
                                         </MultiBinding>
-                                    </Button.IsVisible>
-                                    <Button.Flyout>
-                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                            <MenuItem Header="{Binding FavoriteText}" Command="{Binding ToggleFavoriteCommand}" />
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangeVersion}" Command="{Binding ChangeVersionCommand}" IsVisible="{Binding CanChangeVersion}" />
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
-                                            <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                <MenuItem.Header>
-                                                    <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />
-                                                </MenuItem.Header>
-                                            </MenuItem>
-                                        </MenuFlyout>
-                                    </Button.Flyout>
-                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Check}" />
-                                </Button>
+                                    </ContentControl.IsVisible>
+                                    <ContentControl.ContentTemplate>
+                                        <DataTemplate x:DataType="vm:DiscoverItem">
+                                            <Button Classes="add installed" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" AutomationProperties.Name="{Binding InstalledAutomationName}" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                                <Button.Flyout>
+                                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                        <MenuItem Header="{Binding FavoriteText}" Command="{Binding ToggleFavoriteCommand}" />
+                                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangeVersion}" Command="{Binding ChangeVersionCommand}" IsVisible="{Binding CanChangeVersion}" />
+                                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
+                                                        <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                            <MenuItem.Header>
+                                                                <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />
+                                                            </MenuItem.Header>
+                                                        </MenuItem>
+                                                    </MenuFlyout>
+                                                </Button.Flyout>
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Check}" />
+                                            </Button>
+                                        </DataTemplate>
+                                    </ContentControl.ContentTemplate>
+                                </ContentControl>
                             </Panel>
                         </Grid>
                         <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <!-- the row's actions and status, on a line of their own so that they never reach past the card -->
+                        <!-- the row's actions and status, on a line of their own so that they never reach past the card, each in a template like the install progress above -->
                         <StackPanel Grid.Row="2">
                             <!-- the question and the two buttons keep one line while they fit, and the buttons take the next line when they do not -->
-                            <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingRemove}">
-                                <TextBlock Classes="body-sm danger" Text="{Binding RemoveConfirmText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding ConfirmRemoveCommand}" />
-                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
-                                </StackPanel>
-                            </WrapPanel>
+                            <ContentControl Content="{Binding}" IsVisible="{Binding IsConfirmingRemove}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:DiscoverItem">
+                                        <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8" Margin="0,0,4,8">
+                                            <TextBlock Classes="body-sm danger" Text="{Binding RemoveConfirmText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding ConfirmRemoveCommand}" />
+                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
+                                            </StackPanel>
+                                        </WrapPanel>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
                             <ContentControl Margin="0,0,4,8" Content="{Binding RemoveSteps}" ContentTemplate="{StaticResource StepList}">
                                 <ContentControl.IsVisible>
                                     <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -469,29 +488,53 @@
                                     </MultiBinding>
                                 </ContentControl.IsVisible>
                             </ContentControl>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                            </Grid>
+                            <ContentControl Content="{Binding}" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:DiscoverItem">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8">
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
                             <ItemsControl Margin="0,0,4,8" ItemsSource="{Binding PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!PlanSteps.Count}" />
                             <!-- the texts take the whole width, because a warning can be long, and the buttons keep their own row -->
-                            <StackPanel Spacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
-                                <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
-                                <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8">
-                                    <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
-                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
-                                </WrapPanel>
-                            </StackPanel>
-                            <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
+                            <ContentControl Content="{Binding}" IsVisible="{Binding IsConfirmingInstall}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:DiscoverItem">
+                                        <StackPanel Spacing="8" Margin="0,0,4,8">
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="body-sm" Foreground="{StaticResource Brush.Untested}" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
+                                            <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8">
+                                                <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
+                                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
+                            <ContentControl Content="{Binding}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:DiscoverItem">
+                                        <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
                             <!-- what the author still asks for after an install and where a new vehicle or save is in the game, until the player dismisses it -->
-                            <StackPanel Spacing="8" Margin="0,0,4,8" IsVisible="{Binding HasInstallStepsNotice}">
-                                <ItemsControl ItemsSource="{Binding InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
-                                <WrapPanel ItemSpacing="8" LineSpacing="8">
-                                    <ContentControl Content="{Binding InstalledPlayRow}" ContentTemplate="{StaticResource InstalledPlayButton}" />
-                                    <Button Classes="text" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallStepsDismiss}" Command="{Binding DismissInstallStepsNoticeCommand}" />
-                                </WrapPanel>
-                            </StackPanel>
+                            <ContentControl Content="{Binding}" IsVisible="{Binding HasInstallStepsNotice}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:DiscoverItem">
+                                        <StackPanel Spacing="8" Margin="0,0,4,8">
+                                            <ItemsControl ItemsSource="{Binding InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
+                                            <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                                <ContentControl Content="{Binding InstalledPlayRow}" ContentTemplate="{StaticResource InstalledPlayButton}" />
+                                                <Button Classes="text" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallStepsDismiss}" Command="{Binding DismissInstallStepsNoticeCommand}" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
                         </StackPanel>
                         <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
                             <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip.Tip="{Binding CompatibilityToolTip}">
