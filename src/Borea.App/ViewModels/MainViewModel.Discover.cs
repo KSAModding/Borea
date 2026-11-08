@@ -39,7 +39,7 @@ public partial class MainViewModel
     /// <summary>A list with fewer rows shows every compatibility chip.</summary>
     private const int CommonCompatibilityMinimumRows = 5;
 
-    /// <summary>The share of rows, in percent, at which a compatibility state counts as the common one.</summary>
+    /// <summary>The share of compatible rows, in percent, at which those rows leave out their Compatible chip.</summary>
     private const int CommonCompatibilityPercent = 90;
 
     private IReadOnlyList<DiscoverItem> _listings = [];
@@ -394,14 +394,18 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(DiscoverShareAction));
     }
 
-    /// <summary>The state whose chip a row of the list leaves out, or null when every row shows its chip.</summary>
+    /// <summary>
+    /// Compatible when almost every row of the list is compatible, so those rows leave out a chip that says the same
+    /// on each of them, or null when every row shows its chip. An Incompatible or Unknown chip always shows, because it
+    /// warns about the row even when every row has it.
+    /// </summary>
     private static GameCompatibility? CommonCompatibility(IReadOnlyCollection<GameCompatibility> states)
     {
         if (states.Count < CommonCompatibilityMinimumRows)
             return null;
 
-        var largest = states.GroupBy(state => state).MaxBy(group => group.Count())!;
-        return largest.Count() * 100 >= states.Count * CommonCompatibilityPercent ? largest.Key : null;
+        var compatible = states.Count(state => state == GameCompatibility.Compatible);
+        return compatible * 100 >= states.Count * CommonCompatibilityPercent ? GameCompatibility.Compatible : null;
     }
 
     /// <summary>The Loaders tab has no Sort by dropdown, so it always shows the most downloaded loader first.</summary>
