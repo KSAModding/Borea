@@ -1196,6 +1196,22 @@ public sealed class DiscoverViewModelTests
         Assert.All(viewModel.DiscoverItems, item => Assert.Equal(!item.IsCompatible, item.ShowsCompatibility));
     }
 
+    [Theory]
+    [InlineData("2026.8.3.5117", GameCompatibility.Incompatible, true)]
+    [InlineData("2026.9.7.5402", GameCompatibility.Compatible, false)]
+    public async Task CompatibilityChip_EveryRowInOneState_LeavesOutOnlyACommonCompatible(string build, GameCompatibility state, bool shows)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => ViewModelHarness.WithCopies(json, "KSArmory", 4));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.RefreshCompatibilityAsync(GameVersion.Parse(build));
+
+        Assert.Equal(7, viewModel.DiscoverItems.Count);
+        Assert.All(viewModel.DiscoverItems, item => Assert.Equal(state, item.Compatibility));
+        Assert.All(viewModel.DiscoverItems, item => Assert.Equal(shows, item.ShowsCompatibility));
+    }
+
     [Fact]
     public async Task CompatibilityChip_BelowTheShare_ShowsEveryChip()
     {
@@ -1248,7 +1264,7 @@ public sealed class DiscoverViewModelTests
         await viewModel.RefreshCompatibilityAsync(null);
 
         Assert.All(viewModel.DiscoverItems, item => Assert.Equal(GameCompatibility.Unknown, item.Compatibility));
-        Assert.All(viewModel.DiscoverItems, item => Assert.False(item.ShowsCompatibility));
+        Assert.All(viewModel.DiscoverItems, item => Assert.True(item.ShowsCompatibility));
     }
 
     [Fact]
