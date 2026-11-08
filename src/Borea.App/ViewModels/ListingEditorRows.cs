@@ -309,7 +309,7 @@ public sealed partial class ListingDeclaredDependencyRow : ObservableObject
 
     public ListingDeclaredDependency Dependency { get; }
 
-    /// <summary>Such as "Required by your mod.toml: StarMap".</summary>
+    /// <summary>Such as "Required by your mod.toml: ModMenu".</summary>
     public string Text => _owner.DeclaredDependencyText(Dependency);
 
     /// <summary>Whether the index lists the id as a loader, whose bounds go into [loader].</summary>

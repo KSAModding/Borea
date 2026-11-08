@@ -172,7 +172,7 @@ internal sealed class ModPackUserContent(IUserContentInstaller? installer, IModS
             UserContentOutcome.NameTaken => planned with { Status = ModPackContentStatus.NameTaken, FolderName = check.FolderName, Message = $"An item named '{check.FolderName}' is in the way." },
             UserContentOutcome.Changed => planned with { Status = ModPackContentStatus.Changed, FolderName = check.FolderName, Changes = check.Changes, Message = "The player changed files of the item since the install." },
             UserContentOutcome.InvalidName => planned with { Status = ModPackContentStatus.NameTaken, FolderName = check.FolderName, Message = $"The game would change the name '{check.FolderName}'." },
-            UserContentOutcome.GameRunning => planned with { Message = "KSA or StarMap is running." },
+            UserContentOutcome.GameRunning => planned with { Message = "KSA or a mod loader is running." },
             _ => planned with { Status = ModPackContentStatus.Skipped, Message = check.Outcome.ToString() },
         }, release, installed);
     }

@@ -57,7 +57,7 @@ public partial class MainViewModel
     private bool _pinsLoaderVersion;
 
     /// <summary>
-    /// "Starts StarMap 0.4.8", what Automatic does when that version is not installed, or which release to install
+    /// "Starts MyLoader 0.4.8", what Automatic does when that version is not installed, or which release to install
     /// when the version that starts does not support the kept build of the instance.
     /// </summary>
     public string? LoaderSettingAutomaticText => (_loaderSettingAutomatic, LoaderSettingLoader) switch

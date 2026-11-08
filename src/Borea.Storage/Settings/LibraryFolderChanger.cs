@@ -32,7 +32,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
     private readonly DirectoryLinker _linker = new();
 
     /// <param name="defaultFolder">Where the Instances and Backups folders are when no library folder is saved.</param>
-    /// <param name="isGameProcessRunning">Null looks for a KSA or StarMap process.</param>
+    /// <param name="isGameProcessRunning">Null looks for a KSA or mod loader process.</param>
     /// <param name="isOtherBoreaRunning">Null looks for a Borea App or command other than this process.</param>
     /// <param name="isSameVolume">Whether two folders are on one volume, so a rename can move between them. Null compares their mount points.</param>
     public LibraryFolderChanger(

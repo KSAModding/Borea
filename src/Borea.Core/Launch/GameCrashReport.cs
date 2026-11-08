@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Borea.Core.ModLoaders;
 
 namespace Borea.Core.Launch;
 
@@ -13,16 +14,19 @@ public static partial class GameCrashReport
 
     private const string InnerException = "---> ";
 
-    // A frame in the runtime, the game or its loader names no mod, and a mod
+    // A frame in the runtime, the game or a loader names no mod, and a mod
     // folder that holds a copy of one of their assemblies must not be named
-    // for every crash.
-    private static readonly HashSet<string> HostNamespaces = new(StringComparer.OrdinalIgnoreCase) { "System", "Microsoft", "KSA", "Brutal", "StarMap" };
+    // for every crash. The crash log does not say which loader started the
+    // game, so the code of every known loader counts.
+    private static readonly HashSet<string> HostNamespaces = new(
+        ["System", "Microsoft", "KSA", "Brutal", .. LoaderProfiles.Known.All.SelectMany(profile => profile.CodeNamespaces)],
+        StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The type and message of the innermost exception, such as
     /// "System.NullReferenceException: Object reference not set to an instance of an object.",
     /// or null when the log holds no unhandled exception. The innermost one is
-    /// the cause, because StarMap starts the game through reflection, which
+    /// the cause, because a loader that starts the game through reflection
     /// wraps every exception of the game in a TargetInvocationException.
     /// </summary>
     public static string? ExceptionText(IReadOnlyList<string> log)
@@ -49,7 +53,7 @@ public static partial class GameCrashReport
     /// The assembly names the unhandled exception names, the way
     /// <see cref="LoaderCrashReport.AssemblyNames"/> reads them, and then the
     /// first namespace of each of its stack frames outside the runtime, the
-    /// game and its loader, innermost frame first.
+    /// game and the known loaders, innermost frame first.
     /// </summary>
     public static IReadOnlyList<string> AssemblyNames(IReadOnlyList<string> log)
     {

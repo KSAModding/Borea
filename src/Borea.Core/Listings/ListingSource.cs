@@ -41,15 +41,21 @@ public interface IListingHostClient
 /// <param name="Root">The install root the stamper derives for a mod: the one top-level folder, or null when there is none to derive.</param>
 /// <param name="TopLevelFolders">The folders at the top of the archive, in archive order.</param>
 /// <param name="ModToml">Whether the root holds a mod.toml.</param>
-/// <param name="EntryAssembly">The assembly StarMap loads: [StarMap] EntryAssembly of the mod.toml, else the root name.</param>
+/// <param name="EntryAssembly">The assembly the loader loads: EntryAssembly in the loader's table of the mod.toml, else the root name.</param>
 /// <param name="IsCodeMod">Whether the root holds the <see cref="EntryAssembly"/> DLL.</param>
 public sealed record ListingArchiveFacts(string? Root, IReadOnlyList<string> TopLevelFolders, bool ModToml, string? EntryAssembly, bool IsCodeMod)
 {
     /// <summary>
-    /// The [[StarMap.ModDependencies]] of the mod.toml at the install root, which the stamper turns into the derived dependencies
-    /// of the release, or null when there is no install root or no mod.toml there.
+    /// The [[ModDependencies]] blocks in the loader's table of the mod.toml at the install root, which the stamper turns into
+    /// the derived dependencies of the release, or null when there is no install root or no mod.toml there.
     /// </summary>
     public IReadOnlyList<LocalModDependency>? ModDependencies { get; init; }
+
+    /// <summary>
+    /// The known loader whose table the mod.toml at the root has, else for a code mod the known loader that loads a mod
+    /// without its table, or null.
+    /// </summary>
+    public string? LoaderId { get; init; }
 }
 
 /// <param name="Archive">The facts of the latest release archive, or null when there was none to read.</param>

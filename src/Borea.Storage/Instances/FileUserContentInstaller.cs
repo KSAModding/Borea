@@ -24,7 +24,7 @@ public sealed class FileUserContentInstaller : IUserContentInstaller
     private readonly TimeProvider _time;
 
     /// <param name="records">Pass the one store of the app, so two stores never write one file.</param>
-    /// <param name="isGameRunning">Whether a KSA or StarMap process runs, whoever started it.</param>
+    /// <param name="isGameRunning">Whether a KSA or mod loader process runs, whoever started it.</param>
     public FileUserContentInstaller(IGamePathProvider paths, IModDownloader downloader, IInstalledContentRecords records, Func<bool> isGameRunning, TimeProvider? time = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));

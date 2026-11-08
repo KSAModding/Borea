@@ -22,6 +22,7 @@ public sealed class ListingArchiveTests : IDisposable
         Assert.True(facts.ModToml);
         Assert.Equal("MyMod", facts.EntryAssembly);
         Assert.True(facts.IsCodeMod);
+        Assert.Equal("StarMap", facts.LoaderId);
     }
 
     [Fact]
@@ -31,6 +32,7 @@ public sealed class ListingArchiveTests : IDisposable
 
         Assert.Equal("MyMod.Core", facts.EntryAssembly);
         Assert.True(facts.IsCodeMod);
+        Assert.Equal("StarMap", facts.LoaderId);
     }
 
     [Fact]

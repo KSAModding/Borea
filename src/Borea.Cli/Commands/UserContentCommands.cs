@@ -207,7 +207,7 @@ internal static class UserContentCommands
         UserContentOutcome.InvalidName => throw new InvalidOperationException($"The game would change the name '{result.FolderName}'. Use letters, digits, spaces, '-' and '_'."),
         UserContentOutcome.AlreadyInstalled => throw new InvalidOperationException($"'{id}' is installed in {KindFolder(type)}/{result.FolderName}. Run 'borea update {id}' to change its version."),
         UserContentOutcome.Changed => throw new InvalidOperationException($"Files of {KindFolder(type)}/{result.FolderName} changed since Borea installed it: {string.Join(", ", ChangedFiles(result.Changes!))}. Run again with --discard-changes to go on; the old folder stays in the backups."),
-        UserContentOutcome.GameRunning => throw new InvalidOperationException("KSA or StarMap is running, and Borea cannot tell which instance it uses. Close the game first."),
+        UserContentOutcome.GameRunning => throw new InvalidOperationException("KSA or a mod loader is running, and Borea cannot tell which instance it uses. Close the game first."),
         UserContentOutcome.NotInstalled => throw new InvalidOperationException($"The folder {KindFolder(type)}/{result.FolderName} of '{id}' is gone."),
         _ => throw new InvalidOperationException($"'{id}' was not changed ({result.Outcome})."),
     };

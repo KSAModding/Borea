@@ -4,7 +4,7 @@ using Borea.Core.Mods;
 namespace Borea.Core.Paths;
 
 /// <summary>
-/// Resolves filesystem locations relevant to KSA, StarMap, and Borea's own
+/// Resolves filesystem locations relevant to KSA, its mod loaders, and Borea's own
 /// library.
 /// </summary>
 public interface IGamePathProvider
@@ -94,7 +94,7 @@ public interface IGamePathProvider
     string GetSharedContentPath();
 
     /// <summary>
-    /// Path to Borea's own settings.toml (game/StarMap install locations).
+    /// Path to Borea's own settings.toml (game and loader install locations).
     /// </summary>
     string GetBoreaSettingsPath();
 

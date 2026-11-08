@@ -245,7 +245,7 @@ public partial class MainViewModel
 
     /// <summary>
     /// Says when the folder in the field holds no KSA.dll, and offers the one game up to two levels below it. A player
-    /// who chose the folder above the game gets the folder that StarMap can start.
+    /// who chose the folder above the game gets the folder that the loader can start.
     /// </summary>
     internal async Task CheckGameFolderAsync(string folder)
     {
@@ -832,7 +832,7 @@ public sealed partial class LoaderVersionItem : ObservableObject
 
     public string VersionText => Version.Version?.ToString() ?? Version.RawVersion ?? string.Empty;
 
-    /// <summary>"StarMap 0.4.8", or "StarMap 0.4.6, your folder" for a folder of the player.</summary>
+    /// <summary>"MyLoader 0.4.8", or "MyLoader 0.4.6, your folder" for a folder of the player.</summary>
     public string Title
     {
         get

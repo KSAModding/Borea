@@ -67,7 +67,7 @@ public interface ILauncher
     /// with a crash log of its own run, so a quit and a restart that exit with
     /// 0 are <see cref="GameExitKind.Closed"/>, and so is the crash of a new
     /// process that a restart started. When the launch started a kept build,
-    /// no KSA or StarMap process runs any more, and the loader's game path
+    /// no KSA or mod loader process runs any more, and the loader's game path
     /// still names the kept folder, it writes the game folder of the settings
     /// back, or in a folder that the player made the game path that the
     /// player had set there, so a Borea that does not write the file before each start does

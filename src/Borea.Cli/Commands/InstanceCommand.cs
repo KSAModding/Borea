@@ -167,7 +167,7 @@ internal static class InstanceCommand
         }
     }
 
-    /// <summary>"StarMap automatic (starts 0.4.8)", "StarMap pinned at 0.4.7 (not installed)" and the cases between them.</summary>
+    /// <summary>"MyLoader automatic (starts 0.4.8)", "MyLoader pinned at 0.4.7 (not installed)" and the cases between them.</summary>
     private static string DescribeLoaderSetting(InstanceLoaderView loader, LoaderVersionResolution? resolved)
     {
         var name = loader.Id is null ? "" : $"{loader.Id} ";

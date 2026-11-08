@@ -29,13 +29,21 @@ public sealed class RunningProcessesTests
     }
 
     [Fact]
-    public void StarMapStillCountsWithAnInstalledLoaderAndAFailingReadFallsBack()
+    public void AKnownLoaderProcessCountsWithoutAnInstalledLoader()
     {
-        var names = new LoaderProcessNames(new Listings(Loader("Oxidizer", "oxidizer.exe")), new Versions("Oxidizer"), OsPlatform.Windows);
-        Assert.True(RunningProcesses.IsGameRunning(names.Current, name => name == "StarMap"));
+        var names = new LoaderProcessNames(new Listings(Loader("Oxidizer", "oxidizer.exe")), new Versions(), OsPlatform.Windows);
 
+        Assert.Empty(names.Current());
+        Assert.True(RunningProcesses.IsGameRunning(names.Current, name => name == "StarMap"));
+    }
+
+    [Fact]
+    public void AFailingReadCountsNoLoaderProcess()
+    {
         var failing = new LoaderProcessNames(new Listings(), new FailingVersions(), OsPlatform.Windows);
+
         Assert.Empty(failing.Current());
+        Assert.False(RunningProcesses.IsGameRunning(failing.Current, name => name == "oxidizer"));
         Assert.True(RunningProcesses.IsGameRunning(failing.Current, name => name == "StarMap"));
     }
 

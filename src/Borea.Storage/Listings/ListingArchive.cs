@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Borea.Core.Listings;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Tomlyn;
 using Tomlyn.Model;
@@ -52,7 +53,12 @@ public static class ListingArchive
             var entryAssembly = manifest is null ? root : EntryAssembly(manifest) ?? root;
             var assemblyPath = $"{root}/{entryAssembly}.dll";
             var isCodeMod = names.Any(name => string.Equals(name.Replace('\\', '/'), assemblyPath, StringComparison.OrdinalIgnoreCase));
-            return new ListingArchiveFacts(root, folders, modToml is not null, entryAssembly, isCodeMod) { ModDependencies = dependencies };
+            var loader = (manifest is null ? null : LoaderProfile(manifest)) ?? (isCodeMod ? LoaderProfiles.Known.ForModWithoutTable() : null);
+            return new ListingArchiveFacts(root, folders, modToml is not null, entryAssembly, isCodeMod)
+            {
+                ModDependencies = dependencies,
+                LoaderId = loader?.LoaderId,
+            };
         }
     }
 
@@ -128,24 +134,27 @@ public static class ListingArchive
         }
     }
 
+    /// <summary>The profile of the first known loader whose table the mod.toml has, or null.</summary>
+    private static ILoaderProfile? LoaderProfile(TomlTable manifest) => LoaderProfiles.Known.ForModToml(manifest.ContainsKey);
+
     private static string? EntryAssembly(TomlTable manifest) =>
-        manifest.TryGetValue("StarMap", out var starMap) && starMap is TomlTable section
+        LoaderProfile(manifest)?.ModTomlSection is { } table && manifest[table] is TomlTable section
             && section.TryGetValue("EntryAssembly", out var value) && value is string name && !string.IsNullOrWhiteSpace(name)
             ? name.Trim()
             : null;
 
     /// <summary>
-    /// The blocks of [[StarMap.ModDependencies]] as derived_dependencies of the stamper reads them: the ModId without the
+    /// The [[ModDependencies]] blocks of the loader's table as derived_dependencies of the stamper reads them: the ModId without the
     /// spaces around it, and Optional with the truth of a Python value, so a missing one is false. An empty value or a
     /// missing one declares no dependency.
     /// </summary>
     /// <exception cref="InvalidDataException">The stamper cannot read the dependencies, so it stamps no release.</exception>
     private static IReadOnlyList<LocalModDependency> ModDependencies(TomlTable manifest)
     {
-        if (!manifest.TryGetValue("StarMap", out var starMap) || !IsTrue(starMap))
+        if (LoaderProfile(manifest)?.ModTomlSection is not { } name || !IsTrue(manifest[name]))
             return [];
-        if (starMap is not TomlTable section)
-            throw new InvalidDataException("[StarMap] of the mod.toml is not a table");
+        if (manifest[name] is not TomlTable section)
+            throw new InvalidDataException($"[{name}] of the mod.toml is not a table");
         if (!section.TryGetValue("ModDependencies", out var value) || !IsTrue(value))
             return [];
 
@@ -153,22 +162,22 @@ public static class ListingArchive
         {
             TomlTableArray tables => tables,
             TomlArray array => array,
-            _ => throw new InvalidDataException("StarMap.ModDependencies of the mod.toml is not a list of [[StarMap.ModDependencies]] blocks"),
+            _ => throw new InvalidDataException($"{name}.ModDependencies of the mod.toml is not a list of [[{name}.ModDependencies]] blocks"),
         };
 
         var dependencies = new List<LocalModDependency>();
         foreach (var item in blocks)
         {
             if (item is not TomlTable block)
-                throw new InvalidDataException("a [[StarMap.ModDependencies]] block is not a table");
+                throw new InvalidDataException($"a [[{name}.ModDependencies]] block is not a table");
 
             block.TryGetValue("ModId", out var modId);
             if (!IsTrue(modId))
-                throw new InvalidDataException("a [[StarMap.ModDependencies]] block carries no ModId");
+                throw new InvalidDataException($"a [[{name}.ModDependencies]] block carries no ModId");
             if (modId is not string text)
-                throw new InvalidDataException("a [[StarMap.ModDependencies]] block has a ModId that is not text");
+                throw new InvalidDataException($"a [[{name}.ModDependencies]] block has a ModId that is not text");
             if (text.Trim().Length == 0)
-                throw new InvalidDataException("a [[StarMap.ModDependencies]] block carries no ModId");
+                throw new InvalidDataException($"a [[{name}.ModDependencies]] block carries no ModId");
 
             dependencies.Add(new LocalModDependency(text.Trim(), block.TryGetValue("Optional", out var optional) && IsTrue(optional)));
         }

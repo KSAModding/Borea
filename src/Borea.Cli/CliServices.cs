@@ -33,7 +33,7 @@ internal sealed class CliServices : IDisposable
 
     public required ILibraryFolderChanger LibraryFolderChanger { get; init; }
 
-    /// <summary>Whether a KSA or StarMap process runs, whoever started it.</summary>
+    /// <summary>Whether a KSA or mod loader process runs, whoever started it.</summary>
     public required Func<bool> IsGameProcessRunning { get; init; }
 
     public required IInstanceRepository Instances { get; init; }

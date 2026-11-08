@@ -1,13 +1,14 @@
 using System.Runtime.Versioning;
 using System.Security;
 using Borea.Core.Game;
+using Borea.Core.ModLoaders;
 using Microsoft.Win32;
 
 namespace Borea.Storage.Game;
 
 /// <summary>
 /// Reads the uninstall entries of the registry and the folders where users
-/// unpack StarMap. It never writes to the registry.
+/// unpack the known loaders. It never writes to the registry.
 /// </summary>
 public sealed class WindowsInstallCandidateSource : IInstallCandidateSource
 {
@@ -15,8 +16,6 @@ public sealed class WindowsInstallCandidateSource : IInstallCandidateSource
 
     // The Ahwoo client writes one entry per package, named after its package id.
     internal const string AhwooGameUninstallKeyName = "Ahwoo App 019f01fc-623a-773f-8d70-f0177b16a20c";
-
-    internal const string LoaderDisplayNamePrefix = "StarMap version";
 
     private const string UninstallKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
 
@@ -28,10 +27,14 @@ public sealed class WindowsInstallCandidateSource : IInstallCandidateSource
     public WindowsInstallCandidateSource()
         : this(
             ReadUninstallEntries,
-            [
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "StarMap"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "StarMap"),
-            ],
+            LoaderProfiles.Known.All
+                .SelectMany(profile => profile.InstallFolderNames)
+                .SelectMany(name => new[]
+                {
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), name),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), name),
+                })
+                .ToList(),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Kitten Space Agency", "mods"))
     {
     }
@@ -57,7 +60,8 @@ public sealed class WindowsInstallCandidateSource : IInstallCandidateSource
     public IReadOnlyList<string> GetLoaderDirectories()
     {
         var directories = _uninstallEntries()
-            .Where(entry => entry.DisplayName?.StartsWith(LoaderDisplayNamePrefix, StringComparison.OrdinalIgnoreCase) == true)
+            .Where(entry => entry.DisplayName is { } name && LoaderProfiles.Known.All.Any(profile =>
+                profile.UninstallDisplayNamePrefix is { } prefix && name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
             .Select(entry => entry.InstallLocation)
             .OfType<string>()
             .Concat(_loaderFolders)

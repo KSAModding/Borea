@@ -29,7 +29,7 @@ public sealed class FileSharedModStore : ISharedModStore
     /// <summary>Two break-outs of the same entry would copy from an entry the first one removes.</summary>
     private readonly SemaphoreSlim _breakOutLock = new(1, 1);
 
-    /// <param name="isGameProcessRunning">Null looks for a KSA or StarMap process.</param>
+    /// <param name="isGameProcessRunning">Null looks for a KSA or mod loader process.</param>
     /// <param name="isOtherBoreaRunning">Null looks for another Borea App or command.</param>
     public FileSharedModStore(
         IGamePathProvider paths,

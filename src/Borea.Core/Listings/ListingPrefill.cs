@@ -8,11 +8,10 @@ namespace Borea.Core.Listings;
 /// <summary>Fills a new listing from what Borea can read: the release host, the latest archive, the content index and the installed game.</summary>
 public static class ListingPrefill
 {
-    public const string StarMapId = "StarMap";
-
     /// <summary>
-    /// The draft with every field the source knows filled in. A code mod gets a [loader] on StarMap from the
-    /// newest stable StarMap release of the snapshot, and an empty game_min gets <see cref="DefaultGameMin"/>.
+    /// The draft with every field the source knows filled in. A code mod whose mod.toml has the table of a known loader
+    /// gets a [loader] on that loader from its newest stable release in the snapshot, and an empty game_min gets
+    /// <see cref="DefaultGameMin"/>.
     /// </summary>
     public static ListingDraft Apply(ListingDraft draft, ListingSource source, ContentIndexSnapshot? snapshot, GameVersion? installedGame)
     {
@@ -24,8 +23,8 @@ public static class ListingPrefill
 
         var root = source.Archive?.Root;
         var loader = draft.Loader;
-        if (source.Archive is { IsCodeMod: true } && loader is null)
-            loader = new ListingLoader(StarMapId, NewestStableVersion(snapshot, StarMapId) ?? string.Empty);
+        if (source.Archive is { IsCodeMod: true, LoaderId: { } loaderId } && loader is null)
+            loader = new ListingLoader(loaderId, NewestStableVersion(snapshot, loaderId) ?? string.Empty);
 
         return draft with
         {

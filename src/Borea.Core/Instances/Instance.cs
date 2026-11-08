@@ -6,7 +6,7 @@ namespace Borea.Core.Instances;
 
 /// <summary>
 /// An isolated set of mods, saves, and configuration
-/// that KSA and StarMap are redirected to at launch via CLA/ENV path substitution.
+/// that KSA and its mod loader are redirected to at launch via CLA/ENV path substitution.
 /// </summary>
 public sealed class Instance
 {

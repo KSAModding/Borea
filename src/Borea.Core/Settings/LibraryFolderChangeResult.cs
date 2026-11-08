@@ -36,7 +36,7 @@ public enum LibraryFolderChangeOutcome
     /// <summary>Both folders hold instances, and Borea does not merge libraries.</summary>
     BothHaveInstances = 13,
 
-    /// <summary>Borea runs the game for an instance, or a KSA or StarMap process runs.</summary>
+    /// <summary>Borea runs the game for an instance, or a KSA or mod loader process runs.</summary>
     GameRunning = 14,
 
     /// <summary>Another Borea App or command runs and would keep using the previous folder.</summary>

@@ -160,8 +160,8 @@ public sealed class LoaderConfigurator : ILoaderConfigurator, ILoaderConfigurati
         string.IsNullOrEmpty(configured) ? null : GameAssemblyOf(HostGamePath(configured, gameDirectory, loaderDirectory), loaderDirectory);
 
     /// <summary>
-    /// The file StarMap loads for a configured value in LoaderConfig.TryLoadConfig, which appends KSA.dll to a folder and
-    /// takes any other value as the file. The loader starts in its own folder, so a relative value is relative to that folder.
+    /// The file a loader loads for a configured value, which is KSA.dll in a folder and the file itself for any other
+    /// value. The loader starts in its own folder, so a relative value is relative to that folder.
     /// Null when the value is absent, empty or no path.
     /// </summary>
     private static string? GameAssemblyOf(string? configured, string loaderDirectory)

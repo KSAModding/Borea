@@ -117,7 +117,7 @@ public sealed class InstallDetector : IInstallDetector
         }
     }
 
-    // StarMap accepts the path of KSA.dll as well as the game folder
+    // a loader can take the path of KSA.dll as well as the game folder
     private static string GameDirectoryOf(string configured) =>
         File.Exists(configured) ? Path.GetDirectoryName(configured) ?? configured : configured;
 

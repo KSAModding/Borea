@@ -5,7 +5,7 @@ public enum SharedModStoreChange
 {
     Saved,
 
-    /// <summary>Borea runs the game for an instance, or a KSA or StarMap process runs.</summary>
+    /// <summary>Borea runs the game for an instance, or a KSA or mod loader process runs.</summary>
     GameRunning,
 
     /// <summary>Another Borea App or command runs and would keep linking to the store.</summary>
