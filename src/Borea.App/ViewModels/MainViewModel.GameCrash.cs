@@ -12,7 +12,8 @@ namespace Borea.App.ViewModels;
 /// <summary>
 /// The toast about a game that closed unexpectedly after its start, shown when
 /// the process of a launch ends with a crash the game recorded, and once at the
-/// start of Borea for a crash of the active instance after its last launch.
+/// start of Borea for a crash of the active instance after its last launch. An
+/// error of the mod loader after the game shut down gets no toast.
 /// </summary>
 public partial class MainViewModel
 {
@@ -80,6 +81,14 @@ public partial class MainViewModel
 
     private async Task ShowCrashAsync(BoreaServices services, Instance instance, GameCrash crash)
     {
+        // the player's session ended normally, so the error of the loader on its way out goes to the log and not to a toast
+        if (crash.AfterShutdown)
+        {
+            services.Log.Write($"Instance {instance.InstanceId}: the mod loader failed after the game shut down. Crash log: {crash.LogPath}. {crash.Exception ?? "No exception in the log."}");
+            await services.GameCrashes.MarkReportedAsync(instance.InstanceId, crash);
+            return;
+        }
+
         var blamed = crash.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, crash.BlamedModId));
         var name = blamed is null ? null : blamed.Metadata.Listing?.Name ?? (await ResolveListingAsync(blamed.ModId))?.Name ?? blamed.ModId;
         Toasts.ShowMessage(ToastKind.Error, () => name is null ? Localization.LaunchGameCrashed : Localization.FormatLaunchGameCrashedBy(name), crash.Exception, new ToastAction(() => Localization.GameLogOpen, () => OpenLogFromToast(crash.LogPath)));

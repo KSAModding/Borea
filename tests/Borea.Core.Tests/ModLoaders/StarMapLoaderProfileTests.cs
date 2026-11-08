@@ -81,6 +81,36 @@ public sealed class StarMapLoaderProfileTests
         Assert.Equal(expected, Profile.StoppedWhileLoaderStarted(output));
     }
 
+    /// <summary>The end of a crash log of StarMap 0.5.3 on KSA 2026.11.10.5801, when it could not remove its instance path patch.</summary>
+    internal static readonly string[] StarMapShutdownCrash =
+    [
+        "Shutting down application",
+        "[AFC] Unloaded.",
+        "Unhandled exception System.Exception: Cannot assign method return type System.String to __result type  for method static System.String KSA.Constants::get_DocumentsFolderPath()",
+        "   at HarmonyLib.PatchProcessor.Unpatch(MethodInfo patch)",
+        "   at StarMap.Core.Patches.StarMapPatches.Dispose()",
+        "   at StarMap.Core.StarMapCore.Dispose()",
+        "   at StarMap.GameSurveyer.Dispose()",
+        "   at StarMap.Program.Main(String[] args)",
+        "   at StarMap.Program.<Main>(String[] args).",
+    ];
+
+    public static TheoryData<string[], bool> ShutdownOutputs => new()
+    {
+        { StarMapShutdownCrash, true },
+        { ["Unhandled exception System.NullReferenceException: Object reference not set.", "   at KSA.ConfigOnStartPopup.SetVehicles()", "   at StarMap.GameSurveyer.RunGame()", "   at StarMap.Program.Main(String[] args)."], false },
+        { ["Could not load file or assembly 'Brutal.Core.Numerics'.", .. LoaderStartFrames, "   at StarMap.GameSurveyer.Dispose()"], false },
+        { ["Shutting down application"], false },
+    };
+
+    [Theory]
+    [MemberData(nameof(ShutdownOutputs))]
+    public void FailedAfterTheGameShutDown_NeedsTheDisposeFrameAndNoFrameOfTheSession(string[] crashLog, bool expected)
+    {
+        Assert.Equal(expected, Profile.FailedAfterTheGameShutDown(crashLog));
+        Assert.False(NeutralLoaderProfile.Instance.FailedAfterTheGameShutDown(crashLog));
+    }
+
     [Fact]
     public void StoppedWhileLoadingMods_FrameOfTheRenamedModsLoader_Counts()
     {

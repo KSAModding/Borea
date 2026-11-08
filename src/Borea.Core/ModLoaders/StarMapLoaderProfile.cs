@@ -86,6 +86,27 @@ public sealed partial class StarMapLoaderProfile : ILoaderProfile
     }
 
     /// <summary>
+    /// Whether StarMap failed in its own clean up after the game had shut down. Program.Main disposes the GameSurveyer
+    /// when GameSurveyer.RunGame returns, so an error with a GameSurveyer.Dispose frame and without a frame of RunGame
+    /// or TryLoadCoreAndGame came after the game's session ended, for example when StarMapPatches.Dispose cannot
+    /// remove a patch.
+    /// </summary>
+    public bool FailedAfterTheGameShutDown(IReadOnlyList<string> crashLog)
+    {
+        ArgumentNullException.ThrowIfNull(crashLog);
+
+        var disposing = false;
+        foreach (var line in crashLog)
+        {
+            if (GameSessionFramePattern().IsMatch(line ?? string.Empty))
+                return false;
+            disposing |= DisposeFramePattern().IsMatch(line ?? string.Empty);
+        }
+
+        return disposing;
+    }
+
+    /// <summary>
     /// The enabled mod StarMap was likely loading when it stopped, or null.
     /// PrepareMods loads the mods in manifest order and reports each one it
     /// loaded, skipped or delayed, so the first code mod it did not report is the
@@ -175,6 +196,12 @@ public sealed partial class StarMapLoaderProfile : ILoaderProfile
 
     [GeneratedRegex(@"^\s*at\s+StarMap\.GameSurveyer\.TryLoadCoreAndGame\b")]
     private static partial Regex LoaderStartFramePattern();
+
+    [GeneratedRegex(@"^\s*at\s+StarMap\.GameSurveyer\.Dispose\b")]
+    private static partial Regex DisposeFramePattern();
+
+    [GeneratedRegex(@"^\s*at\s+StarMap\.GameSurveyer\.(?:RunGame|TryLoadCoreAndGame)\b")]
+    private static partial Regex GameSessionFramePattern();
 
     [GeneratedRegex(@"^\s*at\s+StarMap\.Core\.ModRepository\.RuntimeMod\.TryCreateMod\b")]
     private static partial Regex TryCreateModFramePattern();
