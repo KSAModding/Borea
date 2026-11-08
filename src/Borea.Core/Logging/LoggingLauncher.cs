@@ -76,7 +76,9 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
             return exit;
 
         var exitCode = LoaderExitCode.Describe(code, OperatingSystem.IsWindows());
-        _log.Write(exit.Crash is { } crash
+        _log.Write(exit.Crash is { AfterShutdown: true } shutdown
+            ? $"The game of instance {instance.InstanceId} closed, and then the mod loader failed in its clean up with exit code {exitCode}. Crash log: {shutdown.LogPath}. {shutdown.Exception ?? "No exception in the log."}"
+            : exit.Crash is { } crash
             ? $"The game of instance {instance.InstanceId} crashed with exit code {exitCode}, {(crash.BlamedModId is { } modId ? $"blames {modId}" : "no mod named")}. Crash log: {crash.LogPath}. {crash.Exception ?? "No exception in the log."}"
             : $"The game of instance {instance.InstanceId} closed with exit code {exitCode}.");
         return exit;

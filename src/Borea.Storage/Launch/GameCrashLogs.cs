@@ -1,6 +1,7 @@
 using System.Text;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Storage.Instances;
 
 namespace Borea.Storage.Launch;
@@ -26,12 +27,15 @@ internal static class GameCrashLogs
             return null;
         }
 
-        var blamed = ModBlame.Find(instance, modsFolder, GameCrashReport.AssemblyNames(lines));
+        // a crash log does not say which loader started the game, so every known loader is asked
+        var afterShutdown = LoaderProfiles.Known.All.Any(profile => profile.FailedAfterTheGameShutDown(lines));
+        var blamed = afterShutdown ? null : ModBlame.Find(instance, modsFolder, GameCrashReport.AssemblyNames(lines));
         return new GameCrash(
             log.File.FullName,
             log.Run,
             new DateTimeOffset(log.File.LastWriteTimeUtc, TimeSpan.Zero),
             GameCrashReport.ExceptionText(lines),
-            blamed?.ModId);
+            blamed?.ModId,
+            afterShutdown);
     }
 }

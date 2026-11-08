@@ -156,6 +156,32 @@ public sealed class GameCrashToastTests
     }
 
     [Fact]
+    public async Task Play_LoaderFailsAfterTheGameShutDown_ShowsNothingAndMarksTheRun()
+    {
+        var (harness, starter, instance) = await PlayAsync();
+        using var _ = harness;
+
+        WriteCrashLog(harness, instance.InstanceId, AbnormalExit(GameStarter.ProcessId), lines: StarMapShutdownCrash);
+        starter.Exit(UnhandledException);
+        await harness.ViewModel.WhenGameExitCheckedAsync().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Empty(harness.ViewModel.Toasts.Items);
+        Assert.Null(await harness.Services.GameCrashes.GetUnreportedAsync(instance, DateTimeOffset.MinValue));
+    }
+
+    /// <summary>The end of a crash log of StarMap 0.5.3, which fails to remove a patch after the game shut down.</summary>
+    private static readonly string[] StarMapShutdownCrash =
+    [
+        "[Brutal.Monitor] the most recent 113 log lines - full history in KittenSpaceAgency.260926-122536.4244.log",
+        "Shutting down application",
+        "Unhandled exception System.Exception: Cannot assign method return type System.String to __result type  for method static System.String KSA.Constants::get_DocumentsFolderPath()",
+        "   at HarmonyLib.Harmony.Unpatch(MethodBase original, MethodInfo patch)",
+        "   at StarMap.Core.Patches.StarMapPatches.Dispose()",
+        "   at StarMap.GameSurveyer.Dispose()",
+        "   at StarMap.Program.Main(String[] args).",
+    ];
+
+    [Fact]
     public async Task Start_CrashLogOlderThanTheLastLaunch_ShowsNothing()
     {
         using var harness = await StartAfterACrashAsync(AbnormalExit(43512), DateTime.UtcNow.AddHours(-2));

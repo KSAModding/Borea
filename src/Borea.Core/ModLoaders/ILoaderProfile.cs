@@ -45,6 +45,12 @@ public interface ILoaderProfile
     /// <summary>Whether the loader stopped while it started itself, before it loaded a mod.</summary>
     bool StoppedWhileLoaderStarted(IEnumerable<string> output);
 
+    /// <summary>
+    /// Whether the error in a crash log of the game came from the loader's own clean up after the game had shut down,
+    /// so that the player's session ended as it should and only the loader failed on its way out.
+    /// </summary>
+    bool FailedAfterTheGameShutDown(IReadOnlyList<string> crashLog);
+
     /// <summary>The enabled mod the loader was likely loading when it stopped, or null.</summary>
     /// <param name="isWholeOutput">Whether the output holds every line the loader wrote, because none was cut from its start.</param>
     string? LikelyLoadingMod(IReadOnlyList<string> output, IReadOnlyList<LoadOrderMod> enabledMods, bool isWholeOutput = false);

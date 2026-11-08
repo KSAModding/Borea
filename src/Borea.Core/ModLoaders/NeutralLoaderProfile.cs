@@ -34,5 +34,7 @@ public sealed class NeutralLoaderProfile : ILoaderProfile
 
     public bool StoppedWhileLoaderStarted(IEnumerable<string> output) => false;
 
+    public bool FailedAfterTheGameShutDown(IReadOnlyList<string> crashLog) => false;
+
     public string? LikelyLoadingMod(IReadOnlyList<string> output, IReadOnlyList<LoadOrderMod> enabledMods, bool isWholeOutput = false) => null;
 }

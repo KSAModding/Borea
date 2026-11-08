@@ -6,4 +6,5 @@ namespace Borea.Core.Launch;
 /// <param name="WrittenAt">When the game wrote the crash log.</param>
 /// <param name="Exception">The type and message of the exception that ended the game, or null when the log holds none.</param>
 /// <param name="BlamedModId">The installed mod whose assembly the exception names, or null.</param>
-public sealed record GameCrash(string LogPath, string Run, DateTimeOffset WrittenAt, string? Exception, string? BlamedModId);
+/// <param name="AfterShutdown">True when the error came from the mod loader's clean up after the game had shut down, so the player's session ended normally.</param>
+public sealed record GameCrash(string LogPath, string Run, DateTimeOffset WrittenAt, string? Exception, string? BlamedModId, bool AfterShutdown = false);
