@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace Borea.Storage.Preview.Ksa;
 
@@ -59,6 +60,14 @@ internal readonly record struct KsaTransform(Vector3? Position, Vector3? Rotatio
         }
 
         return new KsaTransform(position, rotation, scale);
+    }
+
+    /// <inheritdoc cref="Parse(XmlReader)"/>
+    public static KsaTransform Parse(XElement element)
+    {
+        using var reader = element.CreateReader();
+        reader.MoveToContent();
+        return Parse(reader);
     }
 
     /// <summary>
@@ -122,9 +131,11 @@ internal readonly record struct KsaTransform(Vector3? Position, Vector3? Rotatio
     public static Vector3 ReadVector(XmlReader reader) =>
         new(ReadComponent(reader, KsaPartSchema.X), ReadComponent(reader, KsaPartSchema.Y), ReadComponent(reader, KsaPartSchema.Z));
 
-    private static float ReadComponent(XmlReader reader, string name)
-    {
-        var text = reader.GetAttribute(name);
-        return text is null ? 0f : (float)XmlConvert.ToDouble(text);
-    }
+    /// <inheritdoc cref="ReadVector(XmlReader)"/>
+    public static Vector3 ReadVector(XElement element) =>
+        new(ReadComponent(element.Attribute(KsaPartSchema.X)?.Value), ReadComponent(element.Attribute(KsaPartSchema.Y)?.Value), ReadComponent(element.Attribute(KsaPartSchema.Z)?.Value));
+
+    private static float ReadComponent(XmlReader reader, string name) => ReadComponent(reader.GetAttribute(name));
+
+    private static float ReadComponent(string? text) => text is null ? 0f : (float)XmlConvert.ToDouble(text);
 }

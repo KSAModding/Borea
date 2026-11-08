@@ -68,7 +68,7 @@ internal sealed class PartTemplateData
     }
 
     /// <summary>
-    /// Merges a GameData into this item for the parts the preview draws.
+    /// Merges a PartGameData or SubPartGameData of the older layout into this item for the parts the preview draws.
     /// A subpart instance replaces the present Transform components of the first instance with the same Id, and is
     /// appended otherwise. The render models and the fuel ports are appended. A connector is appended only when no
     /// connector has its Id, because the game then only merges its Flags and Capabilities, which the preview does not need.
@@ -105,14 +105,17 @@ internal sealed class PartTemplateData
 }
 
 /// <summary>
-/// A SubPart element inside a part template. <paramref name="Transform"/> is null when the element has no Transform,
-/// which the game keeps apart from an empty Transform.
+/// A placed subpart of a template: a SubPart item of SubParts, whose Key is <paramref name="Id"/> and whose Ref is
+/// <paramref name="InstanceOf"/>, or a SubPart element with Id and InstanceOf in the older layout.
+/// <paramref name="Transform"/> is null when the element has no Transform, which the game keeps apart from an empty
+/// Transform.
 /// </summary>
 internal sealed record SubPartInstanceData(string Id, string InstanceOf, KsaTransform? Transform);
 
 /// <summary>
 /// One PartModel, PartModelDynamic or PartModelGlass element. <paramref name="MaterialKey"/> is the Id of the
 /// material, the generated key of an inline material without an Id, or null when the model names no material.
+/// <paramref name="ModelId"/> is the Key of the model, or its Id in the older layout.
 /// <paramref name="Internal"/> and <paramref name="ShadowProxy"/> can only be true for a PartModel, because only
 /// PartModelModule.Template has the Internal element and the RaytracingMode value ShadowProxy.
 /// </summary>
@@ -141,9 +144,9 @@ internal sealed record FuelPortData(string? ConnectorSubPartId, Vector3 Anchor, 
 internal readonly record struct PartExtents(Vector3 Min, Vector3 Max);
 
 /// <summary>
-/// One PbrMaterial with textures, from the top level of an asset file or inline in a render model. A texture is null
-/// when the material does not name it by a path. <paramref name="Normal"/> is the path of the Normal element, which
-/// PbrMaterialReference.NormalReference reads as a TexturePowerReference.
+/// One PbrMaterial with textures, from the top level of an asset file or, in the older layout, inline in a render
+/// model. A texture is null when the material does not name it, or names a Texture asset that is not there.
+/// <paramref name="Normal"/> is the file of the Normal element (PbrMaterialReference.NormalReference).
 /// </summary>
 internal sealed record MaterialData(string Key, PreviewAssetRef? Diffuse, PreviewAssetRef? AoRoughMetal, PreviewAssetRef? Normal);
 
@@ -155,7 +158,7 @@ internal enum MeshFileKind
 }
 
 /// <summary>
-/// A top-level MeshAtlas or MeshFile element. <paramref name="File"/> is resolved against the declaring mod.
+/// A top-level MeshAtlas or MeshFile row. <paramref name="File"/> is resolved against the declaring mod.
 /// <paramref name="Id"/> is the Id attribute, which names the mesh of a MeshFile.
 /// </summary>
 internal sealed record MeshFileDeclaration(MeshFileKind Kind, PreviewAssetRef File, string? Id, bool HostOnly);
