@@ -13,9 +13,9 @@
       },
       "Tomlyn": {
         "type": "Direct",
-        "requested": "[2.10.2, )",
-        "resolved": "2.10.2",
-        "contentHash": "phQ8NSO4T9BDJu5hwmWcBA0rj2u1MgwY5YtmRqf4GOkPfo2Gc1POTpspUY09XvbT6Sr1y/X1Aeq1NLUARMLFlQ=="
+        "requested": "[2.11.1, )",
+        "resolved": "2.11.1",
+        "contentHash": "ePC5kPidQngNoOi7jCDeRo5hbXS5uV3o4CAzz5QaxkDo1IhgM0QtGinuI03tqj8/Dl/FigRG4gRiatUsV3pcrA=="
       },
       "Humanizer.Core": {
         "type": "Transitive",

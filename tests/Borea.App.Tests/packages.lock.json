@@ -327,8 +327,8 @@
       },
       "Tomlyn": {
         "type": "Transitive",
-        "resolved": "2.10.2",
-        "contentHash": "phQ8NSO4T9BDJu5hwmWcBA0rj2u1MgwY5YtmRqf4GOkPfo2Gc1POTpspUY09XvbT6Sr1y/X1Aeq1NLUARMLFlQ=="
+        "resolved": "2.11.1",
+        "contentHash": "ePC5kPidQngNoOi7jCDeRo5hbXS5uV3o4CAzz5QaxkDo1IhgM0QtGinuI03tqj8/Dl/FigRG4gRiatUsV3pcrA=="
       },
       "xunit.abstractions": {
         "type": "Transitive",
@@ -429,7 +429,7 @@
         "dependencies": {
           "Borea.Core": "[1.0.0, )",
           "JsonSchema.Net": "[9.6.0, )",
-          "Tomlyn": "[2.10.2, )"
+          "Tomlyn": "[2.11.1, )"
         }
       }
     }
