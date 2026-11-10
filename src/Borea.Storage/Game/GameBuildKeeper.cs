@@ -145,11 +145,10 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         return Plan(configured, version, cancellationToken);
     }
 
-    // an instance must be able to start the copy, so the folder needs the executable of this system, and macOS, which
-    // starts the game only through a wrapper app, has none
+    // an instance must be able to start the copy, so the folder needs the executable of this system
     private KeepPlan PlanFolder(string folder, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(folder) || !Path.IsPathFullyQualified(folder)
+        if (_host == OsPlatform.MacOs || string.IsNullOrWhiteSpace(folder) || !Path.IsPathFullyQualified(folder)
             || GameExecutable.FileName(_host) is not { } executable
             || !File.Exists(Path.Combine(folder, executable))
             || InstalledGameVersionProvider.Read(folder)?.Version is not { } version)
@@ -190,11 +189,14 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     // the wrapper comes first, because a macOS wrapper app also holds the Windows build
     private GameBuildKeepRefusal GameFolderRefusal(string gameDirectory)
     {
-        if (_wine.Find(gameDirectory)?.Wrapper is not null)
+        if (_wine.Find(gameDirectory)?.Wrapper is not null || (_host == OsPlatform.MacOs && IsInApp(gameDirectory)))
             return GameBuildKeepRefusal.WineWrapper;
 
         return WindowsBuildOnHost.IsIn(_host, gameDirectory) ? GameBuildKeepRefusal.NotAGame : GameBuildKeepRefusal.None;
     }
+
+    private static bool IsInApp(string folder) =>
+        folder.Split(Path.DirectorySeparatorChar).Any(name => name.EndsWith(".app", StringComparison.OrdinalIgnoreCase));
 
     public async Task<GameBuildChangeRefusal> UseCurrentBuildAsync(Guid instanceId, CancellationToken cancellationToken)
     {

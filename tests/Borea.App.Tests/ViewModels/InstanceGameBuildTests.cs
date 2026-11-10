@@ -703,7 +703,7 @@ public sealed class InstanceGameBuildTests
 
         viewModel.CancelKeepGameBuildCommand.Execute(null);
 
-        // macOS has no executable of its own, so GameBuildKeeper.PlanFolder refuses a chosen folder there
+        // GameBuildKeeper refuses every folder on macOS
         if (OperatingSystem.IsMacOS())
             return;
 

@@ -860,9 +860,7 @@ public sealed class LaunchFailureTests
 
         await viewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
 
-        // Borea knows no game executable on macOS, so nothing starts there
-        Assert.Equal(OperatingSystem.IsMacOS() ? 0 : 1, starter.Plans.Count);
-        Assert.All(starter.Plans, plan => Assert.Empty(plan.Arguments));
+        Assert.Empty(Assert.Single(starter.Plans).Arguments);
     }
 
     [Fact]

@@ -4843,7 +4843,7 @@
     <value>Der Ordner, den du gewählt hast, enthält kein KSA, das Borea auf diesem System starten kann. Wähle einen anderen Ordner, der unter Windows die KSA.exe und unter Linux die Datei KSA enthält.</value>
   </data>
   <data name="KeepGameBuildWineWrapper" xml:space="preserve">
-    <value>Das Spiel liegt in einer Wine-Wrapper-App, die keine Kopie außerhalb des Wrappers starten kann. Borea behält diesen Build nicht.</value>
+    <value>Das Spiel liegt in einer App, die keine Kopie außerhalb der App starten kann. Borea behält diesen Build nicht.</value>
   </data>
   <data name="KeepGameBuildWindowsBuild" xml:space="preserve">
     <value>Der Spielordner enthält den Windows-Build von KSA, den Borea auf diesem System noch nicht starten kann, darum behält Borea ihn nicht.</value>

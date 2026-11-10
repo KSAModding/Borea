@@ -10,7 +10,8 @@ public sealed class GameExecutableTests
     [Theory]
     [InlineData(OsPlatform.Windows, "KSA.exe")]
     [InlineData(OsPlatform.Linux, "KSA")]
-    [InlineData(OsPlatform.MacOs, null)]
+    [InlineData(OsPlatform.MacOs, "KSA")]
+    [InlineData((OsPlatform)99, null)]
     public void FileName_Platform_IsTheGameFileOrNullWhenNoneIsKnown(OsPlatform platform, string? expected)
     {
         Assert.Equal(expected, GameExecutable.FileName(platform));
