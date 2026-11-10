@@ -11,7 +11,8 @@ namespace Borea.Storage.Game;
 /// deeper and never inside an app. It reads the uninstall entries that
 /// <see cref="WindowsInstallCandidateSource"/> reads on Windows from the
 /// registry files of each prefix, maps their folders to the host, and writes
-/// nothing.
+/// nothing. It also finds the game in the Contents/Resources folder of an app,
+/// as in the macOS port.
 /// </summary>
 public sealed class WrapperInstallCandidateSource : IInstallCandidateSource
 {
@@ -45,7 +46,7 @@ public sealed class WrapperInstallCandidateSource : IInstallCandidateSource
         _wine = wine ?? throw new ArgumentNullException(nameof(wine));
     }
 
-    public IReadOnlyList<string> GetGameDirectories() => InPrefixes().GetGameDirectories();
+    public IReadOnlyList<string> GetGameDirectories() => [.. InPrefixes().GetGameDirectories(), .. PortGameFolders()];
 
     public IReadOnlyList<string> GetLoaderDirectories() => InPrefixes().GetLoaderDirectories();
 
@@ -91,22 +92,14 @@ public sealed class WrapperInstallCandidateSource : IInstallCandidateSource
         }
     }
 
-    private IEnumerable<string> Prefixes()
-    {
-        foreach (var folder in _applicationFolders)
-        {
-            foreach (var entry in Subfolders(folder))
-            {
-                var apps = IsApp(entry) ? [entry] : Subfolders(entry).Where(IsApp);
-                foreach (var app in apps)
-                {
-                    var prefix = Path.Combine(app, "Contents", "SharedSupport", "prefix");
-                    if (File.Exists(Path.Combine(prefix, "system.reg")))
-                        yield return prefix;
-                }
-            }
-        }
-    }
+    private IEnumerable<string> Prefixes() =>
+        Apps().Select(app => Path.Combine(app, "Contents", "SharedSupport", "prefix")).Where(prefix => File.Exists(Path.Combine(prefix, "system.reg")));
+
+    private IEnumerable<string> PortGameFolders() =>
+        Apps().Select(app => Path.Combine(app, "Contents", "Resources")).Where(folder => File.Exists(Path.Combine(folder, "KSA.dll")));
+
+    private IEnumerable<string> Apps() =>
+        _applicationFolders.SelectMany(Subfolders).SelectMany(entry => IsApp(entry) ? [entry] : Subfolders(entry).Where(IsApp));
 
     private static bool IsApp(string folder) => folder.EndsWith(".app", StringComparison.OrdinalIgnoreCase);
 

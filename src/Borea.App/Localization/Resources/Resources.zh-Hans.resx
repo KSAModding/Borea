@@ -4837,7 +4837,7 @@
     <value>所选文件夹中没有 Borea 可在此系统上启动的 KSA。请选择其他文件夹，Windows 上应包含 KSA.exe，Linux 上应包含 KSA 文件。</value>
   </data>
   <data name="KeepGameBuildWineWrapper" xml:space="preserve">
-    <value>游戏位于 Wine 封装应用中，无法启动封装外的副本。Borea 不会保留此构建。</value>
+    <value>游戏位于应用中，无法启动应用外的副本。Borea 不会保留此构建。</value>
   </data>
   <data name="KeepGameBuildWindowsBuild" xml:space="preserve">
     <value>游戏文件夹中存放的是 Windows 版 KSA 构建，Borea 尚无法在此系统上启动它，因此不会保留此构建。</value>

@@ -266,7 +266,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
             if (entry?.Runtime == LoaderRuntime.Dotnet)
             {
-                var host = _findDotnet();
+                var host = MacAppHost(gameDirectory) ?? _findDotnet();
                 if (host is null)
                 {
                     return LaunchResult.Failed(
@@ -331,6 +331,16 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 process.Id,
                 $"Started {loader.Name} for instance '{instance.Name}'.");
         }
+    }
+
+    // the KSA of the macOS port runs the .dll it gets first with the game's runtime; the Linux app host runs only the game
+    private string? MacAppHost(string? gameDirectory)
+    {
+        if (_platform != OsPlatform.MacOs || string.IsNullOrWhiteSpace(gameDirectory) || !Path.IsPathFullyQualified(gameDirectory))
+            return null;
+
+        var host = Path.Combine(Path.GetFullPath(gameDirectory), GameExecutable.FileName(OsPlatform.MacOs)!);
+        return File.Exists(host) ? host : null;
     }
 
     /// <summary>

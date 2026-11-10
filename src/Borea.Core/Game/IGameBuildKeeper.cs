@@ -44,7 +44,7 @@ public interface IGameBuildKeeper
 
     /// <summary>
     /// Why a keep of the game folder of the settings is refused before any scan: <see cref="GameBuildKeepRefusal.WineWrapper"/>
-    /// for a Wine wrapper app, <see cref="GameBuildKeepRefusal.NotAGame"/> for a Windows build that this system cannot start,
+    /// for a game inside a macOS app, <see cref="GameBuildKeepRefusal.NotAGame"/> for a Windows build that this system cannot start,
     /// else <see cref="GameBuildKeepRefusal.None"/>. It only reads, also when the settings name no game folder.
     /// </summary>
     GameBuildKeepRefusal CheckGameFolder();
@@ -101,7 +101,7 @@ public enum GameBuildKeepRefusal
     /// <summary>The settings name no game folder, or its KSA.dll gives no version.</summary>
     NoGame = 2,
 
-    /// <summary>The game is in a macOS Wine wrapper, which cannot start a copy outside its prefix.</summary>
+    /// <summary>The game is inside a macOS app, a Wine wrapper or the port, which cannot start a copy outside it.</summary>
     WineWrapper = 3,
 
     GameRunning = 4,

@@ -33,6 +33,7 @@ public sealed class SharedProfileLauncherTests : IDisposable
     [Theory]
     [InlineData(OsPlatform.Windows, "KSA.exe")]
     [InlineData(OsPlatform.Linux, "KSA")]
+    [InlineData(OsPlatform.MacOs, "KSA")]
     public void Launch_BuildOfTheSystem_StartsItsExecutableInTheGameDirectoryWithNothingAdded(OsPlatform platform, string executable)
     {
         Directory.CreateDirectory(GameDirectory);
@@ -165,17 +166,15 @@ public sealed class SharedProfileLauncherTests : IDisposable
         Assert.Empty(_starter.Plans);
     }
 
-    [Theory]
-    [InlineData(OsPlatform.MacOs, "on macOS")]
-    [InlineData(null, "on this operating system")]
-    public void Launch_PlatformWithoutAKnownExecutable_StartsNothing(OsPlatform? platform, string name)
+    [Fact]
+    public void Launch_PlatformWithoutAKnownExecutable_StartsNothing()
     {
         Directory.CreateDirectory(GameDirectory);
 
-        var result = new SharedProfileLauncher(_paths, _starter, platform).Launch();
+        var result = new SharedProfileLauncher(_paths, _starter, platform: null).Launch();
 
         Assert.Equal(SharedProfileLaunchOutcome.UnknownExecutable, result.Outcome);
-        Assert.Contains(name, result.Message);
+        Assert.Contains("on this operating system", result.Message);
         Assert.Null(result.Plan);
         Assert.Empty(_starter.Plans);
     }
@@ -183,7 +182,7 @@ public sealed class SharedProfileLauncherTests : IDisposable
     [Fact]
     public void Launch_UnknownExecutableAndNoGameDirectory_ReportsThePlatformFirst()
     {
-        var launcher = new SharedProfileLauncher(new TestGamePathProvider(_tempRoot, hasGameDirectory: false), _starter, OsPlatform.MacOs);
+        var launcher = new SharedProfileLauncher(new TestGamePathProvider(_tempRoot, hasGameDirectory: false), _starter, platform: null);
 
         var result = launcher.Launch();
 

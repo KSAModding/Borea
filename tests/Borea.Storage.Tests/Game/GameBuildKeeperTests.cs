@@ -235,6 +235,22 @@ public sealed class GameBuildKeeperTests : IDisposable
         Assert.Equal(refusal, keeper.Check(instance, CancellationToken.None).Refusal);
     }
 
+    [Theory]
+    [InlineData(OsPlatform.MacOs, GameBuildKeepRefusal.WineWrapper)]
+    [InlineData(OsPlatform.Linux, GameBuildKeepRefusal.None)]
+    public async Task CheckGameFolder_GameInsideAnApp_RefusesTheKeepOnMacOs(OsPlatform host, GameBuildKeepRefusal refusal)
+    {
+        var instance = await CreateInstanceAsync("Career");
+        var game = Path.Combine(_tempRoot, "Kitten Space Agency.app", "Contents", "Resources");
+        WriteGame(game);
+        File.WriteAllText(Path.Combine(game, "KSA"), "app host");
+        var paths = new GamePathProvider(game, new Dictionary<string, string>(), Path.Combine(_tempRoot, "Borea"), libraryFolder: Path.Combine(_tempRoot, "Library"));
+        var keeper = Keeper(paths: paths, host: host);
+
+        Assert.Equal(refusal, keeper.CheckGameFolder());
+        Assert.Equal(refusal, keeper.Check(instance, CancellationToken.None).Refusal);
+    }
+
     [Fact]
     public async Task UseCurrentBuildAsync_ClearsTheBuildAndKeepsTheSaves()
     {
@@ -448,6 +464,21 @@ public sealed class GameBuildKeeperTests : IDisposable
         else if (brokenFile == "KSA.dll")
             File.WriteAllText(Path.Combine(PlayerFolder, "KSA.dll"), "not an assembly");
         var keeper = Keeper(host: host);
+
+        var check = keeper.CheckFolder(PlayerFolder, CancellationToken.None);
+        var result = await keeper.KeepFolderAsync(PlayerFolder, FixtureVersion, null, CancellationToken.None);
+
+        Assert.Equal(GameBuildKeepRefusal.NotAGame, check.Refusal);
+        Assert.Equal(GameBuildKeepRefusal.NotAGame, result.Refusal);
+        Assert.False(Directory.Exists(GameBuilds));
+    }
+
+    [Fact]
+    public async Task KeepFolderAsync_FolderWithTheAppHostOnMacOs_IsRefused()
+    {
+        WriteGame(PlayerFolder);
+        File.WriteAllText(Path.Combine(PlayerFolder, "KSA"), "app host");
+        var keeper = Keeper(host: OsPlatform.MacOs);
 
         var check = keeper.CheckFolder(PlayerFolder, CancellationToken.None);
         var result = await keeper.KeepFolderAsync(PlayerFolder, FixtureVersion, null, CancellationToken.None);

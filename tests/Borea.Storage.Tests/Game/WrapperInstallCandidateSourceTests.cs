@@ -43,6 +43,20 @@ public sealed class WrapperInstallCandidateSourceTests : IDisposable
         Assert.Equal([GameDirectory], Source().GetGameDirectories());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GetGameDirectories_FindsTheGameInsideAnApp(bool inSubfolder)
+    {
+        var folder = inSubfolder ? Path.Combine(Applications, "Games") : Applications;
+        var resources = Path.Combine(folder, "Kitten Space Agency.app", "Contents", "Resources");
+        Directory.CreateDirectory(resources);
+        File.WriteAllBytes(Path.Combine(resources, "KSA.dll"), []);
+        Directory.CreateDirectory(Path.Combine(Applications, "Other.app", "Contents", "Resources"));
+
+        Assert.Equal([resources], Source().GetGameDirectories());
+    }
+
     [Fact]
     public void GetLoaderDirectories_ReadsTheStarMapEntriesAndTheProgramFilesFoldersAsHostPaths()
     {

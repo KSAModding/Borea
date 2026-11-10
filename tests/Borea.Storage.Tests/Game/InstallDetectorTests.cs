@@ -87,6 +87,7 @@ public sealed class InstallDetectorTests : IDisposable
 
     [Theory]
     [InlineData(OsPlatform.Linux, true)]
+    [InlineData(OsPlatform.MacOs, true)]
     [InlineData(OsPlatform.Windows, false)]
     public async Task DetectAsync_NativeLinuxBuild_IsFoundWhereItsProgramStarts(OsPlatform host, bool expected)
     {

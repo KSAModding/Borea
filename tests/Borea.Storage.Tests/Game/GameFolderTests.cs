@@ -76,6 +76,9 @@ public sealed class GameFolderTests : IDisposable
     [InlineData(OsPlatform.Linux, null, false)]
     [InlineData(OsPlatform.Windows, "KSA.exe", true)]
     [InlineData(OsPlatform.Windows, "KSA", false)]
+    [InlineData(OsPlatform.MacOs, "KSA", true)]
+    [InlineData(OsPlatform.MacOs, "KSA.exe", true)]
+    [InlineData(OsPlatform.MacOs, null, false)]
     public void FindBelow_NeedsTheProgramFileOfTheBuildNextToKsaDll(OsPlatform host, string? program, bool expected)
     {
         var game = PlaceGame("KSA", program);
