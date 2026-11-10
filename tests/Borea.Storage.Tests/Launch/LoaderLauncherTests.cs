@@ -654,6 +654,45 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(assembly, plan.Arguments[0]);
     }
 
+    [Fact]
+    public void Launch_DotnetEntryOnMacOsWithTheAppHostInTheGameFolder_StartsTheLoaderThroughTheAppHost()
+    {
+        PlaceStarMap();
+        var assembly = PlaceStarMap("StarMap.dll");
+        var game = SettingsGame;
+        File.WriteAllBytes(Path.Combine(PlaceGameAssembly(game), "KSA"), []);
+        var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.MacOs] = new("StarMap.dll", "dotnet") };
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.MacOs, NoDotnetNeeded);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)), ["-given"]);
+
+        Assert.True(result.Started);
+        var plan = Assert.Single(_starter.Plans);
+        Assert.Equal(Path.Combine(game, "KSA"), plan.Executable);
+        Assert.Equal(new[] { assembly, "-InstancePath", instanceRoot, "-given" }, plan.Arguments);
+        Assert.Equal(instanceRoot, plan.EnvironmentVariables["STARMAP_INSTANCE_PATH"]);
+        Assert.Equal(Path.GetFullPath(StarMapDirectory), plan.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Launch_DotnetEntryOnLinuxWithTheAppHostInTheGameFolder_StillStartsDotnet()
+    {
+        PlaceStarMap();
+        var assembly = PlaceStarMap("StarMap.dll");
+        var dotnet = PlaceDotnet();
+        File.WriteAllBytes(Path.Combine(PlaceGameAssembly(_paths.GetGameDirectoryPath()!), "KSA"), []);
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "dotnet") };
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, () => dotnet);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
+
+        Assert.True(result.Started);
+        var plan = Assert.Single(_starter.Plans);
+        Assert.Equal(dotnet, plan.Executable);
+        Assert.Equal(assembly, plan.Arguments[0]);
+    }
+
     /// <summary>A probe that finds a wrapper around the game folder, which holds no game build.</summary>
     private FakeWineProbe PlaceWrapperProbeWithoutTheGame()
     {
