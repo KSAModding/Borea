@@ -55,6 +55,17 @@ public sealed class InstanceLoaderResolverTests
     }
 
     [Fact]
+    public async Task AutomaticInstanceWithoutModsAndNothingInstalled_OffersTheDefaultLoaderBeforeOneWithAnEarlierId()
+    {
+        var held = new ListingsRepository(() => [Listing("Oxidizer"), Listing()]);
+
+        var resolution = await InstanceLoaderResolver.ResolveAsync(InstanceWith(), [], held, held, Releases, ReleaseChannel.Stable, Build5602);
+
+        Assert.Equal(LaunchLoaderFailure.NoLoaderTakesInstance, resolution.Choice.Failure);
+        Assert.Equal("StarMap", resolution.Loader?.ModId);
+    }
+
+    [Fact]
     public async Task StoredLoaderId_IsUsedAsTheGivenLoader()
     {
         var instance = InstanceWith(NeedsStarMap("flight-tools", "0.4.0"));

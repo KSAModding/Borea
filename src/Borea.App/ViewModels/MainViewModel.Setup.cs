@@ -237,7 +237,8 @@ public partial class MainViewModel
         foreach (var loader in _listings.Where(item => item.Type == ContentType.ModLoader))
             Loaders.Add(loader);
         OnPropertyChanged(nameof(ShowLoaderChoice));
-        SelectedLoader = Loaders.FirstOrDefault(loader => loaderId is not null && ModIds.Equals(loader.ModId, loaderId)) ?? Loaders.FirstOrDefault();
+        SelectedLoader = Loaders.FirstOrDefault(loader => loaderId is not null && ModIds.Equals(loader.ModId, loaderId))
+            ?? LoaderProfiles.DefaultFirst(Loaders, loader => loader.ModId).FirstOrDefault();
         await DetectInstallsAsync(_services);
         await CheckGameFolderAsync(GameDirectoryInput);
         await RefreshLoaderStateAsync();

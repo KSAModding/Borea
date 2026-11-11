@@ -64,10 +64,10 @@ public static class InstanceLoaderResolver
             LaunchLoaderFailure.None => choice.Loader!.ModId,
             LaunchLoaderFailure.NeededLoaderNotInstalled or LaunchLoaderFailure.GivenLoaderNotInstalled => choice.LoaderIds[0],
 
-            // the install prompt offers the first loader listing by id that can take an instance, so this does the same
-            LaunchLoaderFailure.NoLoaderTakesInstance => listings
-                .Where(listing => listing.Type == ContentType.ModLoader && listing.Provides?.Instance is not null)
-                .OrderBy(listing => listing.ModId, ModIds.Comparer)
+            // the loader setting offers the loader listings that can take an instance with the default loader first, so this offers the same one
+            LaunchLoaderFailure.NoLoaderTakesInstance => LoaderProfiles.DefaultFirst(
+                    listings.Where(listing => listing.Type == ContentType.ModLoader && listing.Provides?.Instance is not null),
+                    listing => listing.ModId)
                 .FirstOrDefault()?.ModId,
             _ => null,
         };

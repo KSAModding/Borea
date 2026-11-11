@@ -17,7 +17,10 @@ public sealed partial class StarMapLoaderProfile : ILoaderProfile
 
     private const string GameNotFoundReport = "Could not find KSA.dll";
 
-    public string? LoaderId => "StarMap";
+    /// <summary>The content id of StarMap.</summary>
+    public const string Id = "StarMap";
+
+    public string? LoaderId => Id;
 
     public IReadOnlyList<string> CodeNamespaces { get; } = ["StarMap"];
 

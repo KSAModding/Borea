@@ -10,6 +10,22 @@ public sealed class LoaderProfiles
     /// <summary>The profiles of the loaders Borea knows beyond their listing.</summary>
     public static LoaderProfiles Known { get; } = new([new StarMapLoaderProfile()]);
 
+    /// <summary>
+    /// The loader that Borea chooses when no mod of an instance names one, because most mods are made for it. A list of
+    /// loaders shows it first.
+    /// </summary>
+    public const string DefaultLoaderId = StarMapLoaderProfile.Id;
+
+    /// <summary>The loaders in the order Borea offers them: the default loader first, then by id.</summary>
+    public static IOrderedEnumerable<T> DefaultFirst<T>(IEnumerable<T> loaders, Func<T, string> idOf)
+    {
+        ArgumentNullException.ThrowIfNull(loaders);
+        ArgumentNullException.ThrowIfNull(idOf);
+        return loaders
+            .OrderBy(loader => !ModIds.Equals(idOf(loader), DefaultLoaderId))
+            .ThenBy(idOf, ModIds.Comparer);
+    }
+
     public LoaderProfiles(IEnumerable<ILoaderProfile> profiles)
     {
         ArgumentNullException.ThrowIfNull(profiles);
