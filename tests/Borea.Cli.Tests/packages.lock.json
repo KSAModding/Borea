@@ -87,8 +87,8 @@
       },
       "System.CommandLine": {
         "type": "Transitive",
-        "resolved": "2.0.14",
-        "contentHash": "15fyVO4aG6poR6IKmhM74zf7PUzaU6FZAGm2d3SQSO9yIyGAeo44e6t9qeKjjaqyMEqYdqcb2G1B0gpLoDU2cA=="
+        "resolved": "2.0.15",
+        "contentHash": "zsnY7Ex2dPmbS/Nrg5RUKJFCEMbHeP9TdzmTJrsNh59mgr8ulba1SHmE1SVgmVqivvr79kV1GAlInC44F4ggEg=="
       },
       "Tomlyn": {
         "type": "Transitive",
@@ -140,7 +140,7 @@
         "dependencies": {
           "Borea.Composition": "[1.0.0, )",
           "Borea.Core": "[1.0.0, )",
-          "System.CommandLine": "[2.0.14, )"
+          "System.CommandLine": "[2.0.15, )"
         }
       },
       "borea.composition": {
