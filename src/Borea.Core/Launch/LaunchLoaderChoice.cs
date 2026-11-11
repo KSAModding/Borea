@@ -67,14 +67,15 @@ public sealed class LaunchLoaderChoice
         if (needed.Count == 1)
             return Installed(needed[0], requiredByMods: true, LaunchLoaderFailure.NeededLoaderNotInstalled);
 
-        var recorded = installations.Keys.Order(ModIds.Comparer).ToList();
+        // when no mod names a loader, the default loader starts the instance if it is installed
+        var recorded = LoaderProfiles.DefaultFirst(installations.Keys, id => id).ToList();
         var takesInstance = recorded
             .Select(Listing)
             .FirstOrDefault(listing => listing?.Provides?.Instance is not null);
         if (takesInstance is not null)
             return new LaunchLoaderChoice(takesInstance, requiredByMods: false, LaunchLoaderFailure.None, [], lacksListing: false);
 
-        var notListed = recorded.Where(id => Listing(id) is null).ToList();
+        var notListed = installations.Keys.Where(id => Listing(id) is null).Order(ModIds.Comparer).ToList();
         if (notListed.Count > 0)
             return Failed(LaunchLoaderFailure.LoaderNotListed, notListed, lacksListing: true);
 

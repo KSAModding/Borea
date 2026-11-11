@@ -140,9 +140,9 @@ public partial class MainViewModel
             var instance = await services.Instances.GetByIdAsync(item.InstanceId)
                 ?? throw new InvalidOperationException(Localization.LaunchInstanceMissing);
             var resolution = await ResolveLaunchLoaderAsync(services, instance);
-            var loaders = resolution.Listings
-                .Where(listing => listing.Type == ContentType.ModLoader && listing.Provides?.Instance is not null)
-                .OrderBy(listing => listing.ModId, ModIds.Comparer)
+            var loaders = LoaderProfiles.DefaultFirst(
+                    resolution.Listings.Where(listing => listing.Type == ContentType.ModLoader && listing.Provides?.Instance is not null),
+                    listing => listing.ModId)
                 .ToList();
             _loaderSetting = new LoaderSettingContext(
                 instance,

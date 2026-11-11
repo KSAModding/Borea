@@ -105,11 +105,22 @@ public sealed class LaunchLoaderChoiceTests
     }
 
     [Fact]
-    public void Choose_NoModNeedsALoaderAndTwoLoadersTakeAnInstance_UsesTheFirstByIdIgnoringCase()
+    public void Choose_NoModNeedsALoaderAndTwoLoadersTakeAnInstance_UsesTheDefaultLoader()
     {
         var instance = InstanceWith();
 
-        var choice = LaunchLoaderChoice.Choose(instance, Recorded("StarMap", "anotherLoader"), [Listing("StarMap"), Listing("anotherLoader")]);
+        var choice = LaunchLoaderChoice.Choose(instance, Recorded("anotherLoader", "StarMap"), [Listing("anotherLoader"), Listing("StarMap")]);
+
+        Assert.Equal("StarMap", choice.Loader?.ModId);
+        Assert.False(choice.RequiredByMods);
+    }
+
+    [Fact]
+    public void Choose_NoModNeedsALoaderAndTwoOtherLoadersTakeAnInstance_UsesTheFirstByIdIgnoringCase()
+    {
+        var instance = InstanceWith();
+
+        var choice = LaunchLoaderChoice.Choose(instance, Recorded("OtherLoader", "anotherLoader"), [Listing("OtherLoader"), Listing("anotherLoader")]);
 
         Assert.Equal("anotherLoader", choice.Loader?.ModId);
         Assert.False(choice.RequiredByMods);
