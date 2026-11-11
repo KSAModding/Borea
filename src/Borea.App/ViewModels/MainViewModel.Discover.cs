@@ -154,8 +154,15 @@ public partial class MainViewModel
     /// <summary>The tab has listings and shows none, which only a search or a filter can cause.</summary>
     public bool ShowsClearSearchAndFilters => !HasDiscoverItems && DiscoverTotal > 0;
 
+    /// <summary>The search text of the shown tab. Each tab keeps its own, so a search for a mod does not hide the vehicles.</summary>
     [ObservableProperty]
     private string _searchText = string.Empty;
+
+    /// <summary>The search text of each tab, so that a tab shows its own search again when the player comes back to it.</summary>
+    private readonly Dictionary<ContentType, string> _searchByTab = [];
+
+    /// <summary>True while a tab change puts the search of the new tab in the field, which filters the list only once.</summary>
+    private bool _showingTabSearch;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
@@ -537,12 +544,27 @@ public partial class MainViewModel
     partial void OnDiscoverTypeChanged(ContentType value)
     {
         LoadLicenseOptions();
+        _showingTabSearch = true;
+        try
+        {
+            SearchText = _searchByTab.GetValueOrDefault(value, string.Empty);
+        }
+        finally
+        {
+            _showingTabSearch = false;
+        }
+
         ApplyDiscoverFilters();
         if (value.IsVehicleOrSave())
             StartShareSchemaLoad();
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyDiscoverFilters();
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchByTab[DiscoverType] = value;
+        if (!_showingTabSearch)
+            ApplyDiscoverFilters();
+    }
 
     partial void OnHideInstalledChanged(bool value) => ApplyDiscoverFilters();
 

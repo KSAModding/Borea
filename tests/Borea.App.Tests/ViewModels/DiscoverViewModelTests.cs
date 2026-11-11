@@ -209,6 +209,33 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task Search_StaysOnItsTab_AndComesBackWithIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+        var loaders = viewModel.DiscoverItems.Count;
+        viewModel.ShowDiscoverModsCommand.Execute(null);
+        viewModel.SearchText = "advanced flight";
+
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+
+        Assert.Equal(string.Empty, viewModel.SearchText);
+        Assert.Equal(loaders, viewModel.DiscoverItems.Count);
+
+        viewModel.SearchText = "star";
+        viewModel.ShowDiscoverModsCommand.Execute(null);
+
+        Assert.Equal("advanced flight", viewModel.SearchText);
+        Assert.Equal(["AdvancedFlightComputer"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+
+        Assert.Equal("star", viewModel.SearchText);
+    }
+
+    [Fact]
     public async Task Search_MatchesATag()
     {
         using var harness = await ViewModelHarness.CreateAsync();
