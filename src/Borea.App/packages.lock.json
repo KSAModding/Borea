@@ -252,8 +252,8 @@
       },
       "System.CommandLine": {
         "type": "Transitive",
-        "resolved": "2.0.15",
-        "contentHash": "zsnY7Ex2dPmbS/Nrg5RUKJFCEMbHeP9TdzmTJrsNh59mgr8ulba1SHmE1SVgmVqivvr79kV1GAlInC44F4ggEg=="
+        "resolved": "3.0.0",
+        "contentHash": "swNpSTl0iYJeBuvYYfaY+VxzZ5YC8wklwkqDCNOq2aTQqJzjauJfh/O3Zw93nwxspWrxvZTjT45f8VPR0ParEA=="
       },
       "Tmds.DBus.Protocol": {
         "type": "Transitive",
@@ -275,7 +275,7 @@
         "dependencies": {
           "Borea.Composition": "[1.0.0, )",
           "Borea.Core": "[1.0.0, )",
-          "System.CommandLine": "[2.0.15, )"
+          "System.CommandLine": "[3.0.0, )"
         }
       },
       "borea.composition": {
