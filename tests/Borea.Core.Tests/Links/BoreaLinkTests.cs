@@ -38,6 +38,7 @@ public sealed class BoreaLinkTests
     [InlineData("borea://modlist?name=My%20Server&mods=MeasureTools@1.1.10", "MeasureTools 1.1.10", "My Server")]
     [InlineData("BOREA://MODLIST/?mods=MeasureTools@1.1.10", "MeasureTools 1.1.10", null)]
     [InlineData("borea://modlist?mods=MeasureTools@1.0.0%2Bbuild.5,StarMap@0.4.6-beta.1", "MeasureTools 1.0.0|StarMap 0.4.6-beta.1", null)]
+    [InlineData("borea://modlist?id=ksamp-cars&mods=MeasureTools@1.1.10&name=Cars", "MeasureTools 1.1.10", "Cars")]
     public void TryParse_ModListLink_ReadsEntriesAndName(string text, string mods, string? name)
     {
         Assert.True(BoreaLink.TryParse(text, out var link, out _));
@@ -49,6 +50,14 @@ public sealed class BoreaLinkTests
         Assert.True(BoreaLink.TryParse(link.ToString(), out var again, out _));
         Assert.Equal(link.Mods, again.Mods);
         Assert.Equal(link.Name, again.Name);
+        Assert.Equal(link.ListId, again.ListId);
+    }
+
+    [Fact]
+    public void TryParse_ModListLinkWithId_ReadsTheListId()
+    {
+        Assert.True(BoreaLink.TryParse("borea://modlist?mods=MeasureTools@1.1.10&id=ksamp-cars", out var link, out _));
+        Assert.Equal("ksamp-cars", link.ListId);
     }
 
     [Theory]
@@ -117,6 +126,8 @@ public sealed class BoreaLinkTests
     [InlineData("borea://modlist?mods=A@1.0.0,a@2.0.0", ModListLinkProblem.Duplicate)]
     [InlineData("borea://modlist?mods=A@1.0.0&name=+", ModListLinkProblem.BadName)]
     [InlineData("borea://modlist?mods=A@1.0.0&url=x", ModListLinkProblem.Form)]
+    [InlineData("borea://modlist?mods=A@1.0.0&id=-bad", ModListLinkProblem.BadListId)]
+    [InlineData("borea://modlist?mods=A@1.0.0&id=a&id=b", ModListLinkProblem.Form)]
     [InlineData("borea://mod/Measure Tools", ModListLinkProblem.None)]
     public void TryParse_RefusedModList_NamesTheProblem(string text, ModListLinkProblem expected)
     {

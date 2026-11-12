@@ -20,7 +20,7 @@ public enum ModListLinkProblem
     /// <summary>The link is not a modlist link, or it was not refused.</summary>
     None,
 
-    /// <summary>The link has a path, a parameter other than one mods and at most one name, or no mods.</summary>
+    /// <summary>The link has a path, a parameter other than one mods and at most one name and one id, or no mods.</summary>
     Form,
 
     /// <summary>The link is longer than <see cref="BoreaLink.MaxLength"/>, which a long list reaches before <see cref="BoreaLink.MaxModListEntries"/>.</summary>
@@ -31,12 +31,13 @@ public enum ModListLinkProblem
     Duplicate,
     TooMany,
     BadName,
+    BadListId,
 }
 
 /// <summary>
 /// A link that opens Borea: borea://mod/&lt;id&gt;, borea://pack/&lt;id&gt;,
 /// borea://install/&lt;id&gt; with an optional ?version=&lt;semver&gt;, or
-/// borea://modlist?mods=&lt;id&gt;@&lt;semver&gt;,... with an optional &amp;name=&lt;text&gt;. Anything else is refused.
+/// borea://modlist?mods=&lt;id&gt;@&lt;semver&gt;,... with an optional &amp;name=&lt;text&gt; and &amp;id=&lt;list id&gt;. Anything else is refused.
 /// </summary>
 /// <param name="Id">The content id, or empty for a modlist link, which names its mods in <see cref="Mods"/>.</param>
 public sealed record BoreaLink(BoreaLinkKind Kind, string Id, ModVersion? Version = null)
@@ -58,6 +59,12 @@ public sealed record BoreaLink(BoreaLinkKind Kind, string Id, ModVersion? Versio
 
     /// <summary>The name a modlist link suggests for the new instance. It is text from outside, so Borea only shows it.</summary>
     public string? Name { get; init; }
+
+    /// <summary>
+    /// The id a modlist link gives its list, for example the id of a server, so that a later link with the same id can
+    /// be told apart from another list with the same name. It has the form of a content id, and Borea does not act on it yet.
+    /// </summary>
+    public string? ListId { get; init; }
 
     /// <summary>Whether the text names the borea scheme. It says nothing about whether the link is valid.</summary>
     public static bool HasScheme(string? text) => text is not null && text.StartsWith(Scheme + ":", StringComparison.OrdinalIgnoreCase);
@@ -101,7 +108,8 @@ public sealed record BoreaLink(BoreaLinkKind Kind, string Id, ModVersion? Versio
         BoreaLinkKind.Mod => $"{Prefix}mod/{Id}",
         BoreaLinkKind.Pack => $"{Prefix}pack/{Id}",
         BoreaLinkKind.ModList => $"{Prefix}modlist?mods={string.Join(',', Mods.Select(entry => $"{entry.ModId}@{entry.Version}"))}"
-            + (Name is null ? string.Empty : $"&name={EncodeName(Name)}"),
+            + (Name is null ? string.Empty : $"&name={EncodeName(Name)}")
+            + (ListId is null ? string.Empty : $"&id={ListId}"),
         _ => Version is { } version ? $"{Prefix}install/{Id}?version={version}" : $"{Prefix}install/{Id}",
     };
 
@@ -178,6 +186,7 @@ public sealed record BoreaLink(BoreaLinkKind Kind, string Id, ModVersion? Versio
 
         string? modsText = null;
         string? nameText = null;
+        string? listIdText = null;
         foreach (var parameter in (query ?? string.Empty).Split('&'))
         {
             var separator = parameter.IndexOf('=');
@@ -187,8 +196,10 @@ public sealed record BoreaLink(BoreaLinkKind Kind, string Id, ModVersion? Versio
                 modsText = value;
             else if (key == "name" && nameText is null && value is not null)
                 nameText = value;
+            else if (key == "id" && listIdText is null && value is not null)
+                listIdText = value;
             else
-                return Refuse(ModListLinkProblem.Form, "the query of a modlist link is not one mods and at most one name parameter", out refusal, out problem);
+                return Refuse(ModListLinkProblem.Form, "the query of a modlist link is not one mods and at most one name and one id parameter", out refusal, out problem);
         }
 
         var decoded = modsText is null ? null : Decode(modsText);
@@ -226,8 +237,16 @@ public sealed record BoreaLink(BoreaLinkKind Kind, string Id, ModVersion? Versio
                 return Refuse(ModListLinkProblem.BadName, $"the name is not 1 to {MaxNameLength} characters of printable ASCII", out refusal, out problem);
         }
 
+        string? listId = null;
+        if (listIdText is not null)
+        {
+            listId = Decode(listIdText);
+            if (!ModIds.IsValid(listId))
+                return Refuse(ModListLinkProblem.BadListId, "the id of the modlist is not a valid content id", out refusal, out problem);
+        }
+
         refusal = string.Empty;
-        return new BoreaLink(BoreaLinkKind.ModList, string.Empty) { Mods = mods, Name = name };
+        return new BoreaLink(BoreaLinkKind.ModList, string.Empty) { Mods = mods, Name = name, ListId = listId };
     }
 
     /// <summary>Reads a plus or an escaped space as a space, and decodes the rest like <see cref="Decode"/>.</summary>

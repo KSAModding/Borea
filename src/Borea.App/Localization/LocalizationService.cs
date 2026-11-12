@@ -2066,6 +2066,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLinkModListBadName(int length)
         => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListBadNameFormat, length);
 
+    public string LinkModListBadListId => Resources.LinkModListBadListId;
+
     public string FormatLinkModListTooLong(int length)
         => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListTooLongFormat, length);
 

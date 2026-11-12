@@ -2952,6 +2952,9 @@
   <data name="LinkModListBadNameFormat" xml:space="preserve">
     <value>The name in the link must be 1 to {0} characters of plain ASCII text.</value>
   </data>
+  <data name="LinkModListBadListId" xml:space="preserve">
+    <value>The id in the link must look like a content id, such as my-server.</value>
+  </data>
   <data name="LinkModListRowNotInIndex" xml:space="preserve">
     <value>Not in the content index.</value>
   </data>

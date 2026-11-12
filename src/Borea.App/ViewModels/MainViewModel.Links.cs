@@ -122,6 +122,7 @@ public partial class MainViewModel
         ModListLinkProblem.Duplicate => Localization.LinkModListDuplicate,
         ModListLinkProblem.TooMany => Localization.FormatLinkModListTooMany(BoreaLink.MaxModListEntries),
         ModListLinkProblem.BadName => Localization.FormatLinkModListBadName(BoreaLink.MaxNameLength),
+        ModListLinkProblem.BadListId => Localization.LinkModListBadListId,
         _ => null,
     };
 
