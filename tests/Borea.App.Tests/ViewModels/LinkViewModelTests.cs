@@ -19,6 +19,7 @@ public sealed class LinkViewModelTests
 {
     private const string MeasureToolsUrl = "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.10/MeasureTools.zip";
     private const string MeasureToolsSha256 = "8718558358629EFC3753ACFF9052851EFEB142A9343A1794485C177651265F15";
+    private const string ArchiveHost = "archives.test";
 
     [Theory]
     [InlineData("borea://mod/MeasureTools")]
@@ -499,6 +500,111 @@ public sealed class LinkViewModelTests
     }
 
     [Fact]
+    public async Task ModListLink_ShowsTheWholeList_AndInstallsNothingBeforeTheClick()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeModArchive, editSnapshot: snapshot => Served(WithListing(snapshot, "OrbitTools")));
+        var main = await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.9,MeasureTools@1.1.10&name=Server");
+
+        var review = viewModel.ModListImport!;
+        Assert.Equal("Server", review.Name);
+        Assert.Equal(harness.Localization.LinkModListTitle, review.Title);
+        Assert.Equal(["OrbitTools 1.1.9", "MeasureTools 1.1.10"], review.LinkRows.Select(row => $"{row.Name} {row.Version}"));
+        Assert.True(review.CanConfirm);
+        Assert.Single(await harness.Services.Instances.GetAllAsync());
+        Assert.DoesNotContain(harness.Requests, uri => uri.Host == ArchiveHost);
+
+        await review.ConfirmCommand.ExecuteAsync(null);
+
+        Assert.Null(review.InstallError);
+        var created = (await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Server");
+        Assert.Equal(InstanceSource.Custom.Value, created.Source);
+        Assert.Empty(created.LaunchArguments);
+        Assert.Equal(["MeasureTools 1.1.10", "OrbitTools 1.1.9"], ManualMods(created));
+        var active = (await harness.Services.Instances.GetByIdAsync(main.InstanceId))!;
+        Assert.Empty(active.Mods);
+        Assert.Equal(main.LaunchArguments, active.LaunchArguments);
+        Assert.Equal("Main", viewModel.ActiveInstance?.Name);
+    }
+
+    [Fact]
+    public async Task ModListLink_SameLinkAgain_CreatesASecondInstance_AndLeavesTheFirstAlone()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeModArchive, editSnapshot: snapshot => Served(WithListing(snapshot, "OrbitTools")));
+        await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.9&name=Server");
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.10&name=Server");
+        Assert.Equal("Server (2)", viewModel.ModListImport!.Name);
+        await viewModel.ModListImport.ConfirmCommand.ExecuteAsync(null);
+
+        var instances = await harness.Services.Instances.GetAllAsync();
+        Assert.Equal(["OrbitTools 1.1.9"], ManualMods(instances.Single(instance => instance.Name == "Server")));
+        Assert.Equal(["OrbitTools 1.1.10"], ManualMods(instances.Single(instance => instance.Name == "Server (2)")));
+    }
+
+    [Theory]
+    [InlineData("Nope@1.0.0", "unknown")]
+    [InlineData("StarMap@0.4.6", "not-a-mod")]
+    [InlineData("OrbitTools@9.9.9", "missing")]
+    [InlineData("OrbitTools@1.1.8", "yanked")]
+    [InlineData("OrbitTools@1.1.7", "gone")]
+    [InlineData("OrbitTools@1.1.9", "game")]
+    public async Task ModListLink_BadEntry_IsMarkedInItsRow_AndNothingIsPlanned(string entry, string problem)
+    {
+        Func<string, string> edit = problem switch
+        {
+            "yanked" => snapshot => YankRelease(snapshot, "OrbitTools", "1.1.8"),
+            "gone" => ViewModelHarness.MarkGone("OrbitTools", "1.1.7"),
+            _ => snapshot => snapshot,
+        };
+        using var harness = await CreateWithGameAsync(snapshot => edit(WithListing(Compatible(snapshot), "OrbitTools")));
+        await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+        var localization = harness.Localization;
+
+        await viewModel.OpenLinkAsync($"borea://modlist?mods=MeasureTools@1.1.10,{entry}&name=Server");
+
+        var expected = problem switch
+        {
+            "unknown" => localization.LinkModListRowNotInIndex,
+            "not-a-mod" => localization.LinkModListRowNotAMod,
+            "missing" => localization.LinkModListRowVersionMissing,
+            "yanked" => localization.FormatLinkModListRowYanked("Broken."),
+            "gone" => localization.LinkModListRowVersionGone,
+            _ => localization.FormatLinkModListRowIncompatible("2026.9.4.5400"),
+        };
+        var review = viewModel.ModListImport!;
+        Assert.Equal([null, expected], review.LinkRows.Select(row => row.Problem));
+        Assert.Null(review.Plan);
+        Assert.False(review.CanConfirm);
+        Assert.Equal(localization.LinkModListBlocked, review.BlockedText);
+        Assert.Empty(viewModel.Toasts.Items);
+
+        await review.ConfirmCommand.ExecuteAsync(null);
+
+        Assert.Single(await harness.Services.Instances.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task ModListLink_EntryWithoutVersion_ToastSaysWhatToFix()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools,MeasureTools@1.1.10");
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.LinkRefused, toast.Message);
+        Assert.Equal(harness.Localization.LinkModListNoVersion, toast.Detail);
+        Assert.Null(viewModel.ModListImport);
+    }
+
+    [Fact]
     public async Task Registration_RunsAtStart_AndTheSettingRemovesIt()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -600,11 +706,14 @@ public sealed class LinkViewModelTests
         var copy = listings.Single(node => (string?)node!["id"] == "MeasureTools")!.DeepClone();
         copy["id"] = id;
         copy["authored"]!["id"] = id;
+        copy["authored"]!["name"] = id;
         foreach (var release in copy["releases"]!.AsArray())
         {
             release!["id"] = id;
             if (release["listing"] is JsonObject listing)
                 listing["id"] = id;
+            if (release["install"] is JsonObject install)
+                install["root"] = id;
         }
         listings.Add(copy);
         return root.ToJsonString();
@@ -630,6 +739,60 @@ public sealed class LinkViewModelTests
             throw new InvalidOperationException($"The snapshot fixture does not name version {version} exactly once.");
         return snapshot.Replace(field, $"{field} \"yanked\": true, \"yanked_reason\": \"Broken.\",", StringComparison.Ordinal);
     }
+
+    private static string YankRelease(string snapshot, string id, string version)
+    {
+        var root = JsonNode.Parse(snapshot)!;
+        var release = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == id)!["releases"]!.AsArray()
+            .Single(node => (string?)node!["version"] == version)!;
+        release["yanked"] = true;
+        release["yanked_reason"] = "Broken.";
+        return root.ToJsonString();
+    }
+
+    /// <summary>Points the download of every listed release at <see cref="ServeModArchive"/>, with a mod.toml in the install root of the release.</summary>
+    private static string Served(string snapshot)
+    {
+        var root = JsonNode.Parse(snapshot)!;
+        foreach (var listing in root["listings"]!.AsArray())
+        {
+            foreach (var release in listing!["releases"]!.AsArray())
+            {
+                var folder = (string?)release!["install"]?["root"] ?? (string)listing["id"]!;
+                var archive = ModArchive(folder);
+                release["download"] = new JsonObject
+                {
+                    ["url"] = $"https://{ArchiveHost}/{folder}/{(string)release["version"]!}.zip",
+                    ["sha256"] = Convert.ToHexString(SHA256.HashData(archive)),
+                    ["size"] = archive.Length,
+                    ["content_type"] = "application/zip",
+                };
+            }
+        }
+
+        return root.ToJsonString();
+    }
+
+    private static HttpResponseMessage? ServeModArchive(HttpRequestMessage request)
+        => request.RequestUri?.Host == ArchiveHost ? ArchiveResponse(ModArchive(request.RequestUri.Segments[1].TrimEnd('/'))) : null;
+
+    /// <summary>The same bytes for the same folder, because the snapshot names the hash of the archive.</summary>
+    private static byte[] ModArchive(string folder)
+    {
+        using var stream = new MemoryStream();
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = zip.CreateEntry($"{folder}/mod.toml");
+            entry.LastWriteTime = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write($"name = \"{folder}\"");
+        }
+
+        return stream.ToArray();
+    }
+
+    private static IReadOnlyList<string> ManualMods(Instance instance) =>
+        instance.Mods.Where(mod => mod.Reason == InstallReason.Manual).Select(mod => $"{mod.ModId} {mod.Version}").Order(StringComparer.Ordinal).ToList();
 
     private static string WithArchive(string snapshot, byte[] archive)
         => snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)

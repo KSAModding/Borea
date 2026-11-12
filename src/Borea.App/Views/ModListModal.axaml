@@ -4,31 +4,67 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.ModListModal"
              x:DataType="vm:MainViewModel">
-    <!-- the plan of a duplicate or an import, before the new instance exists -->
+    <!-- the plan of a duplicate, an import or a modlist link, before the new instance exists -->
     <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
             <StackPanel DataContext="{Binding ModListImport}" x:DataType="vm:ModListImportItem">
                 <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
-                    <TextBlock Classes="heading-lg" Text="{Binding Title}" VerticalAlignment="Center" />
+                    <TextBlock Classes="heading-lg" Text="{Binding Title}" ToolTip.Tip="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CancelCommand}" IsEnabled="{Binding !IsInstalling}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalClose}">
                         <Path Classes="icon" Data="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>
                 <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
                 <StackPanel Margin="36,32,24,32" Spacing="16">
-                    <Grid ColumnDefinitions="Auto,12,*,16,Auto">
-                        <TextBlock Classes="heading-md heading" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalNameLabel}" VerticalAlignment="Center" />
-                        <TextBox Grid.Column="2" Classes="field" Text="{Binding Name}" IsEnabled="{Binding !IsInstalling}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalNameLabel}" VerticalAlignment="Center">
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="heading-md heading" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalNameLabel}" />
+                        <TextBox Classes="field" Text="{Binding Name}" IsEnabled="{Binding !IsInstalling}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalNameLabel}" HorizontalAlignment="Stretch">
                             <TextBox.KeyBindings>
                                 <KeyBinding Gesture="Enter" Command="{Binding ConfirmCommand}" />
                                 <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
                             </TextBox.KeyBindings>
                         </TextBox>
-                        <Button Grid.Column="4" Classes="cta" Command="{Binding ConfirmCommand}" IsEnabled="{Binding CanConfirm}">
-                            <TextBlock Classes="action-lg" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCreate}" />
-                        </Button>
-                    </Grid>
-                    <TextBlock Classes="body-md secondary" Text="{Binding SummaryText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Classes="body-md secondary" Text="{Binding LinkNote}" TextWrapping="Wrap" IsVisible="{Binding IsLink}" />
+                    <TextBlock Classes="body-md secondary" Text="{Binding SummaryText}" TextWrapping="Wrap" IsVisible="{Binding !IsLink}" />
+                    <!-- the mods of a link, with their names, authors and icons from the content index -->
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="12" views:RoundedClip.IsEnabled="True" IsVisible="{Binding IsLink}">
+                        <StackPanel>
+                            <Border Background="{StaticResource Brush.SurfaceRaised}" Padding="16,10">
+                                <TextBlock Classes="body-md secondary" Text="{Binding SummaryText}" TextWrapping="Wrap" />
+                            </Border>
+                            <ScrollViewer MaxHeight="248">
+                                <ItemsControl ItemsSource="{Binding LinkRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ModListLinkRow">
+                                            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+                                                <Grid ColumnDefinitions="40,12,*,Auto">
+                                                    <Border Classes="thumbnail" Width="40" Height="40" VerticalAlignment="Top">
+                                                        <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
+                                                            <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
+                                                        </views:ListingImageView>
+                                                    </Border>
+                                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" ToolTip.Tip="{Binding ContentId}">
+                                                        <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" IsVisible="{Binding AuthorsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                        <Grid ColumnDefinitions="Auto,*" Margin="0,2,0,0" IsVisible="{Binding HasProblem}">
+                                                            <Path Classes="icon size-16" Stroke="{StaticResource Brush.Danger}" Margin="0,0,6,0" VerticalAlignment="Top" Data="{StaticResource Icon.Warning}" />
+                                                            <TextBlock Grid.Column="1" Classes="body-sm danger" Text="{Binding Problem}" TextWrapping="Wrap" />
+                                                        </Grid>
+                                                    </StackPanel>
+                                                    <Border Grid.Column="3" Classes="chip" Classes.incompatible="{Binding HasProblem}" Margin="16,0,0,0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Version}" MaxWidth="140" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Version}" />
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Classes="body-md secondary" Text="{Binding DependenciesText}" TextWrapping="Wrap" IsVisible="{Binding DependenciesText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md secondary" Text="{Binding LoaderText}" TextWrapping="Wrap" IsVisible="{Binding LoaderText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <ScrollViewer MaxHeight="200" IsVisible="{Binding HasNotes}">
                         <ItemsControl ItemsSource="{Binding Notes}">
                             <ItemsControl.ItemsPanel>
@@ -44,12 +80,17 @@
                         </ItemsControl>
                     </ScrollViewer>
                     <TextBlock Classes="body-md secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding BlockedText}" TextWrapping="Wrap" IsVisible="{Binding BlockedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <SelectableTextBlock Classes="body-md danger" Text="{Binding PlanError}" TextWrapping="Wrap" IsVisible="{Binding PlanError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <SelectableTextBlock Classes="body-md danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Spacing="4" IsVisible="{Binding IsInstalling}">
                         <ProgressBar Height="6" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
+                    <!-- the call to action comes after the list, as in the modal of a new instance -->
+                    <Button Classes="cta" HorizontalAlignment="Right" Margin="0,16,0,0" Command="{Binding ConfirmCommand}" IsEnabled="{Binding CanConfirm}">
+                        <TextBlock Classes="action-lg" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCreate}" VerticalAlignment="Center" />
+                    </Button>
                 </StackPanel>
             </StackPanel>
         </Border>

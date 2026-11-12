@@ -9,6 +9,10 @@ namespace Borea.Core.Planning;
 /// <param name="Reasons">A mod without a reason is a dependency when another listed release requires it, and manual otherwise.</param>
 /// <param name="GameBuild">The kept game build of the new instance. Only a duplicate keeps one, because a modlist can come from another PC that does not have the build.</param>
 /// <param name="Loader">The mod loader setting of the new instance, or null for the automatic one.</param>
+/// <param name="Releases">
+/// The releases the caller checked for the entries, or null to read each entry from <paramref name="Repository"/>. With it, an entry
+/// takes only its release from this list, so it cannot resolve to another release of the same id and version, such as one of another source.
+/// </param>
 public sealed record ModListRequest(
     ModList ModList,
     InstanceSource Source,
@@ -18,7 +22,8 @@ public sealed record ModListRequest(
     IReadOnlyDictionary<string, InstallReason>? Reasons = null,
     InstanceOrigin Origin = InstanceOrigin.ModListImport,
     GameVersion? GameBuild = null,
-    LoaderSetting? Loader = null);
+    LoaderSetting? Loader = null,
+    IReadOnlyList<ModVersionMetadata>? Releases = null);
 
 public sealed record ModListItem(ModListEntry Entry, ModVersionMetadata? Release)
 {
@@ -61,13 +66,7 @@ public sealed class ModListInstaller
         ArgumentNullException.ThrowIfNull(request.ModList);
         ArgumentNullException.ThrowIfNull(request.Repository);
 
-        var items = new List<ModListItem>();
-        foreach (var entry in request.ModList.Mods)
-        {
-            var release = await request.Repository.GetReleaseAsync(entry.ModId, entry.Version, cancellationToken).ConfigureAwait(false);
-            items.Add(new ModListItem(entry, release));
-        }
-
+        var items = await ReadItemsAsync(request, cancellationToken).ConfigureAwait(false);
         var releases = items.Where(item => item.Release is not null).Select(item => item.Release!).ToList();
         var requested = releases.Select(release => new RequestedMod(release, ReasonOf(request, releases, release), Exact: true)).ToList();
         var draftId = Guid.NewGuid();
@@ -76,6 +75,20 @@ public sealed class ModListInstaller
             new InstallPlanningRequest(draft, requested, request.Repository, request.GameVersion, request.TargetPlatform),
             cancellationToken).ConfigureAwait(false);
         return new ModListPlan(request, items, plan);
+    }
+
+    internal static async Task<IReadOnlyList<ModListItem>> ReadItemsAsync(ModListRequest request, CancellationToken cancellationToken)
+    {
+        var items = new List<ModListItem>();
+        foreach (var entry in request.ModList.Mods)
+        {
+            var release = request.Releases is { } releases
+                ? releases.FirstOrDefault(checkedRelease => ModIds.Equals(checkedRelease.ModId, entry.ModId) && checkedRelease.Version == entry.Version)
+                : await request.Repository.GetReleaseAsync(entry.ModId, entry.Version, cancellationToken).ConfigureAwait(false);
+            items.Add(new ModListItem(entry, release));
+        }
+
+        return items;
     }
 
     /// <summary>A failed or stopped install removes the new instance again.</summary>

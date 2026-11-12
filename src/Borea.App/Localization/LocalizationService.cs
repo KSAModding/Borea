@@ -2033,6 +2033,63 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLinkVersionGone(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.LinkVersionGoneFormat, version);
 
+    public string LinkModListTitle => Resources.LinkModListTitle;
+
+    public string LinkModListNote => Resources.LinkModListNote;
+
+    public string LinkModListNoteBlocked => Resources.LinkModListNoteBlocked;
+
+    public string FormatLinkModListCount(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListCountFormat, count);
+
+    public string FormatLinkModListDependencies(string dependencies)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListDependenciesFormat, dependencies);
+
+    public string FormatLinkModListLoader(string loader, string bounds)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListLoaderFormat, loader, bounds);
+
+    public string LinkModListBlocked => Resources.LinkModListBlocked;
+
+    public string LinkModListForm => Resources.LinkModListForm;
+
+    public string LinkModListNoVersion => Resources.LinkModListNoVersion;
+
+    public string LinkModListBadId => Resources.LinkModListBadId;
+
+    public string LinkModListBadVersion => Resources.LinkModListBadVersion;
+
+    public string LinkModListDuplicate => Resources.LinkModListDuplicate;
+
+    public string FormatLinkModListTooMany(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListTooManyFormat, count);
+
+    public string FormatLinkModListBadName(int length)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListBadNameFormat, length);
+
+    public string LinkModListBadListId => Resources.LinkModListBadListId;
+
+    public string FormatLinkModListTooLong(int length)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListTooLongFormat, length);
+
+    public string LinkModListRowNotInIndex => Resources.LinkModListRowNotInIndex;
+
+    public string LinkModListRowNotAMod => Resources.LinkModListRowNotAMod;
+
+    public string LinkModListRowVersionMissing => Resources.LinkModListRowVersionMissing;
+
+    /// <param name="reason">The reason from the content index, which is shown as a quote because it is not translated.</param>
+    public string FormatLinkModListRowYanked(string? reason) => string.IsNullOrWhiteSpace(reason)
+        ? Resources.LinkModListRowYanked
+        : string.Format(CultureInfo.CurrentCulture, Resources.LinkModListRowYankedFormat, reason.Trim());
+
+    public string LinkModListRowVersionGone => Resources.LinkModListRowVersionGone;
+
+    public string FormatLinkModListRowIncompatible(string gameMin)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListRowIncompatibleFormat, gameMin);
+
+    public string FormatLinkModListRowAboveGameMax(string gameMax)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListRowAboveGameMaxFormat, gameMax);
+
     public string DiscoverListYourMod => Resources.DiscoverListYourMod;
 
     public string DiscoverForModAuthors => Resources.DiscoverForModAuthors;

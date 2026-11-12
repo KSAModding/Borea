@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.History;
+using Borea.Core.Launch;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -98,11 +99,7 @@ public partial class MainViewModel
 
         try
         {
-            var installer = InstallerFor(services);
-            var wanted = modList.Name ?? Path.GetFileNameWithoutExtension(fileName);
-            var name = string.IsNullOrWhiteSpace(wanted) ? string.Empty : await installer.FreeNameAsync(wanted);
-            var plan = await installer.PlanAsync(RequestFor(services, modList, InstanceSource.Custom.Value, reasons: null));
-            await ShowModListPlanAsync(new ModListImportItem(this, plan, name, isDuplicate: false, notCopied: []));
+            await ShowNewModListAsync(services, modList, modList.Name ?? Path.GetFileNameWithoutExtension(fileName), link: null);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -110,11 +107,25 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>Plans the modlist into a new instance that exists only after the click in the modal.</summary>
+    /// <param name="link">The rows of a modlist link and its checked releases, or null for a file import. A link with a problem in a row gets no plan.</param>
+    /// <returns>False when another modal opened while the plan was made, which then stays open.</returns>
+    private async Task<bool> ShowNewModListAsync(BoreaServices services, ModList modList, string wantedName, ModListLink? link)
+    {
+        var installer = InstallerFor(services);
+        var name = string.IsNullOrWhiteSpace(wantedName) ? string.Empty : await installer.FreeNameAsync(wantedName);
+        if (link is not null && link.Rows.Any(row => row.HasProblem))
+            return await ShowModListPlanAsync(new ModListImportItem(this, plan: null, name, isDuplicate: false, notCopied: []) { LinkRows = link.Rows });
+
+        var plan = await installer.PlanAsync(RequestFor(services, modList, InstanceSource.Custom.Value, reasons: null) with { Releases = link?.Releases });
+        return await ShowModListPlanAsync(new ModListImportItem(this, plan, name, isDuplicate: false, notCopied: []) { LinkRows = link?.Rows ?? [] });
+    }
+
     private void ShowImportError(string reason) => ShowErrorToast(() => Localization.ToastImportModListFailed, reason);
 
     internal async Task ConfirmModListAsync(ModListImportItem item)
     {
-        if (_services is not { } services || !item.CanConfirm)
+        if (_services is not { } services || !item.CanConfirm || item.Plan is not { } plan)
             return;
 
         using var libraryUse = TryUseLibrary();
@@ -126,12 +137,12 @@ public partial class MainViewModel
 
         item.InstallError = null;
         item.IsInstalling = true;
-        var run = item.Run = StartInstallRun(StartTask(TaskKind.ModListImport, item.Name.Trim(), item.Plan.InstanceId));
+        var run = item.Run = StartInstallRun(StartTask(TaskKind.ModListImport, item.Name.Trim(), plan.InstanceId));
         var completed = false;
         var stopped = false;
         try
         {
-            var created = await InstallerFor(services).InstallAsync(item.Plan, item.Name.Trim(), ProgressOf(item), run.InstallStop);
+            var created = await InstallerFor(services).InstallAsync(plan, item.Name.Trim(), ProgressOf(item), run.InstallStop);
             completed = true;
             if (ReferenceEquals(ModListImport, item))
                 ModListImport = null;
@@ -221,12 +232,20 @@ public partial class MainViewModel
         return new string(instanceName.Select(character => invalid.Contains(character) ? '_' : character).ToArray()) + ".toml";
     }
 
-    /// <summary>The new instance does not exist yet, so the conflict modal has no mod to remove.</summary>
-    private async Task ShowModListPlanAsync(ModListImportItem item)
+    /// <summary>
+    /// The new instance does not exist yet, so the conflict modal has no mod to remove. Planning awaits the network,
+    /// so a modal that opened in the meantime stays open and the new one is not shown.
+    /// </summary>
+    private async Task<bool> ShowModListPlanAsync(ModListImportItem item)
     {
+        if (ModListImport is not null)
+            return false;
+
         ModListImport = item;
         RefreshModListText();
-        await ShowConflictsAsync(item.Plan.Plan, again: null);
+        if (item.Plan is { } plan)
+            await ShowConflictsAsync(plan.Plan, again: null);
+        return true;
     }
 
     /// <summary>A yanked release is a note already, so the planner's warning about it is left out.</summary>
@@ -235,13 +254,22 @@ public partial class MainViewModel
         if (ModListImport is not { } item)
             return;
 
-        var plan = item.Plan.Plan;
+        foreach (var row in item.LinkRows)
+            row.RefreshText();
+
+        if (item.Plan is not { } modListPlan)
+        {
+            item.ShowText([], warning: null, planError: null);
+            return;
+        }
+
+        var plan = modListPlan.Plan;
         var notes = new List<string>();
         if (item.NotCopied.Count > 0)
             notes.Add(Localization.FormatModListNotCopied(item.NotCopied));
 
-        notes.AddRange(item.Plan.Unknown.Select(unknown => Localization.FormatModListUnknown(unknown.Entry.ModId, unknown.Entry.Version.ToString())));
-        notes.AddRange(item.Plan.Yanked.Select(yanked => Localization.FormatPackMemberYanked(yanked.Entry.ModId, yanked.Entry.Version.ToString(), yanked.Release!.YankedReason)));
+        notes.AddRange(modListPlan.Unknown.Select(unknown => Localization.FormatModListUnknown(unknown.Entry.ModId, unknown.Entry.Version.ToString())));
+        notes.AddRange(modListPlan.Yanked.Select(yanked => Localization.FormatPackMemberYanked(yanked.Entry.ModId, yanked.Entry.Version.ToString(), yanked.Release!.YankedReason)));
         var warnings = plan.Warnings.Where(warning => warning.Code != "yanked").ToList();
         item.ShowText(
             notes,
@@ -257,21 +285,74 @@ public partial class MainViewModel
 }
 
 /// <summary>
-/// The modal of a duplicate or an import: the plan, and the name the new instance gets.
+/// The modal of a duplicate, an import or a modlist link: the plan, and the name the new instance gets.
 /// </summary>
 public sealed partial class ModListImportItem : ObservableObject, IInstallProgressRow
 {
     private readonly MainViewModel _owner;
 
-    internal ModListPlan Plan { get; }
+    /// <summary>The plan, or null for a modlist link that names a mod Borea cannot install.</summary>
+    internal ModListPlan? Plan { get; }
 
     internal IReadOnlyList<string> NotCopied { get; }
 
     public bool IsDuplicate { get; }
 
-    public string Title => IsDuplicate ? _owner.Localization.ModListDuplicateTitle : _owner.Localization.LibraryImportModList;
+    /// <summary>The mods a modlist link names, one row each, or empty for a duplicate or a file import.</summary>
+    public IReadOnlyList<ModListLinkRow> LinkRows { get; init; } = [];
 
-    public string SummaryText => _owner.Localization.FormatModListInstallCount(Plan.Plan.Operations.Count);
+    public bool IsLink => LinkRows.Count > 0;
+
+    public string Title => IsDuplicate ? _owner.Localization.ModListDuplicateTitle
+        : IsLink ? _owner.Localization.LinkModListTitle
+        : _owner.Localization.LibraryImportModList;
+
+    /// <summary>A link counts its rows, because the dependencies and the loader that its plan adds have lines of their own.</summary>
+    public string SummaryText => IsLink
+        ? _owner.Localization.FormatLinkModListCount(LinkRows.Count)
+        : _owner.Localization.FormatModListInstallCount(Plan?.Plan.Operations.Count ?? 0);
+
+    /// <summary>A link that Borea cannot create leaves out that nothing installs until Create, because Create stays disabled.</summary>
+    public string? LinkNote => !IsLink ? null
+        : Plan is null ? _owner.Localization.LinkModListNoteBlocked
+        : _owner.Localization.LinkModListNote;
+
+    /// <summary>The mods that the plan of a link installs beside the ones the link names, with their names from the content index.</summary>
+    public string? DependenciesText
+    {
+        get
+        {
+            var added = (Plan?.Plan.Operations ?? [])
+                .Select(operation => operation.Release)
+                .Where(release => IsLink && !LinkRows.Any(row => ModIds.Equals(row.ContentId, release.ModId)))
+                .Select(release => $"{_owner.FindIndexContent(release.ModId).Listing?.Name ?? release.ModId} {release.Version}")
+                .ToList();
+            return added.Count == 0 ? null : _owner.Localization.FormatLinkModListDependencies(string.Join(", ", added));
+        }
+    }
+
+    /// <summary>
+    /// The loader that the mods of a link need. Like a pack or a single mod, a link installs no loader, because Play and the
+    /// instance page offer the version that fits.
+    /// </summary>
+    public string? LoaderText
+    {
+        get
+        {
+            if (!IsLink || Plan is not { } plan)
+                return null;
+
+            var lines = LoaderNeed.With(null, plan.Plan.Operations.Select(operation => operation.Release).ToList()).Loaders
+                .Select(loader => _owner.Localization.FormatLinkModListLoader(
+                    _owner.FindIndexContent(loader.LoaderId).Listing?.Name ?? loader.LoaderId,
+                    _owner.LoaderBoundsText(loader.MinVersion, loader.MaxVersion)))
+                .ToList();
+            return lines.Count == 0 ? null : string.Join(" ", lines);
+        }
+    }
+
+    /// <summary>Why a link with a problem in a row creates no instance.</summary>
+    public string? BlockedText => IsLink && Plan is null ? _owner.Localization.LinkModListBlocked : null;
 
     public IReadOnlyList<string> Notes { get; private set; } = [];
 
@@ -308,9 +389,9 @@ public sealed partial class ModListImportItem : ObservableObject, IInstallProgre
     [ObservableProperty]
     private string? _planError;
 
-    public bool CanConfirm => Plan.Plan.IsReady && !IsInstalling && !string.IsNullOrWhiteSpace(Name);
+    public bool CanConfirm => Plan is { Plan.IsReady: true } && !IsInstalling && !string.IsNullOrWhiteSpace(Name);
 
-    public ModListImportItem(MainViewModel owner, ModListPlan plan, string name, bool isDuplicate, IReadOnlyList<string> notCopied)
+    public ModListImportItem(MainViewModel owner, ModListPlan? plan, string name, bool isDuplicate, IReadOnlyList<string> notCopied)
     {
         _owner = owner;
         Plan = plan;
@@ -328,6 +409,10 @@ public sealed partial class ModListImportItem : ObservableObject, IInstallProgre
         OnPropertyChanged(nameof(HasNotes));
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(SummaryText));
+        OnPropertyChanged(nameof(LinkNote));
+        OnPropertyChanged(nameof(DependenciesText));
+        OnPropertyChanged(nameof(LoaderText));
+        OnPropertyChanged(nameof(BlockedText));
     }
 
     [RelayCommand]
@@ -335,4 +420,47 @@ public sealed partial class ModListImportItem : ObservableObject, IInstallProgre
 
     [RelayCommand]
     private void Cancel() => _owner.CancelModList(this);
+}
+
+/// <summary>The rows of a modlist link, and the checked releases of the rows without a problem, which are the only releases its plan takes.</summary>
+internal sealed record ModListLink(IReadOnlyList<ModListLinkRow> Rows, IReadOnlyList<ModVersionMetadata> Releases);
+
+/// <summary>
+/// One mod of a modlist link. The name, the authors and the icon come from the content index and never from the link, and a
+/// mod that is not in the index shows its content id.
+/// </summary>
+public sealed class ModListLinkRow : ObservableObject
+{
+    private readonly MainViewModel _owner;
+    private readonly DiscoverItem? _listing;
+    private readonly Func<string>? _problem;
+
+    internal ModListLinkRow(MainViewModel owner, DiscoverItem? listing, ModListEntry entry, Func<string>? problem)
+    {
+        _owner = owner;
+        _listing = listing;
+        _problem = problem;
+        ContentId = entry.ModId;
+        Version = entry.Version.ToString();
+    }
+
+    /// <summary>The content id from the link, which tells two listings with the same name apart.</summary>
+    public string ContentId { get; }
+
+    public string Version { get; }
+
+    public string Name => _listing?.Name ?? ContentId;
+
+    public ListingImage? Icon => _listing?.Icon;
+
+    public string? AuthorsText => _listing?.Listing.Authors is { Count: > 0 } authors
+        ? _owner.Localization.FormatContentByAuthor(string.Join(", ", authors))
+        : null;
+
+    /// <summary>Why the link cannot install this mod, or null when it can.</summary>
+    public string? Problem => _problem?.Invoke();
+
+    public bool HasProblem => _problem is not null;
+
+    internal void RefreshText() => OnPropertyChanged(string.Empty);
 }
