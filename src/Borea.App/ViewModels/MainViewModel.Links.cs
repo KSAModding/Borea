@@ -194,7 +194,7 @@ public partial class MainViewModel
         }
 
         IsSettingsOpen = false;
-        if (!await ShowNewModListAsync(services, new ModList(link.Name, link.Mods), link.Name ?? string.Empty, new ModListLink(rows, releases)))
+        if (!await ShowNewModListAsync(services, new ModList(link.Name, link.Mods), link.Name ?? string.Empty, new ModListLink(rows, releases, link.ListId)))
             ShowErrorToast(() => Localization.LinkRefused);
     }
 

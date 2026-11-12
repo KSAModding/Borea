@@ -279,6 +279,41 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task RoundTrip_PersistsTheLinkedModList_AndAnInstanceWithoutOneWritesNoKey()
+    {
+        var instance = (await _repository.CreateAsync("Server", InstanceSource.Custom.Value)).Instance;
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        Assert.DoesNotContain(File.ReadAllLines(path), line => line.StartsWith("ModListLink", StringComparison.Ordinal));
+
+        await _repository.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetLinkedModList(new LinkedModList("srv", ["OrbitTools", "MeasureTools"]));
+            return true;
+        });
+        await _repository.RenameAsync(instance.InstanceId, "Renamed");
+
+        var reloaded = await new FileInstanceRepository(_pathProvider).GetByIdAsync(instance.InstanceId);
+        Assert.Equal(new LinkedModList("srv", ["measuretools", "OrbitTools"]), reloaded!.LinkedModList);
+        Assert.Equal(InstanceSource.Custom.Value, reloaded.Source);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_RecordWithALinkedModList_ReadsInABuildThatDoesNotKnowIt()
+    {
+        var instance = (await _repository.CreateAsync("Server", InstanceSource.Custom.Value)).Instance;
+        instance.SetLinkedModList(new LinkedModList("srv", ["OrbitTools"]));
+        await _repository.SaveAsync(instance);
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        // the older build must meet the keys, or the read below proves nothing
+        Assert.Contains(File.ReadAllLines(path), line => line.StartsWith("ModListLinkId = \"srv\"", StringComparison.Ordinal));
+        Assert.Contains(File.ReadAllLines(path), line => line.StartsWith("ModListLinkMods = [", StringComparison.Ordinal));
+
+        var older = await TomlFileStore.ReadAsync<RecordWithoutDetachedDto>(path);
+
+        Assert.Equal((instance.InstanceId.ToString(), "Custom"), (older!.InstanceId, older.SourceType));
+    }
+
+    [Fact]
     public async Task RoundTrip_PersistsAPinnedLoader_AndAnAutomaticLoaderWritesNoKey()
     {
         var instance = (await _repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;

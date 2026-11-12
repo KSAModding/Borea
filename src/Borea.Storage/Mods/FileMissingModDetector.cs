@@ -49,6 +49,7 @@ public sealed class FileMissingModDetector : IMissingModDetector
                 if (installed is null || ModFoldersOnDisk(instanceId).Contains(installed.ModId))
                     return false;
 
+                instance.ForgetLinkedMod(installed.ModId);
                 return instance.RemoveMod(installed.ModId);
             },
             cancellationToken).ConfigureAwait(false);

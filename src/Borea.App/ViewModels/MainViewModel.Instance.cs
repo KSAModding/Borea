@@ -718,6 +718,7 @@ public partial class MainViewModel
         ContentItem item => _content.FirstOrDefault(content => ModIds.Equals(content.ModId, item.ModId)),
         PackUpdateItem => PackUpdate,
         MissingContentItem => MissingContent,
+        ModListImportItem => row,
         _ => UpdateAll,
     };
 

@@ -35,6 +35,12 @@ public sealed class InstanceDto
     /// <summary>The pack mods the player detached. Absent when there are none, so such a record does not change.</summary>
     public List<string>? SourceModPackDetached { get; set; }
 
+    /// <summary>The id of the modlist link that created the instance. Absent when no link created it, so such a record does not change.</summary>
+    public string? ModListLinkId { get; set; }
+
+    /// <summary>The mods that modlist links with <see cref="ModListLinkId"/> put into the instance. Absent together with it.</summary>
+    public List<string>? ModListLinkMods { get; set; }
+
     public List<InstalledModDto> Mods { get; set; } = new();
     public List<ForeignModDto> ForeignMods { get; set; } = new();
 }

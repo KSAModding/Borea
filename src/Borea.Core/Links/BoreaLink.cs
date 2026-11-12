@@ -62,7 +62,8 @@ public sealed record BoreaLink(BoreaLinkKind Kind, string Id, ModVersion? Versio
 
     /// <summary>
     /// The id a modlist link gives its list, for example the id of a server, so that a later link with the same id can
-    /// be told apart from another list with the same name. It has the form of a content id, and Borea does not act on it yet.
+    /// be told apart from another list with the same name. It has the form of a content id. Borea compares it with the id that an
+    /// instance created from an earlier modlist link recorded, and offers to update that instance.
     /// </summary>
     public string? ListId { get; init; }
 

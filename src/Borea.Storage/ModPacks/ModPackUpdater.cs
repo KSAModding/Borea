@@ -230,7 +230,7 @@ public sealed class ModPackUpdater : IModPackUpdater
         // The update installs before it removes, so its plan runs against the instance with the mods it removes.
         plan = plan.WithInstanceState(InstallPlanningState.Capture(instance));
         warnings.AddRange(plan.Warnings);
-        changes = WithDependencies(changes, draft, plan);
+        changes = ModPackUpdates.WithPlanned(changes, draft, plan);
         if (!plan.IsReady)
         {
             members.AddRange(pins
@@ -250,27 +250,6 @@ public sealed class ModPackUpdater : IModPackUpdater
             ModPackMemberStatus.NotAttempted)));
         members.AddRange(AlreadyInstalled(changes, draft, plan));
         return Result(plan);
-    }
-
-    /// <summary>
-    /// Adds what the plan installs besides the pins, such as a new dependency or a new version of a kept mod.
-    /// A detached mod that the plan installs is an addition or a change, because the update does not leave it alone.
-    /// </summary>
-    private static IReadOnlyList<ModPackChange> WithDependencies(IReadOnlyList<ModPackChange> changes, Instance draft, InstallPlan plan)
-    {
-        ModVersion? Planned(string modId) => plan.Operations.FirstOrDefault(operation => ModIds.Equals(operation.Release.ModId, modId))?.Release.Version;
-        var kept = changes.Select(change => (change.Kind, Planned(change.ModId)) switch
-        {
-            (ModPackChangeKind.Keep, { } version) => change with { To = version },
-            (ModPackChangeKind.Detached, { } version) => change with { Kind = change.From is null ? ModPackChangeKind.Add : ModPackChangeKind.Change, To = version },
-            _ => change,
-        });
-        var added = plan.Operations
-            .Where(operation => !changes.Any(change => ModIds.Equals(change.ModId, operation.Release.ModId)))
-            .Select(operation => draft.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, operation.Release.ModId)) is { } installed
-                ? new ModPackChange(installed.ModId, ModPackChangeKind.Change, installed.Version, operation.Release.Version)
-                : new ModPackChange(operation.Release.ModId, ModPackChangeKind.Add, null, operation.Release.Version));
-        return kept.Concat(added).OrderBy(change => change.Kind).ThenBy(change => change.ModId, ModIds.Comparer).ToList();
     }
 
     private static InstallReason ReasonAfter(IReadOnlyList<ModPackChange> changes, Instance draft, string modId, InstallReason planned)

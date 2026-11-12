@@ -4,7 +4,7 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.ModListModal"
              x:DataType="vm:MainViewModel">
-    <!-- the plan of a duplicate, an import or a modlist link, before the new instance exists -->
+    <!-- the plan of a duplicate, an import or a modlist link, before the new instance exists or the update of an instance runs -->
     <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
             <StackPanel DataContext="{Binding ModListImport}" x:DataType="vm:ModListImportItem">
@@ -16,7 +16,22 @@
                 </Grid>
                 <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
                 <StackPanel Margin="36,32,24,32" Spacing="16">
-                    <StackPanel Spacing="6">
+                    <!-- a link with an id offers to update the instances an earlier link with the same id created, or a new instance; the view model keeps one selected -->
+                    <ItemsControl ItemsSource="{Binding Targets}" IsVisible="{Binding HasTargets}" IsEnabled="{Binding !IsInstalling}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ModListTarget">
+                                <RadioButton IsChecked="{Binding IsSelected}">
+                                    <TextBlock Classes="body-md" Text="{Binding Text}" TextWrapping="Wrap" />
+                                </RadioButton>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Spacing="6" IsVisible="{Binding !IsUpdate}">
                         <TextBlock Classes="heading-md heading" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalNameLabel}" />
                         <TextBox Classes="field" Text="{Binding Name}" IsEnabled="{Binding !IsInstalling}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalNameLabel}" HorizontalAlignment="Stretch">
                             <TextBox.KeyBindings>
@@ -63,6 +78,19 @@
                             </ScrollViewer>
                         </StackPanel>
                     </Border>
+                    <!-- what the chosen update changes, compared with what the instance has -->
+                    <ItemsControl ItemsSource="{Binding ChangeTexts}" IsVisible="{Binding IsUpdate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Classes="body-md" Text="{Binding}" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <TextBlock Classes="body-md secondary" Text="{Binding DependenciesText}" TextWrapping="Wrap" IsVisible="{Binding DependenciesText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-md secondary" Text="{Binding LoaderText}" TextWrapping="Wrap" IsVisible="{Binding LoaderText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <ScrollViewer MaxHeight="200" IsVisible="{Binding HasNotes}">
@@ -89,7 +117,7 @@
                     </StackPanel>
                     <!-- the call to action comes after the list, as in the modal of a new instance -->
                     <Button Classes="cta" HorizontalAlignment="Right" Margin="0,16,0,0" Command="{Binding ConfirmCommand}" IsEnabled="{Binding CanConfirm}">
-                        <TextBlock Classes="action-lg" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCreate}" VerticalAlignment="Center" />
+                        <TextBlock Classes="action-lg" Text="{Binding ConfirmText}" VerticalAlignment="Center" />
                     </Button>
                 </StackPanel>
             </StackPanel>

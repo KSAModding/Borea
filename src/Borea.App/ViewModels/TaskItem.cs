@@ -163,7 +163,8 @@ public sealed partial class TaskItem : ObservableObject
     public bool HasRetry => State == TaskState.Failed && Kind switch
     {
         TaskKind.IndexRefresh => true,
-        TaskKind.UpdateAll or TaskKind.PackUpdate => InstanceId is not null,
+        TaskKind.UpdateAll => InstanceId is not null,
+        TaskKind.PackUpdate => InstanceId is not null && ContentId is not null,
         TaskKind.ModInstall or TaskKind.PackInstall or TaskKind.Update => InstanceId is not null && ContentId is not null,
         _ => false,
     };

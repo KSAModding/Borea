@@ -254,6 +254,21 @@ public partial class MainViewModel
         return names.Count == 0 ? null : Localization.FormatPackUpdateStillInstalled(string.Join(", ", names));
     }
 
+    internal string PackChangeText(ModPackChange change)
+    {
+        var name = ContentName(change.ModId);
+        return change.Kind switch
+        {
+            ModPackChangeKind.Add => Localization.FormatPackUpdateAdd(name, change.To!.Value.ToString()),
+            ModPackChangeKind.Change => Localization.FormatPackUpdateChange(name, change.From!.Value.ToString(), change.To!.Value.ToString()),
+            ModPackChangeKind.Remove => Localization.FormatPackUpdateRemove(name, change.From!.Value.ToString()),
+            ModPackChangeKind.Pinned => Localization.FormatPackUpdatePinned(name, change.From!.Value.ToString()),
+            ModPackChangeKind.Detached => Localization.FormatPackUpdateDetached(name),
+            _ when change.To != change.From => Localization.FormatPackUpdateKeepChange(name, change.From!.Value.ToString(), change.To!.Value.ToString()),
+            _ => Localization.FormatPackUpdateKeep(name, change.From!.Value.ToString()),
+        };
+    }
+
     private static string Sentences(params string?[] parts) => string.Join(" ", parts.Where(part => !string.IsNullOrEmpty(part)));
 }
 
@@ -344,7 +359,7 @@ public sealed partial class PackUpdateItem : ObservableObject, IInstallRow
             if (PendingResult is not { } result)
                 return [];
 
-            var texts = result.Changes.Select(ChangeText)
+            var texts = result.Changes.Select(_owner.PackChangeText)
                 .Concat(result.Content.Where(content => content.Status is ModPackContentStatus.NotAttempted or ModPackContentStatus.Changed).Select(ContentText))
                 .ToList();
             return texts.Count == 0 ? [_owner.Localization.PackUpdateNoModChanges] : texts;
@@ -374,21 +389,6 @@ public sealed partial class PackUpdateItem : ObservableObject, IInstallRow
         _owner = owner;
         InstanceId = instanceId;
         Pack = pack;
-    }
-
-    private string ChangeText(ModPackChange change)
-    {
-        var name = _owner.ContentName(change.ModId);
-        return change.Kind switch
-        {
-            ModPackChangeKind.Add => _owner.Localization.FormatPackUpdateAdd(name, change.To!.Value.ToString()),
-            ModPackChangeKind.Change => _owner.Localization.FormatPackUpdateChange(name, change.From!.Value.ToString(), change.To!.Value.ToString()),
-            ModPackChangeKind.Remove => _owner.Localization.FormatPackUpdateRemove(name, change.From!.Value.ToString()),
-            ModPackChangeKind.Pinned => _owner.Localization.FormatPackUpdatePinned(name, change.From!.Value.ToString()),
-            ModPackChangeKind.Detached => _owner.Localization.FormatPackUpdateDetached(name),
-            _ when change.To != change.From => _owner.Localization.FormatPackUpdateKeepChange(name, change.From!.Value.ToString(), change.To!.Value.ToString()),
-            _ => _owner.Localization.FormatPackUpdateKeep(name, change.From!.Value.ToString()),
-        };
     }
 
     internal void ClearOutcome()
