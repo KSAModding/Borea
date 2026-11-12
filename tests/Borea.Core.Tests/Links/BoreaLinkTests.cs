@@ -34,6 +34,24 @@ public sealed class BoreaLinkTests
     }
 
     [Theory]
+    [InlineData("borea://modlist?mods=FastAndPurrious@0.1.14,KSAMultiplayer@1.2.0&name=Laurens%27+Server", "FastAndPurrious 0.1.14|KSAMultiplayer 1.2.0", "Laurens' Server")]
+    [InlineData("borea://modlist?name=My%20Server&mods=MeasureTools@1.1.10", "MeasureTools 1.1.10", "My Server")]
+    [InlineData("BOREA://MODLIST/?mods=MeasureTools@1.1.10", "MeasureTools 1.1.10", null)]
+    [InlineData("borea://modlist?mods=MeasureTools@1.0.0%2Bbuild.5,StarMap@0.4.6-beta.1", "MeasureTools 1.0.0|StarMap 0.4.6-beta.1", null)]
+    public void TryParse_ModListLink_ReadsEntriesAndName(string text, string mods, string? name)
+    {
+        Assert.True(BoreaLink.TryParse(text, out var link, out _));
+        Assert.Equal(BoreaLinkKind.ModList, link.Kind);
+        Assert.Equal(mods, string.Join('|', link.Mods.Select(entry => $"{entry.ModId} {entry.Version}")));
+        Assert.All(link.Mods, entry => Assert.True(entry.Enabled));
+        Assert.Equal(name, link.Name);
+
+        Assert.True(BoreaLink.TryParse(link.ToString(), out var again, out _));
+        Assert.Equal(link.Mods, again.Mods);
+        Assert.Equal(link.Name, again.Name);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("borea:mod/MeasureTools")]
@@ -73,11 +91,37 @@ public sealed class BoreaLinkTests
     [InlineData("borea://mod/MeasureTools%0A")]
     [InlineData("borea://mod/Measure%20Tools")]
     [InlineData("borea://install/MeasureTools?version=1.0.0%0A")]
+    [InlineData("borea://modlist")]
+    [InlineData("borea://modlist?mods=")]
+    [InlineData("borea://modlist?mods=Core")]
+    [InlineData("borea://modlist?mods=Core,KSAMultiplayer,FastAndPurrious@0.1.14")]
+    [InlineData("borea://modlist?mods=A@1.0.0,a@2.0.0")]
+    [InlineData("borea://modlist?mods=A@x")]
+    [InlineData("borea://modlist?mods=A@1.0.0&mods=B@1.0.0")]
+    [InlineData("borea://modlist?mods=A@1.0.0&url=x")]
+    [InlineData("borea://modlist?mods=A@1.0.0&name=a%0Ab")]
+    [InlineData("borea://modlist?mods=A@1.0.0&name=+")]
+    [InlineData("borea://modlist/x?mods=A@1.0.0")]
+    [InlineData("borea://modlist?mods=-bad@1.0.0")]
     public void TryParse_AnythingElse_IsRefusedWithAReason(string? text)
     {
         Assert.False(BoreaLink.TryParse(text, out var link, out var refusal));
         Assert.Null(link);
         Assert.False(string.IsNullOrWhiteSpace(refusal));
+    }
+
+    [Theory]
+    [InlineData("borea://modlist?mods=Core", ModListLinkProblem.NoVersion)]
+    [InlineData("borea://modlist?mods=-bad@1.0.0", ModListLinkProblem.BadId)]
+    [InlineData("borea://modlist?mods=A@x", ModListLinkProblem.BadVersion)]
+    [InlineData("borea://modlist?mods=A@1.0.0,a@2.0.0", ModListLinkProblem.Duplicate)]
+    [InlineData("borea://modlist?mods=A@1.0.0&name=+", ModListLinkProblem.BadName)]
+    [InlineData("borea://modlist?mods=A@1.0.0&url=x", ModListLinkProblem.Form)]
+    [InlineData("borea://mod/Measure Tools", ModListLinkProblem.None)]
+    public void TryParse_RefusedModList_NamesTheProblem(string text, ModListLinkProblem expected)
+    {
+        Assert.False(BoreaLink.TryParse(text, out _, out _, out var problem));
+        Assert.Equal(expected, problem);
     }
 
     [Fact]
@@ -87,6 +131,22 @@ public sealed class BoreaLinkTests
 
         Assert.False(BoreaLink.TryParse(tooLong, out _, out var refusal));
         Assert.Contains("longer", refusal);
+    }
+
+    [Fact]
+    public void TryParse_ModListOverTheCaps_IsRefused()
+    {
+        var mods = string.Join(',', Enumerable.Range(0, BoreaLink.MaxModListEntries + 1).Select(index => $"M{index}@1.0.0"));
+        var name = new string('a', BoreaLink.MaxNameLength + 1);
+
+        var longMods = string.Join(',', Enumerable.Range(0, BoreaLink.MaxModListEntries - 10).Select(index => $"SomeModWithALongId{index}@1.2.3"));
+
+        Assert.False(BoreaLink.TryParse($"borea://modlist?mods={mods}", out _, out _, out var problem));
+        Assert.Equal(ModListLinkProblem.TooMany, problem);
+        Assert.False(BoreaLink.TryParse($"borea://modlist?mods={longMods}", out _, out _, out problem));
+        Assert.Equal(ModListLinkProblem.TooLong, problem);
+        Assert.False(BoreaLink.TryParse($"borea://modlist?mods=A@1.0.0&name={name}", out _, out _));
+        Assert.True(BoreaLink.TryParse($"borea://modlist?mods=A@1.0.0&name={name[1..]}", out _, out _));
     }
 
     [Theory]

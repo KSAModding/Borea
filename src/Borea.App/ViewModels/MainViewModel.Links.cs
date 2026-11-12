@@ -6,6 +6,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.App.Links;
 using Borea.Composition;
+using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.Links;
 using Borea.Core.Logging;
 using Borea.Core.ModPacks;
@@ -14,7 +16,7 @@ using Borea.Core.Mods;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// borea:// links. A link opens a page of the content index, and an install link only prepares
+/// borea:// links. A link opens a page of the content index, and an install or modlist link only prepares
 /// the install, which then waits for a click.
 /// </summary>
 public partial class MainViewModel
@@ -76,15 +78,15 @@ public partial class MainViewModel
         if (arguments.Count == 1)
             await OpenLinkAsync(arguments[0]);
         else
-            RefuseLink(string.Join(' ', arguments), "the link came as more than one argument");
+            RefuseLink(string.Join(' ', arguments), "the link came as more than one argument", detail: null);
     }
 
     /// <summary>Opens what a borea:// link names. A refused link is logged and shown in a toast, and nothing else happens.</summary>
     internal async Task OpenLinkAsync(string text)
     {
-        if (!BoreaLink.TryParse(text, out var link, out var refusal))
+        if (!BoreaLink.TryParse(text, out var link, out var refusal, out var problem))
         {
-            RefuseLink(text, refusal);
+            RefuseLink(text, refusal, ModListProblemText(problem));
             return;
         }
 
@@ -96,17 +98,32 @@ public partial class MainViewModel
         {
             await OpenLinkAsync(services, link);
         }
-        catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+        catch (Exception exception) when (IsInstallFailure(exception))
         {
             ShowErrorToast(() => Localization.LinkRefused, exception.Message);
         }
     }
 
-    private void RefuseLink(string text, string reason)
+    /// <param name="detail">What to fix in the link, in the language of the player, or null.</param>
+    private void RefuseLink(string text, string reason, string? detail)
     {
         _services?.Log.Write($"Refused the link {BoreaLink.ForLog(text)}, because {reason}.");
-        Toasts.ShowMessage(ToastKind.Error, () => Localization.LinkRefused);
+        Toasts.ShowMessage(ToastKind.Error, () => Localization.LinkRefused, detail);
     }
+
+    /// <summary>What a server owner fixes in a modlist link that Borea refused, or null for any other refused link.</summary>
+    private string? ModListProblemText(ModListLinkProblem problem) => problem switch
+    {
+        ModListLinkProblem.TooLong => Localization.FormatLinkModListTooLong(BoreaLink.MaxLength),
+        ModListLinkProblem.Form => Localization.LinkModListForm,
+        ModListLinkProblem.NoVersion => Localization.LinkModListNoVersion,
+        ModListLinkProblem.BadId => Localization.LinkModListBadId,
+        ModListLinkProblem.BadVersion => Localization.LinkModListBadVersion,
+        ModListLinkProblem.Duplicate => Localization.LinkModListDuplicate,
+        ModListLinkProblem.TooMany => Localization.FormatLinkModListTooMany(BoreaLink.MaxModListEntries),
+        ModListLinkProblem.BadName => Localization.FormatLinkModListBadName(BoreaLink.MaxNameLength),
+        _ => null,
+    };
 
     private async Task OpenLinkAsync(BoreaServices services, BoreaLink link)
     {
@@ -114,6 +131,12 @@ public partial class MainViewModel
             await load.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
 
         await EnsureDiscoverLoadedAsync();
+        if (link.Kind == BoreaLinkKind.ModList)
+        {
+            await OpenModListLinkAsync(services, link);
+            return;
+        }
+
         var (listing, pack) = FindIndexContent(link.Id);
         if (listing is null && pack is null)
         {
@@ -138,6 +161,62 @@ public partial class MainViewModel
         {
             ShowErrorToast(() => Localization.FormatLinkNotInIndex(link.Id));
         }
+    }
+
+    /// <summary>
+    /// Shows the mods of a modlist link in the modal of a modlist import, which creates a new instance on the click. A mod that
+    /// is not a mod listing of the content index, or whose release is not offered for a new install or does not fit the installed
+    /// game, is marked in its row, the same way a pack install refuses such a member, and then Borea plans nothing.
+    /// </summary>
+    private async Task OpenModListLinkAsync(BoreaServices services, BoreaLink link)
+    {
+        if (ModListImport is not null)
+        {
+            ShowErrorToast(() => Localization.LinkRefused);
+            return;
+        }
+
+        if (link.Mods.Any(entry => FindIndexContent(entry.ModId).Listing is null))
+            await RetryContentIndexAsync();
+
+        var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
+        var rows = new List<ModListLinkRow>();
+        var releases = new List<ModVersionMetadata>();
+        foreach (var entry in link.Mods)
+        {
+            var listing = FindIndexContent(entry.ModId).Listing;
+            var release = listing is { Type: ContentType.Mod } ? await services.ContentIndex.GetReleaseAsync(listing.ModId, entry.Version) : null;
+            var problem = LinkEntryProblem(listing, release, installed);
+            if (problem is null)
+                releases.Add(release!);
+            rows.Add(new ModListLinkRow(this, listing, entry, problem));
+        }
+
+        IsSettingsOpen = false;
+        if (!await ShowNewModListAsync(services, new ModList(link.Name, link.Mods), link.Name ?? string.Empty, new ModListLink(rows, releases)))
+            ShowErrorToast(() => Localization.LinkRefused);
+    }
+
+    /// <summary>
+    /// Why the link cannot install <paramref name="entry"/>, or null when its release is offered and fits the game. The text
+    /// does not name the mod or the version, because its row shows both.
+    /// </summary>
+    private Func<string>? LinkEntryProblem(DiscoverItem? listing, ModVersionMetadata? release, GameVersion? installed)
+    {
+        if (listing is null)
+            return () => Localization.LinkModListRowNotInIndex;
+        if (listing.Type != ContentType.Mod)
+            return () => Localization.LinkModListRowNotAMod;
+
+        return release switch
+        {
+            null => () => Localization.LinkModListRowVersionMissing,
+            { Yanked: true } => () => Localization.FormatLinkModListRowYanked(release.YankedReason),
+            { IsOffered: false } => () => Localization.LinkModListRowVersionGone,
+            _ when Borea.Core.Game.Compatibility.Evaluate(release, installed) != GameCompatibility.Incompatible => null,
+            _ when Borea.Core.Game.Compatibility.IsAboveUpperBound(release, installed) => () => Localization.FormatLinkModListRowAboveGameMax(release.GameMax!),
+            _ => () => Localization.FormatLinkModListRowIncompatible(release.GameMin),
+        };
     }
 
     /// <summary>Every listing and pack shares one id namespace, so a mod link that names a vehicle, a save or a pack still finds it.</summary>

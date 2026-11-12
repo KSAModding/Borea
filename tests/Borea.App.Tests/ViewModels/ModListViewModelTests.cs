@@ -131,7 +131,7 @@ public sealed class ModListViewModelTests
         Assert.NotNull(review.InstallError);
         Assert.Same(review, viewModel.ModListImport);
         Assert.Equal("Main", Assert.Single(await harness.Services.Instances.GetAllAsync()).Name);
-        Assert.False(Directory.Exists(harness.Services.Paths.GetInstanceRoot(review.Plan.InstanceId)));
+        Assert.False(Directory.Exists(harness.Services.Paths.GetInstanceRoot(review.Plan!.InstanceId)));
     }
 
     [Fact]

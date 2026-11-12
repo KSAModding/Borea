@@ -2907,6 +2907,75 @@
   <data name="LinkVersionGoneFormat" xml:space="preserve">
     <value>Version {0} can no longer be downloaded, so Borea offers the newest release instead.</value>
   </data>
+  <data name="LinkModListTitle" xml:space="preserve">
+    <value>Create an instance from a link</value>
+  </data>
+  <data name="LinkModListNote" xml:space="preserve">
+    <value>These mods come from a link. Nothing installs until you click Create.</value>
+  </data>
+  <data name="LinkModListNoteBlocked" xml:space="preserve">
+    <value>These mods come from a link.</value>
+  </data>
+  <data name="LinkModListCountFormat" xml:space="preserve">
+    <value>Mods in the link: {0}</value>
+  </data>
+  <data name="LinkModListDependenciesFormat" xml:space="preserve">
+    <value>Borea also installs what these mods need: {0}.</value>
+  </data>
+  <data name="LinkModListLoaderFormat" xml:space="preserve">
+    <value>Needs the mod loader {0} {1}. Borea offers to install it when you click Play.</value>
+  </data>
+  <data name="LinkModListBlocked" xml:space="preserve">
+    <value>Borea cannot install the marked mods. Ask whoever shared the link to fix them.</value>
+  </data>
+  <data name="LinkModListForm" xml:space="preserve">
+    <value>The link must look like borea://modlist?mods=ModId@1.2.3 with an optional &amp;name=.</value>
+  </data>
+  <data name="LinkModListNoVersion" xml:space="preserve">
+    <value>Every mod in the link needs an exact version, like ModId@1.2.3.</value>
+  </data>
+  <data name="LinkModListBadId" xml:space="preserve">
+    <value>A mod in the link has an id that is not a valid content id.</value>
+  </data>
+  <data name="LinkModListBadVersion" xml:space="preserve">
+    <value>A mod in the link has a version that is not valid. A valid one is 1.2.3.</value>
+  </data>
+  <data name="LinkModListDuplicate" xml:space="preserve">
+    <value>The link names a mod more than once.</value>
+  </data>
+  <data name="LinkModListTooManyFormat" xml:space="preserve">
+    <value>The link names more than {0} mods.</value>
+  </data>
+  <data name="LinkModListTooLongFormat" xml:space="preserve">
+    <value>The link is longer than {0} characters. Name fewer mods.</value>
+  </data>
+  <data name="LinkModListBadNameFormat" xml:space="preserve">
+    <value>The name in the link must be 1 to {0} characters of plain ASCII text.</value>
+  </data>
+  <data name="LinkModListRowNotInIndex" xml:space="preserve">
+    <value>Not in the content index.</value>
+  </data>
+  <data name="LinkModListRowNotAMod" xml:space="preserve">
+    <value>Not a mod, so the link cannot install it.</value>
+  </data>
+  <data name="LinkModListRowVersionMissing" xml:space="preserve">
+    <value>This version is not in the content index.</value>
+  </data>
+  <data name="LinkModListRowYanked" xml:space="preserve">
+    <value>Yanked.</value>
+  </data>
+  <data name="LinkModListRowYankedFormat" xml:space="preserve">
+    <value>Yanked: "{0}"</value>
+  </data>
+  <data name="LinkModListRowVersionGone" xml:space="preserve">
+    <value>No longer offered for new installs.</value>
+  </data>
+  <data name="LinkModListRowIncompatibleFormat" xml:space="preserve">
+    <value>Needs KSA {0} or newer.</value>
+  </data>
+  <data name="LinkModListRowAboveGameMaxFormat" xml:space="preserve">
+    <value>Supports KSA up to {0}.</value>
+  </data>
   <data name="DiscoverListYourMod" xml:space="preserve">
     <value>List or change your mod</value>
   </data>
