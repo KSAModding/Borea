@@ -2039,6 +2039,28 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LinkModListNoteBlocked => Resources.LinkModListNoteBlocked;
 
+    public string LinkModListUpdateTitle => Resources.LinkModListUpdateTitle;
+
+    public string FormatLinkModListChoiceUpdate(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListChoiceUpdateFormat, instance);
+
+    public string LinkModListChoiceNew => Resources.LinkModListChoiceNew;
+
+    public string FormatLinkModListUpdateNote(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListUpdateNoteFormat, instance);
+
+    public string FormatLinkModListKeepOwn(string mod, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListKeepOwnFormat, mod, version);
+
+    public string FormatLinkModListInstanceGone(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListInstanceGoneFormat, instance);
+
+    public string FormatLinkModListInstanceBusy(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListInstanceBusyFormat, instance);
+
+    public string FormatLinkModListUpdated(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListUpdatedFormat, instance);
+
     public string FormatLinkModListCount(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.LinkModListCountFormat, count);
 

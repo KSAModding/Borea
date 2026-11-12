@@ -33,6 +33,8 @@ public static class InstanceMapper
             SourceModPackDetached = instance.Source is InstanceSource.FromModPack { Detached.Count: > 0 } pack
                 ? pack.Detached.Order(ModIds.Comparer).ToList()
                 : null,
+            ModListLinkId = instance.LinkedModList?.ListId,
+            ModListLinkMods = instance.LinkedModList?.Mods.Order(ModIds.Comparer).ToList(),
             Mods = instance.Mods.Select(InstalledModMapper.ToDto).ToList(),
             ForeignMods = instance.ForeignMods.Select(ForeignModMapper.ToDto).ToList(),
         };
@@ -61,8 +63,15 @@ public static class InstanceMapper
 
         var instance = Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, foreignMods, dto.IsFavorite, dto.LastPlayedAt, dto.LaunchArguments, gameBuild);
         instance.SetLoader(LoaderFrom(dto));
+        instance.SetLinkedModList(LinkedModListFrom(dto));
         return instance;
     }
+
+    // a hand-edited list id that is not valid reads as no link, so a later link creates a new instance instead of updating this one
+    private static LinkedModList? LinkedModListFrom(InstanceDto dto)
+        => ModIds.IsValid(dto.ModListLinkId)
+            ? new LinkedModList(dto.ModListLinkId!, (dto.ModListLinkMods ?? []).Where(id => ModIds.IsValid(id)))
+            : null;
 
     // a hand-edited loader that does not parse falls back to the default, because a start can still choose a loader then
     private static LoaderSetting LoaderFrom(InstanceDto dto)

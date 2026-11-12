@@ -2,6 +2,7 @@ using Borea.Core.Dependencies;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 
 namespace Borea.Core.ModPacks;
 
@@ -131,6 +132,27 @@ public static class ModPackUpdates
             .Where(mod => changes.FirstOrDefault(change => ModIds.Equals(change.ModId, mod.ModId))?.Kind != ModPackChangeKind.Remove)
             .ToList();
         return Instance.FromExisting(instance.InstanceId, instance.Name, instance.Source, instance.CreatedAt, mods, instance.ForeignMods, instance.IsFavorite, instance.LastPlayedAt, instance.LaunchArguments, instance.GameBuild);
+    }
+
+    /// <summary>
+    /// Adds what the plan installs besides the pins of a pack or the mods of a modlist, such as a new dependency or a new version of a kept mod.
+    /// A detached mod that the plan installs is an addition or a change, because the update does not leave it alone.
+    /// </summary>
+    public static IReadOnlyList<ModPackChange> WithPlanned(IReadOnlyList<ModPackChange> changes, Instance draft, InstallPlan plan)
+    {
+        ModVersion? Planned(string modId) => plan.Operations.FirstOrDefault(operation => ModIds.Equals(operation.Release.ModId, modId))?.Release.Version;
+        var kept = changes.Select(change => (change.Kind, Planned(change.ModId)) switch
+        {
+            (ModPackChangeKind.Keep, { } version) => change with { To = version },
+            (ModPackChangeKind.Detached, { } version) => change with { Kind = change.From is null ? ModPackChangeKind.Add : ModPackChangeKind.Change, To = version },
+            _ => change,
+        });
+        var added = plan.Operations
+            .Where(operation => !changes.Any(change => ModIds.Equals(change.ModId, operation.Release.ModId)))
+            .Select(operation => draft.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, operation.Release.ModId)) is { } installed
+                ? new ModPackChange(installed.ModId, ModPackChangeKind.Change, installed.Version, operation.Release.Version)
+                : new ModPackChange(operation.Release.ModId, ModPackChangeKind.Add, null, operation.Release.Version));
+        return kept.Concat(added).OrderBy(change => change.Kind).ThenBy(change => change.ModId, ModIds.Comparer).ToList();
     }
 
     private static List<ModPackChange> Ordered(IEnumerable<ModPackChange> changes)

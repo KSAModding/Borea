@@ -170,6 +170,7 @@ public sealed partial class ToastItem : ObservableObject
     private string FinishedText(TaskItem task) => task.Kind switch
     {
         TaskKind.Update or TaskKind.PackUpdate when task.NewVersion is { } version => Localization.FormatToastUpdated(Subject, version, InstanceName),
+        TaskKind.PackUpdate => Localization.FormatLinkModListUpdated(Subject),
         TaskKind.Update or TaskKind.UpdateAll => Localization.FormatToastUpdatedAll(task.ModCount, InstanceName),
         TaskKind.ModInstall when task.ChangedModName is { } name && task.Version is { } version => Localization.FormatToastChanged(name, version, InstanceName),
         TaskKind.ModRemoval => Localization.FormatToastRemoved(Subject, InstanceName),

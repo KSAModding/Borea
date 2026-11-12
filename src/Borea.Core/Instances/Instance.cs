@@ -44,6 +44,9 @@ public sealed class Instance
     /// <summary>The mod loader, and its version, that a start of this instance uses.</summary>
     public LoaderSetting Loader { get; private set; } = LoaderSetting.Automatic;
 
+    /// <summary>The modlist link that created this instance, or null when no link created it.</summary>
+    public LinkedModList? LinkedModList { get; private set; }
+
     public Instance(string name, InstanceSource source) : this(Guid.NewGuid(), name, source, DateTimeOffset.UtcNow, Array.Empty<InstalledMod>(), Array.Empty<ForeignMod>())
     {
     }
@@ -273,6 +276,14 @@ public sealed class Instance
 
     public void SetGameBuild(GameVersion? build) => GameBuild = build;
     public void SetLoader(LoaderSetting loader) => Loader = loader ?? throw new ArgumentNullException(nameof(loader));
+
+    public void SetLinkedModList(LinkedModList? list) => LinkedModList = list;
+
+    /// <summary>
+    /// Takes a mod that the player removed off the mods that modlist links put here, so a later link never removes it when the
+    /// player installs it again. A replacement of a version keeps it, because it does not come here.
+    /// </summary>
+    public void ForgetLinkedMod(string modId) => LinkedModList = LinkedModList?.Without(modId);
 
     // a null character would cut the argument short on its way to the process
     private static List<string> CheckedArguments(IReadOnlyList<string> arguments)

@@ -2916,6 +2916,30 @@
   <data name="LinkModListNoteBlocked" xml:space="preserve">
     <value>These mods come from a link.</value>
   </data>
+  <data name="LinkModListUpdateTitle" xml:space="preserve">
+    <value>Update an instance from a link</value>
+  </data>
+  <data name="LinkModListChoiceUpdateFormat" xml:space="preserve">
+    <value>Update {0}</value>
+  </data>
+  <data name="LinkModListChoiceNew" xml:space="preserve">
+    <value>Create a new instance</value>
+  </data>
+  <data name="LinkModListUpdateNoteFormat" xml:space="preserve">
+    <value>{0} was made from an earlier version of this link. Nothing changes until you click Update.</value>
+  </data>
+  <data name="LinkModListKeepOwnFormat" xml:space="preserve">
+    <value>Keeps {0} {1}, because you added it and the link does not name it</value>
+  </data>
+  <data name="LinkModListInstanceGoneFormat" xml:space="preserve">
+    <value>{0} no longer exists. Choose Create a new instance instead.</value>
+  </data>
+  <data name="LinkModListInstanceBusyFormat" xml:space="preserve">
+    <value>Another change to {0} is running. Try again when it is done.</value>
+  </data>
+  <data name="LinkModListUpdatedFormat" xml:space="preserve">
+    <value>{0} now has the mods of the link</value>
+  </data>
   <data name="LinkModListCountFormat" xml:space="preserve">
     <value>Mods in the link: {0}</value>
   </data>

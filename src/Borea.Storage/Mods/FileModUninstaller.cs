@@ -55,6 +55,7 @@ public sealed class FileModUninstaller : IModUninstaller
                     DirectoryLinks.DeleteTreeWithoutFollowingLinks(modDirectory);
 
                 removed = installed;
+                current.ForgetLinkedMod(installed.ModId);
                 return current.RemoveMod(installed.ModId);
             },
             cancellationToken).ConfigureAwait(false);

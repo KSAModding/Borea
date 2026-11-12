@@ -2916,6 +2916,30 @@
   <data name="LinkModListNoteBlocked" xml:space="preserve">
     <value>Diese Mods kommen aus einem Link.</value>
   </data>
+  <data name="LinkModListUpdateTitle" xml:space="preserve">
+    <value>Instanz aus einem Link aktualisieren</value>
+  </data>
+  <data name="LinkModListChoiceUpdateFormat" xml:space="preserve">
+    <value>{0} aktualisieren</value>
+  </data>
+  <data name="LinkModListChoiceNew" xml:space="preserve">
+    <value>Neue Instanz erstellen</value>
+  </data>
+  <data name="LinkModListUpdateNoteFormat" xml:space="preserve">
+    <value>{0} wurde aus einer früheren Version dieses Links erstellt. Nichts ändert sich, bevor du auf Aktualisieren klickst.</value>
+  </data>
+  <data name="LinkModListKeepOwnFormat" xml:space="preserve">
+    <value>Behält {0} {1}, weil du diesen Mod selbst hinzugefügt hast und der Link ihn nicht nennt</value>
+  </data>
+  <data name="LinkModListInstanceGoneFormat" xml:space="preserve">
+    <value>{0} gibt es nicht mehr. Wähle stattdessen Neue Instanz erstellen.</value>
+  </data>
+  <data name="LinkModListInstanceBusyFormat" xml:space="preserve">
+    <value>An {0} läuft gerade eine andere Änderung. Versuch es noch einmal, wenn sie fertig ist.</value>
+  </data>
+  <data name="LinkModListUpdatedFormat" xml:space="preserve">
+    <value>{0} hat jetzt die Mods aus dem Link</value>
+  </data>
   <data name="LinkModListCountFormat" xml:space="preserve">
     <value>Mods im Link: {0}</value>
   </data>

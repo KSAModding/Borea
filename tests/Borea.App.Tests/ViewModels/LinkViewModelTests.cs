@@ -10,6 +10,7 @@ using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Core.Preferences;
 using static Borea.App.Tests.ViewModels.UserContentFixtures;
 
@@ -545,6 +546,123 @@ public sealed class LinkViewModelTests
         var instances = await harness.Services.Instances.GetAllAsync();
         Assert.Equal(["OrbitTools 1.1.9"], ManualMods(instances.Single(instance => instance.Name == "Server")));
         Assert.Equal(["OrbitTools 1.1.10"], ManualMods(instances.Single(instance => instance.Name == "Server (2)")));
+    }
+
+    [Fact]
+    public async Task ModListLink_SameIdAgain_OffersTheUpdatePreselected_ChangesNothingBeforeTheClick_ThenUpdates()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeModArchive, editSnapshot: snapshot => Served(WithListing(WithListing(WithListing(snapshot, "OrbitTools"), "DockTools"), "PlayerTools")));
+        await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+        var localization = harness.Localization;
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.9,MeasureTools@1.1.10&name=Server&id=srv");
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+        var server = (await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Server");
+        var playerTools = await harness.Services.Mods.GetReleaseAsync("PlayerTools", ModVersion.Parse("1.1.10"));
+        var playerPlan = await harness.Services.InstallPlanner.PlanAsync(new InstallPlanningRequest(server, [new RequestedMod(playerTools!, InstallReason.Manual, Exact: true)], harness.Services.Mods));
+        await harness.Services.PlanExecutor.ExecuteAsync(playerPlan, enable: true);
+
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.10,DockTools@1.1.9&name=Renamed&id=srv");
+
+        var review = viewModel.ModListImport!;
+        Assert.Equal([localization.FormatLinkModListChoiceUpdate("Server"), localization.LinkModListChoiceNew], review.Targets.Select(target => target.Text));
+        Assert.True(review.Targets[0].IsSelected);
+        Assert.True(review.IsUpdate);
+        Assert.Equal(localization.ContentUpdate, review.ConfirmText);
+        Assert.Equal(
+        [
+            localization.FormatPackUpdateAdd("DockTools", "1.1.9"),
+            localization.FormatPackUpdateChange("OrbitTools", "1.1.9", "1.1.10"),
+            localization.FormatPackUpdateRemove("MeasureTools", "1.1.10"),
+            localization.FormatLinkModListKeepOwn("PlayerTools", "1.1.10"),
+        ], review.ChangeTexts);
+        Assert.True(review.CanConfirm);
+        Assert.Equal(["MeasureTools 1.1.10", "OrbitTools 1.1.9", "PlayerTools 1.1.10"], ManualMods((await harness.Services.Instances.GetByIdAsync(server.InstanceId))!));
+
+        await review.ConfirmCommand.ExecuteAsync(null);
+
+        Assert.Null(review.InstallError);
+        Assert.Null(viewModel.ModListImport);
+        var instances = await harness.Services.Instances.GetAllAsync();
+        Assert.Equal(["Main", "Server"], instances.Select(instance => instance.Name).Order(StringComparer.Ordinal));
+        var updated = instances.Single(instance => instance.InstanceId == server.InstanceId);
+        Assert.Equal(["DockTools 1.1.9", "OrbitTools 1.1.10", "PlayerTools 1.1.10"], ManualMods(updated));
+        Assert.Equal(new LinkedModList("srv", ["OrbitTools", "DockTools"]), updated.LinkedModList);
+
+        await viewModel.BeginDuplicateAsync(server.InstanceId);
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+        Assert.Null((await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == localization.FormatModListCopyName("Server")).LinkedModList);
+    }
+
+    [Fact]
+    public async Task ModListLink_Update_OrdersTheLinkModsInTheirPlaces_AndKeepsThePlaceOfAPlayerMod()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeModArchive, editSnapshot: snapshot => Served(WithListing(WithListing(snapshot, "OrbitTools"), "PlayerTools")));
+        await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.9,MeasureTools@1.1.10&name=Server&id=srv");
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+        var server = (await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Server");
+        var playerTools = await harness.Services.Mods.GetReleaseAsync("PlayerTools", ModVersion.Parse("1.1.10"));
+        await harness.Services.PlanExecutor.ExecuteAsync(await harness.Services.InstallPlanner.PlanAsync(new InstallPlanningRequest(server, [new RequestedMod(playerTools!, InstallReason.Manual, Exact: true)], harness.Services.Mods)), enable: true);
+        await harness.Services.ModState.ReorderAsync(server.InstanceId, ["OrbitTools", "PlayerTools", "MeasureTools"]);
+
+        await viewModel.OpenLinkAsync("borea://modlist?mods=MeasureTools@1.1.10,OrbitTools@1.1.10&name=Server&id=srv");
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.ModListImport);
+        Assert.Equal(["MeasureTools", "PlayerTools", "OrbitTools"], (await harness.Services.ModState.GetEntriesAsync(server.InstanceId)).Select(entry => entry.ModId));
+    }
+
+    [Fact]
+    public async Task ModListLink_OnlyAnInstanceFromALinkWithTheSameIdIsOffered()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeModArchive, editSnapshot: snapshot => Served(WithListing(snapshot, "OrbitTools")));
+        await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+        var player = (await harness.Services.Instances.CreateAsync("Server", InstanceSource.Custom.Value)).Instance;
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.9&name=Other&id=other");
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.10&name=Server&id=srv");
+        Assert.Empty(viewModel.ModListImport!.Targets);
+        Assert.Equal("Server (2)", viewModel.ModListImport.Name);
+        await viewModel.ModListImport.ConfirmCommand.ExecuteAsync(null);
+
+        await viewModel.OpenLinkAsync("borea://modlist?mods=MeasureTools@1.1.10&name=Server&id=srv");
+        var review = viewModel.ModListImport!;
+        Assert.Equal([harness.Localization.FormatLinkModListChoiceUpdate("Server (2)"), harness.Localization.LinkModListChoiceNew], review.Targets.Select(target => target.Text));
+        review.Targets[^1].IsSelected = true;
+        Assert.False(review.Targets[0].IsSelected);
+        Assert.False(review.IsUpdate);
+        Assert.Equal("Server (3)", review.Name);
+        await review.ConfirmCommand.ExecuteAsync(null);
+
+        var instances = await harness.Services.Instances.GetAllAsync();
+        Assert.Empty(instances.Single(instance => instance.InstanceId == player.InstanceId).Mods);
+        Assert.Equal(["OrbitTools 1.1.9"], ManualMods(instances.Single(instance => instance.Name == "Other")));
+        Assert.Equal(["OrbitTools 1.1.10"], ManualMods(instances.Single(instance => instance.Name == "Server (2)")));
+        Assert.Equal(["MeasureTools 1.1.10"], ManualMods(instances.Single(instance => instance.Name == "Server (3)")));
+    }
+
+    [Fact]
+    public async Task ModListLink_SameIdWithARefusedRow_OffersNoUpdate_AndBlocks()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeModArchive, editSnapshot: snapshot => Served(WithListing(snapshot, "OrbitTools")));
+        await ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.9&name=Server&id=srv");
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        await viewModel.OpenLinkAsync("borea://modlist?mods=OrbitTools@1.1.10,Nope@1.0.0&name=Server&id=srv");
+
+        var review = viewModel.ModListImport!;
+        Assert.Empty(review.Targets);
+        Assert.Null(review.Plan);
+        Assert.False(review.CanConfirm);
+        Assert.Equal(harness.Localization.LinkModListBlocked, review.BlockedText);
+        await review.ConfirmCommand.ExecuteAsync(null);
+        Assert.Equal(["OrbitTools 1.1.9"], ManualMods((await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Server")));
     }
 
     [Theory]

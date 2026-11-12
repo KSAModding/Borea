@@ -148,6 +148,21 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UninstallAsync_ModThatALinkPutThere_LeavesTheModsOfTheLink()
+    {
+        await AddInstalledModAsync(ModInstallOwnership.Borea);
+        await _instances.UpdateAsync(_instanceId, instance =>
+        {
+            instance.SetLinkedModList(new LinkedModList("srv", ["test-mod", "other-mod"]));
+            return true;
+        });
+
+        await _uninstaller.UninstallAsync(_instanceId, "test-mod");
+
+        Assert.Equal(new LinkedModList("srv", ["other-mod"]), (await _instances.GetByIdAsync(_instanceId))!.LinkedModList);
+    }
+
+    [Fact]
     public async Task UninstallAsync_OwnedRecordWithoutFolder_RemovesTheRecord()
     {
         await AddInstalledModAsync(ModInstallOwnership.Borea);
