@@ -1611,6 +1611,11 @@ public partial class MainViewModel
         // a preview that closed can still read this mod
         await WhenVehiclePreviewReadsEndedAsync();
         await services.Uninstaller.UninstallAsync(instanceId, installed.ModId);
+
+        // the dependencies that only this mod needed go with it, as the confirmation said
+        foreach (var orphan in OrphanedDependencies.After(instance, installed.ModId))
+            await services.Uninstaller.UninstallAsync(instanceId, orphan.ModId);
+
         return null;
     }
 }
@@ -1698,7 +1703,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     public string RemoveConfirmText => IsMissing
         ? _owner.Localization.ContentRemoveFromListConfirm
-        : NeededByText is { } needed ? $"{needed} {_owner.Localization.ContentRemoveConfirm}" : _owner.Localization.ContentRemoveConfirm;
+        : string.Join(' ', new[] { NeededByText, _owner.OrphansRemovedText(_instance, ModId), _owner.Localization.ContentRemoveConfirm }.OfType<string>());
 
     /// <summary>What the game does to the recorded vehicles and saves that need the mod, or null when none does.</summary>
     public string? NeededByText => _owner.ContentNeededByText(_instance, ModId);

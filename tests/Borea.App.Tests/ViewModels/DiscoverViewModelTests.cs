@@ -1157,11 +1157,49 @@ public sealed class DiscoverViewModelTests
         Assert.Contains(reason, row.InstallWarning);
     }
 
+    [Fact]
+    public async Task Remove_ModThatPulledInADependency_SaysSoAndRemovesBoth()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => InstallStepsTests.WithRequired(json, "MeasureTools", "AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, InstallReason.Manual, ModInstallOwnership.Borea);
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, InstallReason.Dependency, ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+
+        var text = viewModel.OrphansRemovedText(instance, "MeasureTools");
+        Assert.NotNull(text);
+        Assert.Contains(instance.Mods.Single(mod => mod.ModId == "AdvancedFlightComputer").Metadata.Listing?.Name ?? "AdvancedFlightComputer", text);
+
+        Assert.True(await viewModel.RemoveContentAsync(instance.InstanceId, "MeasureTools"));
+
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task LoaderBound_ThatFits_StaysCompatibleBesideAModWhoseBoundsNoLoaderVersionMeets()
+    {
+        using var harness = await InstallStepsTests.CreateWithGameAsync(WithStarMapBound);
+        var instance = await InstallStepsTests.ActivateInstanceAsync(harness);
+        var viewModel = harness.ViewModel;
+
+        // StarMap 0.5.3 does not run on this build, so the installed mod cannot start, and only that mod is to blame
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, record =>
+        {
+            record.AddMod(InstanceLoaderTests.NeedsLoader("NeedsNewStarMap", "StarMap", "0.5.3"));
+            return true;
+        });
+        await viewModel.LoadAsync();
+
+        var armory = viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory");
+        Assert.Equal(GameCompatibility.Compatible, armory.Compatibility);
+        Assert.Null(armory.CompatibilityToolTip);
+    }
+
     /// <summary>
     /// Adds StarMap 0.4.8, which supports the game up to 2026.8.22.5348, and StarMap 0.5.3, which needs 2026.9.7.5402, and lets
     /// KSArmory need exactly StarMap 0.4.8 on every build from 2026.8.3.5117 on.
     /// </summary>
-    private static string WithStarMapBound(string json)
+    internal static string WithStarMapBound(string json)
     {
         var root = JsonNode.Parse(json)!;
         var listings = root["listings"]!.AsArray();

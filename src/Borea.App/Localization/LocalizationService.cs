@@ -1780,6 +1780,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentRemoveConfirm => Resources.ContentRemoveConfirm;
 
+    public string FormatContentRemoveOrphans(string mods)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveOrphansFormat, mods);
+
     public string FormatContentRemoveChanged(string name, string files)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveChangedFormat, name, files);
 

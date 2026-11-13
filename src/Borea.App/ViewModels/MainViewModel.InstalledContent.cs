@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
+using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -61,6 +62,21 @@ public partial class MainViewModel
     /// What the game does to each recorded vehicle and save of the instance that needs the mod, when the mod is removed
     /// or disabled, or null when none needs it. It only warns, because only an incompatible release blocks.
     /// </summary>
+    /// <summary>
+    /// The sentence that names the dependencies Borea removes together with <paramref name="modId"/>, because no other mod
+    /// of <paramref name="instance"/> needs them, or null when there are none.
+    /// </summary>
+    internal string? OrphansRemovedText(Instance? instance, string modId)
+    {
+        var orphans = instance is null ? [] : OrphanedDependencies.After(instance, modId);
+        return orphans.Count == 0
+            ? null
+            : Localization.FormatContentRemoveOrphans(string.Join(", ", orphans.Select(mod => mod.Metadata.Listing?.Name ?? mod.ModId)));
+    }
+
+    /// <summary>The sentence of <see cref="OrphansRemovedText"/> for the active instance, where Discover removes a mod.</summary>
+    internal string? OrphansRemovedFromActiveText(string modId) => OrphansRemovedText(_activeInstanceEntity, modId);
+
     internal string? ContentNeededByText(Instance instance, string modId)
     {
         var item = Instances.FirstOrDefault(item => item.InstanceId == instance.InstanceId);

@@ -670,7 +670,10 @@ public partial class MainViewModel
 
     /// <summary>
     /// How <paramref name="release"/> fits the active instance on <paramref name="game"/>. Besides the game bounds, a release is
-    /// incompatible when no version of the loader it needs can start that instance, and then the warning says why.
+    /// incompatible when no version of the loader it needs fits its own loader bounds, the game and the loader setting of that
+    /// instance, and then the warning says why. The bounds of the other mods do not count here, because one mod that no
+    /// loader version can start would otherwise mark every mod of that loader, and the Mod loader section of the instance
+    /// and the install plan already name such a mod.
     /// </summary>
     private async Task<(GameCompatibility Compatibility, PlanningMessage? LoaderProblem)> CompatibilityOfAsync(ModVersionMetadata release, GameVersion? game)
     {
@@ -709,10 +712,10 @@ public partial class MainViewModel
             _game = game;
         }
 
-        /// <summary>Why no loader version can start the instance with <paramref name="release"/> in place of its copy of that mod.</summary>
+        /// <summary>Why no version of the loader that <paramref name="release"/> needs fits its bounds, the game and the loader setting.</summary>
         public async Task<LoaderVersionProblem> ProblemAsync(ModVersionMetadata release)
         {
-            var need = LoaderNeed.With(_instance, [release]).Loaders.Single(loader => ModIds.Equals(loader.LoaderId, release.Loader!.LoaderId));
+            var need = LoaderNeed.With(null, [release]).Loaders.Single(loader => ModIds.Equals(loader.LoaderId, release.Loader!.LoaderId));
             var key = (need.LoaderId.ToUpperInvariant(), need.MinVersion, need.MaxVersion);
             if (!_answers.TryGetValue(key, out var problem))
                 _answers[key] = problem = await LoaderVersionChoice.CheckNeedAsync(_instance?.Loader ?? LoaderSetting.Automatic, need, _mods, _channel, _game);
@@ -1383,8 +1386,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     private string? _neededByText;
 
     public string RemoveConfirmText => RemoveChanges is { } files ? _owner.Localization.FormatContentRemoveChanged(Name, files)
-        : NeededByText is { } needed ? $"{needed} {_owner.Localization.ContentRemoveConfirm}"
-        : _owner.Localization.ContentRemoveConfirm;
+        : string.Join(' ', new[] { NeededByText, _owner.OrphansRemovedFromActiveText(ModId), _owner.Localization.ContentRemoveConfirm }.OfType<string>());
 
     public bool CanRemove => IsInstalled && !IsRemoving && RemoveBlockedText is null;
 
