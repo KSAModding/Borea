@@ -246,7 +246,7 @@ public sealed class InstanceLoaderTests
     private static Instance InstanceWith(params InstalledMod[] mods) =>
         Instance.FromExisting(Guid.NewGuid(), "Main", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, [], isFavorite: false);
 
-    private static InstalledMod NeedsLoader(string modId, string loaderId, string min, string? max = null)
+    internal static InstalledMod NeedsLoader(string modId, string loaderId, string min, string? max = null)
     {
         var release = new ModVersionMetadata(
             specVersion: 1,

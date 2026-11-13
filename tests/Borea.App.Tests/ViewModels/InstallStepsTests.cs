@@ -293,7 +293,7 @@ public sealed class InstallStepsTests
         return root.ToJsonString();
     }
 
-    private static string WithRequired(string json, string modId, string dependency)
+    internal static string WithRequired(string json, string modId, string dependency)
     {
         var root = JsonNode.Parse(json)!;
         Listing(root, modId)["releases"]![0]!["dependencies"] = JsonNode.Parse($$"""[{ "id": "{{dependency}}", "kind": "required", "source": "authored" }]""");
