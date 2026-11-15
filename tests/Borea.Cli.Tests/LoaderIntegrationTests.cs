@@ -54,7 +54,8 @@ public sealed class LoaderIntegrationTests : IDisposable
                 _root,
                 new ControlledHttpMessageHandler(snapshot),
                 new EmptyModRepository(),
-                cancellationToken);
+                cancellationToken,
+                sharedProfileRoot: Path.Combine(_root, "GameProfile"));
             return CliServices.From(
                 graph,
                 launcher: new LoaderLauncher(graph.Paths, _processStarter));

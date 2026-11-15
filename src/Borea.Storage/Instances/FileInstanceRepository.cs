@@ -16,6 +16,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
 {
     private readonly IGamePathProvider _pathProvider;
     private readonly ModStore _store;
+    private readonly NewInstanceSettings? _settings;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> _instanceLocks = new();
 
     // Windows does not replace or delete a file that a read still holds open, so a read of a record never
@@ -23,10 +24,12 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> _fileLocks = new();
     private readonly SemaphoreSlim _activeInstanceLock = new(1, 1);
 
-    public FileInstanceRepository(IGamePathProvider pathProvider, ModStore? store = null)
+    /// <param name="settings">Writes the first settings.toml of each new instance. Null leaves a new instance without one.</param>
+    public FileInstanceRepository(IGamePathProvider pathProvider, ModStore? store = null, NewInstanceSettings? settings = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _store = store ?? new ModStore(pathProvider, new DirectoryLinker(), linksReleases: false);
+        _settings = settings;
     }
 
 
@@ -98,13 +101,16 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     /// <summary>
     /// Throws if the name is already in use.
     /// </summary>
-    public async Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source)
-        => await CreateAsync(new Instance(name, source)).ConfigureAwait(false);
+    public Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source)
+        => CreateAsync(new Instance(name, source));
+
+    public Task<InstanceCreateResult> CreateAsync(Instance instance) => CreateAsync(instance, InstanceOrigin.New);
 
     /// <summary>
-    /// Throws if its name is already in use or an instance with its ID exists.
+    /// Throws if its name is already in use or an instance with its ID exists. The settings are copied after the instance
+    /// is saved, so a failed copy leaves the instance in place.
     /// </summary>
-    public async Task<InstanceCreateResult> CreateAsync(Instance instance)
+    public async Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin, InstanceSettingsSource? settings = null)
     {
         ArgumentNullException.ThrowIfNull(instance);
         if (!await IsNameAvailableAsync(instance.Name).ConfigureAwait(false))
@@ -117,29 +123,31 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
             if (File.Exists(_pathProvider.GetInstanceMetadataPath(instance.InstanceId)))
                 throw new InvalidOperationException($"An instance with ID '{instance.InstanceId}' exists already.");
 
+            bool activate;
             await _activeInstanceLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var activate = await GetActiveInstanceIdAsync().ConfigureAwait(false) is not { } activeId
+                activate = await GetActiveInstanceIdAsync().ConfigureAwait(false) is not { } activeId
                     || !File.Exists(_pathProvider.GetInstanceMetadataPath(activeId));
                 await SaveFileAsync(instance).ConfigureAwait(false);
                 if (activate)
                     await WriteActiveInstanceAsync(instance.InstanceId).ConfigureAwait(false);
-
-                return new InstanceCreateResult(instance, activate);
             }
             finally
             {
                 _activeInstanceLock.Release();
             }
+
+            var settingsError = _settings is null
+                ? null
+                : await _settings.CopyAsync(instance.InstanceId, settings ?? InstanceSettingsSource.FromGame.Value).ConfigureAwait(false);
+            return new InstanceCreateResult(instance, activate, settingsError);
         }
         finally
         {
             gate.Release();
         }
     }
-
-    public Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin) => CreateAsync(instance);
 
     /// <summary>
     /// Throws if the instance does not exist or if the new name is already in use.

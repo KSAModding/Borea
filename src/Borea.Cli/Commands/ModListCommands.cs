@@ -34,7 +34,7 @@ internal static class ModListCommands
             var reasons = source.Mods.ToDictionary(mod => mod.ModId, mod => mod.Reason, ModIds.Comparer);
             var context = RunContext.From(parseResult, skipUnknown, proceedWithYanked, dryRun, json, output, error);
 
-            var request = new ModListRequest(ModList.FromInstance(source, manifest), source.Source, Repository(cli, context), InstanceLookup.GameVersionOf(cli, source), cli.GamePlatform.Current, reasons, InstanceOrigin.Duplicate, source.GameBuild, source.Loader);
+            var request = new ModListRequest(ModList.FromInstance(source, manifest), source.Source, Repository(cli, context), InstanceLookup.GameVersionOf(cli, source), cli.GamePlatform.Current, reasons, InstanceOrigin.Duplicate, source.GameBuild, source.Loader, Settings: new InstanceSettingsSource.FromInstance(source.InstanceId));
 
             return await PlanAndInstallAsync(cli, installer, request, newName, source.ForeignMods.Select(mod => mod.FolderName).ToList(), context, ct).ConfigureAwait(false);
         }));
@@ -168,6 +168,7 @@ internal static class ModListCommands
             JsonOutput.Write(context.Output, PlanView.From(plan, name, created, notCopied));
         else if (created is not null)
             context.Output.WriteLine(InstanceCommand.DescribeCreated(created));
+        InstanceCommand.WarnSettingsNotCopied(context.Error, created?.SettingsError);
 
         if (unknown.Count > 0)
             context.Error.WriteLine($"error: No source lists {Describe(unknown)}. Pass --skip-unknown to create the instance without them.");

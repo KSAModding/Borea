@@ -15,6 +15,7 @@ namespace Borea.Core.Planning;
 /// takes only its release from this list, so it cannot resolve to another release of the same id and version, such as one of another source.
 /// </param>
 /// <param name="ListId">The id of the modlist link, which the new instance records, or null when no link with an id made the request.</param>
+/// <param name="Settings">Where the first settings.toml of the new instance comes from. Null means the game's own file.</param>
 public sealed record ModListRequest(
     ModList ModList,
     InstanceSource Source,
@@ -26,7 +27,8 @@ public sealed record ModListRequest(
     GameVersion? GameBuild = null,
     LoaderSetting? Loader = null,
     IReadOnlyList<ModVersionMetadata>? Releases = null,
-    string? ListId = null);
+    string? ListId = null,
+    InstanceSettingsSource? Settings = null);
 
 public sealed record ModListItem(ModListEntry Entry, ModVersionMetadata? Release)
 {
@@ -115,7 +117,7 @@ public sealed class ModListInstaller
         record.SetLoader(plan.Request.Loader ?? LoaderSetting.Automatic);
         if (plan.Request.ListId is { } listId)
             record.SetLinkedModList(new LinkedModList(listId, plan.Items.Where(item => item.Release is not null).Select(item => item.Entry.ModId)));
-        var created = await _instances.CreateAsync(record, plan.Request.Origin).ConfigureAwait(false);
+        var created = await _instances.CreateAsync(record, plan.Request.Origin, plan.Request.Settings).ConfigureAwait(false);
         var instance = created.Instance;
         try
         {

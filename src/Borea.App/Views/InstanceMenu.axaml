@@ -13,6 +13,7 @@
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceSaveSettingsPreset}" Command="{Binding SaveSettingsPresetCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceCopySettingsToGame}" Command="{Binding CopySettingsToGameCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceKeepGameBuild}" Command="{Binding BeginKeepGameBuildCommand}" IsVisible="{Binding GameBuildText, Converter={x:Static ObjectConverters.IsNull}}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText, Converter={x:Static ObjectConverters.IsNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText}" />
                 <MenuItem IsEnabled="False">
                     <MenuItem.IsVisible>

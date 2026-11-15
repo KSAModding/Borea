@@ -45,7 +45,8 @@ public sealed class ModPackInstaller : IModPackInstaller
         _space?.EnsureFits(planned.Plan);
 
         var created = await _instances.CreateAsync(instanceName, Source(metadata)).ConfigureAwait(false);
-        return await InstallAsync(request with { InstanceId = created.Instance.InstanceId }, progress, stop, cancellationToken).ConfigureAwait(false);
+        var installed = await InstallAsync(request with { InstanceId = created.Instance.InstanceId }, progress, stop, cancellationToken).ConfigureAwait(false);
+        return created.SettingsError is null ? installed : WithSettingsError(installed, created.SettingsError);
     }
 
     public Task<ModPackInstallResult> PlanNewAsync(string instanceName, ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
@@ -268,6 +269,9 @@ public sealed class ModPackInstaller : IModPackInstaller
 
     private static ModPackInstallResult Result(Guid instanceId, InstallPlan? plan, IReadOnlyList<ModPackMemberResult> members, IReadOnlyList<PlanningMessage> warnings, bool complete, bool stopped = false, IReadOnlyList<ModPackContentResult>? content = null) =>
         new(instanceId, plan, members, warnings, complete, stopped) { Content = content ?? [] };
+
+    private static ModPackInstallResult WithSettingsError(ModPackInstallResult result, string settingsError) =>
+        new(result.InstanceId, result.Plan, result.Members, result.Warnings, result.IsComplete, result.IsStopped) { Content = result.Content, SettingsError = settingsError };
 
     private static IReadOnlyList<ModPackContentResult> Planned(IReadOnlyList<ModPackUserContent.Step> content) => content.Select(item => item.Planned).ToList();
 }

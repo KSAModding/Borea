@@ -836,6 +836,8 @@ public partial class MainViewModel
             : await services.ModPackInstaller.CreateAndInstallAsync(newInstanceName, request, ProgressOf(pack), run.InstallStop);
         if (newInstanceName is not null && result.InstanceId != Guid.Empty)
             run.TaskItem.SetInstance(result.InstanceId, newInstanceName);
+        if (newInstanceName is not null)
+            ShowSettingsNotCopied(newInstanceName, result.SettingsError);
         pack.ShowResults(result.Members.Select(member => new PackResultItem(this, member)).Concat(result.Content.Select(ContentResult)));
         LeavePackInstallStepsNotice(pack, result);
         if (result.IsStopped)

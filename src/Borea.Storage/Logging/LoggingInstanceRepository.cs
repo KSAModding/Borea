@@ -41,7 +41,7 @@ public sealed class LoggingInstanceRepository : IInstanceRepository
         return CreateAsync(instance, instance.Source is InstanceSource.FromModPack ? InstanceOrigin.ModPack : InstanceOrigin.New);
     }
 
-    public async Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin)
+    public async Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin, InstanceSettingsSource? settings = null)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -49,7 +49,7 @@ public sealed class LoggingInstanceRepository : IInstanceRepository
         InstanceCreateResult result;
         try
         {
-            result = await Inner.CreateAsync(instance, origin).ConfigureAwait(false);
+            result = await Inner.CreateAsync(instance, origin, settings).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -58,6 +58,8 @@ public sealed class LoggingInstanceRepository : IInstanceRepository
         }
 
         _log.Write($"Instance {Describe(instance.InstanceId, instance.Name)} created {DescribeOrigin(instance, origin)}{(result.Activated ? " and made active" : "")}.");
+        if (result.SettingsError is { } settingsError)
+            _log.Write($"Instance {Describe(instance.InstanceId, instance.Name)} has no copied settings.toml. {settingsError}");
         return result;
     }
 

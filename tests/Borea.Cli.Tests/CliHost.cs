@@ -13,7 +13,6 @@ using Borea.Core.Updates;
 using Borea.Core.Instances;
 using Borea.Network.Index;
 using Borea.Storage.Files;
-using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Launch;
 using Borea.Storage.Logging;
@@ -135,7 +134,7 @@ internal sealed class CliHost : IDisposable
     private async Task<CliServices> BuildAsync(CancellationToken cancellationToken)
     {
         Builds++;
-        var graph = await BoreaServices.BuildAsync(Root, BoreaLogSource.Cli, cancellationToken);
+        var graph = await BoreaServices.BuildAsync(Root, BoreaLogSource.Cli, SharedProfile, cancellationToken);
         var instances = InstancesFactory?.Invoke(graph);
         return CliServices.From(
             graph,
@@ -143,8 +142,6 @@ internal sealed class CliHost : IDisposable
             latestVersion: LatestVersion,
             installedVersion: InstalledVersion,
             gamePlatform: GamePlatform,
-            // the graph resolves the real shared profile, so the check gets a provider that points at the test one
-            gameShape: new GameShapeCheck(new GamePathProvider(graph.Settings.GameDirectoryPath, boreaRoot: Root, sharedProfileRoot: SharedProfile), graph.InstalledVersion, graph.Instances, graph.InstanceGames),
             indexFetcher: IndexFetcher,
             indexReader: IndexReader,
             indexSnapshots: IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader),
