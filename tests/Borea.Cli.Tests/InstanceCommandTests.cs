@@ -43,6 +43,19 @@ public sealed class InstanceCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_CopiesTheGameSettings()
+    {
+        const string settings = "[Graphics]\nQuality = \"high\"\n";
+        Directory.CreateDirectory(_host.SharedProfile);
+        await File.WriteAllTextAsync(Path.Combine(_host.SharedProfile, "settings.toml"), settings);
+
+        var create = await _host.RunAsync("instance", "create", "Alpha", "--json");
+
+        Assert.Equal(0, create.ExitCode);
+        Assert.Equal(settings, await File.ReadAllTextAsync(_host.Paths.GetInstanceSettingsPath(create.Json.GetProperty("id").GetGuid())));
+    }
+
+    [Fact]
     public async Task Create_NoActiveInstance_SaysTheNewInstanceIsActive()
     {
         var first = await _host.RunAsync("instance", "create", "Alpha");

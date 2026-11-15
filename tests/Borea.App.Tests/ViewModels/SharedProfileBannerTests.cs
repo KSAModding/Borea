@@ -94,6 +94,23 @@ public sealed class SharedProfileBannerTests
     }
 
     [Fact]
+    public async Task CreateInstance_FromTheBanner_StartsWithTheGameSettings()
+    {
+        const string settings = "[Graphics]\nQuality = \"high\"\n";
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        WriteProfileMod(harness, "LocalOnly");
+        File.WriteAllText(Path.Combine(ProfileFolder(harness), "settings.toml"), settings);
+        await SaveGameDirectoryAsync(harness);
+
+        viewModel.BeginImportSharedProfileCommand.Execute(null);
+        await viewModel.CreateInstanceCommand.ExecuteAsync(null);
+
+        var instance = Assert.Single(await harness.Services.Instances.GetAllAsync());
+        Assert.Equal(settings, File.ReadAllText(harness.Services.Paths.GetInstanceSettingsPath(instance.InstanceId)));
+    }
+
+    [Fact]
     public async Task CreateInstance_FromTheBanner_ThenDeactivated_NoLongerSaysItIsActive()
     {
         using var harness = await ViewModelHarness.CreateAsync();

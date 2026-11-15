@@ -5850,6 +5850,9 @@
   <data name="SharedProfileModalUnchanged" xml:space="preserve">
     <value>In diesem Ordner ändert sich nichts.</value>
   </data>
+  <data name="SharedProfileModalSettings" xml:space="preserve">
+    <value>Wenn das Spiel gespeicherte Einstellungen hat, startet die neue Instanz auch mit einer Kopie davon.</value>
+  </data>
   <data name="SharedProfileImporting" xml:space="preserve">
     <value>Borea kopiert die Mods und vergleicht sie mit dem Inhaltsindex. Schließe dieses Fenster, um abzubrechen.</value>
   </data>
@@ -6273,6 +6276,21 @@
   <data name="NoPreset" xml:space="preserve">
     <value>Keine Vorlage</value>
   </data>
+  <data name="ModalGameSettingsLabel" xml:space="preserve">
+    <value>Spieleinstellungen</value>
+  </data>
+  <data name="ModalGameSettingsHint" xml:space="preserve">
+    <value>Die Instanz hat ihre eigenen Einstellungen (Grafik, Steuerung, Sound und die anderen Optionen). Hier wählst du nur, womit sie startet, und spätere Änderungen ändern das Spiel ohne Mods nicht.</value>
+  </data>
+  <data name="ModalGameSettingsNoGameFile" xml:space="preserve">
+    <value>Das Spiel ohne Mods hat noch keine gespeicherten Einstellungen, deshalb startet die neue Instanz mit den Standardeinstellungen des Spiels.</value>
+  </data>
+  <data name="GameSettingsFromGame" xml:space="preserve">
+    <value>Einstellungen aus dem Spiel</value>
+  </data>
+  <data name="GameSettingsGameDefaults" xml:space="preserve">
+    <value>Standardeinstellungen des Spiels</value>
+  </data>
   <data name="PresetModalTitle" xml:space="preserve">
     <value>Spieleinstellungen als Vorlage speichern</value>
   </data>
@@ -6284,6 +6302,24 @@
   </data>
   <data name="InstanceSaveSettingsPreset" xml:space="preserve">
     <value>Einstellungen als Vorlage speichern</value>
+  </data>
+  <data name="InstanceCopySettingsToGame" xml:space="preserve">
+    <value>Einstellungen ins Spiel ohne Mods kopieren</value>
+  </data>
+  <data name="CopySettingsToGameTitle" xml:space="preserve">
+    <value>Einstellungen ins Spiel kopieren</value>
+  </data>
+  <data name="CopySettingsToGameTextFormat" xml:space="preserve">
+    <value>Borea ersetzt die Einstellungen des Spiels ohne Mods (Grafik, Steuerung, Sound und die anderen Optionen) durch die Einstellungen von {0}. Die Mods, Spielstände und Fahrzeuge des Spiels bleiben, wie sie sind. Borea behält die alten Einstellungen als Sicherung in {1}.</value>
+  </data>
+  <data name="CopySettingsToGameConfirm" xml:space="preserve">
+    <value>Spieleinstellungen ersetzen</value>
+  </data>
+  <data name="CopySettingsToGameNoSettings" xml:space="preserve">
+    <value>Diese Instanz hat noch keine settings.toml. Starte sie einmal und kopiere ihre Einstellungen dann.</value>
+  </data>
+  <data name="CopySettingsToGameGameRunning" xml:space="preserve">
+    <value>Schließe zuerst das Spiel. Borea ändert die Spieleinstellungen nicht, während das Spiel läuft.</value>
   </data>
   <data name="InstanceKeepGameBuild" xml:space="preserve">
     <value>Diesen Spiel-Build behalten</value>
@@ -6371,6 +6407,18 @@
   </data>
   <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
     <value>{0} wurde ohne die Vorlage erstellt</value>
+  </data>
+  <data name="ToastSettingsNotCopiedFormat" xml:space="preserve">
+    <value>{0} wurde ohne die Spieleinstellungen erstellt</value>
+  </data>
+  <data name="ToastSettingsCopiedToGameFormat" xml:space="preserve">
+    <value>Die Einstellungen von {0} wurden ins Spiel kopiert</value>
+  </data>
+  <data name="ToastSettingsBackupFormat" xml:space="preserve">
+    <value>Borea hat die alten Einstellungen als {0} behalten</value>
+  </data>
+  <data name="ToastSettingsToGameFailedFormat" xml:space="preserve">
+    <value>Die Einstellungen von {0} konnten nicht ins Spiel kopiert werden</value>
   </data>
   <data name="PreviewPanelName" xml:space="preserve">
     <value>3D-Vorschau des Fahrzeugs</value>

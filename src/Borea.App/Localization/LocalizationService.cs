@@ -3727,6 +3727,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SharedProfileModalUnchanged => Resources.SharedProfileModalUnchanged;
 
+    public string SharedProfileModalSettings => Resources.SharedProfileModalSettings;
+
     public string SharedProfileImporting => Resources.SharedProfileImporting;
 
     public string SharedProfileInstanceName => Resources.SharedProfileInstanceName;
@@ -3793,13 +3795,19 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LaunchInstanceMissing => Resources.LaunchInstanceMissing;
 
-    public string ChooseGameSettingsPreset => Resources.ChooseGameSettingsPreset;
+    public string ModalGameSettingsLabel => Resources.ModalGameSettingsLabel;
+
+    public string ModalGameSettingsHint => Resources.ModalGameSettingsHint;
+
+    public string ModalGameSettingsNoGameFile => Resources.ModalGameSettingsNoGameFile;
+
+    public string GameSettingsFromGame => Resources.GameSettingsFromGame;
+
+    public string GameSettingsGameDefaults => Resources.GameSettingsGameDefaults;
 
     public string SelectAPreset => Resources.SelectAPreset;
 
     public string ModalSettingsPresetNoGameVersion => Resources.ModalSettingsPresetNoGameVersion;
-
-    public string NoPreset => Resources.NoPreset;
 
     public string PresetModalTitle => Resources.PresetModalTitle;
 
@@ -3808,6 +3816,19 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string PresetModalNoSettings => Resources.PresetModalNoSettings;
 
     public string InstanceSaveSettingsPreset => Resources.InstanceSaveSettingsPreset;
+
+    public string InstanceCopySettingsToGame => Resources.InstanceCopySettingsToGame;
+
+    public string CopySettingsToGameTitle => Resources.CopySettingsToGameTitle;
+
+    public string FormatCopySettingsToGameText(string instanceName, string backupFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.CopySettingsToGameTextFormat, instanceName, backupFolder);
+
+    public string CopySettingsToGameConfirm => Resources.CopySettingsToGameConfirm;
+
+    public string CopySettingsToGameNoSettings => Resources.CopySettingsToGameNoSettings;
+
+    public string CopySettingsToGameGameRunning => Resources.CopySettingsToGameGameRunning;
 
     public string InstanceKeepGameBuild => Resources.InstanceKeepGameBuild;
 
@@ -3876,6 +3897,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastPresetNotApplied(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastPresetNotAppliedFormat, name);
+
+    public string FormatToastSettingsNotCopied(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastSettingsNotCopiedFormat, name);
+
+    public string FormatToastSettingsCopiedToGame(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastSettingsCopiedToGameFormat, name);
+
+    public string FormatToastSettingsBackup(string path)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastSettingsBackupFormat, path);
+
+    public string FormatToastSettingsToGameFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastSettingsToGameFailedFormat, name);
 
     public string FormatLaunchLoaderNotInstalled(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderNotInstalledFormat, loader);

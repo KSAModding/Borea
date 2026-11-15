@@ -252,13 +252,14 @@ internal static class InstanceCommand
     {
         var name = ArgumentRules.Text("name", "The display name. Names compare case-insensitively.");
         var json = ArgumentRules.Json();
-        var create = new Command("create", "Create an empty instance.");
+        var create = new Command("create", "Create an empty instance with a copy of the game's settings.toml.");
         create.Arguments.Add(name);
         create.Options.Add(json);
 
-        create.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, _) =>
+        create.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, _) =>
         {
             var created = await cli.Instances.CreateAsync(parseResult.GetRequiredValue(name), InstanceSource.Custom.Value).ConfigureAwait(false);
+            WarnSettingsNotCopied(error, created.SettingsError);
 
             if (parseResult.GetValue(json))
             {
@@ -275,6 +276,16 @@ internal static class InstanceCommand
 
     internal static string DescribeCreated(InstanceCreateResult created)
         => $"Created instance '{created.Instance.Name}' ({created.Instance.InstanceId}).{NowActive(created.Activated)}";
+
+    /// <summary>
+    /// Says on the error stream that a new instance came without a copy of its settings, when <paramref name="settingsError"/> says why.
+    /// The source can be the game or, for a duplicate, the source instance, so the text does not name it.
+    /// </summary>
+    internal static void WarnSettingsNotCopied(TextWriter error, string? settingsError)
+    {
+        if (settingsError is not null)
+            error.WriteLine($"warning: Borea could not copy the settings.toml into the new instance, so the game writes its default settings there. {settingsError}");
+    }
 
     private static string NowActive(bool activated) => activated ? " It is now the active instance." : string.Empty;
 
@@ -805,6 +816,7 @@ internal static class InstanceCommand
                 return await PreviewImportAsync(cli, instanceName, parseResult.GetValue(json), output, error, ct).ConfigureAwait(false);
 
             var result = await cli.SharedProfileImporter.ImportAsync(instanceName, ct).ConfigureAwait(false);
+            WarnSettingsNotCopied(error, result.SettingsError);
             var views = result.Mods.Select(ImportedModView.From).ToList();
             if (parseResult.GetValue(json))
             {

@@ -5859,6 +5859,9 @@
   <data name="SharedProfileModalUnchanged" xml:space="preserve">
     <value>Nothing in that folder changes.</value>
   </data>
+  <data name="SharedProfileModalSettings" xml:space="preserve">
+    <value>When the game has saved settings, the new instance also starts with a copy of them.</value>
+  </data>
   <data name="SharedProfileImporting" xml:space="preserve">
     <value>Borea copies the mods and compares them with the content index. Close this window to stop.</value>
   </data>
@@ -6282,6 +6285,21 @@
   <data name="NoPreset" xml:space="preserve">
     <value>No preset</value>
   </data>
+  <data name="ModalGameSettingsLabel" xml:space="preserve">
+    <value>Game settings</value>
+  </data>
+  <data name="ModalGameSettingsHint" xml:space="preserve">
+    <value>The instance keeps its own settings (graphics, controls, sound and the other options). Your choice here is only where they start, and later changes do not change the game without mods.</value>
+  </data>
+  <data name="ModalGameSettingsNoGameFile" xml:space="preserve">
+    <value>The game without mods has no saved settings yet, so the new instance starts with the game defaults.</value>
+  </data>
+  <data name="GameSettingsFromGame" xml:space="preserve">
+    <value>Settings from the game</value>
+  </data>
+  <data name="GameSettingsGameDefaults" xml:space="preserve">
+    <value>Game defaults</value>
+  </data>
   <data name="PresetModalTitle" xml:space="preserve">
     <value>Save the game settings as a preset</value>
   </data>
@@ -6293,6 +6311,24 @@
   </data>
   <data name="InstanceSaveSettingsPreset" xml:space="preserve">
     <value>Save settings as preset</value>
+  </data>
+  <data name="InstanceCopySettingsToGame" xml:space="preserve">
+    <value>Copy settings to the game without mods</value>
+  </data>
+  <data name="CopySettingsToGameTitle" xml:space="preserve">
+    <value>Copy settings to the game</value>
+  </data>
+  <data name="CopySettingsToGameTextFormat" xml:space="preserve">
+    <value>Borea replaces the settings of the game without mods (graphics, controls, sound and the other options) with the settings of {0}. The mods, saves and vehicles of the game stay as they are. Borea keeps the old settings as a backup in {1}.</value>
+  </data>
+  <data name="CopySettingsToGameConfirm" xml:space="preserve">
+    <value>Replace the game settings</value>
+  </data>
+  <data name="CopySettingsToGameNoSettings" xml:space="preserve">
+    <value>This instance has no settings.toml yet. Start it once, then copy its settings.</value>
+  </data>
+  <data name="CopySettingsToGameGameRunning" xml:space="preserve">
+    <value>Close the game first. Borea does not change the game settings while the game runs.</value>
   </data>
   <data name="InstanceKeepGameBuild" xml:space="preserve">
     <value>Keep this game build</value>
@@ -6380,6 +6416,18 @@
   </data>
   <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
     <value>Created {0} without the preset</value>
+  </data>
+  <data name="ToastSettingsNotCopiedFormat" xml:space="preserve">
+    <value>Created {0} without the game settings</value>
+  </data>
+  <data name="ToastSettingsCopiedToGameFormat" xml:space="preserve">
+    <value>Copied the settings of {0} to the game</value>
+  </data>
+  <data name="ToastSettingsBackupFormat" xml:space="preserve">
+    <value>Borea kept the old settings as {0}</value>
+  </data>
+  <data name="ToastSettingsToGameFailedFormat" xml:space="preserve">
+    <value>Could not copy the settings of {0} to the game</value>
   </data>
   <data name="PreviewPanelName" xml:space="preserve">
     <value>3D preview of the vehicle</value>

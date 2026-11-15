@@ -46,6 +46,26 @@ public sealed class ModListViewModelTests
     }
 
     [Fact]
+    public async Task Duplicate_StartsWithTheSettingsOfTheSource()
+    {
+        const string settings = "[Graphics]\nQuality = \"source\"\n";
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        var source = await SeedMainAsync(harness);
+        var paths = harness.Services.Paths;
+        Directory.CreateDirectory(paths.GetSharedProfileRoot());
+        await File.WriteAllTextAsync(Path.Combine(paths.GetSharedProfileRoot(), "settings.toml"), "[Graphics]\nQuality = \"game\"\n");
+        await File.WriteAllTextAsync(paths.GetInstanceSettingsPath(source.InstanceId), settings);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.Instances.Single().DuplicateCommand.ExecuteAsync(null);
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        var copy = (await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Main (copy)");
+        Assert.Equal(settings, await File.ReadAllTextAsync(paths.GetInstanceSettingsPath(copy.InstanceId)));
+    }
+
+    [Fact]
     public async Task Duplicate_KeptBuildIsGone_RefusesAndNamesTheBuild()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);

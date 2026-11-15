@@ -119,6 +119,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IGameSettingsPresetRepository GameSettingsPresets { get; init; }
 
+    public required ISharedProfileSettings SharedProfileSettings { get; init; }
+
     public required IGameDataReader GameData { get; init; }
 
     public required IGameSaveStore GameSaves { get; init; }
@@ -392,14 +394,20 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>Builds the services like the overload above, with log lines marked by <paramref name="logSource"/>.</summary>
     public static Task<BoreaServices> BuildAsync(string? boreaRoot, BoreaLogSource logSource, CancellationToken cancellationToken = default)
-        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, ProcessLaunches, cancellationToken, gitHub: ProcessGitHub.Value, shareHostClient: ProcessShareHosts.Value);
+        => BuildAsync(boreaRoot, logSource, sharedProfileRoot: null, cancellationToken);
 
+    /// <param name="sharedProfileRoot">The game's own profile. Null means the one in My Games.</param>
+    internal static Task<BoreaServices> BuildAsync(string? boreaRoot, BoreaLogSource logSource, string? sharedProfileRoot, CancellationToken cancellationToken)
+        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, ProcessLaunches, cancellationToken, sharedProfileRoot: sharedProfileRoot, gitHub: ProcessGitHub.Value, shareHostClient: ProcessShareHosts.Value);
+
+    /// <param name="sharedProfileRoot">The game's own profile. Null means the one in My Games.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
         IModRepository fallbackRepository,
-        CancellationToken cancellationToken = default)
-        => BuildAsync(boreaRoot, httpHandler, fallbackRepository, new NoInstallCandidates(), cancellationToken);
+        CancellationToken cancellationToken = default,
+        string? sharedProfileRoot = null)
+        => BuildAsync(boreaRoot, httpHandler, fallbackRepository, new NoInstallCandidates(), cancellationToken, sharedProfileRoot: sharedProfileRoot);
 
     /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
     /// <param name="images">Serves listing images. Null fetches them from the author hosts.</param>
@@ -568,7 +576,8 @@ public sealed class BoreaServices : IDisposable
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
         var modStore = new ModStore(paths, new DirectoryLinker(), settings.SharedModStore);
-        var fileInstances = new FileInstanceRepository(paths, modStore);
+        var gameSettingsPresets = new LoggingGameSettingsPresetRepository(new GameSettingsPresetRepository(paths), log);
+        var fileInstances = new FileInstanceRepository(paths, modStore, new NewInstanceSettings(paths, gameSettingsPresets));
         var instances = new LoggingInstanceRepository(fileInstances, paths, log);
         var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration, paths.GetLoadersRoot());
         installCandidates ??= HostInstallCandidates();
@@ -582,7 +591,6 @@ public sealed class BoreaServices : IDisposable
         // replacer own it and are guarded themselves.
         var modState = new FileModStateRepository(paths);
         var checkedModState = new CheckedModStateRepository(modState, gameShape);
-        var gameSettingsPresets = new LoggingGameSettingsPresetRepository(new GameSettingsPresetRepository(paths), log);
         var modInstaller = new LoggingModInstaller(new CheckedModInstaller(new FileModInstaller(paths, downloader, instances, modState, store: modStore), gameShape), log);
         var modReplacer = new LoggingModReplacer(new CheckedModReplacer(new FileModReplacer(paths, downloader, instances, modState, store: modStore), gameShape), log);
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
@@ -648,6 +656,7 @@ public sealed class BoreaServices : IDisposable
             ModListFormat = new TomlModListFormat(),
             ModState = checkedModState,
             GameSettingsPresets = gameSettingsPresets,
+            SharedProfileSettings = new SharedProfileSettings(paths, isGameProcessRunning),
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             SharedContent = sharedContent,

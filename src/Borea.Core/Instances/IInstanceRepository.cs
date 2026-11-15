@@ -30,19 +30,22 @@ public interface IInstanceRepository
     Task<bool> IsNameAvailableAsync(string name, Guid? excludingInstanceId = null);
 
     /// <summary>
-    /// Saves a new instance, and makes it active when no existing instance is active.
+    /// Saves a new instance, and makes it active when no existing instance is active. The instance gets a copy of the
+    /// settings.toml of the game without mods once, and a copy that fails leaves the instance created and sets
+    /// <see cref="InstanceCreateResult.SettingsError"/>.
     /// </summary>
     Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source);
 
     /// <summary>
-    /// Saves <paramref name="instance"/> as a new instance under its own id, with the same rule.
+    /// Saves <paramref name="instance"/> as a new instance under its own id, with the same rules.
     /// </summary>
     Task<InstanceCreateResult> CreateAsync(Instance instance);
 
     /// <summary>
     /// Saves <paramref name="instance"/> like <see cref="CreateAsync(Instance)"/>, and tells the log how it came to be.
     /// </summary>
-    Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin);
+    /// <param name="settings">Where the first settings.toml of the instance comes from. Null means the game's own file.</param>
+    Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin, InstanceSettingsSource? settings = null);
 
     Task RenameAsync(Guid instanceId, string newName);
 

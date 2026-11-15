@@ -763,7 +763,7 @@ public partial class MainViewModel : ViewModelBase
         if (_newInstancePack is { } pack)
             return CreatePackInstanceAsync(pack, name);
 
-        var presetId = SelectedGameSettingsPreset?.Id;
+        var settings = SelectedGameSettingsPreset?.Source ?? InstanceSettingsSource.FromGame.Value;
         var build = SelectedGameBuildChoice?.Build;
         return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunModalInstanceOperationAsync(async instances =>
         {
@@ -772,18 +772,13 @@ public partial class MainViewModel : ViewModelBase
 
             var instance = new Instance(name, InstanceSource.Custom.Value);
             instance.SetGameBuild(build);
-            var created = await instances.CreateAsync(instance);
-            if (presetId is { } id && _services is { } services)
+            var created = await instances.CreateAsync(instance, InstanceOrigin.New, settings);
+            // the instance is there, so the modal closes and the toast says it came without the settings
+            if (created.SettingsError is { } settingsError)
             {
-                try
-                {
-                    await services.GameSettingsPresets.ApplyAsync(id, created.Instance.InstanceId);
-                }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
-                {
-                    // the instance is there, so the modal closes and the toast says it came without the settings
-                    ShowErrorToast(() => Localization.FormatToastPresetNotApplied(name), exception.Message);
-                }
+                ShowErrorToast(
+                    () => settings is InstanceSettingsSource.FromPreset ? Localization.FormatToastPresetNotApplied(name) : Localization.FormatToastSettingsNotCopied(name),
+                    settingsError);
             }
 
             ModalInstanceName = string.Empty;
@@ -1401,6 +1396,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(Instance);
+
+    [RelayCommand]
+    private void CopySettingsToGame() => _owner.BeginCopySettingsToGame(this);
 
     // a check that a Cancel left running must not hold the next open, and the load count of the modals drops its result
     [RelayCommand(AllowConcurrentExecutions = true)]

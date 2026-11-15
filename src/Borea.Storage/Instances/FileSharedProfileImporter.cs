@@ -83,7 +83,7 @@ public sealed class FileSharedProfileImporter : ISharedProfileImporter
         var created = await _instances.CreateAsync(new Instance(instanceName, InstanceSource.Custom.Value), InstanceOrigin.GameProfileImport).ConfigureAwait(false);
         try
         {
-            return await FillAsync(created.Instance.InstanceId, mods, created.Activated, cancellationToken).ConfigureAwait(false);
+            return (await FillAsync(created.Instance.InstanceId, mods, created.Activated, cancellationToken).ConfigureAwait(false)) with { SettingsError = created.SettingsError };
         }
         catch
         {

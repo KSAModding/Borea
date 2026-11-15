@@ -237,7 +237,7 @@ public sealed class LoggingInstanceRepositoryTests : IDisposable
 
         public Task<InstanceCreateResult> CreateAsync(Instance instance) => inner.CreateAsync(instance);
 
-        public Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin) => inner.CreateAsync(instance, origin);
+        public Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin, InstanceSettingsSource? settings = null) => inner.CreateAsync(instance, origin, settings);
 
         public Task RenameAsync(Guid instanceId, string newName) => inner.RenameAsync(instanceId, newName);
 

@@ -128,6 +128,9 @@ public sealed class ModPackInstallResult
     /// <summary>A stop kept at least one member from running.</summary>
     public bool IsStopped { get; }
 
+    /// <summary>Why a new instance has no copy of the game's settings.toml, or null when the copy worked, the game has none or no instance was created.</summary>
+    public string? SettingsError { get; init; }
+
     /// <summary>The reasons that hold for the whole pack, a retraction that was not confirmed or the conflicts and open choices of a plan that is not ready.</summary>
     public IReadOnlyList<PlanningMessage> PackReasons { get; }
 

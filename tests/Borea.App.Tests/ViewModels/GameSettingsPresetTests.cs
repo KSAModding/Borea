@@ -105,13 +105,82 @@ public sealed class GameSettingsPresetTests
 
         viewModel.BeginCreateInstanceCommand.Execute(null);
         await viewModel.WhenGameSettingsPresetsLoadedAsync();
-        // the picker starts at "No preset"
+        // the game has no settings.toml, so the picker starts at the game defaults
         Assert.Null(viewModel.SelectedGameSettingsPreset?.Id);
         viewModel.ModalInstanceName = "Plain";
         await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
 
         var created = (await harness.Services.Instances.GetAllAsync()).Single(item => item.Name == "Plain");
         Assert.False(File.Exists(harness.Services.Paths.GetInstanceSettingsPath(created.InstanceId)));
+    }
+
+    [Fact]
+    public async Task NewInstance_OffersTheGameSettingsFirst_AndCopiesThem()
+    {
+        const string gameSettings = "[Graphics]\nQuality = \"game\"\n";
+        using var harness = await CreateAsync(SeedPresetAsync);
+        var viewModel = harness.ViewModel;
+        var preset = Assert.Single(await harness.Services.GameSettingsPresets.ListAsync());
+        Directory.CreateDirectory(harness.Services.Paths.GetSharedProfileRoot());
+        await File.WriteAllTextAsync(Path.Combine(harness.Services.Paths.GetSharedProfileRoot(), "settings.toml"), gameSettings);
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        await viewModel.WhenGameSettingsPresetsLoadedAsync();
+
+        Assert.Equal(
+            new InstanceSettingsSource[] { InstanceSettingsSource.FromGame.Value, InstanceSettingsSource.GameDefaults.Value, new InstanceSettingsSource.FromPreset(preset.Id) },
+            viewModel.GameSettingsPresets.Select(item => item.Source));
+        Assert.Same(viewModel.GameSettingsPresets[0], viewModel.SelectedGameSettingsPreset);
+        Assert.False(viewModel.IsGameSettingsFileMissing);
+        viewModel.ModalInstanceName = "From the game";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        var created = (await harness.Services.Instances.GetAllAsync()).Single(item => item.Name == "From the game");
+        Assert.Equal(gameSettings, await File.ReadAllTextAsync(harness.Services.Paths.GetInstanceSettingsPath(created.InstanceId)));
+    }
+
+    [Fact]
+    public async Task NewInstance_WithoutGameSettings_PreselectsGameDefaultsAndSaysWhy()
+    {
+        using var harness = await CreateAsync(SeedPresetAsync);
+        var viewModel = harness.ViewModel;
+        var preset = Assert.Single(await harness.Services.GameSettingsPresets.ListAsync());
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        await viewModel.WhenGameSettingsPresetsLoadedAsync();
+
+        Assert.True(viewModel.IsGameSettingsFileMissing);
+        Assert.Equal(
+            new InstanceSettingsSource[] { InstanceSettingsSource.GameDefaults.Value, new InstanceSettingsSource.FromPreset(preset.Id) },
+            viewModel.GameSettingsPresets.Select(item => item.Source));
+        Assert.Same(viewModel.GameSettingsPresets[0], viewModel.SelectedGameSettingsPreset);
+    }
+
+    [Fact]
+    public async Task CopySettingsToGame_AsksFirst_ThenReplacesAndNamesTheBackup()
+    {
+        const string oldGameSettings = "[Graphics]\nQuality = \"low\"\n";
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var gameFile = Path.Combine(harness.Services.Paths.GetSharedProfileRoot(), "settings.toml");
+        Directory.CreateDirectory(harness.Services.Paths.GetSharedProfileRoot());
+        await File.WriteAllTextAsync(gameFile, oldGameSettings);
+        var instance = await WithSettingsAsync(harness, Settings);
+
+        instance.CopySettingsToGameCommand.Execute(null);
+
+        Assert.True(viewModel.IsCopySettingsToGameModalOpen);
+        Assert.Equal(oldGameSettings, await File.ReadAllTextAsync(gameFile));
+
+        await viewModel.ConfirmCopySettingsToGameCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsCopySettingsToGameModalOpen);
+        Assert.Equal(Settings, await File.ReadAllTextAsync(gameFile));
+        var backup = Assert.Single(Directory.GetFiles(harness.Services.SharedProfileSettings.BackupFolder));
+        Assert.Equal(oldGameSettings, await File.ReadAllTextAsync(backup));
+        var toast = Assert.Single(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatToastSettingsCopiedToGame("Main"));
+        Assert.Equal(harness.Localization.FormatToastSettingsBackup(Path.GetFileName(backup)), toast.Detail);
+        Assert.Equal(harness.Localization.LibraryOpenFolder, toast.ActionText);
     }
 
     [Fact]

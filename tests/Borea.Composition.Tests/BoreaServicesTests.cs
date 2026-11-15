@@ -41,6 +41,9 @@ public sealed class BoreaServicesTests : IDisposable
 
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
 
+    /// <summary>The game's own profile of a graph that creates instances, so a new instance never reads the real one.</summary>
+    private string SharedProfile => Path.Combine(_tempRoot, "GameProfile");
+
     [Fact]
     public async Task BuildAsync_NoSettingsFile_KnowsNoGameAndNoLoader()
     {
@@ -120,7 +123,7 @@ public sealed class BoreaServicesTests : IDisposable
     public async Task UserContentInstaller_VehicleOfAShareHostFromThePreviewCache_ReportsTheInstallOnce()
     {
         var handler = new InstallReportHandler();
-        var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ReleaseListRepository([]), new NoCandidates(), isGameProcessRunning: () => false);
+        var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ReleaseListRepository([]), new NoCandidates(), sharedProfileRoot: SharedProfile, isGameProcessRunning: () => false);
         var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath);
         var indexPath = services.Paths.GetIndexPath();
         Directory.CreateDirectory(Path.GetDirectoryName(indexPath)!);
@@ -421,7 +424,7 @@ public sealed class BoreaServicesTests : IDisposable
     [Fact]
     public async Task ModPackInstaller_DevPinOnTheSavedStableChannel_InstallsWithTheChannelWarning()
     {
-        using var services = await BoreaServices.BuildAsync(_tempRoot);
+        using var services = await BoreaServices.BuildAsync(_tempRoot, BoreaLogSource.App, SharedProfile, CancellationToken.None);
         var pin = ChannelRelease("1.2.0-dev.1", ReleaseStatus.Dev);
         var repository = new ReleaseListRepository([ChannelRelease("1.0.0", ReleaseStatus.Stable), pin]);
         var instance = (await services.Instances.CreateAsync("Pack target", InstanceSource.Custom.Value)).Instance;
@@ -441,7 +444,7 @@ public sealed class BoreaServicesTests : IDisposable
     public async Task UserContentInstaller_ArchiveWhoseHashDiffers_ChangesNothing()
     {
         var handler = new ArchiveHandler(Encoding.UTF8.GetBytes("not the published archive"));
-        using var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ReleaseListRepository([]), new NoCandidates(), isGameProcessRunning: () => false);
+        using var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ReleaseListRepository([]), new NoCandidates(), sharedProfileRoot: SharedProfile, isGameProcessRunning: () => false);
         var instance = (await services.Instances.CreateAsync("Vehicles", InstanceSource.Custom.Value)).Instance;
         var vehicle = new ModVersionMetadata(1, "rover", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.10.19.5638", 5638, new DownloadInfo("https://example.com/rover.zip", new string('A', 64), 1, "application/zip"), 1, [], ContentType.Vehicle, install: new InstallInfo(null, derived: false, folder: "Rover"));
 
@@ -653,7 +656,8 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(
             _tempRoot,
             new ControlledHttpMessageHandler(snapshot),
-            new ConflictingStarMapRepository());
+            new ConflictingStarMapRepository(),
+            sharedProfileRoot: SharedProfile);
         Assert.IsType<FileForeignModAdopter>(services.ForeignModAdopter);
         Assert.IsType<FileForeignModReleaseMatcher>(services.ForeignModReleaseMatcher);
         Assert.IsType<FileForeignModHandover>(Assert.IsType<LoggingForeignModHandover>(services.ForeignModHandover).Inner);
@@ -693,7 +697,8 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(
             _tempRoot,
             new ControlledHttpMessageHandler(snapshot),
-            new ConflictingStarMapRepository());
+            new ConflictingStarMapRepository(),
+            sharedProfileRoot: SharedProfile);
         var instance = (await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(services, instance.InstanceId, folderName);
         var archive = await WriteArchiveAsync(archiveBytes);

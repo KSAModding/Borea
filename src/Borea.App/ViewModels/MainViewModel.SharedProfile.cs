@@ -161,6 +161,7 @@ public partial class MainViewModel
         IsCreatingInstance = false;
         ModalInstanceName = string.Empty;
         _sharedProfileImportResult = imported;
+        ShowSettingsNotCopied(imported.Instance.Name, imported.SettingsError);
         if (Instances.FirstOrDefault(item => item.InstanceId == imported.Instance.InstanceId) is { } created)
             await OpenInstanceAsync(created);
     }

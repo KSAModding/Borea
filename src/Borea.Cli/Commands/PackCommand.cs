@@ -300,6 +300,7 @@ internal static class PackCommand
                     : await cli.ModPackInstaller.CreateAndInstallAsync(newInstanceName, request, new InstallProgressOutput(error), stop).ConfigureAwait(false);
                 if (newInstanceName is not null && result.InstanceId != Guid.Empty && await cli.Instances.GetByIdAsync(result.InstanceId).ConfigureAwait(false) is { } instanceCreated)
                     created = new InstanceCreateResult(instanceCreated, await cli.Instances.GetActiveInstanceIdAsync().ConfigureAwait(false) == instanceCreated.InstanceId);
+                InstanceCommand.WarnSettingsNotCopied(error, result.SettingsError);
             }
 
             var view = InstallView.From(
