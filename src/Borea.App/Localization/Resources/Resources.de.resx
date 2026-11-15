@@ -2145,9 +2145,6 @@
   <data name="ManualInstallsInstanceChanged" xml:space="preserve">
     <value>Die Instanz hat sich geändert. Versuche es erneut.</value>
   </data>
-  <data name="GameDataOpenFolder" xml:space="preserve">
-    <value>Ordner öffnen</value>
-  </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>Leer</value>
   </data>
@@ -5180,9 +5177,6 @@
   </data>
   <data name="ContentCopyLink" xml:space="preserve">
     <value>Link kopieren</value>
-  </data>
-  <data name="ContentCopyShareLink" xml:space="preserve">
-    <value>Link zum Teilen kopieren</value>
   </data>
   <data name="ContentLinkCopied" xml:space="preserve">
     <value>Der Link wurde in die Zwischenablage kopiert.</value>

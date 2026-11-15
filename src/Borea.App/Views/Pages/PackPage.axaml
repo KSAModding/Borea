@@ -206,7 +206,9 @@
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding SelectedPack.FavoriteText}" Command="{Binding SelectedPack.ToggleFavoriteCommand}" />
-                                        <MenuItem Header="{Binding Localization.ContentCopyShareLink}" Command="{Binding CopyPackShareLinkCommand}" IsVisible="{Binding PackShareUrl, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <Separator />
+                                        <MenuItem Header="{Binding Localization.PackMakeNextVersion}" Command="{Binding MakeNextPackVersionCommand}" />
+                                        <MenuItem Header="{Binding Localization.ContentCopyLink}" Command="{Binding CopyPackShareLinkCommand}" IsVisible="{Binding PackShareUrl, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                         <MenuItem Header="{Binding Localization.ContentReport}" IsVisible="{Binding CanReportPack}">
                                             <MenuItem Command="{Binding ReportPackCommand}" CommandParameter="{x:Static stewardship:IndexReportKind.Takedown}" AutomationProperties.Name="{Binding Localization.ContentReportTakedown}" AutomationProperties.HelpText="{Binding Localization.ContentReportTakedownHint}">
                                                 <MenuItem.Header>
@@ -225,10 +227,11 @@
                                                 </MenuItem.Header>
                                             </MenuItem>
                                         </MenuItem>
-                                        <MenuItem Header="{Binding Localization.PackMakeNextVersion}" Command="{Binding MakeNextPackVersionCommand}" />
+                                        <Separator IsVisible="{Binding CanEditIndexStatus}" />
                                         <MenuItem Header="{Binding Localization.StewardDispute}" Command="{Binding DisputePackCommand}" IsVisible="{Binding CanEditIndexStatus}" />
-                                        <MenuItem Header="{Binding Localization.StewardDelist}" Command="{Binding DelistPackCommand}" IsVisible="{Binding CanEditIndexStatus}" />
-                                        <MenuItem Header="{Binding Localization.StewardRetract}" Command="{Binding RetractPackVersionCommand}" IsVisible="{Binding CanEditIndexStatus}" />
+                                        <Separator IsVisible="{Binding CanEditIndexStatus}" />
+                                        <MenuItem Classes="danger" Header="{Binding Localization.StewardRetract}" Command="{Binding RetractPackVersionCommand}" IsVisible="{Binding CanEditIndexStatus}" />
+                                        <MenuItem Classes="danger" Header="{Binding Localization.StewardDelist}" Command="{Binding DelistPackCommand}" IsVisible="{Binding CanEditIndexStatus}" />
                                     </MenuFlyout>
                                 </Button.Flyout>
                                 <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />

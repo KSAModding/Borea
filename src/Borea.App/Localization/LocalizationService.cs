@@ -1655,8 +1655,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ManualInstallsInstanceChanged => Resources.ManualInstallsInstanceChanged;
 
-    public string GameDataOpenFolder => Resources.GameDataOpenFolder;
-
     public string GameDataEmpty => Resources.GameDataEmpty;
 
     public string GameSaveNoVehicles => Resources.GameSaveNoVehicles;
@@ -3262,8 +3260,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentLinks => Resources.ContentLinks;
 
     public string ContentCopyLink => Resources.ContentCopyLink;
-
-    public string ContentCopyShareLink => Resources.ContentCopyShareLink;
 
     public string ContentLinkCopied => Resources.ContentLinkCopied;
 

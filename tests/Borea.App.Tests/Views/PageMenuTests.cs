@@ -104,7 +104,7 @@ public sealed class PageMenuTests
 
         var header = await OnPageAsync(harness, pack, (window, page) => ClickEntryAsync(harness, window, page, command));
 
-        Assert.Equal(harness.Localization.ContentCopyShareLink, header);
+        Assert.Equal(harness.Localization.ContentCopyLink, header);
         Assert.Equal(url, clipboard.CopiedText);
         Assert.Equal(harness.Localization.ContentLinkCopied, viewModel.Toasts.Items[^1].Message);
     }

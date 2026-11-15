@@ -597,6 +597,16 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Opacity" Value="0.4" />
         </Style>
+        <!-- the destructive item of a menu, always the last one, in the danger color as the Remove button of a page -->
+        <Style Selector="MenuItem.danger /template/ ContentPresenter#PART_HeaderPresenter">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+        </Style>
+        <Style Selector="MenuItem.danger:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+        </Style>
+        <Style Selector="MenuItem.danger:disabled /template/ ContentPresenter#PART_HeaderPresenter">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
         <!-- c/button-cta: purple pill, 38px tall -->
         <Style Selector="Button.cta">
             <Setter Property="Height" Value="38" />

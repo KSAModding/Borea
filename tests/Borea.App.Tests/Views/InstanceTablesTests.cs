@@ -208,7 +208,7 @@ public sealed class InstanceTablesTests
             var managedTable = TableAround(page, managed)!;
             var foreignTable = TableAround(page, "LocalOnly")!;
             var info = foreignTable.GetVisualDescendants().OfType<InfoButton>().Single(button => button.IsEffectivelyVisible);
-            var open = ButtonIn(foreignTable, localization.GameDataOpenFolder);
+            var open = ButtonIn(foreignTable, localization.LibraryOpenFolder);
             var below = foreignTable.TranslatePoint(default, page)!.Value.Y >= managedTable.TranslatePoint(default, page)!.Value.Y + managedTable.Bounds.Height;
             return (TextsIn(managedTable), TextsIn(foreignTable), below, info.Text, Holds(foreignTable, info), open.Command, Holds(foreignTable, open));
         });
@@ -236,7 +236,7 @@ public sealed class InstanceTablesTests
         using var harness = await ManagedModAndFoldersAsync();
         var localization = harness.Localization;
 
-        var (texts, open) = await OnInstancePageAsync(harness, 1280, page => (TextsIn(page), ButtonIn(TableAround(page, localization.ManualInstallsEmptyHint)!, localization.GameDataOpenFolder).Command));
+        var (texts, open) = await OnInstancePageAsync(harness, 1280, page => (TextsIn(page), ButtonIn(TableAround(page, localization.ManualInstallsEmptyHint)!, localization.LibraryOpenFolder).Command));
 
         Assert.Contains(harness.ViewModel.ContentGroups.SelectMany(group => group.Items).Single().Name, texts);
         Assert.Contains(localization.InstanceGroupNotManaged, texts);

@@ -3,17 +3,23 @@
              xmlns:vm="using:Borea.App.ViewModels"
              x:Class="Borea.App.Views.InstanceMenu"
              x:DataType="vm:InstanceItem">
-    <!-- c/button-icon-more of an instance, the same on the Library row, the Home card and the instance page -->
+    <!-- c/button-icon-more of an instance, the same on the Library row, the Home card and the instance page. Menu order: open, everyday edits, copy and share, game build and backups, then the destructive item, with a separator between the groups. -->
     <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
         <Button.Flyout>
             <MenuFlyout Placement="BottomEdgeAlignedRight">
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                <Separator />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryLaunchArguments}" Command="{Binding BeginEditLaunchArgumentsCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceLoaderMenu}" Command="{Binding BeginEditLoaderSettingCommand}" />
-                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
-                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
+                <Separator />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDuplicate}" Command="{Binding DuplicateCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryMakePack}" Command="{Binding MakePackCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryExportModList}" Command="{Binding ExportModListCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCopyModList}" Command="{Binding CopyModListCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceSaveSettingsPreset}" Command="{Binding SaveSettingsPresetCommand}" />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceCopySettingsToGame}" Command="{Binding CopySettingsToGameCommand}" />
+                <Separator />
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceKeepGameBuild}" Command="{Binding BeginKeepGameBuildCommand}" IsVisible="{Binding GameBuildText, Converter={x:Static ObjectConverters.IsNull}}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText, Converter={x:Static ObjectConverters.IsNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameFolderKeepRefusalText}" />
                 <MenuItem IsEnabled="False">
                     <MenuItem.IsVisible>
@@ -27,11 +33,9 @@
                     </MenuItem.Header>
                 </MenuItem>
                 <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceUseCurrentGameBuild}" Command="{Binding BeginUseCurrentGameBuildCommand}" IsVisible="{Binding GameBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDuplicate}" Command="{Binding DuplicateCommand}" />
-                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryExportModList}" Command="{Binding ExportModListCommand}" />
-                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCopyModList}" Command="{Binding CopyModListCommand}" />
-                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryMakePack}" Command="{Binding MakePackCommand}" />
-                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
+                <Separator />
+                <MenuItem Classes="danger" Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
             </MenuFlyout>
         </Button.Flyout>
         <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />

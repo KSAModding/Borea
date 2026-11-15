@@ -283,14 +283,28 @@
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentOpenPage}" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" />
+                                    <Separator IsVisible="{Binding CanOpen}" />
                                     <MenuItem Header="{Binding Page.FavoriteText}" Command="{Binding Page.ToggleFavoriteCommand}" IsVisible="{Binding CanOpen}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentManage}" Command="{Binding BeginManageCommand}" IsVisible="{Binding CanManage}" />
-                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentInstallAgain}" Command="{Binding InstallAgainCommand}" IsVisible="{Binding IsMissing}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentPinVersion}" Command="{Binding PinCommand}" IsVisible="{Binding CanPin}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentUnpin}" Command="{Binding UnpinCommand}" IsVisible="{Binding IsPinned}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDetachFromPack}" Command="{Binding DetachCommand}" IsVisible="{Binding CanDetach}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentAttachToPack}" Command="{Binding AttachCommand}" IsVisible="{Binding CanAttach}" />
-                                    <MenuItem Header="{Binding RemoveActionText}" Command="{Binding BeginRemoveCommand}" IsEnabled="{Binding CanRemove}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
+                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentInstallAgain}" Command="{Binding InstallAgainCommand}" IsVisible="{Binding IsMissing}" />
+                                    <Separator>
+                                        <Separator.IsVisible>
+                                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                                <Binding Path="CanOpen" />
+                                                <Binding Path="CanManage" />
+                                                <Binding Path="IsMissing" />
+                                                <Binding Path="CanPin" />
+                                                <Binding Path="IsPinned" />
+                                                <Binding Path="CanDetach" />
+                                                <Binding Path="CanAttach" />
+                                            </MultiBinding>
+                                        </Separator.IsVisible>
+                                    </Separator>
+                                    <MenuItem Classes="danger" Header="{Binding RemoveActionText}" Command="{Binding BeginRemoveCommand}" IsEnabled="{Binding CanRemove}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
                                     <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
                                         <MenuItem.Header>
                                             <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />
@@ -448,7 +462,8 @@
                                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                                         <MenuItem Header="{Binding FavoriteText}" Command="{Binding ToggleFavoriteCommand}" />
                                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangeVersion}" Command="{Binding ChangeVersionCommand}" IsVisible="{Binding CanChangeVersion}" />
-                                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
+                                                        <Separator />
+                                                        <MenuItem Classes="danger" Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
                                                         <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                             <MenuItem.Header>
                                                                 <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />

@@ -170,13 +170,15 @@
                         <Button Classes="icon" IsVisible="{Binding IsIdle}" AutomationProperties.Name="{Binding Name}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
-                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveBackUp}" Command="{Binding BackUpCommand}" />
+                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
+                                    <Separator />
                                     <!-- only once the index accepts the type, see GameSaveSection.CanShare -->
                                     <MenuItem Header="{Binding ShareText}" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyToInstance}" Command="{Binding BeginCopyCommand}" />
-                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
-                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
+                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveBackUp}" Command="{Binding BackUpCommand}" />
+                                    <Separator />
+                                    <MenuItem Classes="danger" Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
                                 </MenuFlyout>
                             </Button.Flyout>
                             <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
@@ -368,7 +370,7 @@
                             <TextBlock Classes="action-md" Text="{Binding FindText}" />
                         </Button>
                         <Button Grid.Column="4" Classes="link" Command="{Binding OpenFolderCommand}" VerticalAlignment="Center">
-                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" />
+                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" />
                         </Button>
                     </Grid>
                     <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource GameSaveRow}" />
@@ -660,7 +662,7 @@
                                                 </Border>
                                                 <TextBlock Grid.Column="2" Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="3" Classes="label-md" Margin="24,0,0,0" Text="{Binding SizeText}" VerticalAlignment="Center" />
-                                                <Button Grid.Column="4" Classes="text" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" IsEnabled="{Binding Exists}" />
+                                                <Button Grid.Column="4" Classes="text" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" IsEnabled="{Binding Exists}" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -734,7 +736,7 @@
                                 <Grid ColumnDefinitions="*,16,Auto,4,Auto">
                                     <TextBlock Classes="body-md secondary" Text="{Binding Localization.InstanceGroupNotManaged}" VerticalAlignment="Center" />
                                     <Button Grid.Column="2" Classes="link" Command="{Binding OpenInstanceModsFolderCommand}" VerticalAlignment="Center">
-                                        <TextBlock Classes="action-md" Text="{Binding Localization.GameDataOpenFolder}" />
+                                        <TextBlock Classes="action-md" Text="{Binding Localization.LibraryOpenFolder}" />
                                     </Button>
                                     <views:InfoButton Grid.Column="4" Text="{Binding Localization.ManualInstallsInfo}" AutomationProperties.Name="{Binding Localization.MoreInformation}" />
                                 </Grid>
