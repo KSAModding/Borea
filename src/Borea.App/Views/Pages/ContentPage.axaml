@@ -215,7 +215,15 @@
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding SelectedContent.FavoriteText}" Command="{Binding SelectedContent.ToggleFavoriteCommand}" />
-                                        <MenuItem Header="{Binding Localization.ContentCopyShareLink}" Command="{Binding CopyContentShareLinkCommand}" IsVisible="{Binding ContentShareUrl, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <Separator>
+                                            <Separator.IsVisible>
+                                                <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                                    <Binding Path="ContentShareUrl" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                                    <Binding Path="CanReportContent" />
+                                                </MultiBinding>
+                                            </Separator.IsVisible>
+                                        </Separator>
+                                        <MenuItem Header="{Binding Localization.ContentCopyLink}" Command="{Binding CopyContentShareLinkCommand}" IsVisible="{Binding ContentShareUrl, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                         <MenuItem Header="{Binding Localization.ContentReport}" IsVisible="{Binding CanReportContent}">
                                             <MenuItem Command="{Binding ReportContentCommand}" CommandParameter="{x:Static stewardship:IndexReportKind.Takedown}" AutomationProperties.Name="{Binding Localization.ContentReportTakedown}" AutomationProperties.HelpText="{Binding Localization.ContentReportTakedownHint}">
                                                 <MenuItem.Header>
@@ -234,9 +242,18 @@
                                                 </MenuItem.Header>
                                             </MenuItem>
                                         </MenuItem>
-                                        <MenuItem Header="{Binding Localization.StewardDispute}" Command="{Binding DisputeContentCommand}" IsVisible="{Binding CanEditContentStatus}" />
-                                        <MenuItem Header="{Binding Localization.StewardDelist}" Command="{Binding DelistContentCommand}" IsVisible="{Binding CanEditContentStatus}" />
+                                        <Separator>
+                                            <Separator.IsVisible>
+                                                <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                                    <Binding Path="CanEditContentStatus" />
+                                                    <Binding Path="CanAmendContentReleases" />
+                                                </MultiBinding>
+                                            </Separator.IsVisible>
+                                        </Separator>
                                         <MenuItem Header="{Binding Localization.StewardAmend}" Command="{Binding AmendContentReleasesCommand}" IsVisible="{Binding CanAmendContentReleases}" />
+                                        <MenuItem Header="{Binding Localization.StewardDispute}" Command="{Binding DisputeContentCommand}" IsVisible="{Binding CanEditContentStatus}" />
+                                        <Separator IsVisible="{Binding CanEditContentStatus}" />
+                                        <MenuItem Classes="danger" Header="{Binding Localization.StewardDelist}" Command="{Binding DelistContentCommand}" IsVisible="{Binding CanEditContentStatus}" />
                                     </MenuFlyout>
                                 </Button.Flyout>
                                 <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />

@@ -2145,9 +2145,6 @@
   <data name="ManualInstallsInstanceChanged" xml:space="preserve">
     <value>The instance changed. Try again.</value>
   </data>
-  <data name="GameDataOpenFolder" xml:space="preserve">
-    <value>Open folder</value>
-  </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>Empty</value>
   </data>
@@ -5180,9 +5177,6 @@
   </data>
   <data name="ContentCopyLink" xml:space="preserve">
     <value>Copy link</value>
-  </data>
-  <data name="ContentCopyShareLink" xml:space="preserve">
-    <value>Copy share link</value>
   </data>
   <data name="ContentLinkCopied" xml:space="preserve">
     <value>Copied the link to the clipboard.</value>

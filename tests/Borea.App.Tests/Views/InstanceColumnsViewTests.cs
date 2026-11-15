@@ -173,7 +173,7 @@ public sealed class InstanceColumnsViewTests
             .. Lined(page, "game data", Rows<GameDataItem>(page), viewModel.GameDataItems.Count, row =>
             [
                 new("size", Text(row, ((GameDataItem)row.DataContext!).SizeText)),
-                new("actions", TextButton(row, localization.GameDataOpenFolder), AtEnd: true),
+                new("actions", TextButton(row, localization.LibraryOpenFolder), AtEnd: true),
             ]),
             .. Lined(page, "backups", Rows<GameSaveBackupItem>(page), viewModel.BackupItems.Count, row =>
             [

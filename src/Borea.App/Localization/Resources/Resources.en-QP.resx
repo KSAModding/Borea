@@ -1290,9 +1290,6 @@
   <data name="ManualInstallsInstanceChanged" xml:space="preserve">
     <value>The sea's shifted. Give 'er another go.</value>
   </data>
-  <data name="GameDataOpenFolder" xml:space="preserve">
-    <value>Open treasure chest</value>
-  </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>Nuthin'</value>
   </data>
@@ -2099,9 +2096,6 @@
   </data>
   <data name="ContentSharedOnFormat" xml:space="preserve">
     <value>Moored at {0}</value>
-  </data>
-  <data name="ContentCopyShareLink" xml:space="preserve">
-    <value>Copy th' link fer yer mateys</value>
   </data>
   <data name="ContentReport" xml:space="preserve">
     <value>Raise th' alarm</value>
