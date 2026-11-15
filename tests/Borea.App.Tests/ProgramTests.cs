@@ -44,6 +44,15 @@ public sealed class ProgramTests
         Assert.Equal(StartMode.Cli, Program.ChooseStartMode(["boreas://mod/MeasureTools"], consoleOwnedAlone: false));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ChooseStartMode_ReopenWatcherCommand_RunsTheWatcher(bool consoleOwnedAlone)
+    {
+        Assert.Equal(StartMode.ReopenWatcher, Program.ChooseStartMode(["reopen-after-game", "--process", "StarMap"], consoleOwnedAlone));
+        Assert.Equal(StartMode.Cli, Program.ChooseStartMode(["install", "reopen-after-game"], consoleOwnedAlone));
+    }
+
     [Fact]
     public void ChooseStartMode_WhatIsLeftOfASelfUpdateHandover_OpensTheApp()
     {

@@ -110,7 +110,7 @@ public partial class MainWindow : Window
         visual is ScrollBar or OverlayPopupHost or MenuBase
         || visual is InputElement { Focusable: true, IsEffectivelyEnabled: true, IsEffectivelyVisible: true };
 
-    private bool IsModalOpen() => TopModal() is not null;
+    internal bool IsModalOpen() => TopModal() is not null;
 
     /// <summary>The open modal that is drawn over the others, because it comes last in the window.</summary>
     private Border? TopModal() =>

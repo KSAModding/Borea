@@ -1,4 +1,5 @@
 using Avalonia;
+using Borea.App.GameWatch;
 using Borea.App.Localization;
 using Borea.App.SingleInstance;
 using Borea.App.ViewModels;
@@ -36,6 +37,8 @@ sealed class Program
                     Cli.Program.FinishSelfUpdate(handover);
 
                 return exitCode;
+            case StartMode.ReopenWatcher:
+                return ReopenWatcher.Run(args[1..]);
             case StartMode.AppWithoutConsole:
                 WindowsConsole.Free();
                 break;
@@ -45,12 +48,16 @@ sealed class Program
     }
 
     /// <summary>
-    /// Any argument runs the command line, unless the first one is a borea: link, which the App checks.
+    /// Any argument runs the command line, unless the first one is a borea: link, which the App checks,
+    /// or the command of the watcher that the App starts when it closes for the game.
     /// Otherwise the App opens, and first closes a console that Windows created only for it. A double-click
     /// leaves such a console on Windows versions that ignore the console allocation policy in app.manifest.
     /// </summary>
     internal static StartMode ChooseStartMode(string[] args, bool consoleOwnedAlone)
     {
+        if (args is [ReopenWatcher.CommandName, ..])
+            return StartMode.ReopenWatcher;
+
         if (args.Length > 0 && !BoreaLink.HasScheme(args[0]))
             return StartMode.Cli;
 

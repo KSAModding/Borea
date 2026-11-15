@@ -69,6 +69,24 @@
   <data name="SettingsThemeLabel" xml:space="preserve">
     <value>Design</value>
   </data>
+  <data name="SettingsGameStartLabel" xml:space="preserve">
+    <value>Wenn das Spiel startet</value>
+  </data>
+  <data name="SettingsGameStartHint" xml:space="preserve">
+    <value>Wenn du Borea schließt, hat das Spiel am meisten Speicher. Solange eine Aufgabe läuft oder ein Fenster auf deine Antwort wartet, bleibt Borea offen.</value>
+  </data>
+  <data name="GameStartKeepOpen" xml:space="preserve">
+    <value>Borea offen lassen</value>
+  </data>
+  <data name="GameStartMinimize" xml:space="preserve">
+    <value>Borea minimieren</value>
+  </data>
+  <data name="GameStartClose" xml:space="preserve">
+    <value>Borea schließen</value>
+  </data>
+  <data name="SettingsReopenAfterGame" xml:space="preserve">
+    <value>Borea wieder öffnen, wenn das Spiel beendet wird</value>
+  </data>
   <data name="SettingsUpdatesLabel" xml:space="preserve">
     <value>Updates</value>
   </data>
@@ -6122,6 +6140,9 @@
   </data>
   <data name="LaunchStartedFormat" xml:space="preserve">
     <value>{0} für die Instanz „{1}“ gestartet.</value>
+  </data>
+  <data name="LaunchStaysOpenForWork" xml:space="preserve">
+    <value>Borea bleibt offen, weil noch eine Aufgabe läuft oder ein Fenster auf deine Antwort wartet.</value>
   </data>
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} hat den Start von {2} verhindert. Die Mod funktioniert womöglich nicht mit dieser KSA-Version. Deaktiviere sie und versuche es erneut, oder suche nach einem Update.</value>

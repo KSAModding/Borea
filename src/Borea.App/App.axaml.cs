@@ -8,6 +8,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Borea.App.Formatting;
+using Borea.App.GameWatch;
 using Borea.App.Links;
 using Borea.App.Localization;
 using Borea.App.SingleInstance;
@@ -121,6 +122,7 @@ public partial class App : Application
                 PreferencesLoadStatus = _preferencesLoadStatus,
                 LinkHandler = Services is null ? null : LinkHandler.ForThisProcess(),
                 EndApp = () => desktop.Shutdown(),
+                StartReopenWatcher = ReopenWatcher.ProgramPath(Environment.ProcessPath) is { } program ? names => ReopenWatcher.Start(program, names) : null,
                 PendingHandover = _pendingHandover,
                 VehiclePreviewBuilderOf = () => new PreviewSceneBuilder(new PreviewTextureLoader(new AvaloniaRgbaImageDecoder())),
                 VehiclePreviewEncoder = new AvaloniaPngEncoder(),
@@ -133,6 +135,7 @@ public partial class App : Application
             var window = new MainWindow { DataContext = viewModel };
             desktop.MainWindow = window;
             _windowFront = new WindowFront(window);
+            viewModel.GameWindow = new GameWindow(window, _windowFront);
             // macOS passes a borea:// link to the running App instead of starting it with the link
             if (OperatingSystem.IsMacOS() && _startArguments is { } startArguments)
                 ProtocolActivation.Listen(TryGetFeature(typeof(IActivatableLifetime)) as IActivatableLifetime, startArguments, Services?.Log);

@@ -55,7 +55,8 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
     [Theory]
     [InlineData("")]
-    [InlineData(""", "markUntranslatedTexts": null, "openBoreaLinks": null, "staySignedInToGitHub": null""")]
+    [InlineData(""", "markUntranslatedTexts": null, "openBoreaLinks": null, "staySignedInToGitHub": null, "whenGameStarts": null, "reopenAfterGame": null""")]
+    [InlineData(""", "whenGameStarts": "tray" """)]
     public async Task GetAsync_NoOrNullSwitches_LoadsTheDefaults(string fields)
     {
         await WriteAsync($$"""
@@ -70,6 +71,8 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         Assert.False(result.Preferences.MarkUntranslatedTexts);
         Assert.True(result.Preferences.OpenBoreaLinks);
         Assert.True(result.Preferences.StaySignedInToGitHub);
+        Assert.Equal(GameStartAction.KeepOpen, result.Preferences.WhenGameStarts);
+        Assert.True(result.Preferences.ReopenAfterGame);
     }
 
     [Fact]
@@ -126,6 +129,51 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
         Assert.Equal(HomeLaunchOption.ActiveInstance, result.Preferences.HomeLaunch);
+    }
+
+    [Theory]
+    [InlineData(GameStartAction.Minimize, true, "minimize")]
+    [InlineData(GameStartAction.Close, false, "close")]
+    public async Task SaveThenGet_GameStartChoice_RestoresIt(GameStartAction action, bool reopen, string name)
+    {
+        await _repository.SaveAsync(AppPreferences.Empty.WithWhenGameStarts(action).WithReopenAfterGame(reopen), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(action, result.Preferences.WhenGameStarts);
+        Assert.Equal(reopen, result.Preferences.ReopenAfterGame);
+        using var document = await ReadSavedDocumentAsync();
+        Assert.Equal(name, document.RootElement.GetProperty("whenGameStarts").GetString());
+        Assert.Equal(reopen, document.RootElement.GetProperty("reopenAfterGame").GetBoolean());
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepTheGameStartChoice()
+    {
+        var preferences = AppPreferences.Empty.WithWhenGameStarts(GameStartAction.Close).WithReopenAfterGame(false)
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de")
+            .WithMarkUntranslatedTexts(true)
+            .WithSelectedThemeName("Light")
+            .WithCheckForUpdatesAtStart(false)
+            .WithUpdateChannel(BoreaUpdateChannel.Dev)
+            .WithForeignFolderDeletionConfirmed(true)
+            .WithLoadImagesFromAuthorHosts(false)
+            .WithHomeLaunch(HomeLaunchOption.WithoutModLoader)
+            .WithDiscoverSortOrder(DiscoverSortOrder.Name)
+            .WithSharedProfileBannerDismissed(true)
+            .WithDismissedGameRevision(5482)
+            .WithFirstStartedAt(DateTimeOffset.UnixEpoch)
+            .WithFetchAnnouncements(false)
+            .WithOpenBoreaLinks(false)
+            .WithBackupRetentionDays(7)
+            .WithDismissedUntestedGameRevision(5483)
+            .WithStaySignedInToGitHub(false)
+            .WithDismissedLoaderUpdate("StarMap 0.4.6")
+            .WithLastSeenBoreaVersion("0.6.23")
+            .WithDismissedAnnouncements(["a"]);
+
+        Assert.Equal(GameStartAction.Close, preferences.WhenGameStarts);
+        Assert.False(preferences.ReopenAfterGame);
     }
 
     [Fact]

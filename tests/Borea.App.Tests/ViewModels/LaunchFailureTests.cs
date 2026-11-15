@@ -526,7 +526,7 @@ public sealed class LaunchFailureTests
             },
             processStarter: starter);
 
-    private static async Task PlayActiveInstanceAsync(ViewModelHarness harness)
+    internal static async Task PlayActiveInstanceAsync(ViewModelHarness harness)
     {
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
@@ -630,7 +630,7 @@ public sealed class LaunchFailureTests
     private static LaunchPlan WrapperPlan => new(Path.Combine(Path.GetTempPath(), "launcher"), [], Path.GetTempPath(), new Dictionary<string, string>());
 
     /// <summary>A harness with StarMap recorded whose loader launches all end in <paramref name="launcher"/>.</summary>
-    private static Task<ViewModelHarness> CreateWithLauncherAsync(ILauncher launcher) =>
+    internal static Task<ViewModelHarness> CreateWithLauncherAsync(ILauncher launcher) =>
         ViewModelHarness.CreateAsync(
             services => services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap"))),
             loaderLauncher: launcher);
@@ -1122,7 +1122,7 @@ public sealed class LaunchFailureTests
         public bool IsRunning(Guid instanceId) => false;
     }
 
-    private sealed class FixedSharedProfileLauncher(SharedProfileLaunchResult result) : ISharedProfileLauncher
+    internal sealed class FixedSharedProfileLauncher(SharedProfileLaunchResult result) : ISharedProfileLauncher
     {
         public SharedProfileLaunchResult Launch(IReadOnlyList<string>? arguments = null) => result;
     }

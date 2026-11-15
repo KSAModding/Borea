@@ -24,6 +24,12 @@ internal static class AppPreferencesMapper
 
     private const string RecentlyListedSortName = "recently-listed";
 
+    private const string KeepOpenName = "keep-open";
+
+    private const string MinimizeName = "minimize";
+
+    private const string CloseName = "close";
+
     public static AppPreferencesDocumentDto ToDto(AppPreferences preferences) => new()
     {
         FormatVersion = FileAppPreferencesRepository.CurrentFormatVersion,
@@ -59,6 +65,13 @@ internal static class AppPreferencesMapper
         StaySignedInToGitHub = preferences.StaySignedInToGitHub,
         DismissedLoaderUpdate = preferences.DismissedLoaderUpdate,
         LastSeenBoreaVersion = preferences.LastSeenBoreaVersion,
+        WhenGameStarts = preferences.WhenGameStarts switch
+        {
+            GameStartAction.Minimize => MinimizeName,
+            GameStartAction.Close => CloseName,
+            _ => KeepOpenName,
+        },
+        ReopenAfterGame = preferences.ReopenAfterGame,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
@@ -84,7 +97,9 @@ internal static class AppPreferencesMapper
         markUntranslatedTexts: dto.MarkUntranslatedTexts ?? false,
         staySignedInToGitHub: dto.StaySignedInToGitHub ?? true,
         dismissedLoaderUpdate: dto.DismissedLoaderUpdate,
-        lastSeenBoreaVersion: dto.LastSeenBoreaVersion);
+        lastSeenBoreaVersion: dto.LastSeenBoreaVersion,
+        whenGameStarts: ReadWhenGameStarts(dto.WhenGameStarts),
+        reopenAfterGame: dto.ReopenAfterGame ?? true);
 
     private static DateTimeOffset? ReadFirstStartedAt(string? text)
         => DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var at) ? at : null;
@@ -104,6 +119,14 @@ internal static class AppPreferencesMapper
             NameSortName => DiscoverSortOrder.Name,
             RecentlyListedSortName => DiscoverSortOrder.RecentlyListed,
             _ => DiscoverSortOrder.Popularity,
+        };
+
+    private static GameStartAction ReadWhenGameStarts(string? name)
+        => name?.ToLowerInvariant() switch
+        {
+            MinimizeName => GameStartAction.Minimize,
+            CloseName => GameStartAction.Close,
+            _ => GameStartAction.KeepOpen,
         };
 
     /// <summary>

@@ -69,6 +69,12 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>The Borea version that last showed its release notes at start, such as "0.7.0" or "0.7.0-dev.3".</summary>
     public string? LastSeenBoreaVersion { get; set; }
 
+    /// <summary>"keep-open", "minimize" or "close". Null or an unknown name reads as keep-open.</summary>
+    public string? WhenGameStarts { get; set; }
+
+    /// <summary>Null in an older file, which reads as on.</summary>
+    public bool? ReopenAfterGame { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 
     /// <summary>

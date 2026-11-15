@@ -111,6 +111,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>Whether a KSA or mod loader process runs, whoever started it.</summary>
     public required Func<bool> IsGameProcessRunning { get; init; }
 
+    /// <summary>The process names of the installed mod loaders, without extension. Empty when nothing can be read.</summary>
+    public required Func<IReadOnlyList<string>> LoaderProcessNames { get; init; }
+
     public required IAppPreferencesRepository AppPreferences { get; init; }
 
     public required ITaskHistoryRepository TaskHistory { get; init; }
@@ -638,6 +641,7 @@ public sealed class BoreaServices : IDisposable
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration, loaderVersions),
             LibraryFolderChanger = new LoggingLibraryFolderChanger(new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, fileInstances, isGameProcessRunning, isOtherBoreaRunning), log),
             IsGameProcessRunning = isGameProcessRunning,
+            LoaderProcessNames = loaderProcessNames.Current,
             AppPreferences = new FileAppPreferencesRepository(paths),
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
