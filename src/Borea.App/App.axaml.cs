@@ -126,6 +126,7 @@ public partial class App : Application
                 PendingHandover = _pendingHandover,
                 VehiclePreviewBuilderOf = () => new PreviewSceneBuilder(new PreviewTextureLoader(new AvaloniaRgbaImageDecoder())),
                 VehiclePreviewEncoder = new AvaloniaPngEncoder(),
+                ReleaseMemory = () => Dispatcher.UIThread.Post(MemoryRelease.Run, DispatcherPriority.ContextIdle),
             };
             _viewModel = viewModel;
 
