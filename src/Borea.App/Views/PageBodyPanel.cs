@@ -53,6 +53,9 @@ public sealed class PageBodyPanel : Panel
 
     public static Thickness SidePanelMargin { get; } = new(0, SidePanelInset, SidePanelInset, SidePanelInset);
 
+    /// <summary>Keeps a control that floats at the bottom of a page without a side panel the inset away from the bottom.</summary>
+    public static Thickness FloatingBottomMargin { get; } = new(0, 0, 0, SidePanelInset);
+
     /// <summary>Keeps a control that floats at the bottom of the page clear of the side panel, so it centers over the list, the inset away from the bottom.</summary>
     public static Thickness BesideSidePanelBottomMargin { get; } = new(0, 0, SidePanelWidth + 2 * SidePanelInset, SidePanelInset);
 

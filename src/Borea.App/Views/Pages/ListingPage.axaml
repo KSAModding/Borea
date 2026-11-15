@@ -9,6 +9,13 @@
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
         <StyleInclude Source="avares://Borea.App/Views/PageBodyStyles.axaml" />
+        <!-- the start step has no side panel, so the button centers over the whole page -->
+        <Style Selector="views|ScrollToTopButton.beside-panel">
+            <Setter Property="Margin" Value="{x:Static views:PageBodyPanel.BesideSidePanelBottomMargin}" />
+        </Style>
+        <Style Selector="views|ScrollToTopButton.beside-panel.start">
+            <Setter Property="Margin" Value="{x:Static views:PageBodyPanel.FloatingBottomMargin}" />
+        </Style>
         <Style Selector="Button.step">
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="Margin" Value="-8,0" />
@@ -857,6 +864,13 @@
                 </StackPanel>
             </views:PageBodyPanel>
         </ScrollViewer>
+
+        <views:ScrollToTopButton Classes="beside-panel" Classes.start="{Binding ListingEditor.IsStartStep}" Target="{Binding #PageScroller}" HorizontalAlignment="Center" VerticalAlignment="Bottom" AutomationProperties.Name="{Binding Localization.DiscoverBackToTop}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowUp}" />
+                <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverBackToTop}" VerticalAlignment="Center" />
+            </StackPanel>
+        </views:ScrollToTopButton>
 
         <!-- the actions of a share step line up with the cards above them, and the tab order reaches them after the step -->
         <views:PageBodyPanel Grid.Row="1" HasSidePanel="{Binding !ListingEditor.IsStartStep}" HasTopMargin="False" HasBottomMargin="False" IsVisible="{Binding ListingEditor.ShowsShareActionBar}">
