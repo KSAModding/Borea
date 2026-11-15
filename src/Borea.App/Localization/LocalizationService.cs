@@ -360,6 +360,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsThemeLabel => Resources.SettingsThemeLabel;
 
+    public string SettingsGameStartLabel => Resources.SettingsGameStartLabel;
+
+    public string SettingsGameStartHint => Resources.SettingsGameStartHint;
+
+    public string GameStartKeepOpen => Resources.GameStartKeepOpen;
+
+    public string GameStartMinimize => Resources.GameStartMinimize;
+
+    public string GameStartClose => Resources.GameStartClose;
+
+    public string SettingsReopenAfterGame => Resources.SettingsReopenAfterGame;
+
     public string SettingsUpdatesLabel => Resources.SettingsUpdatesLabel;
 
     public string SettingsCheckForUpdatesAtStart => Resources.SettingsCheckForUpdatesAtStart;
@@ -3788,6 +3800,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string LaunchWithoutModLoader => Resources.LaunchWithoutModLoader;
 
     public string LaunchActiveInstance => Resources.LaunchActiveInstance;
+
+    public string LaunchStaysOpenForWork => Resources.LaunchStaysOpenForWork;
 
     public string LaunchInstanceMissing => Resources.LaunchInstanceMissing;
 

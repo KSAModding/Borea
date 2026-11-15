@@ -5,4 +5,5 @@ internal enum StartMode
     App,
     AppWithoutConsole,
     Cli,
+    ReopenWatcher,
 }

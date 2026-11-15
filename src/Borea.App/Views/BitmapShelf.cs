@@ -45,6 +45,16 @@ internal sealed class BitmapShelf
     /// <summary>Hands the bitmap of <paramref name="icon"/> to the caller, who then disposes it.</summary>
     internal Bitmap? Take(IconImage icon) => _entries.TryGetValue(Key.Of(icon), out var node) ? Remove(node).Bitmap : null;
 
+    internal void Clear()
+    {
+        foreach (var entry in _order)
+            entry.Bitmap.Dispose();
+
+        _entries.Clear();
+        _order.Clear();
+        Size = 0;
+    }
+
     private Entry Remove(LinkedListNode<Entry> node)
     {
         _order.Remove(node);

@@ -69,6 +69,24 @@
   <data name="SettingsThemeLabel" xml:space="preserve">
     <value>Theme</value>
   </data>
+  <data name="SettingsGameStartLabel" xml:space="preserve">
+    <value>When the game starts</value>
+  </data>
+  <data name="SettingsGameStartHint" xml:space="preserve">
+    <value>Closing Borea gives the game the most memory. Borea stays open while a task runs or a window waits for your answer.</value>
+  </data>
+  <data name="GameStartKeepOpen" xml:space="preserve">
+    <value>Keep Borea open</value>
+  </data>
+  <data name="GameStartMinimize" xml:space="preserve">
+    <value>Minimize Borea</value>
+  </data>
+  <data name="GameStartClose" xml:space="preserve">
+    <value>Close Borea</value>
+  </data>
+  <data name="SettingsReopenAfterGame" xml:space="preserve">
+    <value>Open Borea again when the game closes</value>
+  </data>
   <data name="SettingsUpdatesLabel" xml:space="preserve">
     <value>Updates</value>
   </data>
@@ -6131,6 +6149,9 @@
   </data>
   <data name="LaunchStartedFormat" xml:space="preserve">
     <value>Started {0} for instance "{1}".</value>
+  </data>
+  <data name="LaunchStaysOpenForWork" xml:space="preserve">
+    <value>Borea stays open, because a task still runs or a window waits for your answer.</value>
   </data>
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} stopped {2} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.</value>

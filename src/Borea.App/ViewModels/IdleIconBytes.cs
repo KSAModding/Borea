@@ -45,5 +45,15 @@ internal sealed class IdleIconBytes
         Size -= node.Value.Size;
     }
 
+    /// <summary>Gives the bytes of every idle icon back.</summary>
+    internal void Clear()
+    {
+        while (_order.Last is { } oldest)
+        {
+            Remove(oldest.Value.Icon);
+            oldest.Value.Icon.Bytes = null;
+        }
+    }
+
     private readonly record struct Entry(ListingImage Icon, long Size);
 }

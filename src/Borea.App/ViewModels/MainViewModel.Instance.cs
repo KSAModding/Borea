@@ -770,14 +770,21 @@ public partial class MainViewModel
     /// <summary>Starts the instance through the loader version that <see cref="InstanceLoaderResolver"/> picks and watches the start.</summary>
     private async Task LaunchAsync(Guid instanceId)
     {
+        if (await TryLaunchAsync(instanceId))
+            await AfterGameStartedAsync(instanceId);
+    }
+
+    /// <returns>Whether the game started and the start watch saw no early stop.</returns>
+    private async Task<bool> TryLaunchAsync(Guid instanceId)
+    {
         if (_services is not { } services || IsLaunching)
-            return;
+            return false;
 
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
             RefuseLaunch(Localization.LibraryFolderBusy);
-            return;
+            return false;
         }
 
         IsLaunching = true;
@@ -797,7 +804,7 @@ public partial class MainViewModel
             {
                 services.Log.Write($"Launch of instance {instance.InstanceId} did not start, its kept build {kept} is {game.Problem}.");
                 RefuseLaunch(GameBuildMissingText(kept)!, row);
-                return;
+                return false;
             }
 
             // a loader started on a folder without KSA.dll finds no game, and the loader choice would rate against no build
@@ -805,7 +812,7 @@ public partial class MainViewModel
             {
                 services.Log.Write($"Launch of instance {instance.InstanceId} did not start, the game folder '{game.GameDirectory}' holds no KSA.dll.");
                 RefuseNotGameFolder(game.GameDirectory!);
-                return;
+                return false;
             }
 
             InstanceLoaderResolution resolution;
@@ -819,7 +826,7 @@ public partial class MainViewModel
                 var reason = services.IndexRefresh.Status is { Outcome: ContentIndexRefreshOutcome.Failed, FailureReason: { } fetchFailure } ? fetchFailure : exception.Message;
                 services.Log.Write($"Launch of instance {instance.InstanceId} did not start, the listings did not load: {reason}", exception);
                 RefuseLaunch(Localization.FormatLaunchListingsFailed(reason));
-                return;
+                return false;
             }
 
             var choice = resolution.Choice;
@@ -839,7 +846,7 @@ public partial class MainViewModel
                     RefuseLaunch(LaunchLoaderFailureText(choice));
                 else
                     RefuseLaunch(Localization.FormatLaunchLoaderNotInstalled(instance.Loader.IsPinned ? $"{choice.Loader.Name} {instance.Loader.Version}" : choice.Loader.Name));
-                return;
+                return false;
             }
 
             var loader = choice.Loader!;
@@ -857,7 +864,7 @@ public partial class MainViewModel
                         ? $"Launch of instance {instance.InstanceId} waits, the pinned {loader.ModId} {update.InstalledVersion} does not support the game."
                         : $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and no release fits the game and the mods.");
                 OpenLoaderPrompt(instance, loader, update, pin: version.IsPinned ? instance.Loader.Version : null);
-                return;
+                return false;
             }
 
             // The load order is a write, so it waits for a shape Borea trusts.
@@ -879,7 +886,7 @@ public partial class MainViewModel
             if (result.Outcome == LaunchOutcome.WrapperRuntimeMissing)
             {
                 OpenRuntimePrompt(instanceId, result, loader);
-                return;
+                return false;
             }
 
             PromptedRuntime = null;
@@ -911,10 +918,13 @@ public partial class MainViewModel
                 await RefreshLastPlayedAsync(instance.InstanceId);
                 StartModStoreCheckAfterGame(instance.InstanceId);
             }
+
+            return result.Started;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {
             RefuseLaunch(exception.Message);
+            return false;
         }
         finally
         {
@@ -979,6 +989,7 @@ public partial class MainViewModel
         IsLaunching = true;
         _launchInstanceId = null;
         ClearLaunchFailure();
+        var started = false;
         try
         {
             var result = _services.SharedProfileLauncher.Launch();
@@ -989,7 +1000,8 @@ public partial class MainViewModel
                 SharedProfileLaunchOutcome.WrapperBusy => Localization.FormatLaunchWrapperBusy(result.Wine!.Wrapper!.BundlePath),
                 _ => result.Message,
             };
-            if (result.Started)
+            started = result.Started;
+            if (started)
                 LaunchMessage = text;
             else
                 RefuseLaunch(text);
@@ -1002,6 +1014,9 @@ public partial class MainViewModel
         {
             IsLaunching = false;
         }
+
+        if (started)
+            await AfterGameStartedAsync(instanceId: null);
     }
 
     /// <summary>

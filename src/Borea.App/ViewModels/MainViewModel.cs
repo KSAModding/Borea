@@ -1014,6 +1014,8 @@ public partial class MainViewModel : ViewModelBase
             && left.StaySignedInToGitHub == right.StaySignedInToGitHub
             && string.Equals(left.DismissedLoaderUpdate, right.DismissedLoaderUpdate, StringComparison.Ordinal)
             && string.Equals(left.LastSeenBoreaVersion, right.LastSeenBoreaVersion, StringComparison.Ordinal)
+            && left.WhenGameStarts == right.WhenGameStarts
+            && left.ReopenAfterGame == right.ReopenAfterGame
             && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
@@ -1075,6 +1077,8 @@ public partial class MainViewModel : ViewModelBase
         foreach (var option in ReleaseChannelOptions)
             option.RefreshText();
         foreach (var option in UpdateChannelOptions)
+            option.RefreshText();
+        foreach (var option in GameStartOptions)
             option.RefreshText();
         foreach (var category in CategoryOptions)
             category.RefreshText();
