@@ -155,6 +155,48 @@ public sealed class GameCrashToastTests
         Assert.Null(await harness.Services.GameCrashes.GetUnreportedAsync(instance, instance.LastPlayedAt!.Value));
     }
 
+    /// <summary>A harness with an active and a second instance, both played some hours ago, and one crash log in the second or the active instance.</summary>
+    private static Task<ViewModelHarness> StartWithTwoInstancesAsync(int activeHoursAgo, int otherHoursAgo, bool otherCrashed) =>
+        ViewModelHarness.CreateAsync(async services =>
+        {
+            var active = (await services.Instances.CreateAsync("Active", InstanceSource.Custom.Value)).Instance;
+            var other = (await services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
+            await services.Instances.SetActiveInstanceAsync(active.InstanceId);
+            foreach (var (instance, hoursAgo) in new[] { (active, activeHoursAgo), (other, otherHoursAgo) })
+            {
+                await services.Instances.UpdateAsync(instance.InstanceId, saved =>
+                {
+                    saved.RecordPlayed(DateTimeOffset.UtcNow.AddHours(-hoursAgo));
+                    return true;
+                });
+            }
+
+            // the crash log lies in the instance that was not played last when otherCrashed is false
+            var crashed = otherCrashed ? other : active;
+            var path = Path.Combine(Path.GetDirectoryName(services.Paths.GetInstanceGameLogPath(crashed.InstanceId))!, "KittenSpaceAgency.260926-122536.43512.previous-crash.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllLinesAsync(path, CrashTail());
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddMinutes(-30));
+        });
+
+    [Fact]
+    public async Task Start_CrashInAPlayedInstanceThatIsNotActive_ShowsTheToast()
+    {
+        using var harness = await StartWithTwoInstancesAsync(activeHoursAgo: 5, otherHoursAgo: 1, otherCrashed: true);
+        await harness.ViewModel.WhenCrashCheckedAsync();
+
+        Assert.Equal(harness.Localization.LaunchGameCrashed, Assert.Single(harness.ViewModel.Toasts.Items).Message);
+    }
+
+    [Fact]
+    public async Task Start_ActiveInstanceWithAnOlderLastPlayedAt_DoesNotWin()
+    {
+        using var harness = await StartWithTwoInstancesAsync(activeHoursAgo: 5, otherHoursAgo: 1, otherCrashed: false);
+        await harness.ViewModel.WhenCrashCheckedAsync();
+
+        Assert.Empty(harness.ViewModel.Toasts.Items);
+    }
+
     [Fact]
     public async Task Play_LoaderFailsAfterTheGameShutDown_ShowsNothingAndMarksTheRun()
     {

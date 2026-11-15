@@ -12,7 +12,7 @@ namespace Borea.App.ViewModels;
 /// <summary>
 /// The toast about a game that closed unexpectedly after its start, shown when
 /// the process of a launch ends with a crash the game recorded, and once at the
-/// start of Borea for a crash of the active instance after its last launch. An
+/// start of Borea for a crash of the instance played last after its last launch. An
 /// error of the mod loader after the game shut down gets no toast.
 /// </summary>
 public partial class MainViewModel
@@ -61,12 +61,11 @@ public partial class MainViewModel
     {
         try
         {
-            if (await services.Instances.GetActiveInstanceIdAsync() is not { } instanceId
-                || await services.Instances.GetByIdAsync(instanceId) is not { LastPlayedAt: { } lastLaunch } instance)
-            {
+            // a player can launch an instance that is not the active one, and Borea can close while the game runs, so the instance played last is the one to check
+            if ((await services.Instances.GetAllAsync()).Where(candidate => candidate.LastPlayedAt is not null).MaxBy(candidate => candidate.LastPlayedAt) is not { LastPlayedAt: { } lastLaunch } instance)
                 return;
-            }
 
+            var instanceId = instance.InstanceId;
             if (await services.GameCrashes.GetUnreportedAsync(instance, lastLaunch) is { } crash)
             {
                 services.Log.Write($"Instance {instanceId}: the game crashed after its last launch. Crash log: {crash.LogPath}. {crash.Exception ?? "No exception in the log."}");
@@ -75,7 +74,7 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            services.Log.Write($"Borea could not check the active instance for a crash of the game. {exception.Message}");
+            services.Log.Write($"Borea could not check the last played instance for a crash of the game. {exception.Message}");
         }
     }
 
