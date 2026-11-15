@@ -423,6 +423,31 @@ public partial class MainViewModel : ViewModelBase
         RefreshGameSetup();
         await RefreshGameShapeAsync();
         await RefreshSharedProfileAsync();
+        _ = ReleaseMemoryAfterStartAsync();
+    }
+
+    /// <summary>Gives back the memory of the start. The App sets it to a job that runs when the UI is idle, and a test leaves it null.</summary>
+    internal Action? ReleaseMemory { get; set; }
+
+    private static readonly TimeSpan MemoryReleaseGrace = TimeSpan.FromSeconds(10);
+
+    private bool _memoryReleaseStarted;
+
+    /// <summary>
+    /// Runs once per process, after the last step of the first start. The index and the Home groups
+    /// are done by then, and the grace period lets the icons of Home arrive, so the buffers they used are garbage
+    /// when the collection runs. No later collection reaches them, because the large object heap is not collected
+    /// again until the process allocates much more. A rebuild of the services loads the start again, and it
+    /// does not release again. The release itself is queued at low priority by its owner, so input comes first.
+    /// </summary>
+    private async Task ReleaseMemoryAfterStartAsync()
+    {
+        if (ReleaseMemory is not { } release || _memoryReleaseStarted)
+            return;
+
+        _memoryReleaseStarted = true;
+        await Task.Delay(MemoryReleaseGrace, Clock);
+        release();
     }
 
     /// <summary>
