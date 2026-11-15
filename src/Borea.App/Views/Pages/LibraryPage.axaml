@@ -62,7 +62,7 @@
             </Button>
         </views:PageBodyPanel>
 
-        <ScrollViewer Grid.Row="1">
+        <ScrollViewer x:Name="PageScroller" Grid.Row="1">
             <views:PageBodyPanel HasTopMargin="False">
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
 
@@ -86,5 +86,12 @@
                 </ItemsControl>
             </views:PageBodyPanel>
         </ScrollViewer>
+
+        <views:ScrollToTopButton Grid.Row="1" Target="{Binding #PageScroller}" Margin="{x:Static views:PageBodyPanel.FloatingBottomMargin}" HorizontalAlignment="Center" VerticalAlignment="Bottom" AutomationProperties.Name="{Binding Localization.DiscoverBackToTop}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowUp}" />
+                <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverBackToTop}" VerticalAlignment="Center" />
+            </StackPanel>
+        </views:ScrollToTopButton>
     </Grid>
 </UserControl>

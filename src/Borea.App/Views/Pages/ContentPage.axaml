@@ -69,7 +69,7 @@
     </UserControl.Resources>
     <!-- Content (discover-content): one listing, with the detail panel along the right edge -->
     <Grid>
-        <ScrollViewer>
+        <ScrollViewer x:Name="PageScroller">
             <!-- laid out like Discover, so the page does not move sideways when a row opens -->
             <views:PageBodyPanel HasSidePanel="True">
                 <StackPanel Container.Name="page-body" Container.Sizing="Width">
@@ -708,6 +708,13 @@
                 </StackPanel>
             </views:PageBodyPanel>
         </ScrollViewer>
+
+        <views:ScrollToTopButton Target="{Binding #PageScroller}" Margin="{x:Static views:PageBodyPanel.BesideSidePanelBottomMargin}" HorizontalAlignment="Center" VerticalAlignment="Bottom" AutomationProperties.Name="{Binding Localization.DiscoverBackToTop}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowUp}" />
+                <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverBackToTop}" VerticalAlignment="Center" />
+            </StackPanel>
+        </views:ScrollToTopButton>
 
         <!-- detail-panel -->
         <Border Classes="side-panel">
