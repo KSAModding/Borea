@@ -2439,6 +2439,9 @@
   <data name="ContentRemove" xml:space="preserve">
     <value>移除</value>
   </data>
+  <data name="ContentRemoveOrphansFormat" xml:space="preserve">
+    <value>Borea 还会移除 {0}，因为没有其他模组需要它。</value>
+  </data>
   <data name="ContentRemoveConfirm" xml:space="preserve">
     <value>是否从实例中移除此内容？</value>
   </data>
@@ -2906,6 +2909,102 @@
   </data>
   <data name="LinkVersionGoneFormat" xml:space="preserve">
     <value>版本 {0} 已无法下载，Borea 改为提供最新发布版本。</value>
+  </data>
+  <data name="LinkModListTitle" xml:space="preserve">
+    <value>从链接创建实例</value>
+  </data>
+  <data name="LinkModListNote" xml:space="preserve">
+    <value>这些模组来自链接。点击“创建”前不会安装任何内容。</value>
+  </data>
+  <data name="LinkModListNoteBlocked" xml:space="preserve">
+    <value>这些模组来自链接。</value>
+  </data>
+  <data name="LinkModListUpdateTitle" xml:space="preserve">
+    <value>从链接更新实例</value>
+  </data>
+  <data name="LinkModListChoiceUpdateFormat" xml:space="preserve">
+    <value>更新 {0}</value>
+  </data>
+  <data name="LinkModListChoiceNew" xml:space="preserve">
+    <value>创建新实例</value>
+  </data>
+  <data name="LinkModListUpdateNoteFormat" xml:space="preserve">
+    <value>{0} 来自此链接的早期版本。点击“更新”前不会有任何更改。</value>
+  </data>
+  <data name="LinkModListKeepOwnFormat" xml:space="preserve">
+    <value>保留 {0} {1}，因为这是你添加的模组，链接中未列出它</value>
+  </data>
+  <data name="LinkModListInstanceGoneFormat" xml:space="preserve">
+    <value>{0} 已不存在。请改为选择“创建新实例”。</value>
+  </data>
+  <data name="LinkModListInstanceBusyFormat" xml:space="preserve">
+    <value>正在进行对 {0} 的其他更改。完成后请重试。</value>
+  </data>
+  <data name="LinkModListUpdatedFormat" xml:space="preserve">
+    <value>{0} 现在包含链接中的模组</value>
+  </data>
+  <data name="LinkModListCountFormat" xml:space="preserve">
+    <value>链接中的模组：{0}</value>
+  </data>
+  <data name="LinkModListDependenciesFormat" xml:space="preserve">
+    <value>Borea 还会安装这些模组所需的依赖：{0}。</value>
+  </data>
+  <data name="LinkModListLoaderFormat" xml:space="preserve">
+    <value>需要模组加载器 {0} {1}。点击“游玩”时，Borea 会提供安装选项。</value>
+  </data>
+  <data name="LinkModListBlocked" xml:space="preserve">
+    <value>Borea 无法安装标记的模组。请让分享链接的人修复它们。</value>
+  </data>
+  <data name="LinkModListForm" xml:space="preserve">
+    <value>链接必须类似 borea://modlist?mods=ModId@1.2.3，可选添加 &amp;name=。</value>
+  </data>
+  <data name="LinkModListNoVersion" xml:space="preserve">
+    <value>链接中的每个模组都需要精确版本，例如 ModId@1.2.3。</value>
+  </data>
+  <data name="LinkModListBadId" xml:space="preserve">
+    <value>链接中的某个模组 ID 不是有效的内容 ID。</value>
+  </data>
+  <data name="LinkModListBadVersion" xml:space="preserve">
+    <value>链接中的某个模组版本无效。有效示例为 1.2.3。</value>
+  </data>
+  <data name="LinkModListDuplicate" xml:space="preserve">
+    <value>链接中多次列出了同一个模组。</value>
+  </data>
+  <data name="LinkModListTooManyFormat" xml:space="preserve">
+    <value>链接列出的模组超过 {0} 个。</value>
+  </data>
+  <data name="LinkModListTooLongFormat" xml:space="preserve">
+    <value>链接长度超过 {0} 个字符。请少列一些模组。</value>
+  </data>
+  <data name="LinkModListBadNameFormat" xml:space="preserve">
+    <value>链接中的名称必须是 1 到 {0} 个字符的纯 ASCII 文本。</value>
+  </data>
+  <data name="LinkModListBadListId" xml:space="preserve">
+    <value>链接中的 ID 必须类似内容 ID，例如 my-server。</value>
+  </data>
+  <data name="LinkModListRowNotInIndex" xml:space="preserve">
+    <value>未收录于内容索引。</value>
+  </data>
+  <data name="LinkModListRowNotAMod" xml:space="preserve">
+    <value>不是模组，因此链接无法安装它。</value>
+  </data>
+  <data name="LinkModListRowVersionMissing" xml:space="preserve">
+    <value>此版本不在内容索引中。</value>
+  </data>
+  <data name="LinkModListRowYanked" xml:space="preserve">
+    <value>已撤回。</value>
+  </data>
+  <data name="LinkModListRowYankedFormat" xml:space="preserve">
+    <value>已撤回：“{0}”</value>
+  </data>
+  <data name="LinkModListRowVersionGone" xml:space="preserve">
+    <value>不再提供新安装。</value>
+  </data>
+  <data name="LinkModListRowIncompatibleFormat" xml:space="preserve">
+    <value>需要 KSA {0} 或更新版本。</value>
+  </data>
+  <data name="LinkModListRowAboveGameMaxFormat" xml:space="preserve">
+    <value>支持的 KSA 版本最高为 {0}。</value>
   </data>
   <data name="DiscoverListYourMod" xml:space="preserve">
     <value>收录或修改你的模组</value>
@@ -4745,6 +4844,12 @@
   </data>
   <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
     <value>存档 {1} 需要 {0}，因此更改后游戏将跳过该存档中所有需要此模组的载具，再次保存会导致这些载具丢失。</value>
+  </data>
+  <data name="InstallMessageLoaderNotForGameFormat" xml:space="preserve">
+    <value>此发布版本需要 {0}，但该模组加载器无法在此 KSA 构建上运行。</value>
+  </data>
+  <data name="InstallMessageLoaderNotAcceptedFormat" xml:space="preserve">
+    <value>此发布版本需要 {0}，但模组加载器设置或此实例中的其他模组不允许使用该模组加载器。</value>
   </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} 或 {1}</value>
