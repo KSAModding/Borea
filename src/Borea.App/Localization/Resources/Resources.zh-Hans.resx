@@ -69,6 +69,24 @@
   <data name="SettingsThemeLabel" xml:space="preserve">
     <value>主题</value>
   </data>
+  <data name="SettingsGameStartLabel" xml:space="preserve">
+    <value>游戏启动时</value>
+  </data>
+  <data name="SettingsGameStartHint" xml:space="preserve">
+    <value>关闭 Borea 可以为游戏腾出最多内存。如果有任务正在运行，或有窗口等待你确认，Borea 会保持打开。</value>
+  </data>
+  <data name="GameStartKeepOpen" xml:space="preserve">
+    <value>保持 Borea 打开</value>
+  </data>
+  <data name="GameStartMinimize" xml:space="preserve">
+    <value>最小化 Borea</value>
+  </data>
+  <data name="GameStartClose" xml:space="preserve">
+    <value>关闭 Borea</value>
+  </data>
+  <data name="SettingsReopenAfterGame" xml:space="preserve">
+    <value>游戏退出后重新打开 Borea</value>
+  </data>
   <data name="SettingsUpdatesLabel" xml:space="preserve">
     <value>更新</value>
   </data>
@@ -5853,6 +5871,9 @@
   <data name="SharedProfileModalUnchanged" xml:space="preserve">
     <value>该文件夹中的所有内容均保持不变。</value>
   </data>
+  <data name="SharedProfileModalSettings" xml:space="preserve">
+    <value>如果游戏已有保存的设置，新实例也会复制一份作为初始设置。</value>
+  </data>
   <data name="SharedProfileImporting" xml:space="preserve">
     <value>Borea 正在复制模组并与内容索引比较。关闭此窗口可停止操作。</value>
   </data>
@@ -6129,6 +6150,9 @@
   <data name="LaunchStartedFormat" xml:space="preserve">
     <value>已为实例“{1}”启动 {0}。</value>
   </data>
+  <data name="LaunchStaysOpenForWork" xml:space="preserve">
+    <value>有任务正在运行，或有窗口等待你确认，Borea 将保持打开。</value>
+  </data>
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} 导致 {2} 无法启动。它可能与此 KSA 版本不兼容。请禁用后重试，或查找更新。</value>
   </data>
@@ -6276,6 +6300,21 @@
   <data name="NoPreset" xml:space="preserve">
     <value>不使用预设</value>
   </data>
+  <data name="ModalGameSettingsLabel" xml:space="preserve">
+    <value>游戏设置</value>
+  </data>
+  <data name="ModalGameSettingsHint" xml:space="preserve">
+    <value>每个实例都单独保存画面、操控、声音等设置。这里仅选择新实例的初始设置，之后在实例中所做的更改不会影响游戏在不加载模组时使用的设置。</value>
+  </data>
+  <data name="ModalGameSettingsNoGameFile" xml:space="preserve">
+    <value>游戏在不加载模组时尚未保存过设置，新实例将使用游戏的默认设置。</value>
+  </data>
+  <data name="GameSettingsFromGame" xml:space="preserve">
+    <value>沿用游戏设置</value>
+  </data>
+  <data name="GameSettingsGameDefaults" xml:space="preserve">
+    <value>游戏默认设置</value>
+  </data>
   <data name="PresetModalTitle" xml:space="preserve">
     <value>将游戏设置保存为预设</value>
   </data>
@@ -6287,6 +6326,24 @@
   </data>
   <data name="InstanceSaveSettingsPreset" xml:space="preserve">
     <value>将设置保存为预设</value>
+  </data>
+  <data name="InstanceCopySettingsToGame" xml:space="preserve">
+    <value>将设置复制到不加载模组的游戏</value>
+  </data>
+  <data name="CopySettingsToGameTitle" xml:space="preserve">
+    <value>将设置复制到游戏</value>
+  </data>
+  <data name="CopySettingsToGameTextFormat" xml:space="preserve">
+    <value>Borea 会用实例“{0}”的设置替换游戏在不加载模组时使用的画面、操控、声音等设置。游戏的模组、存档和载具不受影响。旧设置将备份到 {1}。</value>
+  </data>
+  <data name="CopySettingsToGameConfirm" xml:space="preserve">
+    <value>替换游戏设置</value>
+  </data>
+  <data name="CopySettingsToGameNoSettings" xml:space="preserve">
+    <value>此实例还没有 settings.toml。请先启动该实例一次，再复制设置。</value>
+  </data>
+  <data name="CopySettingsToGameGameRunning" xml:space="preserve">
+    <value>请先关闭游戏。Borea 在游戏运行期间不会更改游戏设置。</value>
   </data>
   <data name="InstanceKeepGameBuild" xml:space="preserve">
     <value>保留此游戏构建</value>
@@ -6374,6 +6431,18 @@
   </data>
   <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
     <value>已创建 {0}，未应用预设</value>
+  </data>
+  <data name="ToastSettingsNotCopiedFormat" xml:space="preserve">
+    <value>已创建 {0}，但未能复制游戏设置</value>
+  </data>
+  <data name="ToastSettingsCopiedToGameFormat" xml:space="preserve">
+    <value>已将实例“{0}”的设置复制到游戏</value>
+  </data>
+  <data name="ToastSettingsBackupFormat" xml:space="preserve">
+    <value>Borea 已将旧设置备份为 {0}</value>
+  </data>
+  <data name="ToastSettingsToGameFailedFormat" xml:space="preserve">
+    <value>无法将实例“{0}”的设置复制到游戏</value>
   </data>
   <data name="PreviewPanelName" xml:space="preserve">
     <value>载具 3D 预览</value>
