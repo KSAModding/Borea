@@ -63,39 +63,35 @@
             <Setter Property="Grid.Column" Value="6" />
         </Style>
         <!-- two tables need more room than a small window gives, so they stack -->
-        <ContainerQuery Name="statistics" Query="max-width:800">
-            <Style Selector=":is(Control).stat-left">
-                <Setter Property="Grid.ColumnSpan" Value="3" />
-            </Style>
-            <Style Selector=":is(Control).stat-right">
-                <Setter Property="Grid.Column" Value="0" />
-                <Setter Property="Grid.ColumnSpan" Value="3" />
-                <Setter Property="Grid.Row" Value="1" />
-                <Setter Property="Margin" Value="0,24,0,0" />
-            </Style>
-        </ContainerQuery>
+        <Style Selector=":is(Control).stat-left[(views|PageBodyPanel.IsTight)=True]">
+            <Setter Property="Grid.ColumnSpan" Value="3" />
+        </Style>
+        <Style Selector=":is(Control).stat-right[(views|PageBodyPanel.IsTight)=True]">
+            <Setter Property="Grid.Column" Value="0" />
+            <Setter Property="Grid.ColumnSpan" Value="3" />
+            <Setter Property="Grid.Row" Value="1" />
+            <Setter Property="Margin" Value="0,24,0,0" />
+        </Style>
         <!-- four small lists fit in one row only on a wide window, and otherwise form two rows of two, the shorter lists in the first row so that no long list faces an empty space -->
-        <ContainerQuery Name="statistics" Query="max-width:1100">
-            <Style Selector=":is(Control).stat-types">
-                <Setter Property="Grid.ColumnSpan" Value="3" />
-            </Style>
-            <Style Selector=":is(Control).stat-hosts">
-                <Setter Property="Grid.Column" Value="4" />
-                <Setter Property="Grid.ColumnSpan" Value="3" />
-            </Style>
-            <Style Selector=":is(Control).stat-tags">
-                <Setter Property="Grid.Column" Value="0" />
-                <Setter Property="Grid.ColumnSpan" Value="3" />
-                <Setter Property="Grid.Row" Value="1" />
-                <Setter Property="Margin" Value="0,24,0,0" />
-            </Style>
-            <Style Selector=":is(Control).stat-licenses">
-                <Setter Property="Grid.Column" Value="4" />
-                <Setter Property="Grid.ColumnSpan" Value="3" />
-                <Setter Property="Grid.Row" Value="1" />
-                <Setter Property="Margin" Value="0,24,0,0" />
-            </Style>
-        </ContainerQuery>
+        <Style Selector=":is(Control).stat-types[(views|PageBodyPanel.IsLimited)=True]">
+            <Setter Property="Grid.ColumnSpan" Value="3" />
+        </Style>
+        <Style Selector=":is(Control).stat-hosts[(views|PageBodyPanel.IsLimited)=True]">
+            <Setter Property="Grid.Column" Value="4" />
+            <Setter Property="Grid.ColumnSpan" Value="3" />
+        </Style>
+        <Style Selector=":is(Control).stat-tags[(views|PageBodyPanel.IsLimited)=True]">
+            <Setter Property="Grid.Column" Value="0" />
+            <Setter Property="Grid.ColumnSpan" Value="3" />
+            <Setter Property="Grid.Row" Value="1" />
+            <Setter Property="Margin" Value="0,24,0,0" />
+        </Style>
+        <Style Selector=":is(Control).stat-licenses[(views|PageBodyPanel.IsLimited)=True]">
+            <Setter Property="Grid.Column" Value="4" />
+            <Setter Property="Grid.ColumnSpan" Value="3" />
+            <Setter Property="Grid.Row" Value="1" />
+            <Setter Property="Margin" Value="0,24,0,0" />
+        </Style>
     </UserControl.Styles>
     <UserControl.Resources>
         <!-- the name of a row of the Statistics tab, which opens its content page when it has one.
@@ -611,7 +607,7 @@
 
                     <!-- Statistics: what the index holds, counted from the snapshot that Borea read, with the headline numbers first and then a card per subject, the most useful first -->
                     <Panel IsVisible="{Binding IsStatisticsTab}">
-                        <StackPanel DataContext="{Binding Statistics}" x:DataType="vm:StewardStatisticsTab" Container.Name="statistics" Container.Sizing="Width">
+                        <StackPanel DataContext="{Binding Statistics}" x:DataType="vm:StewardStatisticsTab">
                             <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardStatisticsHint}" TextWrapping="Wrap" Margin="0,16,0,0" />
                             <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0" IsVisible="{Binding IsLoading}">
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />

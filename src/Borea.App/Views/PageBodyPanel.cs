@@ -24,7 +24,7 @@ public sealed class PageBodyPanel : Panel
         AvaloniaProperty.Register<PageBodyPanel, bool>(nameof(HasBottomMargin), defaultValue: true);
 
     /// <summary>
-    /// Whether the body is at most <see cref="MediumBodyWidth"/> wide. Every control in the panel inherits the four
+    /// Whether the body is at most <see cref="MediumBodyWidth"/> wide. Every control in the panel inherits the
     /// width properties, and a style reads one with a property selector, such as
     /// <c>TextBlock.hide-medium[(views|PageBodyPanel.IsMedium)=True]</c>. A narrower body is also each wider one.
     /// </summary>
@@ -49,7 +49,19 @@ public sealed class PageBodyPanel : Panel
     public static readonly AttachedProperty<bool> IsSmallProperty =
         AvaloniaProperty.RegisterAttached<PageBodyPanel, Control, bool>("IsSmall", inherits: true);
 
+    /// <summary>Whether the body is at most <see cref="TightBodyWidth"/> wide, where two side by side tables of the statistics stack.</summary>
+    public static readonly AttachedProperty<bool> IsTightProperty =
+        AvaloniaProperty.RegisterAttached<PageBodyPanel, Control, bool>("IsTight", inherits: true);
+
+    /// <summary>Whether the body is at most <see cref="LimitedBodyWidth"/> wide, where four small lists of the statistics form two rows.</summary>
+    public static readonly AttachedProperty<bool> IsLimitedProperty =
+        AvaloniaProperty.RegisterAttached<PageBodyPanel, Control, bool>("IsLimited", inherits: true);
+
     public const double MediumBodyWidth = 810;
+
+    public const double TightBodyWidth = 800;
+
+    public const double LimitedBodyWidth = 1100;
 
     public const double NarrowBodyWidth = 720;
 
@@ -127,6 +139,10 @@ public sealed class PageBodyPanel : Panel
 
     public static bool GetIsSmall(Control control) => control.GetValue(IsSmallProperty);
 
+    public static bool GetIsTight(Control control) => control.GetValue(IsTightProperty);
+
+    public static bool GetIsLimited(Control control) => control.GetValue(IsLimitedProperty);
+
     /// <summary>
     /// Tells the controls in the panel how wide the body is. It runs before the children are measured, so they are
     /// measured with the styles of that width.
@@ -137,6 +153,8 @@ public sealed class PageBodyPanel : Panel
         SetValue(IsNarrowProperty, width <= NarrowBodyWidth);
         SetValue(IsCompactProperty, width <= CompactBodyWidth);
         SetValue(IsSmallProperty, width <= SmallBodyWidth);
+        SetValue(IsTightProperty, width <= TightBodyWidth);
+        SetValue(IsLimitedProperty, width <= LimitedBodyWidth);
     }
 
     private double TopMargin => HasTopMargin ? PageTopMargin : 0;
