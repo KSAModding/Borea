@@ -1,6 +1,9 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
+using Avalonia.Layout;
+using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
@@ -131,7 +134,59 @@ public sealed class VersionRowTests
     [InlineData(1920)]
     public async Task PackPage_InstalledVersionHasNoAddButtonAndTheNewInstanceButtonsStayInOneColumn(double width)
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: PackViewModelTests.WithPacks(PackViewModelTests.Pack(
+        using var harness = await OpenPackVersionsAsync();
+        var viewModel = harness.ViewModel;
+
+        var rows = await RenderAsync(harness, () => new PackPage(), width, page => viewModel.PackVersions
+            .Select(version => new Row(version.Version, X(page, version.NewInstanceCommand), X(page, version.InstallCommand)))
+            .ToList());
+
+        AssertAligned(rows, installed: "1.0.0");
+    }
+
+    /// <summary>
+    /// Every control below a query container adds one handler for each query to one event of the container, and Avalonia
+    /// copies the whole list each time one of them leaves. With the Versions table inside such a container, taking its
+    /// rows away froze Borea for seconds when the player opened another mod. The pages read the width from
+    /// <see cref="Borea.App.Views.PageBodyPanel"/> instead.
+    /// </summary>
+    [Fact]
+    public async Task ModPage_VersionRows_AreInsideNoQueryContainer()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await OpenVersionsAsync(harness);
+
+        var (rows, inside) = await RenderAsync(harness, () => new Borea.App.Views.Pages.ContentPage(), 1280, RowsInsideAQueryContainer<VersionItem>);
+
+        Assert.Equal(harness.ViewModel.ContentVersions.Count, rows);
+        Assert.Equal(0, inside);
+    }
+
+    [Fact]
+    public async Task PackPage_VersionRows_AreInsideNoQueryContainer()
+    {
+        using var harness = await OpenPackVersionsAsync();
+
+        var (rows, inside) = await RenderAsync(harness, () => new PackPage(), 1280, RowsInsideAQueryContainer<PackVersionItem>);
+
+        Assert.Equal(harness.ViewModel.PackVersions.Count, rows);
+        Assert.Equal(0, inside);
+    }
+
+    /// <summary>
+    /// The rows that show a <typeparamref name="TRow"/>, and how many of them have a query container above them on the page.
+    /// The window is a container of its own, which no query of Borea names.
+    /// </summary>
+    private static (int Rows, int Inside) RowsInsideAQueryContainer<TRow>(Control page)
+    {
+        var rows = page.GetVisualDescendants().OfType<ContentPresenter>().Where(presenter => presenter.Content is TRow).ToList();
+        return (rows.Count, rows.Count(row => row.GetVisualAncestors().TakeWhile(ancestor => ancestor != page).Append(page).OfType<Layoutable>()
+            .Any(ancestor => Container.GetSizing(ancestor) != ContainerSizing.Normal)));
+    }
+
+    private static async Task<ViewModelHarness> OpenPackVersionsAsync()
+    {
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: PackViewModelTests.WithPacks(PackViewModelTests.Pack(
             "starter-pack",
             "Starter Pack",
             PackViewModelTests.Version("1.0.0", PackViewModelTests.Pin("AdvancedFlightComputer", "0.7.4")),
@@ -143,12 +198,7 @@ public sealed class VersionRowTests
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
         await Assert.Single(viewModel.DiscoverPacks).OpenCommand.ExecuteAsync(null);
         viewModel.ShowPackVersionsCommand.Execute(null);
-
-        var rows = await RenderAsync(harness, () => new PackPage(), width, page => viewModel.PackVersions
-            .Select(version => new Row(version.Version, X(page, version.NewInstanceCommand), X(page, version.InstallCommand)))
-            .ToList());
-
-        AssertAligned(rows, installed: "1.0.0");
+        return harness;
     }
 
     private static void AssertAligned(List<Row> rows, string installed)

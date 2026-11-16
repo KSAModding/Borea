@@ -11,29 +11,23 @@
     <UserControl.Styles>
         <StyleInclude Source="avares://Borea.App/Views/PageBodyStyles.axaml" />
         <!-- a medium page has no room for both the Size and the Downloads column of the Versions table, so Size hides there and leaves the room to the downloads -->
-        <ContainerQuery Name="page-body" Query="max-width:810">
-            <Style Selector="Border.versions-table:not(.no-downloads) TextBlock.hide-medium">
-                <Setter Property="IsVisible" Value="False" />
-            </Style>
-        </ContainerQuery>
+        <Style Selector="Border.versions-table:not(.no-downloads) TextBlock.hide-medium[(views|PageBodyPanel.IsMedium)=True]">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
         <Style Selector="StackPanel.content-tabs">
             <Setter Property="Spacing" Value="16" />
         </Style>
         <!-- three tabs in a long language need the room of their gaps and padding, so a narrow page keeps a margin at the edge of the strip -->
-        <ContainerQuery Name="page-body" Query="max-width:520">
-            <Style Selector="StackPanel.content-tabs">
-                <Setter Property="Spacing" Value="4" />
-            </Style>
-            <Style Selector="StackPanel.content-tabs > Button.tab">
-                <Setter Property="Padding" Value="12,8" />
-            </Style>
-        </ContainerQuery>
+        <Style Selector="StackPanel.content-tabs[(views|PageBodyPanel.IsSmall)=True]">
+            <Setter Property="Spacing" Value="4" />
+        </Style>
+        <Style Selector="StackPanel.content-tabs > Button.tab[(views|PageBodyPanel.IsSmall)=True]">
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
         <!-- a card of the 3D view narrower than the three labeled buttons need -->
-        <ContainerQuery Name="page-body" Query="max-width:540">
-            <Style Selector="TextBlock.hide-compact">
-                <Setter Property="IsVisible" Value="False" />
-            </Style>
-        </ContainerQuery>
+        <Style Selector="TextBlock.hide-compact[(views|PageBodyPanel.IsCompact)=True]">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
         <!-- a listing without any count gets no Downloads column, so the table shows no column of empty cells -->
         <Style Selector="Border.versions-table.no-downloads TextBlock.downloads">
             <Setter Property="IsVisible" Value="False" />
@@ -72,7 +66,7 @@
         <ScrollViewer x:Name="PageScroller">
             <!-- laid out like Discover, so the page does not move sideways when a row opens -->
             <views:PageBodyPanel HasSidePanel="True">
-                <StackPanel Container.Name="page-body" Container.Sizing="Width">
+                <StackPanel>
                     <DockPanel Height="24" IsVisible="{Binding !IsContentFromInstance}">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
                             <Button Classes="plain back" Command="{Binding GoBackCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding Localization.NavigationBack}" AutomationProperties.Name="{Binding Localization.NavigationBack}">

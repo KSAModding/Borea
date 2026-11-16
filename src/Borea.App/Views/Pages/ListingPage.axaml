@@ -125,7 +125,7 @@
         <ScrollViewer x:Name="PageScroller">
             <!-- the start step has no side panel, so its cards take that room -->
             <views:PageBodyPanel HasSidePanel="{Binding !ListingEditor.IsStartStep}">
-                <StackPanel Container.Name="page-body" Container.Sizing="Width">
+                <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
                         <Button Classes="plain back" Command="{Binding GoBackCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding Localization.NavigationBack}" AutomationProperties.Name="{Binding Localization.NavigationBack}">
                             <Path Classes="icon" Data="{StaticResource Icon.ArrowLeft}" />

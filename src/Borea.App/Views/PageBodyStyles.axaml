@@ -1,14 +1,12 @@
-<Styles xmlns="https://github.com/avaloniaui">
-    <!-- only the pages with a "page-body" container include these styles, because a container query at app level would watch every control of every page and make each row of a long list slower to show -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:views="using:Borea.App.Views">
+    <!-- the width comes from the properties that PageBodyPanel gives its controls and not from a container query, because a query container holds one handler for each control and each query, and a long table that leaves the page then takes seconds to let go of them -->
+    <!-- only the pages that hide columns include these styles, because every control of a page that has them checks them -->
     <!-- a page body narrower than the design: tables hide the columns they can do without -->
-    <ContainerQuery Name="page-body" Query="max-width:720">
-        <Style Selector=":is(Control).hide-narrow">
-            <Setter Property="IsVisible" Value="False" />
-        </Style>
-    </ContainerQuery>
-    <ContainerQuery Name="page-body" Query="max-width:520">
-        <Style Selector=":is(Control).hide-small">
-            <Setter Property="IsVisible" Value="False" />
-        </Style>
-    </ContainerQuery>
+    <Style Selector=":is(Control).hide-narrow[(views|PageBodyPanel.IsNarrow)=True]">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector=":is(Control).hide-small[(views|PageBodyPanel.IsSmall)=True]">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
 </Styles>

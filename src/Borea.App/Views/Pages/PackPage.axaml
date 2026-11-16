@@ -33,37 +33,33 @@
             <Setter Property="MaxWidth" Value="190" />
         </Style>
         <!-- a narrow page folds each row into two lines: the name, then the version, the state in the instance and the newer release, each in its column. The chips keep their full text and trim it -->
-        <ContainerQuery Name="page-body" Query="max-width:720">
-            <Style Selector=":is(Control).member-name">
-                <Setter Property="Grid.ColumnSpan" Value="4" />
-            </Style>
-            <Style Selector=":is(Control).member-version">
-                <Setter Property="Grid.Row" Value="1" />
-                <Setter Property="Grid.Column" Value="0" />
-                <Setter Property="Margin" Value="0,6,0,0" />
-            </Style>
-            <Style Selector=":is(Control).member-cell">
-                <Setter Property="Grid.Row" Value="1" />
-                <Setter Property="Margin" Value="16,6,0,0" />
-            </Style>
-            <Style Selector=":is(Control).member-cell, :is(Control).member-header">
-                <Setter Property="MaxWidth" Value="140" />
-            </Style>
-            <Style Selector="TextBlock.cell-text">
-                <Setter Property="MaxWidth" Value="104" />
-            </Style>
-            <Style Selector="TextBlock.cell-text.plain">
-                <Setter Property="MaxWidth" Value="124" />
-            </Style>
-        </ContainerQuery>
+        <Style Selector=":is(Control).member-name[(views|PageBodyPanel.IsNarrow)=True]">
+            <Setter Property="Grid.ColumnSpan" Value="4" />
+        </Style>
+        <Style Selector=":is(Control).member-version[(views|PageBodyPanel.IsNarrow)=True]">
+            <Setter Property="Grid.Row" Value="1" />
+            <Setter Property="Grid.Column" Value="0" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+        </Style>
+        <Style Selector=":is(Control).member-cell[(views|PageBodyPanel.IsNarrow)=True]">
+            <Setter Property="Grid.Row" Value="1" />
+            <Setter Property="Margin" Value="16,6,0,0" />
+        </Style>
+        <Style Selector=":is(Control).member-cell[(views|PageBodyPanel.IsNarrow)=True], :is(Control).member-header[(views|PageBodyPanel.IsNarrow)=True]">
+            <Setter Property="MaxWidth" Value="140" />
+        </Style>
+        <Style Selector="TextBlock.cell-text[(views|PageBodyPanel.IsNarrow)=True]">
+            <Setter Property="MaxWidth" Value="104" />
+        </Style>
+        <Style Selector="TextBlock.cell-text.plain[(views|PageBodyPanel.IsNarrow)=True]">
+            <Setter Property="MaxWidth" Value="124" />
+        </Style>
         <!-- a small page puts the chips of the pinned release below its version -->
-        <ContainerQuery Name="page-body" Query="max-width:520">
-            <Style Selector=":is(Control).member-fit">
-                <Setter Property="Grid.Row" Value="1" />
-                <Setter Property="Grid.Column" Value="0" />
-                <Setter Property="Margin" Value="0,4,0,0" />
-            </Style>
-        </ContainerQuery>
+        <Style Selector=":is(Control).member-fit[(views|PageBodyPanel.IsSmall)=True]">
+            <Setter Property="Grid.Row" Value="1" />
+            <Setter Property="Grid.Column" Value="0" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+        </Style>
     </UserControl.Styles>
     <UserControl.Resources>
         <!-- the header of the vehicles or the saves table, with the columns of the mods table and the name of the active instance -->
@@ -128,7 +124,7 @@
         <ScrollViewer x:Name="PageScroller">
             <!-- laid out like Discover, so the page does not move sideways when a row opens -->
             <views:PageBodyPanel HasSidePanel="True">
-                <StackPanel Container.Name="page-body" Container.Sizing="Width" Grid.IsSharedSizeScope="True">
+                <StackPanel Grid.IsSharedSizeScope="True">
                     <DockPanel Height="24">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
                             <Button Classes="plain back" Command="{Binding GoBackCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding Localization.NavigationBack}" AutomationProperties.Name="{Binding Localization.NavigationBack}">
