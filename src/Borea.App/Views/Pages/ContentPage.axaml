@@ -685,12 +685,19 @@
                                                         <Button Classes="text" Content="{Binding Run.StopText}" Command="{Binding Run.StopCommand}" IsVisible="{Binding IsInstalling}" />
                                                     </WrapPanel>
                                                     <SelectableTextBlock Grid.Row="2" Grid.ColumnSpan="8" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                                    <StackPanel Grid.Row="3" Grid.ColumnSpan="8" Margin="0,8,0,4" IsVisible="{Binding IsChangelogExpanded}">
-                                                        <views:MarkdownView Markdown="{Binding Changelog.Text}" IsVisible="{Binding Changelog.Text, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                                        <Button Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding Changelog.Link}" ToolTip.Tip="{Binding Changelog.Link.Url}" IsVisible="{Binding Changelog.Link, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <TextBlock Classes="action-md" Text="{Binding Changelog.Link.Label}" />
-                                                        </Button>
-                                                    </StackPanel>
+                                                    <!-- the Markdown view of a long changelog holds about a thousand controls, so a closed row leaves it unbuilt -->
+                                                    <ContentControl Grid.Row="3" Grid.ColumnSpan="8" Margin="0,8,0,4" Content="{Binding}" IsVisible="{Binding IsChangelogExpanded}">
+                                                        <ContentControl.ContentTemplate>
+                                                            <DataTemplate x:DataType="vm:VersionItem">
+                                                                <StackPanel>
+                                                                    <views:MarkdownView Markdown="{Binding Changelog.Text}" IsVisible="{Binding Changelog.Text, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                                    <Button Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding Changelog.Link}" ToolTip.Tip="{Binding Changelog.Link.Url}" IsVisible="{Binding Changelog.Link, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                                        <TextBlock Classes="action-md" Text="{Binding Changelog.Link.Label}" />
+                                                                    </Button>
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ContentControl.ContentTemplate>
+                                                    </ContentControl>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
