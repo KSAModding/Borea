@@ -13,12 +13,10 @@
             <Setter Property="Height" Value="144" />
         </Style>
         <!-- a narrow page gives the text beside the cover more of the width -->
-        <ContainerQuery Name="page-body" Query="max-width:520">
-            <Style Selector="Border.cover-picture">
-                <Setter Property="Width" Value="96" />
-                <Setter Property="Height" Value="96" />
-            </Style>
-        </ContainerQuery>
+        <Style Selector="Border.cover-picture[(views|PageBodyPanel.IsSmall)=True]">
+            <Setter Property="Width" Value="96" />
+            <Setter Property="Height" Value="96" />
+        </Style>
     </UserControl.Styles>
     <UserControl.Resources>
         <!-- the limit and the rules of a host, from hosts.toml -->

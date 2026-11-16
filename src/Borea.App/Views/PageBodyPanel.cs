@@ -23,6 +23,40 @@ public sealed class PageBodyPanel : Panel
     public static readonly StyledProperty<bool> HasBottomMarginProperty =
         AvaloniaProperty.Register<PageBodyPanel, bool>(nameof(HasBottomMargin), defaultValue: true);
 
+    /// <summary>
+    /// Whether the body is at most <see cref="MediumBodyWidth"/> wide. Every control in the panel inherits the four
+    /// width properties, and a style reads one with a property selector, such as
+    /// <c>TextBlock.hide-medium[(views|PageBodyPanel.IsMedium)=True]</c>. A narrower body is also each wider one.
+    /// </summary>
+    /// <remarks>
+    /// These properties take the place of container queries. Every control below a query container adds one handler
+    /// for each query to a single event of that container, and Avalonia copies the whole list of handlers each time
+    /// one of them leaves. A mod page with its Versions table held about 30,000 handlers, so taking the rows away
+    /// froze Borea for seconds. An inherited property has no such list.
+    /// </remarks>
+    public static readonly AttachedProperty<bool> IsMediumProperty =
+        AvaloniaProperty.RegisterAttached<PageBodyPanel, Control, bool>("IsMedium", inherits: true);
+
+    /// <summary>Whether the body is at most <see cref="NarrowBodyWidth"/> wide.</summary>
+    public static readonly AttachedProperty<bool> IsNarrowProperty =
+        AvaloniaProperty.RegisterAttached<PageBodyPanel, Control, bool>("IsNarrow", inherits: true);
+
+    /// <summary>Whether the body is at most <see cref="CompactBodyWidth"/> wide.</summary>
+    public static readonly AttachedProperty<bool> IsCompactProperty =
+        AvaloniaProperty.RegisterAttached<PageBodyPanel, Control, bool>("IsCompact", inherits: true);
+
+    /// <summary>Whether the body is at most <see cref="SmallBodyWidth"/> wide.</summary>
+    public static readonly AttachedProperty<bool> IsSmallProperty =
+        AvaloniaProperty.RegisterAttached<PageBodyPanel, Control, bool>("IsSmall", inherits: true);
+
+    public const double MediumBodyWidth = 810;
+
+    public const double NarrowBodyWidth = 720;
+
+    public const double CompactBodyWidth = 540;
+
+    public const double SmallBodyWidth = 520;
+
     public const double NavigationRailWidth = 80;
 
     public const double SmallMargin = 24;
@@ -85,6 +119,26 @@ public sealed class PageBodyPanel : Panel
         set => SetValue(HasBottomMarginProperty, value);
     }
 
+    public static bool GetIsMedium(Control control) => control.GetValue(IsMediumProperty);
+
+    public static bool GetIsNarrow(Control control) => control.GetValue(IsNarrowProperty);
+
+    public static bool GetIsCompact(Control control) => control.GetValue(IsCompactProperty);
+
+    public static bool GetIsSmall(Control control) => control.GetValue(IsSmallProperty);
+
+    /// <summary>
+    /// Tells the controls in the panel how wide the body is. It runs before the children are measured, so they are
+    /// measured with the styles of that width.
+    /// </summary>
+    private void ShowBodyWidth(double width)
+    {
+        SetValue(IsMediumProperty, width <= MediumBodyWidth);
+        SetValue(IsNarrowProperty, width <= NarrowBodyWidth);
+        SetValue(IsCompactProperty, width <= CompactBodyWidth);
+        SetValue(IsSmallProperty, width <= SmallBodyWidth);
+    }
+
     private double TopMargin => HasTopMargin ? PageTopMargin : 0;
 
     private double BottomMargin => HasBottomMargin ? PageBottomMargin : 0;
@@ -93,6 +147,7 @@ public sealed class PageBodyPanel : Panel
     {
         var available = double.IsInfinity(availableSize.Width) ? MaxBodyWidth + 2 * LargeMargin : availableSize.Width;
         var (_, width) = Place(available, HasSidePanel);
+        ShowBodyWidth(width);
         var height = TopMargin + BottomMargin;
         foreach (var child in Children)
         {
