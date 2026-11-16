@@ -8,6 +8,8 @@ using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
 using Borea.App.Views.Pages;
+using Borea.Core.Game;
+using Borea.Core.Mods;
 
 namespace Borea.App.Tests.Views;
 
@@ -87,6 +89,46 @@ public sealed class VersionRowTests
         AssertAligned(rows, installed: "0.7.3");
         Assert.Empty(column.Cells);
         Assert.Equal(viewModel.ContentVersions.Count + 1, column.SizeCells);
+    }
+
+    /// <summary>
+    /// The Markdown view of a long changelog holds about a thousand controls, so a row builds it only while the row is open.
+    /// </summary>
+    [Fact]
+    public async Task ModPage_ChangelogView_IsBuiltOnlyWhileTheRowIsOpen()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var changelog = string.Join("\n\n", Enumerable.Range(1, 40).Select(line => $"- Fixed the **item {line}** of the list."));
+        harness.SpaceDock.Releases.AddRange(Enumerable.Range(1, 20).Select(minor => new ModVersionMetadata(
+            specVersion: 1,
+            modId: ViewModelHarness.FakeSpaceDock.OwnId,
+            version: ModVersion.Parse($"1.{minor}.0"),
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: DateTimeOffset.UnixEpoch,
+            gameMin: "2026.1.1.1",
+            gameMinRevision: 1,
+            download: new DownloadInfo($"https://archives.test/1.{minor}.0.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
+            installSizeBytes: null,
+            dependencies: [],
+            changelog: null,
+            changelogText: changelog)));
+        var listing = await harness.SpaceDock.GetListingAsync(ViewModelHarness.FakeSpaceDock.OwnId);
+        await viewModel.OpenContentCommand.ExecuteAsync(new DiscoverItem(viewModel, listing!));
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        var (closed, opened) = await RenderAsync(harness, () => new Borea.App.Views.Pages.ContentPage(), 1280, page =>
+        {
+            var closedViews = page.GetVisualDescendants().OfType<Borea.App.Views.MarkdownView>().Count(view => view.Markdown == changelog);
+            viewModel.ContentVersions[0].ToggleChangelogCommand.Execute(null);
+            page.UpdateLayout();
+            var openedViews = page.GetVisualDescendants().OfType<Borea.App.Views.MarkdownView>().Where(view => view.Markdown == changelog).ToList();
+            return (closedViews, openedViews.Count);
+        });
+
+        Assert.Equal(20, viewModel.ContentVersions.Count);
+        Assert.Equal(0, closed);
+        Assert.Equal(1, opened);
     }
 
     private static List<Row> ContentRows(MainViewModel viewModel, Control page)
