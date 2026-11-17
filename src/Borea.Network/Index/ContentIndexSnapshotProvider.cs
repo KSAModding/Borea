@@ -99,8 +99,6 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
         {
             var fetchResult = await _fetcher.FetchAsync(indexPath).ConfigureAwait(false);
             RecordFetch(indexPath, fetchResult);
-            if (fetchResult == ContentIndexFetchResult.NotModified && current is not null)
-                return RecordAttempt(current);
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
         {
@@ -111,6 +109,7 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
 
         try
         {
+            // A 304 can validate files published by another process, including type files.
             return RecordAttempt(await _reader.ReadAsync().ConfigureAwait(false));
         }
         catch (Exception ex) when (current is not null && ex is (InvalidOperationException or IOException))
