@@ -371,6 +371,31 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         Assert.Equal(2, reader.CallCount);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RefreshAsync_NotModifiedAfterCacheChanged_ReadsNewSnapshot(bool changeWriteTime)
+    {
+        var time = new FakeTimeProvider();
+        var indexPath = CachedIndex(time.UtcNow);
+        var fetcher = new FakeFetcher(ContentIndexFetchResult.Downloaded, ContentIndexFetchResult.NotModified, ContentIndexFetchResult.NotModified);
+        var original = Snapshot();
+        var updated = OneModReader().Snapshot;
+        var reader = new FakeReader(original);
+        var provider = new ContentIndexSnapshotProvider(fetcher, reader, new TestPathProvider(indexPath), time);
+        Assert.Same(original, await provider.GetSnapshotAsync());
+
+        var originalWriteTime = File.GetLastWriteTimeUtc(indexPath);
+        await File.WriteAllTextAsync(indexPath, changeWriteTime ? "[]" : "{ }");
+        File.SetLastWriteTimeUtc(indexPath, changeWriteTime ? originalWriteTime.AddMinutes(1) : originalWriteTime);
+        reader.Snapshot = updated;
+
+        Assert.Same(updated, await provider.RefreshAsync());
+        time.UtcNow += TimeSpan.FromMinutes(1);
+        Assert.Same(updated, await provider.RefreshAsync());
+        Assert.Equal(2, reader.CallCount);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
@@ -458,19 +483,19 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
 
     private sealed class FakeReader : IContentIndexReader
     {
-        private readonly ContentIndexSnapshot _snapshot;
+        public ContentIndexSnapshot Snapshot { get; set; }
 
         public int CallCount { get; private set; }
 
         public FakeReader(ContentIndexSnapshot snapshot)
         {
-            _snapshot = snapshot;
+            Snapshot = snapshot;
         }
 
         public Task<ContentIndexSnapshot> ReadAsync(CancellationToken cancellationToken = default)
         {
             CallCount++;
-            return Task.FromResult(_snapshot);
+            return Task.FromResult(Snapshot);
         }
     }
 

@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using Borea.Core.Files;
 using Borea.Core.Index;
 using Borea.Core.Logging;
@@ -88,23 +89,28 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         CancellationToken ct)
     {
         string etagPath = destinationPath + ".etag";
-        string tempPath = destinationPath + ".tmp";
+        string tempPath = $"{destinationPath}.{Guid.NewGuid():N}.tmp";
+        string etagTempPath = $"{etagPath}.{Guid.NewGuid():N}.tmp";
 
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
 
-        bool etagExists = File.Exists(destinationPath) && File.Exists(etagPath);
-
-        if (etagExists)
+        bool etagExists = false;
+        if (File.Exists(destinationPath) && File.Exists(etagPath))
         {
-            string existingEtag = (await File.ReadAllTextAsync(etagPath, ct)).Trim();
-            if (EntityTagHeaderValue.TryParse(existingEtag, out var tag))
+            try
             {
-                request.Headers.IfNoneMatch.Add(tag);
+                var existingEtag = await File.ReadAllLinesAsync(etagPath, ct).ConfigureAwait(false);
+                // Separate body and sidecar moves can overlap, so the tag is usable only for its own body.
+                if (existingEtag.Length == 2 && EntityTagHeaderValue.TryParse(existingEtag[0], out var tag)
+                    && existingEtag[1] == Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(destinationPath, ct).ConfigureAwait(false))))
+                {
+                    request.Headers.IfNoneMatch.Add(tag);
+                    etagExists = true;
+                }
             }
-            else
+            catch (FileNotFoundException)
             {
-                etagExists = false;
-                File.Delete(etagPath);
+                // Another fetch can remove the sidecar before its replacement is ready.
             }
         }
 
@@ -149,22 +155,21 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
                     throw new HttpRequestException("The downloaded content index was not accepted.", ex);
                 }
             }
+            File.Delete(etagPath);
             await FileReplace.MoveOverAsync(tempPath, destinationPath, ct).ConfigureAwait(false);
+
+            string? newEtag = response.Headers.ETag?.ToString();
+            if (newEtag is not null)
+            {
+                var sidecar = newEtag + "\n" + Convert.ToHexString(SHA256.HashData(body));
+                await File.WriteAllTextAsync(etagTempPath, sidecar, ct).ConfigureAwait(false);
+                await FileReplace.MoveOverAsync(etagTempPath, etagPath, ct).ConfigureAwait(false);
+            }
         }
         finally
         {
             File.Delete(tempPath);
-        }
-
-        string? newEtag = response.Headers.ETag?.ToString();
-
-        if (newEtag is not null)
-        {
-            await File.WriteAllTextAsync(etagPath, newEtag, ct);
-        }
-        else if (File.Exists(etagPath))
-        {
-            File.Delete(etagPath);
+            File.Delete(etagTempPath);
         }
 
         return ContentIndexFetchResult.Downloaded;

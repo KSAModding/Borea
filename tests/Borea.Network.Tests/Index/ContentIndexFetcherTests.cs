@@ -3,6 +3,8 @@ using Borea.Core.Logging;
 using Borea.Network.Index;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Borea.Network.Tests.Index
 {
@@ -52,6 +54,9 @@ namespace Borea.Network.Tests.Index
 
         private static HttpResponseMessage JsonResponse(string json) => FakeHttpMessageHandler.JsonResponse(json);
 
+        private static string Sidecar(string body, string tag) =>
+            tag + "\n" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(body)));
+
         [Fact]
         public async Task FetchAsync_NoExistingCache_DownloadsAndWritesSidecar()
         {
@@ -64,7 +69,7 @@ namespace Borea.Network.Tests.Index
             Assert.Equal(ContentIndexFetchResult.Downloaded, result);
             Assert.Empty(handler.LastRequest!.Headers.IfNoneMatch);
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
-            Assert.Equal("\"abc123\"", (await File.ReadAllTextAsync(_etagPath)).Trim());
+            Assert.Equal(Sidecar(SampleIndexBody, "\"abc123\""), await File.ReadAllTextAsync(_etagPath));
             Assert.False(File.Exists(_destinationPath + ".tmp"));
         }
 
@@ -72,7 +77,7 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_ExistingCacheAndSidecar_SendsIfNoneMatch()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
 
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => new HttpResponseMessage(HttpStatusCode.NotModified),
@@ -84,11 +89,45 @@ namespace Borea.Network.Tests.Index
             Assert.Contains(handler.LastRequest!.Headers.IfNoneMatch, tag => tag.Tag == "\"abc123\"");
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task FetchAsync_UsesUniqueTemporaryFileAndCleansItUp(bool rejectCandidate)
+        {
+            string fixedTempPath = _destinationPath + ".tmp";
+            await File.WriteAllTextAsync(fixedTempPath, "Another fetch owns this file.");
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(SampleIndexBody, "\"abc123\""),
+                out _);
+            string? candidate = null;
+            var validator = new CandidateValidator(candidatePath =>
+            {
+                candidate = candidatePath;
+                Assert.StartsWith(_destinationPath + ".", candidatePath);
+                Assert.EndsWith(".tmp", candidatePath);
+                Assert.NotEqual(fixedTempPath, candidatePath);
+                if (rejectCandidate)
+                    throw new InvalidOperationException("The candidate is not valid.");
+                return Task.CompletedTask;
+            });
+
+            var fetch = CreateFetcher(client, validator).FetchAsync(_destinationPath);
+            if (rejectCandidate)
+                await Assert.ThrowsAsync<HttpRequestException>(() => fetch);
+            else
+                Assert.Equal(ContentIndexFetchResult.Downloaded, await fetch);
+
+            Assert.NotNull(candidate);
+            Assert.False(File.Exists(candidate));
+            Assert.Equal(new[] { fixedTempPath }, Directory.GetFiles(_tempDir, "*.tmp"));
+            Assert.Equal("Another fetch owns this file.", await File.ReadAllTextAsync(fixedTempPath));
+        }
+
         [Fact]
         public async Task FetchAsync_NotModified_LeavesDestinationAndSidecarUntouched()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
             var originalDestinationWrite = File.GetLastWriteTimeUtc(_destinationPath);
             var originalEtagWrite = File.GetLastWriteTimeUtc(_etagPath);
 
@@ -115,7 +154,7 @@ namespace Borea.Network.Tests.Index
 
             Assert.Equal(ContentIndexFetchResult.Downloaded, result);
             Assert.Empty(handler.LastRequest!.Headers.IfNoneMatch);
-            Assert.Equal("\"fresh-etag\"", (await File.ReadAllTextAsync(_etagPath)).Trim());
+            Assert.Equal(Sidecar(SampleIndexBody, "\"fresh-etag\""), await File.ReadAllTextAsync(_etagPath));
         }
 
         [Fact]
@@ -134,11 +173,29 @@ namespace Borea.Network.Tests.Index
             Assert.Equal(UpdatedIndexBody, await File.ReadAllTextAsync(_destinationPath));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task FetchAsync_SidecarDoesNotIdentifyTheCachedBody_FetchesUnconditionally(bool legacySidecar)
+        {
+            await File.WriteAllTextAsync(_destinationPath, UpdatedIndexBody);
+            await File.WriteAllTextAsync(_etagPath, legacySidecar ? "\"old-etag\"" : Sidecar(SampleIndexBody, "\"old-etag\""));
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(UpdatedIndexBody, "\"new-etag\""),
+                out var handler);
+
+            await CreateFetcher(client).FetchAsync(_destinationPath);
+
+            Assert.Empty(handler.LastRequest!.Headers.IfNoneMatch);
+            Assert.Equal(UpdatedIndexBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal(Sidecar(UpdatedIndexBody, "\"new-etag\""), await File.ReadAllTextAsync(_etagPath));
+        }
+
         [Fact]
         public async Task FetchAsync_ResponseHasNoETag_DeletesExistingSidecar()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
 
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => JsonResponse(UpdatedIndexBody),
@@ -154,7 +211,7 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_NonSuccessStatusCode_ThrowsAndLeavesCacheUntouched()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
 
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => new HttpResponseMessage(HttpStatusCode.InternalServerError),
@@ -173,7 +230,7 @@ namespace Borea.Network.Tests.Index
             const string readerInvalidBody =
                 """{ "snapshot_version": 1, "sources": { "authored": "invalid" }, "listings": [], "packs": [], "game_versions": {} }""";
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"known-good\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"known-good\""));
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => JsonResponseWithETag(readerInvalidBody, "\"rejected\""),
                 out _);
@@ -188,7 +245,7 @@ namespace Borea.Network.Tests.Index
                 CreateFetcher(client, validator).FetchAsync(_destinationPath));
 
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
-            Assert.Equal("\"known-good\"", await File.ReadAllTextAsync(_etagPath));
+            Assert.Equal(Sidecar(SampleIndexBody, "\"known-good\""), await File.ReadAllTextAsync(_etagPath));
             Assert.False(File.Exists(_destinationPath + ".tmp"));
         }
 
@@ -196,7 +253,7 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_PlainTextContentType_DownloadsSuccessfully()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
 
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => new HttpResponseMessage(HttpStatusCode.OK)
@@ -215,7 +272,7 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_RejectedContentType_ThrowsAndLeavesCacheUntouched()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
 
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => new HttpResponseMessage(HttpStatusCode.OK)
@@ -234,7 +291,7 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_HalfDownloadedFileWithInvalidFormat_ThrowsAndLeavesCacheUntouched()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
 
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => new HttpResponseMessage(HttpStatusCode.OK)
@@ -282,7 +339,7 @@ namespace Borea.Network.Tests.Index
             Assert.Equal(ContentIndexFetchResult.Downloaded, result);
             Assert.Empty(handler.LastRequest!.Headers.IfNoneMatch);
             Assert.Equal(UpdatedIndexBody, await File.ReadAllTextAsync(_destinationPath));
-            Assert.Equal("\"new-etag\"", (await File.ReadAllTextAsync(_etagPath)).Trim());
+            Assert.Equal(Sidecar(UpdatedIndexBody, "\"new-etag\""), await File.ReadAllTextAsync(_etagPath));
         }
 
         [Fact]
@@ -303,7 +360,7 @@ namespace Borea.Network.Tests.Index
 
             var firstResult = await fetcher.FetchAsync(_destinationPath);
             Assert.Equal(ContentIndexFetchResult.Downloaded, firstResult);
-            Assert.Equal("W/\"abc123\"", (await File.ReadAllTextAsync(_etagPath)).Trim());
+            Assert.Equal(Sidecar(SampleIndexBody, "W/\"abc123\""), await File.ReadAllTextAsync(_etagPath));
 
             var secondResult = await fetcher.FetchAsync(_destinationPath);
             Assert.Equal(ContentIndexFetchResult.NotModified, secondResult);
@@ -325,7 +382,7 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_MissingPacks_ThrowsAndLeavesCacheUntouched()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
 
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => JsonResponse("""{ "snapshot_version": 1, "listings": [], "game_versions": {} }"""),
@@ -340,7 +397,7 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_MissingGameVersions_ThrowsAndLeavesCacheUntouched()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
 
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => JsonResponse("""{ "snapshot_version": 1, "listings": [], "packs": [] }"""),
@@ -366,7 +423,7 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_RejectsInvalidIndexes_ThrowsAndLeavesCacheUntouched(string invalidJson)
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"abc123\""));
             var client = FakeHttpMessageHandler.BuildClient(
                 _ => JsonResponseWithETag(invalidJson, "\"abc123\""),
                 out _);
@@ -393,13 +450,13 @@ namespace Borea.Network.Tests.Index
         private async Task WriteCachedIndexAsync()
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
-            await File.WriteAllTextAsync(_etagPath, "\"index-1\"");
+            await File.WriteAllTextAsync(_etagPath, Sidecar(SampleIndexBody, "\"index-1\""));
         }
 
         private async Task WriteCachedVehiclesAsync()
         {
             await File.WriteAllTextAsync(VehiclesPath, VehiclesBody);
-            await File.WriteAllTextAsync(VehiclesPath + ".etag", "\"vehicles-1\"");
+            await File.WriteAllTextAsync(VehiclesPath + ".etag", Sidecar(VehiclesBody, "\"vehicles-1\""));
         }
 
         [Fact]
@@ -458,7 +515,7 @@ namespace Borea.Network.Tests.Index
 
             Assert.Equal(ContentIndexFetchResult.NotModified, result);
             Assert.Equal(VehiclesBody, await File.ReadAllTextAsync(VehiclesPath));
-            Assert.Equal("\"vehicles-1\"", await File.ReadAllTextAsync(VehiclesPath + ".etag"));
+            Assert.Equal(Sidecar(VehiclesBody, "\"vehicles-1\""), await File.ReadAllTextAsync(VehiclesPath + ".etag"));
             Assert.Equal(logged, log.Lines.Any(line => line.Contains("snapshot-vehicles.json", StringComparison.Ordinal)));
         }
 
@@ -479,7 +536,7 @@ namespace Borea.Network.Tests.Index
 
             Assert.Equal(ContentIndexFetchResult.NotModified, result);
             Assert.Equal(VehiclesBody, await File.ReadAllTextAsync(VehiclesPath));
-            Assert.Equal("\"vehicles-1\"", await File.ReadAllTextAsync(VehiclesPath + ".etag"));
+            Assert.Equal(Sidecar(VehiclesBody, "\"vehicles-1\""), await File.ReadAllTextAsync(VehiclesPath + ".etag"));
             Assert.False(File.Exists(VehiclesPath + ".tmp"));
             Assert.Contains(log.Lines, line => line.Contains("snapshot-vehicles.json", StringComparison.Ordinal));
         }
@@ -498,7 +555,7 @@ namespace Borea.Network.Tests.Index
             Assert.Equal(ContentIndexFetchResult.Downloaded, result);
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
             Assert.Equal(NewVehiclesBody, await File.ReadAllTextAsync(VehiclesPath));
-            Assert.Equal("\"vehicles-2\"", await File.ReadAllTextAsync(VehiclesPath + ".etag"));
+            Assert.Equal(Sidecar(NewVehiclesBody, "\"vehicles-2\""), await File.ReadAllTextAsync(VehiclesPath + ".etag"));
         }
 
         [Fact]
