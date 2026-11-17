@@ -1,4 +1,5 @@
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 using Borea.Storage.Instances;
 using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Paths;
@@ -12,6 +13,7 @@ public sealed class FileGameSaveBackupStoreTests : IDisposable
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
     private readonly MovingTime _time = new(Now);
+    private readonly FileInstalledContentRecords _records;
     private readonly FileGameSaveStore _saves;
     private readonly FileGameSaveBackupStore _store;
     private readonly Guid _instanceId = Guid.NewGuid();
@@ -19,8 +21,9 @@ public sealed class FileGameSaveBackupStoreTests : IDisposable
     public FileGameSaveBackupStoreTests()
     {
         _paths = new TestGamePathProvider(_tempRoot);
-        _saves = new FileGameSaveStore(_paths, _time);
-        _store = new FileGameSaveBackupStore(_paths, _time);
+        _records = new FileInstalledContentRecords(_paths);
+        _saves = new FileGameSaveStore(_paths, _time, _records);
+        _store = new FileGameSaveBackupStore(_paths, _time, _records);
         Directory.CreateDirectory(_paths.GetInstanceRoot(_instanceId));
     }
 
@@ -160,6 +163,25 @@ public sealed class FileGameSaveBackupStoreTests : IDisposable
         Assert.Equal(GameSaveBackupReason.Replaced, replaced.Reason);
         Assert.Equal("Orbit", replaced.FolderName);
         Assert.Equal(20, new FileInfo(Path.Combine(replaced.Path, "universe.xml")).Length);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_OverARecordedFolder_RemovesItsRecord()
+    {
+        var orbit = await AddSaveAsync("Orbit", "Orbit", universeBytes: 300);
+        await _saves.DeleteAsync(_instanceId, orbit);
+        var backup = Assert.Single(await _store.ListAsync(_instanceId));
+        await AddSaveAsync("Orbit", "Orbit", universeBytes: 20);
+        await _records.AddAsync(_instanceId, new InstalledContentRecord(
+            FileInstalledContentRecordsTests.Release(ContentType.Save, folder: "Orbit"),
+            "Orbit",
+            DateTimeOffset.UnixEpoch,
+            await InstalledContentHashes.ComputeAsync(orbit.Path)));
+
+        Assert.Equal(GameSaveRestoreOutcome.Restored, await _store.RestoreAsync(backup, replace: true));
+
+        Assert.Equal(300, new FileInfo(Path.Combine(orbit.Path, "universe.xml")).Length);
+        Assert.Empty(await _records.ListAsync(_instanceId));
     }
 
     [Fact]

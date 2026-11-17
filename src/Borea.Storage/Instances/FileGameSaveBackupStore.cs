@@ -23,11 +23,14 @@ public sealed class FileGameSaveBackupStore : IGameSaveBackupStore
 
     private readonly IGamePathProvider _paths;
     private readonly GameSaveBackupFolder _backups;
+    private readonly IInstalledContentRecords _records;
 
-    public FileGameSaveBackupStore(IGamePathProvider paths, TimeProvider? time = null)
+    /// <param name="records">Pass the one store of the app, so two stores never write one file.</param>
+    public FileGameSaveBackupStore(IGamePathProvider paths, TimeProvider? time = null, IInstalledContentRecords? records = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _backups = new GameSaveBackupFolder(paths, time ?? TimeProvider.System);
+        _records = records ?? new FileInstalledContentRecords(paths);
     }
 
     public Task<IReadOnlyList<GameSaveBackup>> ListAsync(Guid instanceId, CancellationToken cancellationToken = default)
@@ -194,6 +197,12 @@ public sealed class FileGameSaveBackupStore : IGameSaveBackupStore
         try
         {
             var source = staging is null ? path : Extract(path, staging, cancellationToken);
+            if (exists)
+            {
+                // The record goes first: a folder that loses it only makes Borea more careful, and no record tells which release a backup holds.
+                await _records.RemoveAsync(backup.InstanceId, kind.ToContentType(), folderName, cancellationToken).ConfigureAwait(false);
+            }
+
             Directory.CreateDirectory(folder);
             var replaced = exists ? await _backups.MoveInAsync(backup.InstanceId, kind, target, GameSaveBackupReason.Replaced).ConfigureAwait(false) : null;
             try
