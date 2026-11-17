@@ -64,7 +64,8 @@ namespace Borea.Network.Tests.Index
             var fetcher = new ContentIndexFetcher(
                 client,
                 new Uri("https://example.test/content-index.json"),
-                new CandidateValidator(_ => Task.CompletedTask)) { FetchTimeout = TimeSpan.FromMilliseconds(100) };
+                new CandidateValidator(_ => Task.CompletedTask))
+            { FetchTimeout = TimeSpan.FromMilliseconds(100) };
 
             var pending = fetcher.FetchAsync(_destinationPath);
             await body.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));

@@ -10,7 +10,7 @@ internal static class HttpDeadline
         {
             return await operation(deadline.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException exception) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
             throw new HttpRequestException($"The HTTP request did not complete within {timeout}.", exception);
         }
