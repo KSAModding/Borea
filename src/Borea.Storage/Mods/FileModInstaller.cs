@@ -91,6 +91,7 @@ public sealed class FileModInstaller : IModInstaller
 
         var modFolder = Path.Combine(modsFolder, release.ModId);
         var stagingFolder = Path.Combine(_pathProvider.GetInstanceRoot(instanceId), $".borea-staging-{Guid.NewGuid():N}");
+        var activated = false;
         var recorded = false;
         InstalledMod? installed = null;
         InstallPlanningState? resultingState = null;
@@ -121,6 +122,7 @@ public sealed class FileModInstaller : IModInstaller
 
                     Directory.CreateDirectory(modsFolder);
                     DirectoryRename.Move(stagingFolder, modFolder);
+                    activated = true;
                     current.AddMod(installed);
                     resultingState = InstallPlanningState.Capture(current);
                     return true;
@@ -138,9 +140,12 @@ public sealed class FileModInstaller : IModInstaller
             LeftoverCleanup.TryDeleteTree(stagingFolder);
             if (installed is not null)
             {
-                var ownedFolder = ModFolders.FindOwned(modsFolder, installed, _store);
-                if (ownedFolder is not null)
-                    LeftoverCleanup.TryDeleteTree(ownedFolder);
+                if (activated)
+                {
+                    var ownedFolder = ModFolders.FindOwned(modsFolder, installed, _store);
+                    if (ownedFolder is not null)
+                        LeftoverCleanup.TryDeleteTree(ownedFolder);
+                }
 
                 await _store.ReleaseAsync(installed).ConfigureAwait(false);
             }

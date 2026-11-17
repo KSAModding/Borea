@@ -139,6 +139,27 @@ public sealed class ModStoreTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GuardedInstallAsync_SameReleaseInstalledDuringDownload_LeavesOtherInstallIntact()
+    {
+        var release = Release(sha256: null);
+        var expected = InstallPlanningState.Capture((await _instances.GetByIdAsync(_first))!);
+        _downloader.Downloading = async (_, _) =>
+        {
+            _downloader.Downloading = null;
+            await InstallAsync(_first, release);
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Installer.InstallGuardedAsync(_first, release, InstallReason.Manual, enable: true, expected));
+
+        Assert.Equal("The instance changed after the installation was planned.", exception.Message);
+        Assert.Equal(ModId, Assert.Single((await _instances.GetByIdAsync(_first))!.Mods).ModId);
+        Assert.Equal(Assert.Single(StoredReleases()), _linker.GetTarget(ModFolder(_first)));
+        Assert.Equal("one", ReadValue(_first));
+        Assert.Empty(Directory.EnumerateDirectories(_paths.GetInstanceRoot(_first), ".borea-*"));
+    }
+
+    [Fact]
     public async Task UninstallAsync_OneOfTwoInstances_LeavesTheOtherInstanceAndTheStoredRelease()
     {
         var release = Release(Sha256Of(_downloader.Bytes));
