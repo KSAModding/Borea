@@ -59,16 +59,12 @@ internal sealed class WindowServices(TopLevel topLevel) : IWindowServices
             return;
         }
 
-        if ((await file.GetBasicPropertiesAsync()).Size != 0)
-            throw new IOException("This storage provider cannot safely replace an existing file. Choose a new file.");
-
-        await using var stream = await file.OpenWriteAsync();
-        await write(stream);
+        throw new IOException("This storage provider cannot safely save an export. Choose a local file.");
     }
 
     internal static async Task WriteLocalExportAsync(string path, Func<Stream, Task> write)
     {
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var temporary = Path.Combine(Path.GetDirectoryName(path)!, ".borea-export-" + Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
             await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true))

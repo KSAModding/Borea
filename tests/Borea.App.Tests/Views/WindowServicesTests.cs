@@ -23,9 +23,9 @@ public sealed class WindowServicesTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteLocalExportAsync_WriteCompletes_ReplacesTheDestination()
+    public async Task WriteLocalExportAsync_LongFilename_ReplacesTheDestination()
     {
-        var path = Path.Combine(_folder, "archive.zip");
+        var path = Path.Combine(_folder, new string('a', 236) + ".zip");
         await File.WriteAllTextAsync(path, "previous archive");
 
         await WindowServices.WriteLocalExportAsync(path, stream => stream.WriteAsync(new byte[] { 1, 2, 3 }).AsTask());
