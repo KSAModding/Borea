@@ -128,7 +128,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
                     return ContentIndexFetchResult.NotModified;
 
                 response.Dispose();
-                return await FetchFileAsync(uri, destinationPath, validateRoot, candidateValidator, missingIsEmpty, ct, useCachedEtag: false).ConfigureAwait(false);
+                return await FetchFileCoreAsync(uri, destinationPath, validateRoot, candidateValidator, missingIsEmpty, ct, useCachedEtag: false).ConfigureAwait(false);
             }
 
             throw new HttpRequestException($"ETag does not exist yet request returned 304 Not Modified: {response.ReasonPhrase}");

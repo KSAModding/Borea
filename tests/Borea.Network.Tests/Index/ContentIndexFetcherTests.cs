@@ -78,8 +78,43 @@ namespace Borea.Network.Tests.Index
 
             Assert.IsAssignableFrom<OperationCanceledException>(exception.InnerException);
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
-            Assert.Equal("\"index-1\"", await File.ReadAllTextAsync(_etagPath));
-            Assert.False(File.Exists(_destinationPath + ".tmp"));
+            Assert.Equal(Sidecar(SampleIndexBody, "\"index-1\""), await File.ReadAllTextAsync(_etagPath));
+            Assert.Empty(Directory.GetFiles(_tempDir, "*.tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_RetryBodyStalls_ThrowsNetworkFailure()
+        {
+            await WriteCachedIndexAsync();
+            using var body = new StalledBodyStream();
+            int requests = 0;
+            using var client = FakeHttpMessageHandler.BuildClient(request =>
+            {
+                requests++;
+                if (requests == 1)
+                {
+                    Assert.Contains(request.Headers.IfNoneMatch, tag => tag.Tag == "\"index-1\"");
+                    File.Delete(_destinationPath);
+                    return new HttpResponseMessage(HttpStatusCode.NotModified);
+                }
+
+                Assert.Empty(request.Headers.IfNoneMatch);
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) };
+            }, out _);
+            client.Timeout = Timeout.InfiniteTimeSpan;
+            var fetcher = new ContentIndexFetcher(client, new Uri("https://example.test/content-index.json"),
+                new CandidateValidator(_ => Task.CompletedTask))
+            { FetchTimeout = TimeSpan.FromMilliseconds(100) };
+
+            var pending = fetcher.FetchAsync(_destinationPath);
+            await body.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            var exception = await Assert.ThrowsAsync<HttpRequestException>(() => pending.WaitAsync(TimeSpan.FromSeconds(1)));
+
+            Assert.IsAssignableFrom<OperationCanceledException>(exception.InnerException);
+            Assert.Equal(2, requests);
+            Assert.False(File.Exists(_destinationPath));
+            Assert.Equal(Sidecar(SampleIndexBody, "\"index-1\""), await File.ReadAllTextAsync(_etagPath));
+            Assert.Empty(Directory.GetFiles(_tempDir, "*.tmp"));
         }
 
         [Fact]
