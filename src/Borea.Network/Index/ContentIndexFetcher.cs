@@ -86,7 +86,8 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         Func<byte[], HttpResponseMessage, bool> validateRoot,
         IContentIndexCandidateValidator? candidateValidator,
         bool missingIsEmpty,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool useCachedEtag = true)
     {
         string etagPath = destinationPath + ".etag";
         string tempPath = $"{destinationPath}.{Guid.NewGuid():N}.tmp";
@@ -94,25 +95,9 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
 
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
 
-        bool etagExists = false;
-        if (File.Exists(destinationPath) && File.Exists(etagPath))
-        {
-            try
-            {
-                var existingEtag = await File.ReadAllLinesAsync(etagPath, ct).ConfigureAwait(false);
-                // Separate body and sidecar moves can overlap, so the tag is usable only for its own body.
-                if (existingEtag.Length == 2 && EntityTagHeaderValue.TryParse(existingEtag[0], out var tag)
-                    && existingEtag[1] == Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(destinationPath, ct).ConfigureAwait(false))))
-                {
-                    request.Headers.IfNoneMatch.Add(tag);
-                    etagExists = true;
-                }
-            }
-            catch (FileNotFoundException)
-            {
-                // Another fetch can remove the sidecar before its replacement is ready.
-            }
-        }
+        var cachedEtag = useCachedEtag ? await ReadCachedEtagAsync(destinationPath, ct).ConfigureAwait(false) : null;
+        if (cachedEtag is { } cached)
+            request.Headers.IfNoneMatch.Add(cached.Tag);
 
         using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
@@ -121,13 +106,18 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
             return ContentIndexFetchResult.NotModified;
         }
 
-        if (etagExists && response.StatusCode == System.Net.HttpStatusCode.NotModified)
+        if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
         {
-            return ContentIndexFetchResult.NotModified;
-        }
-        else if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
-        {
-            // This is to prevent a situation where we should've downloaded the index, yet didn't due to a incorrect 304 response.
+            if (cachedEtag is { } sent)
+            {
+                // A 304 confirms the request's body, which another process can replace while the request is in flight.
+                if (sent.BodyHash == await ReadBodyHashAsync(destinationPath, ct).ConfigureAwait(false))
+                    return ContentIndexFetchResult.NotModified;
+
+                response.Dispose();
+                return await FetchFileAsync(uri, destinationPath, validateRoot, candidateValidator, missingIsEmpty, ct, useCachedEtag: false).ConfigureAwait(false);
+            }
+
             throw new HttpRequestException($"ETag does not exist yet request returned 304 Not Modified: {response.ReasonPhrase}");
         }
 
@@ -155,7 +145,6 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
                     throw new HttpRequestException("The downloaded content index was not accepted.", ex);
                 }
             }
-            File.Delete(etagPath);
             await FileReplace.MoveOverAsync(tempPath, destinationPath, ct).ConfigureAwait(false);
 
             string? newEtag = response.Headers.ETag?.ToString();
@@ -164,6 +153,10 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
                 var sidecar = newEtag + "\n" + Convert.ToHexString(SHA256.HashData(body));
                 await File.WriteAllTextAsync(etagTempPath, sidecar, ct).ConfigureAwait(false);
                 await FileReplace.MoveOverAsync(etagTempPath, etagPath, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                File.Delete(etagPath);
             }
         }
         finally
@@ -175,4 +168,38 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         return ContentIndexFetchResult.Downloaded;
     }
 
+    private static async Task<(EntityTagHeaderValue Tag, string BodyHash)?> ReadCachedEtagAsync(string destinationPath, CancellationToken ct)
+    {
+        try
+        {
+            using var reader = new StreamReader(new FileStream(destinationPath + ".etag", FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete, bufferSize: 4096, FileOptions.Asynchronous | FileOptions.SequentialScan));
+            var tagText = await reader.ReadLineAsync(ct).ConfigureAwait(false);
+            var bodyHash = await reader.ReadLineAsync(ct).ConfigureAwait(false);
+            // Separate body and sidecar moves can overlap, so a tag is usable only for its own body.
+            if (await reader.ReadLineAsync(ct).ConfigureAwait(false) is null && EntityTagHeaderValue.TryParse(tagText, out var tag)
+                && bodyHash is not null && bodyHash == await ReadBodyHashAsync(destinationPath, ct).ConfigureAwait(false))
+                return (tag, bodyHash);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The sidecar is optional, and another process can replace it before it is read.
+        }
+
+        return null;
+    }
+
+    private static async Task<string?> ReadBodyHashAsync(string destinationPath, CancellationToken ct)
+    {
+        try
+        {
+            await using var stream = new FileStream(destinationPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
+                bufferSize: 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            return Convert.ToHexString(await SHA256.HashDataAsync(stream, ct).ConfigureAwait(false));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 }

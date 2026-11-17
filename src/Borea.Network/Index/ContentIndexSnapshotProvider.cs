@@ -12,7 +12,6 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
     private readonly TimeProvider _timeProvider;
     private readonly object _gate = new();
     private ContentIndexSnapshot? _snapshot;
-    private (DateTime LastWriteTimeUtc, long Length)? _snapshotFileStamp;
     private DateTimeOffset _lastAttemptAt;
     private Task<ContentIndexSnapshot>? _inFlight;
     private ContentIndexRefreshOutcome _lastOutcome = ContentIndexRefreshOutcome.NotAttempted;
@@ -92,80 +91,54 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
     private async Task<ContentIndexSnapshot> RefreshCoreAsync()
     {
         ContentIndexSnapshot? current;
-        (DateTime LastWriteTimeUtc, long Length)? currentFileStamp;
         lock (_gate)
-        {
             current = _snapshot;
-            currentFileStamp = _snapshotFileStamp;
-        }
 
         var indexPath = _paths.GetIndexPath();
         try
         {
             var fetchResult = await _fetcher.FetchAsync(indexPath).ConfigureAwait(false);
-            // Restarting the cache age changes the file time, so compare it first.
-            var fileStamp = GetFileStamp(indexPath);
-            bool cacheUnchanged = fileStamp == currentFileStamp;
-            var cachedAt = RecordFetch(indexPath, fetchResult);
-            if (fetchResult == ContentIndexFetchResult.NotModified && current is not null && cacheUnchanged)
-            {
-                if (fileStamp is { } stamp && cachedAt is { } writtenAt)
-                    fileStamp = (writtenAt, stamp.Length);
-                return RecordAttempt(current, fileStamp);
-            }
+            RecordFetch(indexPath, fetchResult);
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
         {
             RecordOutcome(ContentIndexRefreshOutcome.Failed, ex.Message);
             if (current is not null)
-                return RecordAttempt(current, currentFileStamp);
+                return RecordAttempt(current);
         }
 
         try
         {
-            var fileStamp = GetFileStamp(indexPath);
-            var snapshot = await _reader.ReadAsync().ConfigureAwait(false);
-            return RecordAttempt(snapshot, fileStamp);
+            // A 304 can validate files published by another process, including type files.
+            return RecordAttempt(await _reader.ReadAsync().ConfigureAwait(false));
         }
         catch (Exception ex) when (current is not null && ex is (InvalidOperationException or IOException))
         {
-            return RecordAttempt(current, currentFileStamp);
+            return RecordAttempt(current);
         }
     }
 
-    private DateTime? RecordFetch(string indexPath, ContentIndexFetchResult fetchResult)
+    private void RecordFetch(string indexPath, ContentIndexFetchResult fetchResult)
     {
-        var cachedAt = RestartCacheAge(indexPath);
+        RestartCacheAge(indexPath);
 
         RecordOutcome(
             fetchResult == ContentIndexFetchResult.Downloaded ? ContentIndexRefreshOutcome.Downloaded : ContentIndexRefreshOutcome.NotModified,
             failureReason: null);
-        return cachedAt;
     }
 
     /// <summary>Sets the last write time of the cached file to now. A 304 confirms the cached file, so its age starts again too.</summary>
-    private DateTime? RestartCacheAge(string indexPath)
+    private void RestartCacheAge(string indexPath)
     {
         try
         {
             if (File.Exists(indexPath))
-            {
-                var cachedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                File.SetLastWriteTimeUtc(indexPath, cachedAt);
-                return cachedAt;
-            }
+                File.SetLastWriteTimeUtc(indexPath, _timeProvider.GetUtcNow().UtcDateTime);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // the file keeps its older time, which only makes the cache look older
         }
-        return null;
-    }
-
-    private static (DateTime LastWriteTimeUtc, long Length)? GetFileStamp(string indexPath)
-    {
-        var file = new FileInfo(indexPath);
-        return file.Exists ? (file.LastWriteTimeUtc, file.Length) : null;
     }
 
     private void RecordOutcome(ContentIndexRefreshOutcome outcome, string? failureReason)
@@ -177,12 +150,11 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
         }
     }
 
-    private ContentIndexSnapshot RecordAttempt(ContentIndexSnapshot snapshot, (DateTime LastWriteTimeUtc, long Length)? fileStamp)
+    private ContentIndexSnapshot RecordAttempt(ContentIndexSnapshot snapshot)
     {
         lock (_gate)
         {
             _snapshot = snapshot;
-            _snapshotFileStamp = fileStamp;
             _lastAttemptAt = _timeProvider.GetUtcNow();
             return snapshot;
         }

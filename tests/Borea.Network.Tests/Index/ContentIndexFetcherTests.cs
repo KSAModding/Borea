@@ -141,6 +141,155 @@ namespace Borea.Network.Tests.Index
             Assert.Equal(originalEtagWrite, File.GetLastWriteTimeUtc(_etagPath));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task FetchAsync_CacheChangedDuringConditionalRequest_RetriesUnconditionally(bool removeBody)
+        {
+            await WriteCachedIndexAsync();
+            int requests = 0;
+            var client = FakeHttpMessageHandler.BuildClient(
+                async (request, _) =>
+                {
+                    requests++;
+                    if (requests == 1)
+                    {
+                        Assert.Contains(request.Headers.IfNoneMatch, tag => tag.Tag == "\"index-1\"");
+                        if (removeBody)
+                            File.Delete(_destinationPath);
+                        else
+                            await File.WriteAllTextAsync(_destinationPath, UpdatedIndexBody);
+                        return new HttpResponseMessage(HttpStatusCode.NotModified);
+                    }
+
+                    Assert.Equal(2, requests);
+                    Assert.Empty(request.Headers.IfNoneMatch);
+                    return JsonResponseWithETag(UpdatedIndexBody, "\"index-2\"");
+                },
+                out _);
+
+            Assert.Equal(ContentIndexFetchResult.Downloaded, await CreateFetcher(client).FetchAsync(_destinationPath));
+
+            Assert.Equal(2, requests);
+            Assert.Equal(UpdatedIndexBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal(Sidecar(UpdatedIndexBody, "\"index-2\""), await File.ReadAllTextAsync(_etagPath));
+            Assert.Empty(Directory.GetFiles(_tempDir, "*.tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_ConcurrentWriters_KeepSeparateCandidatesAndUseOnlyAMatchingETag()
+        {
+            var candidateReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var resumeCandidate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var firstClient = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(SampleIndexBody, "\"index-1\""), out _);
+            using var secondClient = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(UpdatedIndexBody, "\"index-2\""), out _);
+            string? firstCandidate = null;
+            var firstValidator = new CandidateValidator(async candidate =>
+            {
+                firstCandidate = candidate;
+                candidateReady.SetResult();
+                await resumeCandidate.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(candidate));
+            });
+            var secondValidator = new CandidateValidator(async candidate =>
+            {
+                Assert.NotEqual(firstCandidate, candidate);
+                Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(firstCandidate!));
+                Assert.Equal(UpdatedIndexBody, await File.ReadAllTextAsync(candidate));
+                resumeCandidate.TrySetResult();
+            });
+
+            var first = CreateFetcher(firstClient, firstValidator).FetchAsync(_destinationPath);
+            try
+            {
+                await candidateReady.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.Equal(ContentIndexFetchResult.Downloaded, await CreateFetcher(secondClient, secondValidator).FetchAsync(_destinationPath));
+            }
+            finally
+            {
+                resumeCandidate.TrySetResult();
+                await first;
+            }
+
+            var publishedBody = await File.ReadAllTextAsync(_destinationPath);
+            Assert.Contains(publishedBody, new[] { SampleIndexBody, UpdatedIndexBody });
+            string publishedTag = publishedBody == SampleIndexBody ? "\"index-1\"" : "\"index-2\"";
+            bool matchingSidecar = await File.ReadAllTextAsync(_etagPath) == Sidecar(publishedBody, publishedTag);
+            using var checkClient = FakeHttpMessageHandler.BuildClient(request =>
+            {
+                if (matchingSidecar)
+                {
+                    Assert.Equal(publishedTag, Assert.Single(request.Headers.IfNoneMatch).Tag);
+                    return new HttpResponseMessage(HttpStatusCode.NotModified);
+                }
+
+                Assert.Empty(request.Headers.IfNoneMatch);
+                return JsonResponseWithETag(publishedBody, publishedTag);
+            }, out _);
+            Assert.Equal(matchingSidecar ? ContentIndexFetchResult.NotModified : ContentIndexFetchResult.Downloaded,
+                await CreateFetcher(checkClient).FetchAsync(_destinationPath));
+            Assert.Equal(publishedBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal(Sidecar(publishedBody, publishedTag), await File.ReadAllTextAsync(_etagPath));
+            Assert.Empty(Directory.GetFiles(_tempDir, "*.tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_CanceledCandidate_RemovesOnlyItsOwnTemporaryFiles()
+        {
+            await WriteCachedIndexAsync();
+            using var cancellation = new CancellationTokenSource();
+            using var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(UpdatedIndexBody, "\"index-2\""), out _);
+            var validator = new CandidateValidator(_ =>
+            {
+                cancellation.Cancel();
+                cancellation.Token.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            });
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                CreateFetcher(client, validator).FetchAsync(_destinationPath, cancellation.Token));
+
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal(Sidecar(SampleIndexBody, "\"index-1\""), await File.ReadAllTextAsync(_etagPath));
+            Assert.Empty(Directory.GetFiles(_tempDir, "*.tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_CacheChangedAndRetryReturns304_StopsAfterOneRetry()
+        {
+            await WriteCachedIndexAsync();
+            int requests = 0;
+            using var client = FakeHttpMessageHandler.BuildClient(request =>
+            {
+                requests++;
+                Assert.Equal(requests == 1, request.Headers.IfNoneMatch.Any());
+                File.Delete(_destinationPath);
+                return new HttpResponseMessage(HttpStatusCode.NotModified);
+            }, out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+
+            Assert.Equal(2, requests);
+            Assert.Empty(Directory.GetFiles(_tempDir, "*.tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_SidecarPublicationFails_RemovesBothTemporaryFiles()
+        {
+            Directory.CreateDirectory(_etagPath);
+            using var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(SampleIndexBody, "\"index-1\""), out _);
+
+            var exception = await Record.ExceptionAsync(() => CreateFetcher(client).FetchAsync(_destinationPath));
+
+            Assert.True(exception is IOException or UnauthorizedAccessException);
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.Empty(Directory.GetFiles(_tempDir, "*.tmp"));
+        }
+
         [Fact]
         public async Task FetchAsync_DestinationMissingButSidecarPresent_ForcesUnconditionalFetch()
         {

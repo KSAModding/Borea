@@ -81,7 +81,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAvailableModsAsync_NotModifiedWithinNewInterval_DoesNotReadAgain()
+    public async Task GetAvailableModsAsync_NotModified_ReadsAgainOnlyAfterTheInterval()
     {
         var time = new FakeTimeProvider();
         var fetcher = new FakeFetcher(ContentIndexFetchResult.Downloaded, ContentIndexFetchResult.NotModified);
@@ -90,11 +90,13 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
 
         await repository.GetAvailableModsAsync();
         await repository.GetAvailableModsAsync();
+        Assert.Equal(1, reader.CallCount);
         time.UtcNow += TimeSpan.FromMinutes(11);
+        await repository.GetAvailableModsAsync();
         await repository.GetAvailableModsAsync();
 
         Assert.Equal(2, fetcher.CallCount);
-        Assert.Equal(1, reader.CallCount);
+        Assert.Equal(2, reader.CallCount);
     }
 
     [Fact]
@@ -349,7 +351,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         await provider.RefreshAsync();
 
         Assert.Equal(2, fetcher.CallCount);
-        Assert.Equal(1, reader.CallCount);
+        Assert.Equal(2, reader.CallCount);
         Assert.Equal(new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.NotModified, time.UtcNow), provider.Status);
     }
 
@@ -372,13 +374,16 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task RefreshAsync_NotModifiedAfterCacheChanged_ReadsNewSnapshot(bool changeWriteTime)
+    [InlineData("index.json", "[]", true)]
+    [InlineData("index.json", "{ }", false)]
+    [InlineData("index.json", "[]", false)]
+    [InlineData("snapshot-vehicles.json", "vehicles", false)]
+    [InlineData("snapshot-saves.json", "saves", false)]
+    public async Task RefreshAsync_NotModifiedAfterCacheChanged_ReadsNewSnapshot(string fileName, string body, bool changeWriteTime)
     {
         var time = new FakeTimeProvider();
         var indexPath = CachedIndex(time.UtcNow);
-        var fetcher = new FakeFetcher(ContentIndexFetchResult.Downloaded, ContentIndexFetchResult.NotModified, ContentIndexFetchResult.NotModified);
+        var fetcher = new FakeFetcher(ContentIndexFetchResult.Downloaded, ContentIndexFetchResult.NotModified);
         var original = Snapshot();
         var updated = OneModReader().Snapshot;
         var reader = new FakeReader(original);
@@ -386,13 +391,13 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         Assert.Same(original, await provider.GetSnapshotAsync());
 
         var originalWriteTime = File.GetLastWriteTimeUtc(indexPath);
-        await File.WriteAllTextAsync(indexPath, changeWriteTime ? "[]" : "{ }");
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, fileName), body);
         File.SetLastWriteTimeUtc(indexPath, changeWriteTime ? originalWriteTime.AddMinutes(1) : originalWriteTime);
         reader.Snapshot = updated;
 
         Assert.Same(updated, await provider.RefreshAsync());
         time.UtcNow += TimeSpan.FromMinutes(1);
-        Assert.Same(updated, await provider.RefreshAsync());
+        Assert.Same(updated, await provider.GetSnapshotAsync());
         Assert.Equal(2, reader.CallCount);
     }
 
@@ -400,6 +405,26 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     {
         if (Directory.Exists(_tempDir))
             Directory.Delete(_tempDir, recursive: true);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RefreshAsync_NotModifiedButCacheCannotBeRead_KeepsLastSnapshot(bool ioFailure)
+    {
+        var original = Snapshot();
+        var reader = new FakeReader(original);
+        var fetcher = new FakeFetcher(ContentIndexFetchResult.Downloaded, ContentIndexFetchResult.NotModified, ContentIndexFetchResult.NotModified);
+        var provider = new ContentIndexSnapshotProvider(fetcher, reader, new TestPathProvider(CachedIndex(DateTimeOffset.UtcNow)));
+        Assert.Same(original, await provider.GetSnapshotAsync());
+        reader.Failure = ioFailure ? new IOException("The cached file cannot be read.") : new InvalidOperationException("The cached file is not valid.");
+
+        Assert.Same(original, await provider.RefreshAsync());
+
+        reader.Failure = null;
+        reader.Snapshot = OneModReader().Snapshot;
+        Assert.Same(reader.Snapshot, await provider.RefreshAsync());
+        Assert.Equal(3, reader.CallCount);
     }
 
     private string CachedIndex(DateTimeOffset writtenAt)
@@ -484,6 +509,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     private sealed class FakeReader : IContentIndexReader
     {
         public ContentIndexSnapshot Snapshot { get; set; }
+        public Exception? Failure { get; set; }
 
         public int CallCount { get; private set; }
 
@@ -495,7 +521,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public Task<ContentIndexSnapshot> ReadAsync(CancellationToken cancellationToken = default)
         {
             CallCount++;
-            return Task.FromResult(Snapshot);
+            return Failure is { } failure ? Task.FromException<ContentIndexSnapshot>(failure) : Task.FromResult(Snapshot);
         }
     }
 
