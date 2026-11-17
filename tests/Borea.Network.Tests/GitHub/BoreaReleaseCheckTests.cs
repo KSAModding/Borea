@@ -159,6 +159,22 @@ public sealed class BoreaReleaseCheckTests
     }
 
     [Fact]
+    public async Task GetReleasesAsync_BodyStalls_IsNoReleaseAfterTheDeadline()
+    {
+        using var body = new StalledBodyStream();
+        using var client = FakeHttpMessageHandler.BuildClient(
+            _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) },
+            out _);
+        client.Timeout = Timeout.InfiniteTimeSpan;
+        var check = new BoreaReleaseCheck(client) { FetchTimeout = TimeSpan.FromMilliseconds(100) };
+
+        var pending = check.GetReleasesAsync();
+        await body.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Empty(await pending.WaitAsync(TimeSpan.FromSeconds(1)));
+    }
+
+    [Fact]
     public async Task GetReleasesAsync_ClientTimeout_IsNoRelease()
     {
         var client = FakeHttpMessageHandler.BuildClient(async (_, token) =>

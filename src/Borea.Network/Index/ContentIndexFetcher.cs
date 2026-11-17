@@ -7,6 +7,10 @@ namespace Borea.Network.Index;
 
 public sealed class ContentIndexFetcher : IContentIndexFetcher
 {
+    private static readonly TimeSpan DefaultFetchTimeout = TimeSpan.FromMinutes(2);
+
+    internal TimeSpan FetchTimeout { get; init; } = DefaultFetchTimeout;
+
     private readonly HttpClient _client;
     private readonly Uri _indexUri;
     private readonly IContentIndexCandidateValidator _candidateValidator;
@@ -79,7 +83,16 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         }
     }
 
-    private async Task<ContentIndexFetchResult> FetchFileAsync(
+    private Task<ContentIndexFetchResult> FetchFileAsync(
+        Uri uri,
+        string destinationPath,
+        Func<byte[], HttpResponseMessage, bool> validateRoot,
+        IContentIndexCandidateValidator? candidateValidator,
+        bool missingIsEmpty,
+        CancellationToken ct) =>
+        HttpDeadline.RunAsync(FetchTimeout, token => FetchFileCoreAsync(uri, destinationPath, validateRoot, candidateValidator, missingIsEmpty, token), ct);
+
+    private async Task<ContentIndexFetchResult> FetchFileCoreAsync(
         Uri uri,
         string destinationPath,
         Func<byte[], HttpResponseMessage, bool> validateRoot,
