@@ -1288,6 +1288,22 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
+    public void Launch_SystemRefusesToStartAKeptBuildInAnAdoptedFolder_GivesTheGamePathOfThePlayerBack()
+    {
+        PlaceStarMap();
+        var player = PlaceGameAssembly(Path.Combine(_tempRoot, "Other Game"));
+        WriteConfig(new { GameLocation = player });
+        KeepBuild();
+        _starter.Failure = new Win32Exception("Access is denied.");
+        using var launcher = LauncherSeeingGame(() => false);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()), StarMapDirectory, arguments: null, isAdopted: true);
+
+        Assert.Equal(LaunchOutcome.StartFailed, result.Outcome);
+        Assert.Equal(player, GameLocation());
+    }
+
+    [Fact]
     public void Launch_AModInsteadOfALoader_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() => _launcher.Launch(_instance, MetadataFixtures.MinimalMetadata()));
