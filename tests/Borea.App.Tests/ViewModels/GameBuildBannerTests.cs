@@ -178,16 +178,22 @@ public sealed class GameBuildBannerTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("ksa.ahwoo.com")]
-    [InlineData("file:///C:/Windows/notepad.exe")]
-    public async Task Load_NoWebAddressFromTheMasterServer_ShowsTheBannerWithoutALink(string url)
+    [InlineData("", "https://ksa.ahwoo.com/")]
+    [InlineData("ksa.ahwoo.com", "https://ksa.ahwoo.com/")]
+    [InlineData("file:///C:/Windows/notepad.exe", "https://ksa.ahwoo.com/")]
+    [InlineData("https://ksa.ahwoo.com/download", "https://ksa.ahwoo.com/download")]
+    [InlineData("https://AHWOO.COM/download", "https://ahwoo.com/download")]
+    [InlineData("http://ksa.ahwoo.com/download", "https://ksa.ahwoo.com/")]
+    [InlineData("https://example.com/download", "https://ksa.ahwoo.com/")]
+    [InlineData("https://ahwoo.com.evil.net/download", "https://ksa.ahwoo.com/")]
+    [InlineData("https://evilahwoo.com/download", "https://ksa.ahwoo.com/")]
+    public async Task Load_MasterServerDownloadAddress_UsesOnlyHttpsOnAhwoo(string url, string expected)
     {
         using var harness = await CreateAsync(MasterServer("2026.9.10.5438", url));
         var viewModel = harness.ViewModel;
 
         Assert.True(viewModel.ShowGameBuildBanner);
-        Assert.Null(viewModel.GameBuildDownloadUrl);
+        Assert.Equal(expected, viewModel.GameBuildDownloadUrl);
     }
 
     [Fact]
