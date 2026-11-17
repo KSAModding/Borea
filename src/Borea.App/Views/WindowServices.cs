@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Borea.App.ViewModels;
+using Borea.Core.Files;
 
 namespace Borea.App.Views;
 
@@ -25,10 +26,11 @@ internal sealed class WindowServices(TopLevel topLevel) : IWindowServices
         if (file is null)
             return null;
 
-        await using var stream = await file.OpenWriteAsync();
-        stream.SetLength(0);
-        await using var writer = new StreamWriter(stream);
-        await writer.WriteAsync(text);
+        await WriteExportAsync(file, async stream =>
+        {
+            await using var writer = new StreamWriter(stream, leaveOpen: true);
+            await writer.WriteAsync(text);
+        });
         return file.Name;
     }
 
@@ -45,30 +47,40 @@ internal sealed class WindowServices(TopLevel topLevel) : IWindowServices
         if (file is null)
             return null;
 
-        var stream = await file.OpenWriteAsync();
+        await WriteExportAsync(file, write);
+        return file.Name;
+    }
+
+    private static async Task WriteExportAsync(IStorageFile file, Func<Stream, Task> write)
+    {
+        if (file.TryGetLocalPath() is { } path)
+        {
+            await WriteLocalExportAsync(path, write);
+            return;
+        }
+
+        if ((await file.GetBasicPropertiesAsync()).Size != 0)
+            throw new IOException("This storage provider cannot safely replace an existing file. Choose a new file.");
+
+        await using var stream = await file.OpenWriteAsync();
+        await write(stream);
+    }
+
+    internal static async Task WriteLocalExportAsync(string path, Func<Stream, Task> write)
+    {
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            await using (stream)
+            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true))
             {
-                stream.SetLength(0);
                 await write(stream);
             }
+            await FileReplace.MoveOverAsync(temporary, path);
         }
-        catch
+        finally
         {
-            // a file that stops half way is no archive
-            try
-            {
-                await file.DeleteAsync();
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-            }
-
-            throw;
+            File.Delete(temporary);
         }
-
-        return file.Name;
     }
 
     public async Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName)
