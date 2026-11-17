@@ -7,6 +7,8 @@ namespace Borea.Network.Announcements;
 /// <summary>Fetches announcements.toml with the ETag of the cached file, like the content index.</summary>
 public sealed class AnnouncementFetcher : IAnnouncementFetcher
 {
+    private static readonly TimeSpan FetchTimeout = TimeSpan.FromSeconds(30);
+
     public static readonly Uri DefaultUri = new("https://raw.githubusercontent.com/KSAModding/Borea/main/announcements.toml");
 
     private readonly HttpClient _client;
@@ -20,7 +22,10 @@ public sealed class AnnouncementFetcher : IAnnouncementFetcher
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
     }
 
-    public async Task<bool> FetchAsync(string destinationPath, CancellationToken cancellationToken = default)
+    public Task<bool> FetchAsync(string destinationPath, CancellationToken cancellationToken = default) =>
+        HttpDeadline.RunAsync(FetchTimeout, token => FetchCoreAsync(destinationPath, token), cancellationToken);
+
+    private async Task<bool> FetchCoreAsync(string destinationPath, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(destinationPath);
         var etagPath = destinationPath + ".etag";

@@ -53,6 +53,47 @@ namespace Borea.Network.Tests.Index
         private static HttpResponseMessage JsonResponse(string json) => FakeHttpMessageHandler.JsonResponse(json);
 
         [Fact]
+        public async Task FetchAsync_BodyStalls_ThrowsNetworkFailureAndKeepsTheCache()
+        {
+            await WriteCachedIndexAsync();
+            using var body = new StalledBodyStream();
+            using var client = FakeHttpMessageHandler.BuildClient(
+                _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) },
+                out _);
+            client.Timeout = Timeout.InfiniteTimeSpan;
+            var fetcher = new ContentIndexFetcher(
+                client,
+                new Uri("https://example.test/content-index.json"),
+                new CandidateValidator(_ => Task.CompletedTask))
+            { FetchTimeout = TimeSpan.FromMilliseconds(100) };
+
+            var pending = fetcher.FetchAsync(_destinationPath);
+            await body.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            var exception = await Assert.ThrowsAsync<HttpRequestException>(() => pending.WaitAsync(TimeSpan.FromSeconds(1)));
+
+            Assert.IsAssignableFrom<OperationCanceledException>(exception.InnerException);
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal("\"index-1\"", await File.ReadAllTextAsync(_etagPath));
+            Assert.False(File.Exists(_destinationPath + ".tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_CallerCancelsStalledBody_ThrowsCancellation()
+        {
+            using var body = new StalledBodyStream();
+            using var client = FakeHttpMessageHandler.BuildClient(
+                _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) },
+                out _);
+            using var cancellation = new CancellationTokenSource();
+            var pending = CreateFetcher(client).FetchAsync(_destinationPath, cancellation.Token);
+            await body.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+            cancellation.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending.WaitAsync(TimeSpan.FromSeconds(1)));
+        }
+
+        [Fact]
         public async Task FetchAsync_NoExistingCache_DownloadsAndWritesSidecar()
         {
             var client = FakeHttpMessageHandler.BuildClient(

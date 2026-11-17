@@ -30,6 +30,8 @@ public sealed class ShareHostClient : IShareHostClient
 
     private static readonly TimeSpan SlowDownStep = TimeSpan.FromSeconds(5);
 
+    private static readonly TimeSpan FetchTimeout = TimeSpan.FromMinutes(30);
+
     /// <summary>
     /// How long a publish waits for its answer. The timeout of the HTTP client is long because of large uploads, and a publish
     /// offers no Cancel, so a silent host would otherwise hold the player for that time. A publish that ends here counts as a
@@ -443,19 +445,22 @@ public sealed class ShareHostClient : IShareHostClient
     {
         try
         {
-            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-            await using var body = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            using var text = new MemoryStream();
-            var buffer = new byte[16 * 1024];
-            int read;
-            while ((read = await body.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+            return await HttpDeadline.RunAsync(FetchTimeout, async token =>
             {
-                text.Write(buffer, 0, read);
-                if (text.Length > MaxReplyBytes)
-                    return new Reply(response.StatusCode, string.Empty);
-            }
+                using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+                await using var body = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                using var text = new MemoryStream();
+                var buffer = new byte[16 * 1024];
+                int read;
+                while ((read = await body.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
+                {
+                    text.Write(buffer, 0, read);
+                    if (text.Length > MaxReplyBytes)
+                        return new Reply(response.StatusCode, string.Empty);
+                }
 
-            return new Reply(response.StatusCode, Encoding.UTF8.GetString(text.GetBuffer(), 0, (int)text.Length));
+                return new Reply(response.StatusCode, Encoding.UTF8.GetString(text.GetBuffer(), 0, (int)text.Length));
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -13,6 +13,10 @@ namespace Borea.Network.GitHub;
 /// </summary>
 public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
 {
+    private static readonly TimeSpan DefaultFetchTimeout = TimeSpan.FromSeconds(30);
+
+    internal TimeSpan FetchTimeout { get; init; } = DefaultFetchTimeout;
+
     internal const string ReleasesUrl = "https://api.github.com/repos/KSAModding/Borea/releases?per_page=100";
 
     internal const string ApiVersion = "2026-03-10";
@@ -56,14 +60,17 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
 
         try
         {
-            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            return await HttpDeadline.RunAsync(FetchTimeout, async token =>
+            {
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
 
-            // 403 or 429 is a rate limit, 404 a missing repository.
-            if (!response.IsSuccessStatusCode)
-                return null;
+                // 403 or 429 is a rate limit, 404 a missing repository.
+                if (!response.IsSuccessStatusCode)
+                    return null;
 
-            var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<T>(text);
+                var text = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
+                return JsonSerializer.Deserialize<T>(text);
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

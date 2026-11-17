@@ -30,6 +30,10 @@ public sealed class BoreaReleaseFiles : IBoreaReleaseFiles
 
     private const int BufferSize = 81920;
 
+    private static readonly TimeSpan TextTimeout = TimeSpan.FromSeconds(30);
+
+    private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(30);
+
     private readonly HttpClient _httpClient;
     private readonly IBoreaLog? _log;
 
@@ -111,7 +115,10 @@ public sealed class BoreaReleaseFiles : IBoreaReleaseFiles
         _ => false,
     };
 
-    private async Task<string> ReadTextFromAsync(string url, CancellationToken cancellationToken)
+    private Task<string> ReadTextFromAsync(string url, CancellationToken cancellationToken) =>
+        HttpDeadline.RunAsync(TextTimeout, token => ReadTextCoreAsync(url, token), cancellationToken);
+
+    private async Task<string> ReadTextCoreAsync(string url, CancellationToken cancellationToken)
     {
         using var response = await SendAsync(url, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -133,7 +140,10 @@ public sealed class BoreaReleaseFiles : IBoreaReleaseFiles
         return Encoding.UTF8.GetString(text.GetBuffer(), 0, (int)text.Length);
     }
 
-    private async Task<string> DownloadFromAsync(string url, string path, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+    private Task<string> DownloadFromAsync(string url, string path, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken) =>
+        HttpDeadline.RunAsync(DownloadTimeout, token => DownloadCoreAsync(url, path, progress, token), cancellationToken);
+
+    private async Task<string> DownloadCoreAsync(string url, string path, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
     {
         try
         {
