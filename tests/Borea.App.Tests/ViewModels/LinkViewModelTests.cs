@@ -191,6 +191,35 @@ public sealed class LinkViewModelTests
     }
 
     [Fact]
+    public async Task InstallLink_ActiveInstanceChangesDuringReleaseLookup_PlansIntoTheNamedInstance()
+    {
+        HeldContentIndexRepository index = null!;
+        using var harness = await ViewModelHarness.CreateAsync(wrapContentIndex: inner => index = new HeldContentIndexRepository(inner));
+        var first = await ActivateInstanceAsync(harness);
+        var second = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
+        var viewModel = harness.ViewModel;
+        var lookupStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseLookup = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        index.ReleaseLookup = () =>
+        {
+            lookupStarted.TrySetResult();
+            return releaseLookup.Task;
+        };
+
+        var opening = viewModel.OpenLinkAsync("borea://install/MeasureTools?version=1.1.9");
+        await lookupStarted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        index.ReleaseLookup = null;
+        await viewModel.ActivateInstanceAsync(second.InstanceId);
+        Assert.Equal(second.InstanceId, viewModel.ActiveInstance!.InstanceId);
+        releaseLookup.SetResult();
+        await opening;
+
+        var row = viewModel.SelectedContent!;
+        Assert.Equal(first.InstanceId, row.PendingPlan!.InstanceId);
+        Assert.Equal(harness.Localization.FormatLinkInstall("MeasureTools 1.1.9", first.Name), row.LinkRequestText);
+    }
+
+    [Fact]
     public async Task InstallLink_VersionNotInTheIndex_OffersTheNewestRelease()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -784,6 +813,36 @@ public sealed class LinkViewModelTests
 
     private static MainViewModel NewViewModel(ViewModelHarness harness, AppPreferences preferences, FakeRegistrar registrar, Func<string, bool>? writeLauncher = null)
         => harness.NewViewModel(harness.Services.AppPreferences, preferences, linkHandler: new LinkHandler(registrar, "/opt/Borea/borea", writeLauncher));
+
+    private sealed class HeldContentIndexRepository(IContentIndexRepository inner) : IContentIndexRepository
+    {
+        public Func<Task>? ReleaseLookup { get; set; }
+
+        public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) =>
+            inner.GetAvailableModsAsync(cancellationToken);
+
+        public Task<ModMetadata?> GetListingAsync(string modId, CancellationToken cancellationToken = default) =>
+            inner.GetListingAsync(modId, cancellationToken);
+
+        public Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default) =>
+            inner.GetLatestReleaseAsync(modId, cancellationToken);
+
+        public async Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default)
+        {
+            if (ReleaseLookup is { } lookup)
+                await lookup();
+            return await inner.GetReleaseAsync(modId, version, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default) =>
+            inner.GetAvailableVersionsAsync(modId, cancellationToken);
+
+        public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) =>
+            inner.SearchAsync(query, cancellationToken);
+
+        public Task<IReadOnlyList<ContentIndexDiagnostic>> GetDiagnosticsAsync(CancellationToken cancellationToken = default) =>
+            inner.GetDiagnosticsAsync(cancellationToken);
+    }
 
     /// <summary>A harness whose game folder holds a game of version 2026.8.3.5117.</summary>
     private static Task<ViewModelHarness> CreateWithGameAsync(Func<string, string> editSnapshot, IReadOnlyDictionary<string, string>? typeFiles = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null) =>

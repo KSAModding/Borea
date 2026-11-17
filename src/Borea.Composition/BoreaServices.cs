@@ -436,6 +436,7 @@ public sealed class BoreaServices : IDisposable
     /// <param name="listingImageHandler">Fetches the images that the listing editor measures. Null fetches them from the author hosts.</param>
     /// <param name="shareHostClient">Signs in and uploads to a share host. Null builds one that keeps no sign-in.</param>
     /// <param name="wrapGameBuilds">Wraps the keeper of the game builds. Null uses it as it is.</param>
+    /// <param name="wrapContentIndex">Wraps the content index repository. Null uses it as it is.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
@@ -465,12 +466,13 @@ public sealed class BoreaServices : IDisposable
         Func<IInstallPlanner, IInstallPlanner>? wrapInstallPlanner = null,
         HttpMessageHandler? listingImageHandler = null,
         IShareHostClient? shareHostClient = null,
-        Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null)
+        Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null,
+        Func<IContentIndexRepository, IContentIndexRepository>? wrapContentIndex = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, wrapInstallPlanner, listingImageHandler, shareHostClient, wrapGameBuilds);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, wrapInstallPlanner, listingImageHandler, shareHostClient, wrapGameBuilds, wrapContentIndex);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -504,7 +506,8 @@ public sealed class BoreaServices : IDisposable
         Func<IInstallPlanner, IInstallPlanner>? wrapInstallPlanner = null,
         HttpMessageHandler? listingImageHandler = null,
         IShareHostClient? shareHostClient = null,
-        Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null)
+        Func<IGameBuildKeeper, IGameBuildKeeper>? wrapGameBuilds = null,
+        Func<IContentIndexRepository, IContentIndexRepository>? wrapContentIndex = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -710,7 +713,7 @@ public sealed class BoreaServices : IDisposable
             IndexSnapshots = indexSnapshots,
             CachedIndexSnapshots = indexSnapshots.CachedOnly,
             IndexRefresh = indexSnapshots,
-            ContentIndex = contentIndex,
+            ContentIndex = wrapContentIndex?.Invoke(contentIndex) ?? contentIndex,
             UserContent = contentIndex,
             ReadOnlyUserContent = readOnlyContentIndex,
             Images = images ?? new ContentImageSource(new FileContentImageCache(paths)),

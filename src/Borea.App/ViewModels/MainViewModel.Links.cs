@@ -268,6 +268,7 @@ public partial class MainViewModel
                 row,
                 async () => chosen ??= await services.ContentIndex.GetLatestReleaseInChannelAsync(row.ModId, services.Settings.ReleaseChannel),
                 exact?.Version,
+                instanceId: instance.InstanceId,
                 confirm: true);
 
             if (row.IsConfirmingInstall && chosen is { } release)
@@ -320,7 +321,7 @@ public partial class MainViewModel
             return;
         }
 
-        await InstallPackAsync(pack, version: exact?.Version, confirm: true);
+        await InstallPackAsync(pack, targetInstanceId: instance.InstanceId, version: exact?.Version, confirm: true);
 
         if (pack.PendingInstall is not null)
             pack.ShowLinkRequest(() => WithNote(note, Localization.FormatLinkInstall($"{pack.Name} {target.Version}", instance.Name)));
