@@ -1,8 +1,11 @@
+using Borea.Core.Game;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
 using Borea.Storage.Files;
+using Borea.Storage.Game;
+using Borea.Storage.Launch;
 using Borea.Storage.Mods;
 
 namespace Borea.Storage.ModLoaders;
@@ -20,6 +23,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
     private readonly IBoreaSettingsRepository _settings;
     private readonly ILoaderConfigurator _configurator;
     private readonly Func<bool> _isGameRunning;
+    private readonly OsPlatform? _platform;
     private readonly LoaderLayoutMigration _layout;
     private readonly FileLoaderVersionStore _versions;
 
@@ -32,13 +36,15 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         IModDownloader downloader,
         IBoreaSettingsRepository settings,
         ILoaderConfigurator configurator,
-        Func<bool>? isGameRunning = null)
+        Func<bool>? isGameRunning = null,
+        OsPlatform? platform = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _configurator = configurator ?? throw new ArgumentNullException(nameof(configurator));
         _isGameRunning = isGameRunning ?? (static () => false);
+        _platform = platform ?? SharedProfileLauncher.CurrentPlatform();
         _layout = new LoaderLayoutMigration(settings, pathProvider);
         _versions = new FileLoaderVersionStore(settings, pathProvider);
     }
@@ -339,7 +345,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 await File.WriteAllBytesAsync(stagedConfigurationPath, kept, cancellationToken).ConfigureAwait(false);
             }
 
-            RequireLaunchTarget(loader, release, stagedDestination);
+            RequireLaunchTarget(loader, release, stagedDestination, settings.GameDirectoryPath);
 
             if (configure?.GamePath is not null)
                 progress.Report(release, InstallPhase.Configuring);
@@ -569,9 +575,10 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
     /// <summary>
     /// RFC 0035 rule 3: the launch target must be in the release.
     /// </summary>
-    private static void RequireLaunchTarget(ModMetadata loader, ModVersionMetadata release, string destination)
+    private void RequireLaunchTarget(ModMetadata loader, ModVersionMetadata release, string destination, string? gameDirectory)
     {
-        var launch = loader.Provides?.Launch;
+        var entry = GamePlatform.Of(_platform, gameDirectory) is { } platform ? loader.Provides?.Platforms.GetValueOrDefault(platform) : null;
+        var launch = entry?.Launch ?? loader.Provides?.Launch;
         if (launch is null)
             return;
 

@@ -896,6 +896,42 @@ public sealed class FileLoaderInstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallAsync_LinuxLaunchTargetWithoutDefaultTarget_Installs()
+    {
+        await SaveGameDirectoryAsync();
+        Directory.CreateDirectory(_gameDirectory);
+        await File.WriteAllBytesAsync(Path.Combine(_gameDirectory, "KSA"), []);
+        _downloader.Bytes = TestArchives.Build(("StarMap.dll", "dll"));
+        var provides = new LoaderProvides("StarMap.exe", InstallAnchor.Mods, configure: StarMapConfigure,
+            platforms: new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", runtime: "dotnet") });
+        var installer = new FileLoaderInstaller(_pathProvider, _downloader, _settings, new LoaderConfigurator(), platform: OsPlatform.Linux);
+
+        var result = await installer.InstallAsync(Listing(Standalone(), provides), StarMapRelease());
+
+        Assert.Equal(InstalledDirectory, result.Directory);
+        Assert.True(File.Exists(Path.Combine(result.Directory, "StarMap.dll")));
+        Assert.Equal(InstalledDirectory, await RecordedDirectoryAsync());
+    }
+
+    [Fact]
+    public async Task InstallAsync_LinuxLaunchTargetMissingWithDefaultTarget_FailsAndLeavesNothing()
+    {
+        await SaveGameDirectoryAsync();
+        Directory.CreateDirectory(_gameDirectory);
+        await File.WriteAllBytesAsync(Path.Combine(_gameDirectory, "KSA"), []);
+        _downloader.Bytes = TestArchives.Build(("StarMap.exe", "exe"));
+        var provides = new LoaderProvides("StarMap.exe", InstallAnchor.Mods, configure: StarMapConfigure,
+            platforms: new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", runtime: "dotnet") });
+        var installer = new FileLoaderInstaller(_pathProvider, _downloader, _settings, new LoaderConfigurator(), platform: OsPlatform.Linux);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => installer.InstallAsync(Listing(Standalone(), provides), StarMapRelease()));
+
+        Assert.Equal("The archive of 'StarMap' 0.4.6 has no 'StarMap.dll' at its install root, so nothing could start StarMap.", ex.Message);
+        await AssertNothingInstalledAsync();
+    }
+
+    [Fact]
     public async Task InstallAsync_FailsInAnEmptyExistingDirectory_ClearsItAndKeepsIt()
     {
         await SaveGameDirectoryAsync();
