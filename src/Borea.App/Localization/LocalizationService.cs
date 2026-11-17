@@ -3538,6 +3538,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentNoVersionsInChannel => Resources.ContentNoVersionsInChannel;
 
+    public string FormatContentNoVersionsHidden(string status)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNoVersionsHiddenFormat, status);
+
     public string FormatContentVersionGone(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentVersionGoneFormat, date);
 

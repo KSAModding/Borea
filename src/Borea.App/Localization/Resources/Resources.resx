@@ -5403,6 +5403,9 @@
   <data name="ContentNoVersionsInChannel" xml:space="preserve">
     <value>No releases in this channel.</value>
   </data>
+  <data name="ContentNoVersionsHiddenFormat" xml:space="preserve">
+    <value>No releases in this channel, but this listing has {0} releases. Change the Show filter above to see them.</value>
+  </data>
   <data name="ContentVersionGoneFormat" xml:space="preserve">
     <value>No longer downloadable since {0}.</value>
   </data>

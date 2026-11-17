@@ -91,7 +91,30 @@ public sealed class ReleaseChannelViewModelTests
         await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
 
         Assert.Empty(viewModel.ContentVersions);
-        Assert.Equal(harness.Localization.ContentNoVersionsInChannel, viewModel.ContentVersionsEmptyText);
+        Assert.Equal(harness.Localization.FormatContentNoVersionsHidden(harness.Localization.ReleaseDev), viewModel.ContentVersionsEmptyText);
+    }
+
+    [Fact]
+    public async Task VersionFilter_HidesOnlyTestingReleases_NamesTheTestingStatus()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+        {
+            var root = JsonNode.Parse(json)!;
+            var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "AdvancedFlightComputer")!;
+            var releases = listing["releases"]!.AsArray();
+            releases[0]!["release_status"] = "dev";
+            for (var index = 1; index < releases.Count; index++)
+                releases[index]!["release_status"] = "testing";
+            return root.ToJsonString();
+        });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.Empty(viewModel.ContentVersions);
+        Assert.Equal(harness.Localization.FormatContentNoVersionsHidden(harness.Localization.ReleaseTesting), viewModel.ContentVersionsEmptyText);
     }
 
     [Fact]
