@@ -76,14 +76,15 @@ public partial class MainViewModel
     /// <summary>The page the game itself names when the master server gives it none (VersionInfo).</summary>
     private const string GameDownloadPage = "https://ksa.ahwoo.com/";
 
-    /// <summary>The download page the master server names, when it is a web address, and the page of the game without an answer.</summary>
+    /// <summary>The download page the master server names when it uses HTTPS on ahwoo.com or a subdomain, otherwise the page of the game.</summary>
     public string? GameBuildDownloadUrl =>
         NewerGameBuild is null ? null
         : LatestGameBuild is null ? GameDownloadPage
         : Uri.TryCreate(LatestGameBuild.DownloadUrl, UriKind.Absolute, out var page)
-        && (page.Scheme == Uri.UriSchemeHttps || page.Scheme == Uri.UriSchemeHttp)
+        && page.Scheme == Uri.UriSchemeHttps
+        && (page.Host.Equals("ahwoo.com", StringComparison.OrdinalIgnoreCase) || page.Host.EndsWith(".ahwoo.com", StringComparison.OrdinalIgnoreCase))
             ? page.AbsoluteUri
-            : null;
+            : GameDownloadPage;
 
     public bool ShowGameBuildBanner => NewerGameBuild is { } build
         && build.Revision > (_dismissedGameRevision ?? _appPreferences.DismissedGameRevision ?? -1);

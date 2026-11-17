@@ -309,6 +309,9 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             }
             catch (Win32Exception exception)
             {
+                if (game.KeptBuild is not null && gamePath is not null)
+                    RestoreGameFolder(instance, loader, Path.GetFullPath(loaderDirectory), gamePath, playerGamePath);
+
                 return LaunchResult.Failed(
                     LaunchOutcome.StartFailed,
                     $"The system did not start '{plan.Executable}': {exception.Message}",
@@ -476,25 +479,30 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     /// </summary>
     private void RestoreGameFolder(Instance instance, int processId)
     {
-        if (_pathProvider.GetGameDirectoryPath() is not { } gameDirectory || !Path.IsPathFullyQualified(gameDirectory))
-            return;
-
         lock (_gate)
         {
             if (!_keptBuilds.TryGetValue(instance.InstanceId, out var kept) || kept.ProcessId != processId)
                 return;
 
-            try
-            {
-                if (!SameGamePath(LoaderConfigurator.ReadGamePath(kept.Loader, kept.LoaderDirectory), kept.GamePath) || _isGameRunning())
-                    return;
+            RestoreGameFolder(instance, kept.Loader, kept.LoaderDirectory, kept.GamePath, kept.PlayerGamePath);
+        }
+    }
 
-                LoaderConfigurator.WriteGamePath(kept.Loader, kept.LoaderDirectory, kept.PlayerGamePath ?? _configurator.GamePathValue(gameDirectory));
-            }
-            catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
-            {
-                _log?.Write($"The game of instance {instance.InstanceId} on a kept build ended, and Borea could not write the game folder '{gameDirectory}' back to the configuration of {kept.Loader.Name} in '{kept.LoaderDirectory}'.", exception);
-            }
+    private void RestoreGameFolder(Instance instance, ModMetadata loader, string loaderDirectory, string gamePath, string? playerGamePath)
+    {
+        if (_pathProvider.GetGameDirectoryPath() is not { } gameDirectory || !Path.IsPathFullyQualified(gameDirectory))
+            return;
+
+        try
+        {
+            if (!SameGamePath(LoaderConfigurator.ReadGamePath(loader, loaderDirectory), gamePath) || _isGameRunning())
+                return;
+
+            LoaderConfigurator.WriteGamePath(loader, loaderDirectory, playerGamePath ?? _configurator.GamePathValue(gameDirectory));
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            _log?.Write($"Borea could not write the game folder '{gameDirectory}' back to the configuration of {loader.Name} in '{loaderDirectory}' for instance {instance.InstanceId}.", exception);
         }
     }
 
