@@ -28,6 +28,19 @@ public sealed class OrphanedDependenciesTests
         Assert.Empty(OrphanedDependencies.After(instance, "Stars"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void After_DependencyThatAForeignModStillNames_Stays(bool optional)
+    {
+        var instance = InstanceWith(
+            Mod("Stars", InstallReason.Manual, Required("Menu")),
+            Mod("Menu", InstallReason.Dependency));
+        instance.ReplaceForeignMods([new ForeignMod("Tools", [new LocalModDependency("menu", optional)])]);
+
+        Assert.Empty(OrphanedDependencies.After(instance, "Stars"));
+    }
+
     [Fact]
     public void After_ChoiceOfAnAnyOfEntry_Stays()
     {
