@@ -647,7 +647,7 @@ public sealed class BoreaServices : IDisposable
             Instances = instances,
             GameData = new FileGameDataReader(paths),
             GameSaves = new FileGameSaveStore(paths, records: installedContent, sharedContent: sharedContent),
-            GameSaveBackups = new FileGameSaveBackupStore(paths),
+            GameSaveBackups = new FileGameSaveBackupStore(paths, records: installedContent),
             InstalledContent = installedContent,
             UserContentInstaller = userContentInstaller,
             UserContentInstallation = new UserContentInstallation(installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), checkedModState, userContentInstaller),
