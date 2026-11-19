@@ -97,14 +97,30 @@ public sealed partial class ListingEditor
         _archiveRead = cancel;
         try
         {
+            var progressGate = new Lock();
+            var acceptingProgress = true;
             var progress = new Progress<DownloadProgress>(value =>
             {
-                if (IsReadingArchive && !cancel.IsCancellationRequested)
-                    ArchiveReadText = Localization.FormatListingDownloading(SizeText(value.BytesDownloaded));
+                lock (progressGate)
+                {
+                    if (acceptingProgress && !cancel.IsCancellationRequested)
+                        ArchiveReadText = Localization.FormatListingDownloading(SizeText(value.BytesDownloaded));
+                }
             });
             var installRoot = AuthoredInstallRoot();
             var listingId = ModIds.IsValid(Draft.Id) ? Draft.Id : null;
-            var source = await services.ListingSources.ReadAsync(reference, installRoot, listingId, Empty(ReleasesTagPrefix), progress, cancel.Token);
+            ListingSource source;
+            try
+            {
+                source = await services.ListingSources.ReadAsync(reference, installRoot, listingId, Empty(ReleasesTagPrefix), progress, cancel.Token);
+            }
+            finally
+            {
+                // Let any active callback finish before the result replaces the progress text.
+                lock (progressGate)
+                    acceptingProgress = false;
+            }
+
             cancel.Token.ThrowIfCancellationRequested();
             if (source.Archive is { } archive && source.Host.Latest is { } latest)
             {
