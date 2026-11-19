@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Net;
 using System.Text;
 using Borea.App.ViewModels;
 using Borea.Core.Listings;
+using Borea.Core.Mods;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -190,7 +192,7 @@ public sealed class ListingArchiveFolderTests
     }
 
     [Fact]
-    public async Task AuthoredInstallRootInTheZip_Passes()
+    public async Task AuthoredInstallRootInTheZip_PassesWithLateProgress()
     {
         _zip = Zip("AdvancedFlightComputer-0.7.5");
         using var harness = await ViewModelHarness.CreateAsync(respond: request =>
@@ -202,11 +204,56 @@ public sealed class ListingArchiveFolderTests
         editor.ListedQuery = "advanced";
         await editor.LoadListedCommand.ExecuteAsync(null);
 
-        await editor.ReadArchiveDependenciesCommand.ExecuteAsync(null);
+        var progressContext = new QueuedDownloadProgress();
+        var deliveredReports = 0;
+        // Deliver pending progress as soon as the successful read clears the status text.
+        editor.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(ListingEditor.ArchiveReadText) && editor.ArchiveReadText is null)
+                deliveredReports += progressContext.Deliver();
+        };
 
+        var previousContext = SynchronizationContext.Current;
+        Task read;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(progressContext);
+            read = editor.ReadArchiveDependenciesCommand.ExecuteAsync(null);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+        await read;
+
+        Assert.True(deliveredReports > 0, "The test must deliver progress after the status text is cleared.");
         Assert.Contains("root = \"AdvancedFlightComputer-0.7.5\"", editor.DocumentText, StringComparison.Ordinal);
         Assert.Null(editor.ArchiveReadText);
         Assert.DoesNotContain(editor.Errors, IsArchiveIssue);
+    }
+
+    private sealed class QueuedDownloadProgress : SynchronizationContext
+    {
+        private readonly ConcurrentQueue<(SendOrPostCallback Callback, object? State)> _reports = new();
+
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            if (state is DownloadProgress)
+                _reports.Enqueue((callback, state));
+            else
+                base.Post(callback, state);
+        }
+
+        public int Deliver()
+        {
+            var delivered = 0;
+            while (_reports.TryDequeue(out var report))
+            {
+                report.Callback(report.State);
+                delivered++;
+            }
+            return delivered;
+        }
     }
 
     private static bool IsArchiveIssue(ListingIssue issue) => issue.Location is "id" or "releases" && issue.Severity == ListingIssueSeverity.Error;
