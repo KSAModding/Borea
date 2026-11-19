@@ -118,7 +118,25 @@ public partial class MainViewModel
     [ObservableProperty]
     private ReleaseChannelOption? _versionFilter;
 
-    public string ContentVersionsEmptyText => _contentReleases.Count > 0 ? Localization.ContentNoVersionsInChannel : Localization.ContentNoVersions;
+    /// <summary>
+    /// The text of an empty Versions table. When the Show filter hides releases, it names the narrowest
+    /// status that would show one, so that a listing with only testing releases does not read as empty.
+    /// </summary>
+    public string ContentVersionsEmptyText
+    {
+        get
+        {
+            if (_contentReleases.Count == 0)
+                return Localization.ContentNoVersions;
+
+            var hidden = _contentReleases.Where(release => VersionFilter is not null && !VersionFilter.Channel.Includes(release.Status)).ToList();
+            if (hidden.Count == 0)
+                return Localization.ContentNoVersionsInChannel;
+
+            var narrowest = hidden.MinBy(release => ReleaseChannels.NarrowestFor(release.Status))!;
+            return Localization.FormatContentNoVersionsHidden(ReleaseStatusText(narrowest.Status));
+        }
+    }
 
     /// <summary>True when the index reports a count for any release of the listing. The Versions table shows its Downloads column only then.</summary>
     public bool HasVersionDownloads => _contentReleases.Any(release => release.HasDownloads);

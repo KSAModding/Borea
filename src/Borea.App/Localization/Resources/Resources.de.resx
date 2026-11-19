@@ -5403,6 +5403,9 @@
   <data name="ContentNoVersionsInChannel" xml:space="preserve">
     <value>Keine Veröffentlichungen in diesem Kanal.</value>
   </data>
+  <data name="ContentNoVersionsHiddenFormat" xml:space="preserve">
+    <value>Keine Veröffentlichungen in diesem Kanal, aber dieser Eintrag hat Veröffentlichungen mit dem Status {0}. Ändere den Filter oben, um sie zu sehen.</value>
+  </data>
   <data name="ContentVersionGoneFormat" xml:space="preserve">
     <value>Seit {0} nicht mehr herunterladbar.</value>
   </data>
