@@ -612,7 +612,7 @@
                                         <TextBlock Grid.Column="6" Classes="body-md secondary hide-narrow" Width="104" Text="{Binding Localization.ContentPublishedHeader}" />
                                     </Grid>
                                 </Border>
-                                <TextBlock Classes="body-md muted" Text="{Binding ContentVersionsEmptyText}" Margin="16,12" IsVisible="{Binding !ContentVersions.Count}" />
+                                <TextBlock Classes="body-md muted" Text="{Binding ContentVersionsEmptyText}" Margin="16,12" IsVisible="{Binding !ContentVersions.Count}" TextWrapping="Wrap" />
                                 <ItemsControl ItemsSource="{Binding ContentVersions}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:VersionItem">
