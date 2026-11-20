@@ -5403,6 +5403,9 @@
   <data name="ContentNoVersionsInChannel" xml:space="preserve">
     <value>此通道中没有发布版本。</value>
   </data>
+  <data name="ContentNoVersionsHiddenFormat" xml:space="preserve">
+    <value>此通道暂无版本，但条目有{0}。调整上方“显示”筛选器即可查看。</value>
+  </data>
   <data name="ContentVersionGoneFormat" xml:space="preserve">
     <value>自 {0} 起已无法下载。</value>
   </data>
