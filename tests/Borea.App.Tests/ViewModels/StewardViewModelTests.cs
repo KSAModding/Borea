@@ -260,6 +260,30 @@ public sealed class StewardViewModelTests
     }
 
     [Fact]
+    public async Task OwnOpenPullRequest_TheCheckSaysTheChangeGoesOntoIt_AndTheDialogSaysItWasAdded()
+    {
+        var own = new IndexStatusPullRequest(4, PullOne, "Delist Other", "octocat");
+        _editor.Check = change => new IndexStatusCheck(null, [own, new IndexStatusPullRequest(6, PullOne, "Dispute Third", "bob")], [], IsOwner: false) { Reuses = own };
+        _editor.AddTo = own;
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        await OpenListingAsync(viewModel, "MeasureTools");
+
+        viewModel.DelistContentCommand.Execute(null);
+        var dialog = viewModel.StewardChange!;
+        await dialog.WhenDoneAsync();
+        var openPullRequests = dialog.OpenPullRequestsText;
+        dialog.Reason = "Taken down.";
+        await dialog.OpenPullRequestCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            "Borea adds this change to your open pull request #4 instead of opening a new one, so that the changes do not conflict. "
+            + "Pull request #6 also changes index-status.toml. The one that merges second will have a conflict.",
+            openPullRequests);
+        Assert.Equal("Borea added the change to pull request #4. It waits for a steward to merge it.", dialog.OpenedText);
+    }
+
+    [Fact]
     public async Task Check_WithoutTheOpenPullRequests_SaysThatItCouldNotCheckThem()
     {
         _editor.Check = change => new IndexStatusCheck(null, null, [], IsOwner: false);

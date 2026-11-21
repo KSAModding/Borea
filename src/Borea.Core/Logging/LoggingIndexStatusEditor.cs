@@ -49,7 +49,7 @@ public sealed class LoggingIndexStatusEditor : IIndexStatusEditor
         try
         {
             var pullRequest = await Inner.OpenAsync(change, cancellationToken).ConfigureAwait(false);
-            _log.Write($"Opened index status pull request {pullRequest.Url.AbsoluteUri}: {change.Title}");
+            _log.Write($"{(pullRequest.IsReused ? "Added to" : "Opened")} index status pull request {pullRequest.Url.AbsoluteUri}: {change.Title}");
             return pullRequest;
         }
         catch (Exception exception) when (exception is StewardException or IndexStatusRefusedException)

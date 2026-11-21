@@ -17,7 +17,10 @@ public interface IIndexStatusEditor
     /// <exception cref="StewardException">GitHub could not be read, the account is no steward of content-index, or the file has a form that Borea does not edit.</exception>
     Task<IndexStatusCheck> CheckAsync(IndexStatusChange change, CancellationToken cancellationToken = default);
 
-    /// <summary>Checks the change again, commits it to its steward branch and opens the pull request.</summary>
+    /// <summary>
+    /// Checks the change again and commits it to its steward branch. When the steward has an open status pull request that GitHub can
+    /// merge, the change goes onto its branch and the pull request names every change; else a new pull request opens.
+    /// </summary>
     /// <exception cref="IndexStatusRefusedException">The checks of content-index would refuse the change. Nothing was written.</exception>
     /// <exception cref="StewardException">A request failed.</exception>
     Task<IndexStatusPullRequest> OpenAsync(IndexStatusChange change, CancellationToken cancellationToken = default);
@@ -52,13 +55,21 @@ public interface IIndexStatusEditor
 public sealed record IndexStatusOverview(IReadOnlyList<IndexStatusEntry> Entries, IReadOnlyList<IndexStatusPullRequest> OpenPullRequests);
 
 /// <param name="Conflicts">Whether GitHub cannot merge it into the base branch, or null while GitHub has not worked it out.</param>
-public sealed record IndexStatusPullRequest(int Number, Uri Url, string Title, string? Author, bool? Conflicts = null);
+public sealed record IndexStatusPullRequest(int Number, Uri Url, string Title, string? Author, bool? Conflicts = null)
+{
+    /// <summary>The change went onto this pull request, which was open already, instead of a new one.</summary>
+    public bool IsReused { get; init; }
+}
 
 /// <param name="Refusal">Why the checks of content-index would refuse the change, or null.</param>
 /// <param name="OpenPullRequests">Open pull requests that change the file too, so the later one to merge conflicts. Null when they could not be read.</param>
 /// <param name="Owners">The logins that own the listing or pack, as the ownership proof names them, without the signed-in steward.</param>
 /// <param name="IsOwner">The signed-in steward owns the listing or pack, and POLICY.md asks a party to leave the case to another steward.</param>
-public sealed record IndexStatusCheck(IndexStatusRefusal? Refusal, IReadOnlyList<IndexStatusPullRequest>? OpenPullRequests, IReadOnlyList<string> Owners, bool IsOwner);
+public sealed record IndexStatusCheck(IndexStatusRefusal? Refusal, IReadOnlyList<IndexStatusPullRequest>? OpenPullRequests, IReadOnlyList<string> Owners, bool IsOwner)
+{
+    /// <summary>The open pull request of the steward that the change goes onto, so it does not conflict with it, or null when a new one opens.</summary>
+    public IndexStatusPullRequest? Reuses { get; init; }
+}
 
 public enum StewardFailure
 {

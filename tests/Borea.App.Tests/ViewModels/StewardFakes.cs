@@ -32,6 +32,9 @@ internal sealed class FakeIndexStatusEditor : IIndexStatusEditor
 
     public TaskCompletionSource? HoldOpen { get; set; }
 
+    /// <summary>When set, an opened change goes onto this pull request instead of a new one.</summary>
+    public IndexStatusPullRequest? AddTo { get; set; }
+
     /// <summary>The ids that the signed-in steward owns.</summary>
     public List<string> Owned { get; } = [];
 
@@ -73,6 +76,9 @@ internal sealed class FakeIndexStatusEditor : IIndexStatusEditor
             throw new IndexStatusRefusedException(IndexStatusRefusal.InvalidReason, change.Id, change.Version);
 
         Opened.Add(change);
+        if (AddTo is { } own)
+            return own with { IsReused = true };
+
         var pull = new IndexStatusPullRequest(Opened.Count, new Uri($"https://github.com/KSAModding/content-index/pull/{Opened.Count}"), change.Title, "octocat", Conflicts: false);
         Pulls.Add(pull);
         return pull;
