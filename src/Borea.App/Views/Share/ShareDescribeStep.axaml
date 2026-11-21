@@ -173,6 +173,28 @@
                         <TextBlock Classes="action-md" Text="{Binding Localization.SharePictureAdd}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
+                <!-- the newest screenshots of the instance, one click each; a share without them builds no tiles -->
+                <StackPanel Spacing="6" IsVisible="{Binding ListingEditor.ShownShareScreenshots, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ShareScreenshotsHeading}" />
+                    <ItemsControl ItemsSource="{Binding ListingEditor.ShownShareScreenshots}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" Columns="6" ColumnSpacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ShareScreenshotChoice">
+                                <Button Classes="plain screenshot" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding AddCommand}" AutomationProperties.Name="{Binding TakenText}">
+                                    <Border Classes="thumbnail" views:RoundedClip.IsEnabled="True">
+                                        <views:AspectRatioPanel>
+                                            <views:ScreenshotThumbnail Screenshot="{Binding Screenshot}" />
+                                        </views:AspectRatioPanel>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
         </Border>
 

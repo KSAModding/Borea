@@ -4050,6 +4050,9 @@
   <data name="SharePictureAdd" xml:space="preserve">
     <value>Add a picture</value>
   </data>
+  <data name="ShareScreenshotsHeading" xml:space="preserve">
+    <value>Screenshots of this instance</value>
+  </data>
   <data name="SharePictureCover" xml:space="preserve">
     <value>Cover</value>
   </data>

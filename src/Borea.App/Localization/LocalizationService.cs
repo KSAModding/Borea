@@ -2447,6 +2447,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SharePictureAdd => Resources.SharePictureAdd;
 
+    public string ShareScreenshotsHeading => Resources.ShareScreenshotsHeading;
+
     public string SharePictureCover => Resources.SharePictureCover;
 
     public string SharePictureUnreadable => Resources.SharePictureUnreadable;

@@ -1,5 +1,6 @@
 using Borea.App.ViewModels;
 using Borea.Core.Instances;
+using Borea.Core.Sharing;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -107,5 +108,31 @@ public sealed class ScreenshotsViewModelTests
         await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
 
         Assert.Null(viewModel.InstanceScreenshots);
+    }
+
+    [Fact]
+    public async Task Share_OffersTheScreenshotsOfTheInstance_AndAddsOneAboveTheLimitAsASmallerJpeg()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instanceId = await GameSaveShareTests.CreateInstanceAsync(harness, "Example Rover");
+        var folder = harness.Services.Paths.GetInstanceScreenshotsFolder(instanceId);
+        var small = WriteScreenshot(folder, new DateTime(2026, 11, 1, 10, 0, 0));
+        var large = WriteScreenshot(folder, new DateTime(2026, 11, 2, 10, 0, 0), SharePictureFitTests.Noise(2000, 1600, opaque: true));
+        Assert.InRange(new FileInfo(Path.Combine(folder, large)).Length, ShareImageLimits.MaxBytes + 1, SharePictureFit.MaxSourceBytes);
+        await GameSaveShareTests.OpenAsync(harness);
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+        var editor = harness.ViewModel.ListingEditor;
+        await editor.ShareScreenshotsLoad;
+
+        var choices = Assert.IsAssignableFrom<IReadOnlyList<ShareScreenshotChoice>>(editor.ShownShareScreenshots);
+
+        Assert.Equal([large, small], choices.Select(choice => Path.GetFileName(choice.Screenshot.Path)));
+
+        await choices[1].AddCommand.ExecuteAsync(null);
+        await choices[0].AddCommand.ExecuteAsync(null);
+
+        Assert.Null(editor.SharePictureError);
+        Assert.Equal([small, Path.ChangeExtension(large, ".jpg")], editor.SharePictures.Select(row => row.Name));
+        Assert.InRange(editor.SharePictures[1].Bytes.Length, 1, ShareImageLimits.MaxBytes);
     }
 }

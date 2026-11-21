@@ -85,6 +85,7 @@ public sealed partial class ListingEditor
         }
 
         LookUpShareListing(share);
+        LoadShareScreenshots(share);
         RefreshShare();
         StartShareHosts();
         Refresh();
@@ -108,6 +109,7 @@ public sealed partial class ListingEditor
         IsShareMoreOptionsOpen = false;
         ForgetShareHostRun();
         ForgetSharePictures();
+        ForgetShareScreenshots();
         RefreshShare();
     }
 
