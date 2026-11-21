@@ -1058,6 +1058,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardOpenPullRequestsUnknown => Resources.StewardOpenPullRequestsUnknown;
 
+    public string FormatStewardReusesPullRequest(string number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReusesPullRequestFormat, number);
+
     public string StewardOwnerWarning => Resources.StewardOwnerWarning;
 
     public string StewardOwnerOwnRequest => Resources.StewardOwnerOwnRequest;
@@ -1069,6 +1072,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatStewardOpened(string number)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardOpenedFormat, number);
+
+    public string FormatStewardAddedToPullRequest(string number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardAddedToPullRequestFormat, number);
 
     public string StewardRefusedInvalidReason => Resources.StewardRefusedInvalidReason;
 

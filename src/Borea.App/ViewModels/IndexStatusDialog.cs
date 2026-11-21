@@ -91,13 +91,28 @@ public sealed partial class IndexStatusDialog : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(OpenPullRequestCommand))]
     private IndexStatusPullRequest? _opened;
 
-    public string? OpenPullRequestsText => Check switch
+    /// <summary>
+    /// Warns about the open pull requests that change the file too and conflict with a new one. The steward's own pull request that
+    /// the change goes onto conflicts with nothing, so the text names it apart.
+    /// </summary>
+    public string? OpenPullRequestsText
     {
-        null => null,
-        { OpenPullRequests: null } => _owner.Localization.StewardOpenPullRequestsUnknown,
-        { OpenPullRequests.Count: 0 } => null,
-        { OpenPullRequests: { } open } => _owner.Localization.FormatStewardOpenPullRequests(string.Join(", ", open.Select(pull => "#" + pull.Number.ToString(CultureInfo.InvariantCulture)))),
-    };
+        get
+        {
+            if (Check is not { } check)
+                return null;
+            if (check.OpenPullRequests is not { } open)
+                return _owner.Localization.StewardOpenPullRequestsUnknown;
+
+            var others = open.Where(pull => pull.Number != check.Reuses?.Number).ToList();
+            var conflicts = others.Count == 0 ? null : _owner.Localization.FormatStewardOpenPullRequests(string.Join(", ", others.Select(pull => "#" + pull.Number.ToString(CultureInfo.InvariantCulture))));
+            if (check.Reuses is not { } own)
+                return conflicts;
+
+            var reuse = _owner.Localization.FormatStewardReusesPullRequest(own.Number.ToString(CultureInfo.InvariantCulture));
+            return conflicts is null ? reuse : reuse + " " + conflicts;
+        }
+    }
 
     /// <summary>
     /// A steward who is a party to a takedown or a dispute leaves it to another steward, and a report against their own content
@@ -133,7 +148,12 @@ public sealed partial class IndexStatusDialog : ObservableObject
 
     public bool IsOpened => Opened is not null;
 
-    public string? OpenedText => Opened is { } pull ? _owner.Localization.FormatStewardOpened(pull.Number.ToString(CultureInfo.InvariantCulture)) : null;
+    public string? OpenedText => Opened switch
+    {
+        null => null,
+        { IsReused: true } pull => _owner.Localization.FormatStewardAddedToPullRequest(pull.Number.ToString(CultureInfo.InvariantCulture)),
+        { } pull => _owner.Localization.FormatStewardOpened(pull.Number.ToString(CultureInfo.InvariantCulture)),
+    };
 
     internal Task WhenDoneAsync() => _run;
 

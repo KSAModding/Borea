@@ -65,17 +65,40 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         }
 
         IReadOnlyList<IndexStatusPullRequest>? open;
+        IndexStatusPullRequest? reuses = null;
         try
         {
-            open = await OpenPullRequestsAsync(withConflicts: false, cancellationToken).ConfigureAwait(false);
+            var pulls = await StatusPullsAsync(cancellationToken).ConfigureAwait(false);
+            open = pulls.Select(status => PullRequestOf(status.Pull, status.Pull.User?.Login)).ToList();
+            if (await OwnPullAsync(pulls, login, cancellationToken).ConfigureAwait(false) is { } own)
+            {
+                reuses = PullRequestOf(own.Pull, login);
+                if (refusal is null)
+                {
+                    try
+                    {
+                        (await ReadStatusAsync(own.Head, cancellationToken).ConfigureAwait(false)).Document.Check(change, commit.Contents);
+                    }
+                    catch (IndexStatusRefusedException exception) when (exception.Refusal == IndexStatusRefusal.NotInFile)
+                    {
+                        // The branch does not hold the state to lift yet, so the lift goes to a pull request of its own.
+                        reuses = null;
+                    }
+                    catch (IndexStatusRefusedException exception)
+                    {
+                        refusal = exception.Refusal;
+                    }
+                }
+            }
         }
         catch (GitHubApiException exception) when (exception.Failure != GitHubApiFailure.SignedOut)
         {
             open = null;
+            reuses = null;
         }
 
         var (owners, isOwner) = await OwnersAsync(change.Id, commit, login, cancellationToken).ConfigureAwait(false);
-        return new IndexStatusCheck(refusal, open, owners, isOwner);
+        return new IndexStatusCheck(refusal, open, owners, isOwner) { Reuses = reuses };
     });
 
     public Task<IndexStatusPullRequest> OpenAsync(IndexStatusChange change, CancellationToken cancellationToken = default) => StewardActions.GuardAsync(async () =>
@@ -87,6 +110,18 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         var id = commit.Contents.ListingId(change.Id) ?? commit.Contents.PackId(change.Id) ?? change.Id;
         change = change with { Id = id, Version = change.Version is { } version ? commit.Contents.PackVersion(id, version) ?? version : null };
         var (owners, _) = await OwnersAsync(change.Id, commit, login, cancellationToken).ConfigureAwait(false);
+        if (await OwnPullAsync(await StatusPullsAsync(cancellationToken).ConfigureAwait(false), login, cancellationToken).ConfigureAwait(false) is { } own)
+        {
+            try
+            {
+                return await AddToPullRequestAsync(own, commit, change, change.Body(owners), login, cancellationToken).ConfigureAwait(false);
+            }
+            catch (IndexStatusRefusedException exception) when (exception.Refusal == IndexStatusRefusal.NotInFile)
+            {
+                // The branch does not hold the state to lift yet, and nothing was written, so the lift opens a pull request of its own.
+            }
+        }
+
         return await OpenPullRequestAsync(commit, changed, change.Branch, change.Title, change.Body(owners), login, cancellationToken).ConfigureAwait(false);
     });
 
@@ -184,20 +219,24 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         if (tree.Truncated)
             throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse, "the file tree of content-index is too large to read at once");
 
-        var file = await _api.ReadFileAsync(Repository, IndexStatusDocument.Path, head, cancellationToken).ConfigureAwait(false)
+        var (fileSha, document) = await ReadStatusAsync(head, cancellationToken).ConfigureAwait(false);
+        var contents = IndexContents.FromPaths(tree.Tree.Where(item => item.Type == "blob").Select(item => item.Path));
+        return new BaseCommit(head, fileSha, document, contents);
+    }
+
+    /// <summary>index-status.toml at the commit <paramref name="sha"/>, with its blob sha.</summary>
+    private async Task<(string FileSha, IndexStatusDocument Document)> ReadStatusAsync(string sha, CancellationToken cancellationToken)
+    {
+        var file = await _api.ReadFileAsync(Repository, IndexStatusDocument.Path, sha, cancellationToken).ConfigureAwait(false)
             ?? throw new GitHubApiException(GitHubApiFailure.NotFound, IndexStatusDocument.Path);
-        IndexStatusDocument document;
         try
         {
-            document = IndexStatusDocument.Parse(file.Text ?? throw new FormatException($"{IndexStatusDocument.Path} is no UTF-8 text."));
+            return (file.Sha, IndexStatusDocument.Parse(file.Text ?? throw new FormatException($"{IndexStatusDocument.Path} is no UTF-8 text.")));
         }
         catch (FormatException exception)
         {
             throw new StewardException(StewardFailure.UnreadableFile, exception.Message, innerException: exception);
         }
-
-        var contents = IndexContents.FromPaths(tree.Tree.Where(item => item.Type == "blob").Select(item => item.Path));
-        return new BaseCommit(head, file.Sha, document, contents);
     }
 
     /// <summary>The open pull requests to the base branch that change the file, which conflict with each other once one of them merges.</summary>
@@ -205,21 +244,8 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
     private async Task<IReadOnlyList<IndexStatusPullRequest>> OpenPullRequestsAsync(bool withConflicts, CancellationToken cancellationToken)
     {
         var found = new List<IndexStatusPullRequest>();
-        await foreach (var pull in _api.GetPagesAsync<PullDto>($"{Api}/repos/{Repository}/pulls?state=open&base={Uri.EscapeDataString(_base)}", cancellationToken).ConfigureAwait(false))
+        foreach (var (pull, _) in await StatusPullsAsync(cancellationToken).ConfigureAwait(false))
         {
-            var changesFile = false;
-            await foreach (var file in _api.GetPagesAsync<PullFileDto>($"{Api}/repos/{Repository}/pulls/{pull.Number.ToString(CultureInfo.InvariantCulture)}/files", cancellationToken).ConfigureAwait(false))
-            {
-                if (file.Filename == IndexStatusDocument.Path || file.PreviousFilename == IndexStatusDocument.Path)
-                {
-                    changesFile = true;
-                    break;
-                }
-            }
-
-            if (!changesFile)
-                continue;
-
             var listed = PullRequestOf(pull, pull.User?.Login);
             if (withConflicts)
             {
@@ -230,7 +256,51 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
             found.Add(listed);
         }
 
-        return found.OrderBy(pull => pull.Number).ToList();
+        return found;
+    }
+
+    /// <summary>The open pull requests to the base branch that change the file, oldest first, each with whether it changes nothing else.</summary>
+    private async Task<IReadOnlyList<(PullDto Pull, bool OnlyFile)>> StatusPullsAsync(CancellationToken cancellationToken)
+    {
+        var found = new List<(PullDto Pull, bool OnlyFile)>();
+        await foreach (var pull in _api.GetPagesAsync<PullDto>($"{Api}/repos/{Repository}/pulls?state=open&base={Uri.EscapeDataString(_base)}", cancellationToken).ConfigureAwait(false))
+        {
+            var changesFile = false;
+            var onlyFile = true;
+            await foreach (var file in _api.GetPagesAsync<PullFileDto>($"{Api}/repos/{Repository}/pulls/{pull.Number.ToString(CultureInfo.InvariantCulture)}/files", cancellationToken).ConfigureAwait(false))
+            {
+                var isFile = file.Filename == IndexStatusDocument.Path && file.PreviousFilename is null or IndexStatusDocument.Path;
+                changesFile |= isFile || file.PreviousFilename == IndexStatusDocument.Path;
+                onlyFile &= isFile;
+            }
+
+            if (changesFile)
+                found.Add((pull, onlyFile));
+        }
+
+        return found.OrderBy(status => status.Pull.Number).ToList();
+    }
+
+    /// <summary>
+    /// The oldest of <paramref name="pulls"/> that a new change of the steward goes onto, because a second pull request would conflict with it:
+    /// one that the steward opened from a steward branch of content-index, that changes only the file, and that GitHub can merge.
+    /// A pull request whose mergeable state GitHub has not worked out yet does not count.
+    /// </summary>
+    private async Task<OwnPull?> OwnPullAsync(IReadOnlyList<(PullDto Pull, bool OnlyFile)> pulls, string login, CancellationToken cancellationToken)
+    {
+        foreach (var (pull, onlyFile) in pulls)
+        {
+            if (!onlyFile || !string.Equals(pull.User?.Login, login, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var single = await _api.GetAsync<PullDto>($"{Api}/repos/{Repository}/pulls/{pull.Number.ToString(CultureInfo.InvariantCulture)}", cancellationToken).ConfigureAwait(false);
+            if (single is { Mergeable: true, Head: { Ref: { } branch, Sha: { Length: > 0 } head, Repo.FullName: { } repository } }
+                && string.Equals(repository, Repository, StringComparison.OrdinalIgnoreCase)
+                && branch.StartsWith(IndexStatusChange.BranchPrefix, StringComparison.Ordinal))
+                return new OwnPull(single, branch, head);
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -310,6 +380,40 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         var reply = await _api.SendAsync(HttpMethod.Post, $"{Api}/repos/{Repository}/pulls", request, cancellationToken).ConfigureAwait(false);
         var pull = GitHubApi.Parse<PullDto>(GitHubApi.Ensure(reply));
         return PullRequestOf(pull, login);
+    }
+
+    /// <summary>
+    /// Applies the change to the file at the head of the open pull request with the same checks, commits it to that branch on top of
+    /// its head, and gives the pull request a title that names every change since the branch left the base branch. The body keeps what
+    /// it says, with the reason and owners of each earlier change, and adds <paramref name="body"/>.
+    /// </summary>
+    /// <exception cref="IndexStatusRefusedException">The checks of content-index would refuse the file on that branch, for example because it has the entry already. Nothing was written.</exception>
+    private async Task<IndexStatusPullRequest> AddToPullRequestAsync(OwnPull own, BaseCommit commit, IndexStatusChange change, string body, string login, CancellationToken cancellationToken)
+    {
+        var (fileSha, document) = await ReadStatusAsync(own.Head, cancellationToken).ConfigureAwait(false);
+        var changed = document.Apply(change, commit.Contents, _time.GetUtcNow());
+        var compare = await _api.GetAsync<CompareDto>($"{Api}/repos/{Repository}/compare/{_base}...{own.Head}", cancellationToken).ConfigureAwait(false);
+        var mergeBase = compare.MergeBaseCommit?.Sha is { Length: > 0 } sha ? sha : throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse);
+        var (_, before) = await ReadStatusAsync(mergeBase, cancellationToken).ConfigureAwait(false);
+
+        // The blob sha of the head makes GitHub refuse the commit when the branch moved since it was read.
+        var put = new Dictionary<string, object>
+        {
+            ["message"] = change.Title,
+            ["content"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(changed.Text)),
+            ["branch"] = own.Branch,
+            ["sha"] = fileSha,
+        };
+        GitHubApi.Ensure(await _api.SendAsync(HttpMethod.Put, $"{Api}/repos/{Repository}/contents/{IndexStatusDocument.Path}", put, cancellationToken).ConfigureAwait(false));
+
+        var request = new Dictionary<string, object>
+        {
+            ["title"] = changed.PullRequestTitle(before),
+            ["body"] = string.IsNullOrWhiteSpace(own.Pull.Body) ? body : own.Pull.Body.TrimEnd() + "\n\n" + body,
+        };
+        var number = own.Pull.Number.ToString(CultureInfo.InvariantCulture);
+        var reply = await _api.SendAsync(HttpMethod.Patch, $"{Api}/repos/{Repository}/pulls/{number}", request, cancellationToken).ConfigureAwait(false);
+        return PullRequestOf(GitHubApi.Parse<PullDto>(GitHubApi.Ensure(reply)), login) with { IsReused = true };
     }
 
     /// <summary>
@@ -400,6 +504,10 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
     /// <param name="FileSha">The blob of index-status.toml, which the commit replaces.</param>
     private sealed record BaseCommit(string Head, string FileSha, IndexStatusDocument Document, IndexContents Contents);
 
+    /// <param name="Branch">The steward branch of content-index that the pull request merges.</param>
+    /// <param name="Head">The commit at the head of that branch, which the next commit goes on top of.</param>
+    private sealed record OwnPull(PullDto Pull, string Branch, string Head);
+
     private sealed class RefDto
     {
         public ShaDto? Object { get; set; }
@@ -432,9 +540,32 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
 
         public string HtmlUrl { get; set; } = string.Empty;
 
+        public string? Body { get; set; }
+
         public bool? Mergeable { get; set; }
 
         public UserDto? User { get; set; }
+
+        public HeadDto? Head { get; set; }
+    }
+
+    private sealed class HeadDto
+    {
+        public string? Ref { get; set; }
+
+        public string? Sha { get; set; }
+
+        public RepositoryDto? Repo { get; set; }
+    }
+
+    private sealed class RepositoryDto
+    {
+        public string? FullName { get; set; }
+    }
+
+    private sealed class CompareDto
+    {
+        public ShaDto? MergeBaseCommit { get; set; }
     }
 
     private sealed class PullFileDto

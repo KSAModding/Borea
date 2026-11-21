@@ -1002,6 +1002,9 @@
   <data name="StewardOpenPullRequestsUnknown" xml:space="preserve">
     <value>Borea konnte nicht prüfen, ob ein anderer offener Pull Request index-status.toml ändert.</value>
   </data>
+  <data name="StewardReusesPullRequestFormat" xml:space="preserve">
+    <value>Borea fügt diese Änderung deinem offenen Pull Request #{0} hinzu, statt einen neuen zu öffnen, damit die Änderungen nicht in Konflikt geraten.</value>
+  </data>
   <data name="StewardOwnerWarning" xml:space="preserve">
     <value>Das gehört dir. POLICY.md bittet einen Steward, der an einem Takedown oder einem Streitfall beteiligt ist, ihn einem anderen Steward zu überlassen.</value>
   </data>
@@ -1016,6 +1019,9 @@
   </data>
   <data name="StewardOpenedFormat" xml:space="preserve">
     <value>Pull Request #{0} ist offen. Er wartet darauf, dass ein Steward ihn mergt.</value>
+  </data>
+  <data name="StewardAddedToPullRequestFormat" xml:space="preserve">
+    <value>Borea hat die Änderung zu Pull Request #{0} hinzugefügt. Er wartet darauf, dass ein Steward ihn mergt.</value>
   </data>
   <data name="StewardRefusedInvalidReason" xml:space="preserve">
     <value>Schreib den Grund als einen Satz in einer Zeile.</value>

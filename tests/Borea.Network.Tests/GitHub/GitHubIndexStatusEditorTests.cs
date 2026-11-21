@@ -339,12 +339,13 @@ public sealed partial class GitHubIndexStatusEditorTests
     }
 
     [Fact]
-    public async Task TwoStatusPullRequests_TheSecondIsWarnedAndConflictsOnceTheFirstMerges()
+    public async Task StatusPullRequestOfAnotherSteward_TheNewOneIsWarnedAndConflictsOnceTheFirstMerges()
     {
         var editor = await SignedInAsync();
         _index.Pulls.Add(new FakePull(90, "List Other", "listing-other", "main", "alice", ["listings/Other.toml"]));
+        var first = await editor.OpenAsync(IndexStatusChange.Delist("MyMod", "Taken down.")) with { Author = "carol" };
+        _index.Pulls[^1] = _index.Pulls[^1] with { Author = "carol" };
 
-        var first = await editor.OpenAsync(IndexStatusChange.Delist("MyMod", "Taken down."));
         var check = await editor.CheckAsync(IndexStatusChange.Retract("my-pack", "1.0.0", "Broken."));
         var second = await editor.OpenAsync(IndexStatusChange.Retract("my-pack", "1.0.0", "Broken."));
         var beforeMerge = await editor.ReadAsync();
@@ -352,9 +353,69 @@ public sealed partial class GitHubIndexStatusEditorTests
         var afterMerge = await editor.ReadAsync();
 
         Assert.Equal([first], check.OpenPullRequests);
+        Assert.Null(check.Reuses);
+        Assert.Equal((2, false), (second.Number, second.IsReused));
         Assert.Equal([first with { Conflicts = false }, second with { Conflicts = false }], beforeMerge.OpenPullRequests);
         Assert.Equal([second with { Conflicts = true }], afterMerge.OpenPullRequests);
         Assert.Equal("MyMod", afterMerge.Entries.Single().Id);
+    }
+
+    [Fact]
+    public async Task OpenAsync_SecondChangeOfTheSameSteward_GoesOntoItsOpenPullRequest()
+    {
+        var editor = await SignedInAsync();
+
+        var first = await editor.OpenAsync(IndexStatusChange.Delist("MyMod", "Taken down."));
+        var check = await editor.CheckAsync(IndexStatusChange.Delist("mine", string.Empty));
+        var second = await editor.OpenAsync(IndexStatusChange.Delist("mine", "The author asked for it."));
+
+        var expected = IndexStatusDocument.Parse(Current)
+            .Apply(IndexStatusChange.Delist("MyMod", "Taken down."), Contents(), Now)
+            .Apply(IndexStatusChange.Delist("Mine", "The author asked for it."), Contents(), Now).Text;
+        var pull = Assert.Single(_index.Pulls);
+        Assert.Equal([first], check.OpenPullRequests);
+        Assert.Equal(first, check.Reuses);
+        Assert.Equal(first with { Title = "Delist MyMod and Mine", IsReused = true }, second);
+        Assert.Equal(expected, _index.Branches["steward/delisted-mymod"].Files["index-status.toml"]);
+        Assert.Equal(["steward/delisted-mymod", "steward/delisted-mymod"], _index.Puts.Select(put => (string)put["branch"]!));
+        Assert.Equal("Delist MyMod and Mine", pull.Title);
+        Assert.Equal(
+            "Sets `delisted` on `MyMod` in `index-status.toml`.\n\nReason: Taken down.\n\n@alice owns `MyMod`.\n\n"
+            + "Sets `delisted` on `Mine` in `index-status.toml`.\n\nReason: The author asked for it.",
+            pull.Body);
+        Assert.Equal(Current, _index.Main["index-status.toml"]);
+    }
+
+    [Fact]
+    public async Task OpenAsync_ChangeThatTheOpenPullRequestOfTheStewardHasAlready_IsRefusedAndWritesNothing()
+    {
+        var editor = await SignedInAsync();
+        await editor.OpenAsync(IndexStatusChange.Delist("MyMod", "Taken down."));
+
+        var check = await editor.CheckAsync(IndexStatusChange.Dispute("MyMod", string.Empty));
+        var refused = await Assert.ThrowsAsync<IndexStatusRefusedException>(() => editor.OpenAsync(IndexStatusChange.Dispute("MyMod", "Claimed twice.")));
+
+        Assert.Equal((IndexStatusRefusal.Duplicate, IndexStatusRefusal.Duplicate), (check.Refusal, refused.Refusal));
+        Assert.Single(_index.Puts);
+        Assert.Equal("Delist MyMod", Assert.Single(_index.Pulls).Title);
+    }
+
+    [Fact]
+    public async Task OpenAsync_LiftOfAStateThatTheOpenBranchOfTheStewardDoesNotHold_OpensAPullRequestOfItsOwn()
+    {
+        var editor = await SignedInAsync();
+        await editor.OpenAsync(IndexStatusChange.Delist("mine", "The author asked for it."));
+        _index.Main["index-status.toml"] = IndexStatusDocument.Parse(Current).Apply(IndexStatusChange.Delist("MyMod", "Taken down."), Contents(), Now).Text;
+        var entry = (await editor.ReadAsync()).Entries.Single();
+
+        var check = await editor.CheckAsync(IndexStatusChange.Lift(entry, "The takedown did not hold."));
+        var lift = await editor.OpenAsync(IndexStatusChange.Lift(entry, "The takedown did not hold."));
+
+        Assert.Null(check.Refusal);
+        Assert.Null(check.Reuses);
+        Assert.Equal((2, false), (lift.Number, lift.IsReused));
+        Assert.Equal(Current, _index.Branches["steward/lift-mymod"].Files["index-status.toml"]);
+        Assert.Equal("Delist Mine", _index.Pulls[0].Title);
     }
 
     [Fact]
@@ -472,9 +533,14 @@ public sealed partial class GitHubIndexStatusEditorTests
 
         public List<JsonObject> Puts { get; } = [];
 
+        /// <summary>The files of main at each commit that a branch was cut from.</summary>
+        public Dictionary<string, Dictionary<string, string>> Snapshots { get; } = new(StringComparer.Ordinal);
+
         public string MainSha => Sha(string.Join('\0', Main.OrderBy(file => file.Key, StringComparer.Ordinal).Select(file => file.Key + "=" + file.Value)));
 
         public string BlobSha(string text) => Sha("blob " + text);
+
+        public static string BranchSha(FakeBranch branch) => Sha("branch\0" + string.Join('\0', branch.Files.OrderBy(file => file.Key, StringComparer.Ordinal).Select(file => file.Key + "=" + file.Value)));
 
         /// <summary>Merges the pull request into main, after which every other open one that changes one of its files conflicts.</summary>
         public void Merge(int number)
@@ -492,12 +558,18 @@ public sealed partial class GitHubIndexStatusEditorTests
                 return Json(JsonSerializer.Serialize(new { @ref = "refs/heads/main", @object = new { sha = MainSha } }));
             if (method == "GET" && path.StartsWith("git/ref/heads/", StringComparison.Ordinal))
                 return Branches.ContainsKey(path["git/ref/heads/".Length..]) ? Json("{}") : Json("""{"message":"Not Found"}""", HttpStatusCode.NotFound);
+            if (method == "GET" && path.StartsWith("compare/main...", StringComparison.Ordinal))
+            {
+                var branch = Branches.Values.Single(item => BranchSha(item) == path["compare/main...".Length..]);
+                return Json(JsonSerializer.Serialize(new { merge_base_commit = new { sha = branch.Base } }));
+            }
+
             if (method == "GET" && path == $"git/trees/{MainSha}?recursive=1")
                 return Json(JsonSerializer.Serialize(new { truncated = false, tree = Main.Keys.Select(file => new { path = file, type = "blob" }) }));
-            if (method == "GET" && ContentPath().Match(path) is { Success: true } content && content.Groups["ref"].Value == MainSha)
+            if (method == "GET" && ContentPath().Match(path) is { Success: true } content && FilesAt(content.Groups["ref"].Value) is { } files)
             {
                 var file = Uri.UnescapeDataString(content.Groups["path"].Value);
-                return Main.TryGetValue(file, out var text)
+                return files.TryGetValue(file, out var text)
                     ? Json(JsonSerializer.Serialize(new { sha = BlobSha(text), encoding = "base64", content = Convert.ToBase64String(Encoding.UTF8.GetBytes(text)) }))
                     : Json("""{"message":"Not Found"}""", HttpStatusCode.NotFound);
             }
@@ -507,6 +579,7 @@ public sealed partial class GitHubIndexStatusEditorTests
                 var created = JsonNode.Parse(body!)!;
                 var name = ((string)created["ref"]!)["refs/heads/".Length..];
                 Assert.Equal(MainSha, (string?)created["sha"]);
+                Snapshots[MainSha] = new Dictionary<string, string>(Main, StringComparer.Ordinal);
                 Branches.Add(name, new FakeBranch(MainSha, new Dictionary<string, string>(Main, StringComparer.Ordinal)));
                 return Json("{}", HttpStatusCode.Created);
             }
@@ -532,6 +605,14 @@ public sealed partial class GitHubIndexStatusEditorTests
                 return Json(Pull(pull), HttpStatusCode.Created);
             }
 
+            if (method == "PATCH" && PullPath().Match(path) is { Success: true } edited)
+            {
+                var request = JsonNode.Parse(body!)!;
+                var index = Pulls.FindIndex(item => item.Number == int.Parse(edited.Groups["number"].Value, System.Globalization.CultureInfo.InvariantCulture));
+                Pulls[index] = Pulls[index] with { Title = (string)request["title"]!, Body = (string)request["body"]! };
+                return Json(Pull(Pulls[index]));
+            }
+
             if (method == "GET" && path == "pulls?state=open&base=main&per_page=100&page=1")
                 return Json("[" + string.Join(',', Pulls.Where(item => item.Open).Select(item => Pull(item, withMergeable: false))) + "]");
             if (method == "GET" && PullPath().Match(path) is { Success: true } single)
@@ -545,13 +626,25 @@ public sealed partial class GitHubIndexStatusEditorTests
             return Json("""{"message":"Not Found"}""", HttpStatusCode.NotFound);
         }
 
-        private static string Pull(FakePull pull, bool withMergeable = true) => JsonSerializer.Serialize(new Dictionary<string, object?>
+        private Dictionary<string, string>? FilesAt(string sha) =>
+            sha == MainSha ? Main
+            : Branches.Values.FirstOrDefault(branch => BranchSha(branch) == sha)?.Files
+            ?? Snapshots.GetValueOrDefault(sha);
+
+        private string Pull(FakePull pull, bool withMergeable = true) => JsonSerializer.Serialize(new Dictionary<string, object?>
         {
             ["number"] = pull.Number,
             ["title"] = pull.Title,
+            ["body"] = pull.Body,
             ["html_url"] = $"https://github.com/KSAModding/content-index/pull/{pull.Number}",
             ["user"] = new { login = pull.Author, id = 1 },
             ["mergeable"] = withMergeable ? pull.Mergeable : null,
+            ["head"] = new
+            {
+                @ref = pull.Head,
+                sha = Branches.TryGetValue(pull.Head, out var branch) ? BranchSha(branch) : MainSha,
+                repo = new { full_name = "KSAModding/content-index" },
+            },
         });
 
         private static string Sha(string text) => Convert.ToHexStringLower(System.Security.Cryptography.SHA1.HashData(Encoding.UTF8.GetBytes(text)));

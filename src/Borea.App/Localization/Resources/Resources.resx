@@ -1002,6 +1002,9 @@
   <data name="StewardOpenPullRequestsUnknown" xml:space="preserve">
     <value>Borea could not check whether another open pull request changes index-status.toml.</value>
   </data>
+  <data name="StewardReusesPullRequestFormat" xml:space="preserve">
+    <value>Borea adds this change to your open pull request #{0} instead of opening a new one, so that the changes do not conflict.</value>
+  </data>
   <data name="StewardOwnerWarning" xml:space="preserve">
     <value>You own this. POLICY.md asks a steward who is a party to a takedown or a dispute to leave it to another steward.</value>
   </data>
@@ -1016,6 +1019,9 @@
   </data>
   <data name="StewardOpenedFormat" xml:space="preserve">
     <value>Pull request #{0} is open. It waits for a steward to merge it.</value>
+  </data>
+  <data name="StewardAddedToPullRequestFormat" xml:space="preserve">
+    <value>Borea added the change to pull request #{0}. It waits for a steward to merge it.</value>
   </data>
   <data name="StewardRefusedInvalidReason" xml:space="preserve">
     <value>Write the reason as one sentence on one line.</value>

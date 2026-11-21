@@ -312,6 +312,19 @@ public sealed class IndexStatusDocumentTests
         Assert.Equal("Lifts `disputed` from `MyMod` in `index-status.toml`.\n\nReason: Resolved.", lift.Body([]));
     }
 
+    [Fact]
+    public void PullRequestTitle_NamesEachChangeOfOneKind_AndCountsChangesOfDifferentKinds()
+    {
+        var current = IndexStatusDocument.Parse(IndexStatusFixtures.Current);
+        var disputed = current.Apply(IndexStatusChange.Dispute("MyMod", "Claimed twice."), Contents, Now);
+
+        var delisted = current.Apply(Change("delisted", "MyMod", null), Contents, Now).Apply(Change("delisted", "Other", null), Contents, Now).Apply(Change("delisted", "my-pack", null), Contents, Now);
+        var mixed = current.Apply(Change("delisted", "Other", null), Contents, Now);
+
+        Assert.Equal("Delist MyMod, Other and my-pack", delisted.PullRequestTitle(current));
+        Assert.Equal("Change the index status of 2 entries", mixed.PullRequestTitle(disputed));
+    }
+
     private static IndexStatusChange Change(string state, string id, string? version) => state switch
     {
         "delisted" => IndexStatusChange.Delist(id, "A reason."),

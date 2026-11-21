@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using Borea.Core.Index;
 
 namespace Borea.Core.Stewardship;
 
@@ -137,6 +138,33 @@ public sealed partial class IndexStatusDocument
         ArgumentNullException.ThrowIfNull(contents);
         _ = Resolve(change, contents);
     }
+
+    /// <summary>
+    /// The title of a pull request that changes <paramref name="earlier"/> into this document, such as "Delist A and B". Changes of
+    /// different kinds, or of a state that this build does not know, get a title that only counts them.
+    /// </summary>
+    public string PullRequestTitle(IndexStatusDocument earlier)
+    {
+        ArgumentNullException.ThrowIfNull(earlier);
+        var changes = earlier.Entries.Except(Entries).Select(entry => (Action: (IndexStatusAction?)IndexStatusAction.Lift, Entry: entry))
+            .Concat(Entries.Except(earlier.Entries).Select(entry => (Action: ActionOf(entry), Entry: entry)))
+            .ToList();
+        if (changes.Select(change => change.Action).Distinct().ToList() is not [{ } action])
+            return $"Change the index status of {changes.Count.ToString(CultureInfo.InvariantCulture)} {(changes.Count == 1 ? "entry" : "entries")}";
+
+        var subjects = changes.Select(change => change.Entry.Version is null ? change.Entry.Id : $"{change.Entry.Id} {change.Entry.Version}").ToList();
+        return subjects.Count == 1
+            ? $"{action} {subjects[0]}"
+            : $"{action} {string.Join(", ", subjects.SkipLast(1))} and {subjects[^1]}";
+    }
+
+    private static IndexStatusAction? ActionOf(IndexStatusEntry entry) => entry.Kind switch
+    {
+        IndexStatusState.Delisted => IndexStatusAction.Delist,
+        IndexStatusState.Disputed => IndexStatusAction.Dispute,
+        IndexStatusState.Retracted => IndexStatusAction.Retract,
+        _ => null,
+    };
 
     /// <summary>The entry that a lift removes, or the id and version of the new entry as the documents spell them.</summary>
     private Target Resolve(IndexStatusChange change, IndexContents contents)
