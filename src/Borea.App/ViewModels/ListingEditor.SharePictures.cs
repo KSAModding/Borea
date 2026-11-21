@@ -81,7 +81,7 @@ public sealed partial class ListingEditor
         _isPickingSharePicture = true;
         try
         {
-            file = await window.OpenImageFileAsync(Localization.ListingChooseFile, Localization.ListingImageFileType, ShareImageLimits.MaxBytes);
+            file = await window.OpenImageFileAsync(Localization.ListingChooseFile, Localization.ListingImageFileType, ShareImageLimits.MaxBytes, _owner.Services?.Paths.GetInstanceScreenshotsFolder(share.InstanceId));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

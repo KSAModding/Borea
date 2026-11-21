@@ -456,6 +456,19 @@ public sealed class ShareHostShareTests
     }
 
     [Fact]
+    public async Task AddPicture_OpensThePickerInTheScreenshotsOfTheInstanceTheShareComesFrom()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+        var window = new PictureWindow();
+        harness.ViewModel.WindowServices = window;
+
+        await editor.AddSharePictureCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Services.Paths.GetInstanceScreenshotsFolder(harness.ViewModel.Instances.Single().InstanceId), window.StartFolder);
+    }
+
+    [Fact]
     public async Task AddPicture_TakesSixAndRefusesWhatTheHostWouldRefuse()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
@@ -3444,6 +3457,8 @@ public sealed class ShareHostShareTests
 
         public Exception? Failure { get; init; }
 
+        public string? StartFolder { get; private set; }
+
         /// <summary>Holds the answer of the picker until the test completes the task.</summary>
         public Task? Gate { get; init; }
 
@@ -3453,8 +3468,9 @@ public sealed class ShareHostShareTests
 
         public Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName) => Task.FromResult<PickedTextFile?>(null);
 
-        public async Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes)
+        public async Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes, string? startFolder)
         {
+            StartFolder = startFolder;
             if (Gate is { } gate)
                 await gate;
 

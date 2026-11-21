@@ -18,8 +18,11 @@ public interface IWindowServices
     /// <summary>Null when the user cancelled.</summary>
     Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName);
 
-    /// <summary>Null when the user cancelled. Reads at most <paramref name="maxBytes"/> plus one byte, so a larger file shows as too large.</summary>
-    Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes);
+    /// <summary>
+    /// Null when the user cancelled. Reads at most <paramref name="maxBytes"/> plus one byte, so a larger file shows as too large.
+    /// The picker opens in <paramref name="startFolder"/> when that folder exists.
+    /// </summary>
+    Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes, string? startFolder = null);
 
     Task CopyTextAsync(string text);
 }

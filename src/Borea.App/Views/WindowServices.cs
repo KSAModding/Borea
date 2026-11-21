@@ -95,13 +95,14 @@ internal sealed class WindowServices(TopLevel topLevel) : IWindowServices
         return new PickedTextFile(files[0].Name, await reader.ReadToEndAsync());
     }
 
-    public async Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes)
+    public async Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes, string? startFolder = null)
     {
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = title,
             AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType(fileTypeName) { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp"] }, FilePickerFileTypes.All],
+            SuggestedStartLocation = startFolder is not null && Directory.Exists(startFolder) ? await topLevel.StorageProvider.TryGetFolderFromPathAsync(startFolder) : null,
         });
         if (files.Count == 0)
             return null;
