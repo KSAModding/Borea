@@ -4000,10 +4000,10 @@
     <value>Pictures</value>
   </data>
   <data name="SharePicturesHintFormat" xml:space="preserve">
-    <value>Optional. Add up to {0} pictures, as PNG, JPEG or WebP files of at most {1} each. The first is the cover. They become public when you publish.</value>
+    <value>Optional. Add up to {0} pictures, as PNG, JPEG or WebP files. Borea makes a picture above {1} smaller. The first is the cover. They become public when you publish.</value>
   </data>
   <data name="SharePicturesNewVersionHintFormat" xml:space="preserve">
-    <value>Optional. These join the pictures that the page already has, and a page shows at most {0}. Use PNG, JPEG or WebP files of at most {1} each. They become public when you publish.</value>
+    <value>Optional. These join the pictures that the page already has, and a page shows at most {0}. Use PNG, JPEG or WebP files. Borea makes a picture above {1} smaller. They become public when you publish.</value>
   </data>
   <data name="SharePictureAdd" xml:space="preserve">
     <value>Add a picture</value>

@@ -479,7 +479,7 @@ public sealed class ShareHostShareTests
         var still = ListingEditorTests.Png(16, 9);
         (byte[] Bytes, string Problem)[] refused =
         [
-            (new byte[ShareImageLimits.MaxBytes + 1], localization.FormatSharePictureTooLarge("bad.png", "10 MB")),
+            ([.. still, .. new byte[ShareImageLimits.MaxBytes]], localization.FormatSharePictureTooLarge("bad.png", "10 MB")),
             ([1, 2, 3], localization.FormatSharePictureNotImage("bad.png")),
             ([.. still[..33], 0, 0, 0, 8, .. "acTL"u8, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, .. still[33..]], localization.FormatSharePictureAnimated("bad.png")),
         ];
@@ -503,6 +503,22 @@ public sealed class ShareHostShareTests
 
         Assert.True(editor.CanAddSharePicture);
         Assert.True(editor.SharePictures[0].IsCover);
+    }
+
+    [Fact]
+    public async Task AddPicture_StillAboveTheLimit_AddsASmallerJpeg()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: ViewModelHarness.ShareHosts(Hosts), respond: Serve(), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+        harness.ViewModel.WindowServices = new PictureWindow { File = new PickedBinaryFile("shot.png", [.. SharePictureFitTests.Noise(64, 36, opaque: true), .. new byte[ShareImageLimits.MaxBytes]]) };
+
+        await editor.AddSharePictureCommand.ExecuteAsync(null);
+
+        Assert.Null(editor.SharePictureError);
+        var row = Assert.Single(editor.SharePictures);
+        Assert.Equal("shot.jpg", row.Name);
+        Assert.InRange(row.Bytes.Length, 1, ShareImageLimits.MaxBytes);
+        Assert.Equal(new ContentImageFacts("JPEG", 64, 36, false), ContentImageBytes.Inspect(row.Bytes));
     }
 
     [Fact]

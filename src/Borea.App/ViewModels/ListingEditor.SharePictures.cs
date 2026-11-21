@@ -81,7 +81,7 @@ public sealed partial class ListingEditor
         _isPickingSharePicture = true;
         try
         {
-            file = await window.OpenImageFileAsync(Localization.ListingChooseFile, Localization.ListingImageFileType, ShareImageLimits.MaxBytes, _owner.Services?.Paths.GetInstanceScreenshotsFolder(share.InstanceId));
+            file = await window.OpenImageFileAsync(Localization.ListingChooseFile, Localization.ListingImageFileType, SharePictureFit.MaxSourceBytes, _owner.Services?.Paths.GetInstanceScreenshotsFolder(share.InstanceId));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -96,9 +96,30 @@ public sealed partial class ListingEditor
         if (file is null || _share != share || !CanAddSharePicture)
             return;
 
+        await TakeSharePictureAsync(share, file);
+    }
+
+    /// <summary>A still picture above the limit of the host goes as a smaller copy, which is made off the UI thread because a large screenshot takes a moment to decode.</summary>
+    private async Task TakeSharePictureAsync(GameSaveShareStart share, PickedBinaryFile file)
+    {
         SharePictureError = SharePictureProblem(file);
         if (SharePictureError is not null)
             return;
+
+        if (file.Bytes.Length > ShareImageLimits.MaxBytes)
+        {
+            var fitted = await Task.Run(() => SharePictureFit.Fit(file, ShareImageLimits.MaxBytes));
+            if (_share != share || !CanAddSharePicture)
+                return;
+
+            if (fitted is null)
+            {
+                SharePictureError = SharePictureTooLargeText(file);
+                return;
+            }
+
+            file = fitted;
+        }
 
         SharePictures.Add(new SharePictureRow(this, file.Name, file.Bytes));
         RefreshSharePictures();
@@ -106,8 +127,8 @@ public sealed partial class ListingEditor
 
     private string? SharePictureProblem(PickedBinaryFile file)
     {
-        if (file.Bytes.Length > ShareImageLimits.MaxBytes)
-            return Localization.FormatSharePictureTooLarge(file.Name, ShareHostSizeText(ShareImageLimits.MaxBytes));
+        if (file.Bytes.Length > SharePictureFit.MaxSourceBytes)
+            return SharePictureTooLargeText(file);
 
         return ContentImageBytes.Inspect(file.Bytes) switch
         {
@@ -116,6 +137,8 @@ public sealed partial class ListingEditor
             _ => null,
         };
     }
+
+    private string SharePictureTooLargeText(PickedBinaryFile file) => Localization.FormatSharePictureTooLarge(file.Name, ShareHostSizeText(ShareImageLimits.MaxBytes));
 
     internal void RemoveSharePicture(SharePictureRow row)
     {

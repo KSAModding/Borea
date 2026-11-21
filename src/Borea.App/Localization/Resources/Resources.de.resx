@@ -4000,10 +4000,10 @@
     <value>Bilder</value>
   </data>
   <data name="SharePicturesHintFormat" xml:space="preserve">
-    <value>Optional. Füge bis zu {0} Bilder hinzu, als PNG-, JPEG- oder WebP-Dateien mit je höchstens {1}. Das erste ist das Titelbild. Sie werden öffentlich, wenn du veröffentlichst.</value>
+    <value>Optional. Füge bis zu {0} Bilder hinzu, als PNG-, JPEG- oder WebP-Dateien. Ein Bild über {1} macht Borea kleiner. Das erste ist das Titelbild. Sie werden öffentlich, wenn du veröffentlichst.</value>
   </data>
   <data name="SharePicturesNewVersionHintFormat" xml:space="preserve">
-    <value>Optional. Diese kommen zu den Bildern dazu, die die Seite schon hat, und eine Seite zeigt höchstens {0}. Nimm PNG-, JPEG- oder WebP-Dateien mit je höchstens {1}. Sie werden öffentlich, wenn du veröffentlichst.</value>
+    <value>Optional. Diese kommen zu den Bildern dazu, die die Seite schon hat, und eine Seite zeigt höchstens {0}. Nimm PNG-, JPEG- oder WebP-Dateien. Ein Bild über {1} macht Borea kleiner. Sie werden öffentlich, wenn du veröffentlichst.</value>
   </data>
   <data name="SharePictureAdd" xml:space="preserve">
     <value>Bild hinzufügen</value>
