@@ -738,4 +738,18 @@
             </StackPanel>
         </Border>
     </DataTemplate>
+    <!-- a screenshot of the Library: the picture, where it comes from and when the game saved it. A click opens it in the viewer of the system -->
+    <DataTemplate x:Key="ScreenshotTile" x:DataType="vm:ScreenshotItem">
+        <views:ScreenshotTile Classes="plain screenshot" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding TakenText}">
+            <StackPanel Spacing="6">
+                <Border Classes="thumbnail" views:RoundedClip.IsEnabled="True">
+                    <views:AspectRatioPanel>
+                        <views:ScreenshotThumbnail Screenshot="{Binding Screenshot}" />
+                    </views:AspectRatioPanel>
+                </Border>
+                <TextBlock Classes="label-md" Text="{Binding SourceName}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding TakenText}" />
+            </StackPanel>
+        </views:ScreenshotTile>
+    </DataTemplate>
 </ResourceDictionary>

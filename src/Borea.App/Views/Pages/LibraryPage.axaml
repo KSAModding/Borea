@@ -47,7 +47,21 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <Button Classes="dropdown" HorizontalAlignment="Left" Margin="0,24,0,0" IsVisible="{Binding !!Instances.Count}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
+            <!-- c/inner-nav-bar, as on the instance page -->
+            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,24,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <Button Classes="tab quiet" Classes.active="{Binding IsLibraryInstancesTab}" Content="{Binding Localization.LibraryTabInstances}" Command="{Binding ShowLibraryInstancesCommand}" />
+                    <Button Classes="tab quiet" Classes.active="{Binding IsLibraryScreenshotsTab}" Content="{Binding Localization.LibraryTabScreenshots}" Command="{Binding ShowLibraryScreenshotsCommand}" />
+                </StackPanel>
+            </Border>
+
+            <Button Classes="dropdown" HorizontalAlignment="Left" Margin="0,16,0,0" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
+                <Button.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="IsLibraryInstancesTab" />
+                        <Binding Path="!!Instances.Count" />
+                    </MultiBinding>
+                </Button.IsVisible>
                 <Button.Flyout>
                     <MenuFlyout Placement="BottomEdgeAlignedLeft">
                         <MenuItem Header="{Binding Localization.LibrarySortName}" Command="{Binding SelectLibrarySortCommand}" CommandParameter="{x:Static vm:LibrarySort.Name}" />
@@ -60,30 +74,57 @@
                     <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
+
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0" IsVisible="{Binding IsLibraryScreenshotsTab}">
+                <StackPanel Orientation="Horizontal" Spacing="16" IsVisible="{Binding HasScreenshots}">
+                    <ComboBox ItemsSource="{Binding ScreenshotFilters}" SelectedItem="{Binding SelectedScreenshotFilter}" MinWidth="200" MaxDropDownHeight="300" AutomationProperties.Name="{Binding Localization.ScreenshotsFilterName}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ScreenshotFilter">
+                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Classes="body-md secondary" Text="{Binding ScreenshotCountText}" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button Grid.Column="2" Classes="link" VerticalAlignment="Center" Command="{Binding ReloadScreenshotsCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowClockwise}" Stroke="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
+                        <TextBlock Classes="action-md" Text="{Binding Localization.ScreenshotsRefresh}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </Grid>
         </views:PageBodyPanel>
 
         <ScrollViewer x:Name="PageScroller" Grid.Row="1">
             <views:PageBodyPanel HasTopMargin="False">
-                <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
+                <StackPanel IsVisible="{Binding IsLibraryInstancesTab}">
+                    <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
 
-                <TextBlock Classes="heading-sm heading" Text="{Binding Localization.LibraryActiveHeading}" Margin="8,16,0,0" IsVisible="{Binding HasActiveInstance}" />
-                <ContentControl Content="{Binding ActiveInstance}" ContentTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0" IsVisible="{Binding HasActiveInstance}" />
-                <TextBlock Classes="heading-sm heading" Text="{Binding Localization.LibraryOtherInstancesHeading}" Margin="8,24,0,0">
-                    <TextBlock.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="HasActiveInstance" />
-                            <Binding Path="!!OtherInstances.Count" />
-                        </MultiBinding>
-                    </TextBlock.IsVisible>
-                </TextBlock>
+                    <TextBlock Classes="heading-sm heading" Text="{Binding Localization.LibraryActiveHeading}" Margin="8,16,0,0" IsVisible="{Binding HasActiveInstance}" />
+                    <ContentControl Content="{Binding ActiveInstance}" ContentTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0" IsVisible="{Binding HasActiveInstance}" />
+                    <TextBlock Classes="heading-sm heading" Text="{Binding Localization.LibraryOtherInstancesHeading}" Margin="8,24,0,0">
+                        <TextBlock.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="HasActiveInstance" />
+                                <Binding Path="!!OtherInstances.Count" />
+                            </MultiBinding>
+                        </TextBlock.IsVisible>
+                    </TextBlock>
 
-                <ItemsControl ItemsSource="{Binding OtherInstances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Spacing="8" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding OtherInstances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- the rows of tiles virtualize, because a library can hold thousands of screenshots -->
+                <StackPanel IsVisible="{Binding IsLibraryScreenshotsTab}" Margin="0,16,0,0">
+                    <TextBlock Classes="body-md muted" Text="{Binding Localization.ScreenshotsEmpty}" TextWrapping="Wrap" Margin="8,8,0,0" IsVisible="{Binding ShowsScreenshotsEmpty}" />
+                    <views:TileGrid Items="{Binding ShownScreenshots}" ItemTemplate="{StaticResource ScreenshotTile}" MinTileWidth="200" Spacing="16" />
+                </StackPanel>
             </views:PageBodyPanel>
         </ScrollViewer>
 

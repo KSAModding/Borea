@@ -1603,6 +1603,29 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryOtherInstancesHeading => Resources.LibraryOtherInstancesHeading;
 
+    public string LibraryTabInstances => Resources.LibraryTabInstances;
+
+    public string LibraryTabScreenshots => Resources.LibraryTabScreenshots;
+
+    public string ScreenshotsFilterName => Resources.ScreenshotsFilterName;
+
+    public string ScreenshotsAll => Resources.ScreenshotsAll;
+
+    public string FormatScreenshotCount(int count)
+        => FormatCount(count, Resources.ScreenshotsCountOne, Resources.ScreenshotsCountFormat);
+
+    public string ScreenshotsRefresh => Resources.ScreenshotsRefresh;
+
+    public string ScreenshotsEmpty => Resources.ScreenshotsEmpty;
+
+    public string ScreenshotOpen => Resources.ScreenshotOpen;
+
+    public string ScreenshotShowInFolder => Resources.ScreenshotShowInFolder;
+
+    public string ScreenshotCopyPath => Resources.ScreenshotCopyPath;
+
+    public string ScreenshotPathCopied => Resources.ScreenshotPathCopied;
+
     public string FormatLibraryLastPlayed(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryLastPlayedFormat, date);
 

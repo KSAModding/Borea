@@ -54,7 +54,14 @@ public partial class MainViewModel
             _ = PreviewStills.Stop();
     }
 
-    partial void OnCurrentWindowLibraryChanged(bool value) => OnPageShown(value);
+    partial void OnCurrentWindowLibraryChanged(bool value)
+    {
+        OnPageShown(value);
+
+        // the page stays in the tree when it hides, so its screenshot tiles give their pictures back here, and the page opens on its instances again
+        if (!value)
+            LibraryTab = LibraryTab.Instances;
+    }
 
     partial void OnCurrentWindowInstanceChanged(bool value) => OnPageShown(value);
 
