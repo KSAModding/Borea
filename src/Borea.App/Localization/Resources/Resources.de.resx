@@ -1713,6 +1713,9 @@
   <data name="LibraryOpenFolder" xml:space="preserve">
     <value>Ordner öffnen</value>
   </data>
+  <data name="LibraryOpenScreenshotsFolder" xml:space="preserve">
+    <value>Screenshot-Ordner öffnen</value>
+  </data>
   <data name="LibraryDelete" xml:space="preserve">
     <value>Löschen</value>
   </data>
@@ -2013,6 +2016,15 @@
   <data name="ToastDeleteFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht gelöscht werden</value>
   </data>
+  <data name="ToastScreenshotsKeepFailedFormat" xml:space="preserve">
+    <value>{0} wurde nicht gelöscht, weil die Screenshots nicht kopiert werden konnten</value>
+  </data>
+  <data name="ToastScreenshotsKeptOneFormat" xml:space="preserve">
+    <value>1 Screenshot nach {0} kopiert</value>
+  </data>
+  <data name="ToastScreenshotsKeptFormat" xml:space="preserve">
+    <value>{0} Screenshots nach {1} kopiert</value>
+  </data>
   <data name="ToastDuplicateFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht dupliziert werden</value>
   </data>
@@ -2168,6 +2180,27 @@
   </data>
   <data name="ManualInstallsInstanceChanged" xml:space="preserve">
     <value>Die Instanz hat sich geändert. Versuche es erneut.</value>
+  </data>
+  <data name="GameDataNameSettings" xml:space="preserve">
+    <value>Spieleinstellungen</value>
+  </data>
+  <data name="GameDataNameHudLayouts" xml:space="preserve">
+    <value>HUD-Layouts</value>
+  </data>
+  <data name="GameDataNameCrashDumps" xml:space="preserve">
+    <value>Absturzdaten</value>
+  </data>
+  <data name="GameDataNameScreenshots" xml:space="preserve">
+    <value>Screenshots</value>
+  </data>
+  <data name="GameDataNameExports" xml:space="preserve">
+    <value>Weitere Exporte</value>
+  </data>
+  <data name="GameDataScreenshotsOneFormat" xml:space="preserve">
+    <value>1 Screenshot, {0}</value>
+  </data>
+  <data name="GameDataScreenshotsFormat" xml:space="preserve">
+    <value>{0} Screenshots, {1}</value>
   </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>Leer</value>
@@ -3967,10 +4000,10 @@
     <value>Bilder</value>
   </data>
   <data name="SharePicturesHintFormat" xml:space="preserve">
-    <value>Optional. Füge bis zu {0} Bilder hinzu, als PNG-, JPEG- oder WebP-Dateien mit je höchstens {1}. Das erste ist das Titelbild. Sie werden öffentlich, wenn du veröffentlichst.</value>
+    <value>Optional. Füge bis zu {0} Bilder hinzu, als PNG-, JPEG- oder WebP-Dateien. Ein Bild über {1} macht Borea kleiner. Das erste ist das Titelbild. Sie werden öffentlich, wenn du veröffentlichst.</value>
   </data>
   <data name="SharePicturesNewVersionHintFormat" xml:space="preserve">
-    <value>Optional. Diese kommen zu den Bildern dazu, die die Seite schon hat, und eine Seite zeigt höchstens {0}. Nimm PNG-, JPEG- oder WebP-Dateien mit je höchstens {1}. Sie werden öffentlich, wenn du veröffentlichst.</value>
+    <value>Optional. Diese kommen zu den Bildern dazu, die die Seite schon hat, und eine Seite zeigt höchstens {0}. Nimm PNG-, JPEG- oder WebP-Dateien. Ein Bild über {1} macht Borea kleiner. Sie werden öffentlich, wenn du veröffentlichst.</value>
   </data>
   <data name="SharePictureAdd" xml:space="preserve">
     <value>Bild hinzufügen</value>
@@ -4907,6 +4940,18 @@
   </data>
   <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
     <value>{0} mit Ordner und Backups löschen? Das lässt sich nicht rückgängig machen.</value>
+  </data>
+  <data name="ModalDeleteInstanceScreenshotsOne" xml:space="preserve">
+    <value>Dabei wird auch 1 Screenshot gelöscht.</value>
+  </data>
+  <data name="ModalDeleteInstanceScreenshotsFormat" xml:space="preserve">
+    <value>Dabei werden auch {0} Screenshots gelöscht.</value>
+  </data>
+  <data name="ModalDeleteInstanceKeepScreenshots" xml:space="preserve">
+    <value>Screenshots behalten</value>
+  </data>
+  <data name="ModalDeleteInstanceKeepScreenshotsTipFormat" xml:space="preserve">
+    <value>Kopiert sie vor dem Löschen nach {0}.</value>
   </data>
   <data name="ModalDeleteInstanceKeptBuildFormat" xml:space="preserve">
     <value>KSA {0} ({1}), den diese Instanz behält, bleibt in Game Builds. Du kannst ihn im Tab Spiel der Einstellungen löschen.</value>

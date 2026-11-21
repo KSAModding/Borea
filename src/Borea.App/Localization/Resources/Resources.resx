@@ -1713,6 +1713,9 @@
   <data name="LibraryOpenFolder" xml:space="preserve">
     <value>Open folder</value>
   </data>
+  <data name="LibraryOpenScreenshotsFolder" xml:space="preserve">
+    <value>Open screenshots folder</value>
+  </data>
   <data name="LibraryDelete" xml:space="preserve">
     <value>Delete</value>
   </data>
@@ -2013,6 +2016,15 @@
   <data name="ToastDeleteFailedFormat" xml:space="preserve">
     <value>Could not delete {0}</value>
   </data>
+  <data name="ToastScreenshotsKeepFailedFormat" xml:space="preserve">
+    <value>{0} was not deleted, because its screenshots could not be copied</value>
+  </data>
+  <data name="ToastScreenshotsKeptOneFormat" xml:space="preserve">
+    <value>Kept 1 screenshot in {0}</value>
+  </data>
+  <data name="ToastScreenshotsKeptFormat" xml:space="preserve">
+    <value>Kept {0} screenshots in {1}</value>
+  </data>
   <data name="ToastDuplicateFailedFormat" xml:space="preserve">
     <value>Could not duplicate {0}</value>
   </data>
@@ -2168,6 +2180,27 @@
   </data>
   <data name="ManualInstallsInstanceChanged" xml:space="preserve">
     <value>The instance changed. Try again.</value>
+  </data>
+  <data name="GameDataNameSettings" xml:space="preserve">
+    <value>Game settings</value>
+  </data>
+  <data name="GameDataNameHudLayouts" xml:space="preserve">
+    <value>HUD layouts</value>
+  </data>
+  <data name="GameDataNameCrashDumps" xml:space="preserve">
+    <value>Crash dumps</value>
+  </data>
+  <data name="GameDataNameScreenshots" xml:space="preserve">
+    <value>Screenshots</value>
+  </data>
+  <data name="GameDataNameExports" xml:space="preserve">
+    <value>Other exports</value>
+  </data>
+  <data name="GameDataScreenshotsOneFormat" xml:space="preserve">
+    <value>1 screenshot, {0}</value>
+  </data>
+  <data name="GameDataScreenshotsFormat" xml:space="preserve">
+    <value>{0} screenshots, {1}</value>
   </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>Empty</value>
@@ -3967,10 +4000,10 @@
     <value>Pictures</value>
   </data>
   <data name="SharePicturesHintFormat" xml:space="preserve">
-    <value>Optional. Add up to {0} pictures, as PNG, JPEG or WebP files of at most {1} each. The first is the cover. They become public when you publish.</value>
+    <value>Optional. Add up to {0} pictures, as PNG, JPEG or WebP files. Borea makes a picture above {1} smaller. The first is the cover. They become public when you publish.</value>
   </data>
   <data name="SharePicturesNewVersionHintFormat" xml:space="preserve">
-    <value>Optional. These join the pictures that the page already has, and a page shows at most {0}. Use PNG, JPEG or WebP files of at most {1} each. They become public when you publish.</value>
+    <value>Optional. These join the pictures that the page already has, and a page shows at most {0}. Use PNG, JPEG or WebP files. Borea makes a picture above {1} smaller. They become public when you publish.</value>
   </data>
   <data name="SharePictureAdd" xml:space="preserve">
     <value>Add a picture</value>
@@ -4907,6 +4940,18 @@
   </data>
   <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
     <value>Delete {0}, its folder and its backups? You cannot undo this.</value>
+  </data>
+  <data name="ModalDeleteInstanceScreenshotsOne" xml:space="preserve">
+    <value>This also deletes 1 screenshot.</value>
+  </data>
+  <data name="ModalDeleteInstanceScreenshotsFormat" xml:space="preserve">
+    <value>This also deletes {0} screenshots.</value>
+  </data>
+  <data name="ModalDeleteInstanceKeepScreenshots" xml:space="preserve">
+    <value>Keep the screenshots</value>
+  </data>
+  <data name="ModalDeleteInstanceKeepScreenshotsTipFormat" xml:space="preserve">
+    <value>Copies them to {0} before the delete.</value>
   </data>
   <data name="ModalDeleteInstanceKeptBuildFormat" xml:space="preserve">
     <value>KSA {0} ({1}), which this instance keeps, stays in Game Builds. You can delete it on the Game tab of Settings.</value>

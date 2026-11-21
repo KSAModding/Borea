@@ -1894,7 +1894,7 @@ public sealed class ListingEditorTests
 
         public Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName) => Task.FromResult<PickedTextFile?>(null);
 
-        public Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes) => Task.FromResult(ImageToOpen);
+        public Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes, string? startFolder) => Task.FromResult(ImageToOpen);
 
         public Task CopyTextAsync(string text)
         {

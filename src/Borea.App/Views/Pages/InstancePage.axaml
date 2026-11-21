@@ -700,7 +700,7 @@
                                                 <Border Classes="thumbnail" Width="48" Height="48">
                                                     <Path Classes="icon" Data="{StaticResource Icon.FolderOpen}" />
                                                 </Border>
-                                                <TextBlock Grid.Column="2" Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding DiskName}" />
                                                 <TextBlock Grid.Column="3" Classes="label-md" Margin="24,0,0,0" Text="{Binding SizeText}" VerticalAlignment="Center" />
                                                 <Button Grid.Column="4" Classes="text" Margin="24,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" IsEnabled="{Binding Exists}" />
                                             </Grid>

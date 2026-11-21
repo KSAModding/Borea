@@ -259,6 +259,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastDeleteFailed(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastDeleteFailedFormat, name);
 
+    public string FormatToastScreenshotsKeepFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastScreenshotsKeepFailedFormat, name);
+
+    public string FormatToastScreenshotsKept(int count, string folder)
+        => count == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.ToastScreenshotsKeptOneFormat, folder)
+            : string.Format(CultureInfo.CurrentCulture, Resources.ToastScreenshotsKeptFormat, count, folder);
+
     public string FormatToastDuplicateFailed(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastDuplicateFailedFormat, instanceName);
 
@@ -1575,6 +1583,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryOpenFolder => Resources.LibraryOpenFolder;
 
+    public string LibraryOpenScreenshotsFolder => Resources.LibraryOpenScreenshotsFolder;
+
     public string LibraryDelete => Resources.LibraryDelete;
 
     public string LibrarySave => Resources.LibrarySave;
@@ -1674,6 +1684,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ManualInstallsInstanceChanged => Resources.ManualInstallsInstanceChanged;
 
     public string GameDataEmpty => Resources.GameDataEmpty;
+
+    public string GameDataNameSettings => Resources.GameDataNameSettings;
+
+    public string GameDataNameHudLayouts => Resources.GameDataNameHudLayouts;
+
+    public string GameDataNameCrashDumps => Resources.GameDataNameCrashDumps;
+
+    public string GameDataNameScreenshots => Resources.GameDataNameScreenshots;
+
+    public string GameDataNameExports => Resources.GameDataNameExports;
+
+    public string FormatGameDataScreenshots(int count, string size)
+        => count == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.GameDataScreenshotsOneFormat, size)
+            : string.Format(CultureInfo.CurrentCulture, Resources.GameDataScreenshotsFormat, count, size);
 
     public string GameSaveNoVehicles => Resources.GameSaveNoVehicles;
 
@@ -2971,6 +2996,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatModalDeleteInstanceKeptBuild(string build, string size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalDeleteInstanceKeptBuildFormat, build, size);
+
+    public string FormatModalDeleteInstanceScreenshots(int count)
+        => FormatCount(count, Resources.ModalDeleteInstanceScreenshotsOne, Resources.ModalDeleteInstanceScreenshotsFormat);
+
+    public string ModalDeleteInstanceKeepScreenshots => Resources.ModalDeleteInstanceKeepScreenshots;
+
+    public string FormatModalDeleteInstanceKeepScreenshotsTip(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalDeleteInstanceKeepScreenshotsTipFormat, folder);
 
     public string ModalKeepGameBuildTitle => Resources.ModalKeepGameBuildTitle;
 

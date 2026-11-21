@@ -28,6 +28,7 @@ using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Preferences;
 using Borea.Storage.Preview;
+using Borea.Storage.Screenshots;
 using Borea.Storage.State;
 using Borea.Storage.Settings;
 
@@ -381,6 +382,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<SharedProfileLauncher>(Assert.IsType<LoggingSharedProfileLauncher>(services.SharedProfileLauncher).Inner);
         Assert.IsType<FileSharedProfileImporter>(Assert.IsType<CheckedSharedProfileImporter>(services.SharedProfileImporter).Inner);
         Assert.IsType<FileGameDataReader>(services.GameData);
+        Assert.IsType<FileScreenshotStore>(services.Screenshots);
         Assert.IsType<FileGameSaveStore>(services.GameSaves);
         Assert.IsType<FileGameSaveBackupStore>(services.GameSaveBackups);
     }

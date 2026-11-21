@@ -85,6 +85,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetInstanceHudLayoutsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "HUDLayouts");
     public string GetInstanceCrashDumpsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "crashdumps");
     public string GetInstanceExportsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "exports");
+    public string GetInstanceScreenshotsFolder(Guid instanceId) => Path.Combine(GetInstanceExportsFolder(instanceId), "screenshots");
     public string GetInstanceGameLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "KittenSpaceAgency.log");
     public string GetInstanceLaunchLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "borea-launch.log");
     public string GetInstancePlaytimePath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "playtime.toml");
@@ -105,6 +106,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetBackupsRoot() => Path.Combine(_libraryFolder, BackupsFolderName);
     public string? GetGameDirectoryPath() => _gameDirectory;
     public string GetSharedProfileRoot() => _sharedProfileRoot;
+    public string GetSharedProfileScreenshotsFolder() => Path.Combine(_sharedProfileRoot, "exports", "screenshots");
 
     public string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version)
     {

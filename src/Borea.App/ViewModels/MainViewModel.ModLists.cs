@@ -343,10 +343,12 @@ public partial class MainViewModel
         return instance is null ? null : (instance, ModList.FromInstance(instance, await services.ModState.GetEntriesAsync(instanceId)));
     }
 
-    private static string FileNameFor(string instanceName)
+    private static string FileNameFor(string instanceName) => WithoutInvalidFileNameChars(instanceName) + ".toml";
+
+    private static string WithoutInvalidFileNameChars(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
-        return new string(instanceName.Select(character => invalid.Contains(character) ? '_' : character).ToArray()) + ".toml";
+        return new string(name.Select(character => invalid.Contains(character) ? '_' : character).ToArray());
     }
 
     /// <summary>
