@@ -4,6 +4,15 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.LibraryPage"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <!-- the sort row sits closer below the tab row than below the header. Both margins are style setters, because a value set on the button itself would win over the setter of the tab row state -->
+        <Style Selector="Button.library-sort">
+            <Setter Property="Margin" Value="0,24,0,0" />
+        </Style>
+        <Style Selector="Button.library-sort.below-tabs">
+            <Setter Property="Margin" Value="0,16,0,0" />
+        </Style>
+    </UserControl.Styles>
     <!-- Library -->
     <Grid RowDefinitions="Auto,*">
         <views:PageBodyPanel HasBottomMargin="False">
@@ -48,14 +57,14 @@
             </ScrollViewer>
 
             <!-- c/inner-nav-bar, as on the instance page -->
-            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,24,0,0">
+            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,24,0,0" IsVisible="{Binding ShowsLibraryTabs}">
                 <StackPanel Orientation="Horizontal" Spacing="16">
                     <Button Classes="tab quiet" Classes.active="{Binding IsLibraryInstancesTab}" Content="{Binding Localization.LibraryTabInstances}" Command="{Binding ShowLibraryInstancesCommand}" />
                     <Button Classes="tab quiet" Classes.active="{Binding IsLibraryScreenshotsTab}" Content="{Binding Localization.LibraryTabScreenshots}" Command="{Binding ShowLibraryScreenshotsCommand}" />
                 </StackPanel>
             </Border>
 
-            <Button Classes="dropdown" HorizontalAlignment="Left" Margin="0,16,0,0" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
+            <Button Classes="dropdown library-sort" Classes.below-tabs="{Binding ShowsLibraryTabs}" HorizontalAlignment="Left" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
                 <Button.IsVisible>
                     <MultiBinding Converter="{x:Static BoolConverters.And}">
                         <Binding Path="IsLibraryInstancesTab" />

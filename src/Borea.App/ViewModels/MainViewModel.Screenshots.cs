@@ -23,6 +23,8 @@ public partial class MainViewModel
     private IReadOnlyList<ScreenshotItem> _screenshots = [];
     private Task _screenshotLoad = Task.CompletedTask;
     private int _screenshotLoadGeneration;
+    private Task _anyScreenshotCheck = Task.CompletedTask;
+    private int _anyScreenshotCheckGeneration;
 
     /// <summary>The source that the chosen filter shows, or null for every screenshot, which the next load chooses again.</summary>
     private ScreenshotSource? _shownScreenshotSource;
@@ -54,6 +56,9 @@ public partial class MainViewModel
 
     /// <summary>Completes when the last load of the Screenshots tab is done.</summary>
     internal Task WhenScreenshotsLoadedAsync() => _screenshotLoad;
+
+    /// <summary>Completes when the last check for any screenshot is done.</summary>
+    internal Task WhenAnyScreenshotCheckedAsync() => _anyScreenshotCheck;
 
     [RelayCommand]
     private Task ShowLibraryScreenshotsAsync() => ShowScreenshotsAsync(source: null);
@@ -124,6 +129,24 @@ public partial class MainViewModel
         static Func<string> Constant(string text) => () => text;
     }
 
+    /// <summary>Looks again whether any instance or the game profile has a screenshot, for the tab row of the Library. The row keeps its state until the answer comes.</summary>
+    private void StartAnyScreenshotCheck() => _anyScreenshotCheck = CheckAnyScreenshotAsync();
+
+    private async Task CheckAnyScreenshotAsync()
+    {
+        if (_services is not { } services)
+            return;
+
+        var generation = ++_anyScreenshotCheckGeneration;
+        var folders = Instances
+            .Select(item => services.Paths.GetInstanceScreenshotsFolder(item.InstanceId))
+            .Append(services.Paths.GetSharedProfileScreenshotsFolder())
+            .ToList();
+        var any = await services.Screenshots.AnyAsync(folders);
+        if (generation == _anyScreenshotCheckGeneration)
+            HasAnyScreenshot = any;
+    }
+
     private void ForgetScreenshots()
     {
         _screenshotLoadGeneration++;
@@ -170,8 +193,11 @@ public partial class MainViewModel
 
         var since = launchedAt.AddTicks(-(launchedAt.Ticks % TimeSpan.TicksPerSecond));
         var count = (await ListScreenshotsAsync(services.Paths.GetInstanceScreenshotsFolder(instanceId))).Count(screenshot => screenshot.TakenAt >= since);
-        if (count > 0)
-            Toasts.ShowMessage(ToastKind.Success, () => Localization.FormatNewScreenshots(count), action: new ToastAction(() => Localization.ScreenshotsShow, () => _ = ShowScreenshotsAsync(new ScreenshotSource(instanceId))));
+        if (count == 0)
+            return;
+
+        HasAnyScreenshot = true;
+        Toasts.ShowMessage(ToastKind.Success, () => Localization.FormatNewScreenshots(count), action: new ToastAction(() => Localization.ScreenshotsShow, () => _ = ShowScreenshotsAsync(new ScreenshotSource(instanceId))));
     }
 
     /// <summary>The screenshots in <paramref name="folder"/>, newest first. A folder that cannot be read gives none and a line in the log.</summary>

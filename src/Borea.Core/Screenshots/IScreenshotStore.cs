@@ -12,6 +12,12 @@ public interface IScreenshotStore
     Task<IReadOnlyList<Screenshot>> ListAsync(string folder, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Whether any of the folders holds an image by the rule of <see cref="ListAsync"/>. The scan stops at the first image, an absent folder
+    /// counts as empty, and a folder that cannot be read is skipped.
+    /// </summary>
+    Task<bool> AnyAsync(IReadOnlyList<string> folders, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Copies the files into the folder and keeps the originals. A name that is taken gets " (2)", " (3)" and so on
     /// before the extension, so no file is overwritten.
     /// </summary>

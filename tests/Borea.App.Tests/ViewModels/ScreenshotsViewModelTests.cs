@@ -69,6 +69,27 @@ public sealed class ScreenshotsViewModelTests
     }
 
     [Fact]
+    public async Task Library_ShowsTheTabRowOnlyOnceAnInstanceHasAScreenshot()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var main = await CreateInstanceAsync(harness, "Main");
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        viewModel.SetMainWindowLibrary();
+        await viewModel.WhenAnyScreenshotCheckedAsync();
+
+        Assert.False(viewModel.ShowsLibraryTabs);
+
+        WriteScreenshot(harness.Services.Paths.GetInstanceScreenshotsFolder(main.InstanceId), new DateTime(2026, 11, 20, 10, 0, 0));
+        viewModel.SetMainWindowHome();
+        viewModel.SetMainWindowLibrary();
+        await viewModel.WhenAnyScreenshotCheckedAsync();
+
+        Assert.True(viewModel.ShowsLibraryTabs);
+    }
+
+    [Fact]
     public async Task GameData_InstanceWithScreenshots_ShowsTheNewestAndShowAllFiltersTheLibraryToIt()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -156,6 +177,7 @@ public sealed class ScreenshotsViewModelTests
         var toast = Assert.Single(viewModel.Toasts.Items);
         Assert.Equal(harness.Localization.FormatNewScreenshots(2), toast.Message);
         Assert.Equal(harness.Localization.ScreenshotsShow, toast.ActionText);
+        Assert.True(viewModel.HasAnyScreenshot);
 
         toast.RunActionCommand.Execute(null);
         await viewModel.WhenScreenshotsLoadedAsync();
