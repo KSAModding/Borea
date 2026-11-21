@@ -1761,6 +1761,57 @@
   <data name="LibraryOtherInstancesHeading" xml:space="preserve">
     <value>Instanzen</value>
   </data>
+  <data name="LibraryTabInstances" xml:space="preserve">
+    <value>Instanzen</value>
+  </data>
+  <data name="LibraryTabScreenshots" xml:space="preserve">
+    <value>Screenshots</value>
+  </data>
+  <data name="ScreenshotsFilterName" xml:space="preserve">
+    <value>Instanz</value>
+  </data>
+  <data name="ScreenshotsAll" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="ScreenshotsCountOne" xml:space="preserve">
+    <value>1 Screenshot</value>
+  </data>
+  <data name="ScreenshotsCountFormat" xml:space="preserve">
+    <value>{0} Screenshots</value>
+  </data>
+  <data name="ScreenshotsRefresh" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="ScreenshotsEmpty" xml:space="preserve">
+    <value>Noch keine Screenshots. Drücke im Spiel die Druck-Taste, um einen Screenshot zu speichern. Borea zeigt hier die Screenshots aller Instanzen.</value>
+  </data>
+  <data name="ScreenshotOpen" xml:space="preserve">
+    <value>Öffnen</value>
+  </data>
+  <data name="ScreenshotShowInFolder" xml:space="preserve">
+    <value>Im Ordner anzeigen</value>
+  </data>
+  <data name="ScreenshotCopyPath" xml:space="preserve">
+    <value>Pfad kopieren</value>
+  </data>
+  <data name="ScreenshotPathCopied" xml:space="preserve">
+    <value>Pfad kopiert</value>
+  </data>
+  <data name="InstanceScreenshotsHeading" xml:space="preserve">
+    <value>Screenshots</value>
+  </data>
+  <data name="ScreenshotsShowAll" xml:space="preserve">
+    <value>Alle anzeigen</value>
+  </data>
+  <data name="ScreenshotsNewOne" xml:space="preserve">
+    <value>1 neuer Screenshot</value>
+  </data>
+  <data name="ScreenshotsNewFormat" xml:space="preserve">
+    <value>{0} neue Screenshots</value>
+  </data>
+  <data name="ScreenshotsShow" xml:space="preserve">
+    <value>Anzeigen</value>
+  </data>
   <data name="LibraryImportModList" xml:space="preserve">
     <value>Modliste importieren</value>
   </data>
@@ -4007,6 +4058,9 @@
   </data>
   <data name="SharePictureAdd" xml:space="preserve">
     <value>Bild hinzufügen</value>
+  </data>
+  <data name="ShareScreenshotsHeading" xml:space="preserve">
+    <value>Screenshots dieser Instanz</value>
   </data>
   <data name="SharePictureCover" xml:space="preserve">
     <value>Titelbild</value>

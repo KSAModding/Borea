@@ -1761,6 +1761,57 @@
   <data name="LibraryOtherInstancesHeading" xml:space="preserve">
     <value>Instances</value>
   </data>
+  <data name="LibraryTabInstances" xml:space="preserve">
+    <value>Instances</value>
+  </data>
+  <data name="LibraryTabScreenshots" xml:space="preserve">
+    <value>Screenshots</value>
+  </data>
+  <data name="ScreenshotsFilterName" xml:space="preserve">
+    <value>Instance</value>
+  </data>
+  <data name="ScreenshotsAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="ScreenshotsCountOne" xml:space="preserve">
+    <value>1 screenshot</value>
+  </data>
+  <data name="ScreenshotsCountFormat" xml:space="preserve">
+    <value>{0} screenshots</value>
+  </data>
+  <data name="ScreenshotsRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="ScreenshotsEmpty" xml:space="preserve">
+    <value>No screenshots yet. Press Print Screen in the game to save a screenshot. Borea shows the screenshots of every instance here.</value>
+  </data>
+  <data name="ScreenshotOpen" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="ScreenshotShowInFolder" xml:space="preserve">
+    <value>Show in folder</value>
+  </data>
+  <data name="ScreenshotCopyPath" xml:space="preserve">
+    <value>Copy path</value>
+  </data>
+  <data name="ScreenshotPathCopied" xml:space="preserve">
+    <value>Path copied</value>
+  </data>
+  <data name="InstanceScreenshotsHeading" xml:space="preserve">
+    <value>Screenshots</value>
+  </data>
+  <data name="ScreenshotsShowAll" xml:space="preserve">
+    <value>Show all</value>
+  </data>
+  <data name="ScreenshotsNewOne" xml:space="preserve">
+    <value>1 new screenshot</value>
+  </data>
+  <data name="ScreenshotsNewFormat" xml:space="preserve">
+    <value>{0} new screenshots</value>
+  </data>
+  <data name="ScreenshotsShow" xml:space="preserve">
+    <value>Show</value>
+  </data>
   <data name="LibraryImportModList" xml:space="preserve">
     <value>Import modlist</value>
   </data>
@@ -4007,6 +4058,9 @@
   </data>
   <data name="SharePictureAdd" xml:space="preserve">
     <value>Add a picture</value>
+  </data>
+  <data name="ShareScreenshotsHeading" xml:space="preserve">
+    <value>Screenshots of this instance</value>
   </data>
   <data name="SharePictureCover" xml:space="preserve">
     <value>Cover</value>

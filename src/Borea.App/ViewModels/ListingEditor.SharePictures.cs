@@ -291,6 +291,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(IsSendingShare));
         OnPropertyChanged(nameof(ShowsSharePictures));
         OnPropertyChanged(nameof(CanAddSharePicture));
+        OnPropertyChanged(nameof(ShownShareScreenshots));
         OnPropertyChanged(nameof(SharePicturesHint));
         OnPropertyChanged(nameof(ShareSummaryPicturesText));
         OnPropertyChanged(nameof(CanRetrySharePictures));

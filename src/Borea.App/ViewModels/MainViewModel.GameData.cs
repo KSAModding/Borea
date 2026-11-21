@@ -30,7 +30,7 @@ public partial class MainViewModel
         await LoadGameDataAsync();
     }
 
-    private Task LoadGameDataAsync() => Task.WhenAll(LoadGameDataRowsAsync(), LoadBackupsAsync());
+    private Task LoadGameDataAsync() => Task.WhenAll(LoadGameDataRowsAsync(), LoadBackupsAsync(), LoadInstanceScreenshotsAsync());
 
     private async Task LoadGameDataRowsAsync()
     {

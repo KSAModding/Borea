@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Borea.Core.Instances;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Borea.App.ViewModels;
@@ -14,12 +15,30 @@ public enum LibrarySort
     LastPlayed,
 }
 
+public enum LibraryTab
+{
+    Instances,
+    Screenshots,
+}
+
 /// <summary>
-/// The order of the Library list, and when each instance was last played.
+/// The tabs and the order of the Library list, and when each instance was last played.
 /// </summary>
 public partial class MainViewModel
 {
     private LibrarySort _librarySort;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLibraryInstancesTab))]
+    [NotifyPropertyChangedFor(nameof(IsLibraryScreenshotsTab))]
+    private LibraryTab _libraryTab;
+
+    public bool IsLibraryInstancesTab => LibraryTab == LibraryTab.Instances;
+
+    public bool IsLibraryScreenshotsTab => LibraryTab == LibraryTab.Screenshots;
+
+    [RelayCommand]
+    private void ShowLibraryInstances() => LibraryTab = LibraryTab.Instances;
 
     /// <summary>The Library rows below the active instance, in the chosen order. Every row when no instance is active.</summary>
     public ObservableCollection<InstanceItem> OtherInstances { get; } = [];

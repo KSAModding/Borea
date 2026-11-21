@@ -24,8 +24,11 @@ public partial class MainViewModel
     /// <summary>Completes when the check for a crash since the last launch is done.</summary>
     internal Task WhenCrashCheckedAsync() => _crashCheck;
 
-    /// <summary>The wait lasts as long as the game runs, so it joins the other waits for the end of a game.</summary>
-    private void StartCrashWatch(Instance instance, LaunchResult started)
+    /// <summary>
+    /// The wait lasts as long as the game runs, so it joins the other waits for the end of a game. After a crash or a normal end it also
+    /// tells about the screenshots of the session, because this is the one wait that knows when a game of an instance ended.
+    /// </summary>
+    private void StartGameExitWatch(Instance instance, LaunchResult started, DateTime launchedAt)
     {
         if (_services is not { } services)
             return;
@@ -39,6 +42,8 @@ public partial class MainViewModel
                 var exit = await services.Launcher.WatchExitAsync(instance, started);
                 if (exit.Crash is { } crash)
                     await ShowCrashAsync(services, instance, crash);
+
+                await ShowNewScreenshotsAsync(instance.InstanceId, launchedAt);
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ObjectDisposedException)
             {

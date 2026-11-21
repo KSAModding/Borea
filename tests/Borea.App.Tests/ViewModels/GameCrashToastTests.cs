@@ -39,7 +39,7 @@ public sealed class GameCrashToastTests
     private static string AbnormalExit(int processId) => $"KittenSpaceAgency.260926-122536.{processId}.20260926_122557.abnormal-exit.log";
 
     /// <summary>Starts the active instance, whose game writes its log and keeps running until <see cref="GameStarter.Exit"/>.</summary>
-    private static async Task<(ViewModelHarness Harness, GameStarter Starter, Instance Instance)> PlayAsync(Func<ViewModelHarness, Task<Instance>>? addInstance = null)
+    internal static async Task<(ViewModelHarness Harness, GameStarter Starter, Instance Instance)> PlayAsync(Func<ViewModelHarness, Task<Instance>>? addInstance = null)
     {
         var starter = new GameStarter();
         var harness = await LaunchFailureTests.CreateAsync(starter);

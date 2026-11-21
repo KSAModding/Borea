@@ -1071,6 +1071,7 @@ public partial class MainViewModel : ViewModelBase
             RefreshRowText();
             RefreshGameDataItems();
             RefreshGameSaveText();
+            RefreshScreenshotText();
         }
     }
 
@@ -1141,6 +1142,7 @@ public partial class MainViewModel : ViewModelBase
         ToastInDetails?.RefreshText();
         RefreshGameDataItems();
         RefreshGameSaveText();
+        RefreshScreenshotText();
         RefreshLoaderText();
         RefreshLoaderUpdateText();
         RefreshGitHubAccount();

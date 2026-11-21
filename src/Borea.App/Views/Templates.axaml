@@ -738,4 +738,53 @@
             </StackPanel>
         </Border>
     </DataTemplate>
+    <!-- a screenshot of the Library: the picture, where it comes from and when the game saved it. A click opens it in the viewer of the system -->
+    <DataTemplate x:Key="ScreenshotTile" x:DataType="vm:ScreenshotItem">
+        <views:ScreenshotTile Classes="plain screenshot" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding TakenText}">
+            <StackPanel Spacing="6">
+                <Border Classes="thumbnail" views:RoundedClip.IsEnabled="True">
+                    <views:AspectRatioPanel>
+                        <views:ScreenshotThumbnail Screenshot="{Binding Screenshot}" />
+                    </views:AspectRatioPanel>
+                </Border>
+                <TextBlock Classes="label-md" Text="{Binding SourceName}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding TakenText}" />
+            </StackPanel>
+        </views:ScreenshotTile>
+    </DataTemplate>
+    <!-- the same tile without the instance, on the page of that instance -->
+    <DataTemplate x:Key="ScreenshotSmallTile" x:DataType="vm:ScreenshotItem">
+        <views:ScreenshotTile Classes="plain screenshot" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding TakenText}">
+            <StackPanel Spacing="4">
+                <Border Classes="thumbnail" views:RoundedClip.IsEnabled="True">
+                    <views:AspectRatioPanel>
+                        <views:ScreenshotThumbnail Screenshot="{Binding Screenshot}" />
+                    </views:AspectRatioPanel>
+                </Border>
+                <TextBlock Classes="body-sm secondary" Text="{Binding TakenText}" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </views:ScreenshotTile>
+    </DataTemplate>
+    <!-- the newest screenshots of an instance above its Game data, and the way to all of them in the Library -->
+    <DataTemplate x:Key="ScreenshotStrip" x:DataType="vm:ScreenshotStrip">
+        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True">
+            <StackPanel>
+                <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceScreenshotsHeading}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Classes="link" Margin="16,-4,-8,-4" VerticalAlignment="Center" Command="{Binding ShowAllCommand}">
+                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ScreenshotsShowAll}" />
+                        </Button>
+                    </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource ScreenshotSmallTile}" Margin="16,12,16,16">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" Columns="6" ColumnSpacing="12" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </DataTemplate>
 </ResourceDictionary>
