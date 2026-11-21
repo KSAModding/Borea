@@ -66,6 +66,16 @@ public partial class MainViewModel
 
     internal void OpenGameDataFolder(string folder) => ShowOpenError(() => PathName(folder), TryOpenWithSystem(folder));
 
+    internal string GameDataName(GameDataKind kind) => kind switch
+    {
+        GameDataKind.Settings => Localization.GameDataNameSettings,
+        GameDataKind.HudLayouts => Localization.GameDataNameHudLayouts,
+        GameDataKind.CrashDumps => Localization.GameDataNameCrashDumps,
+        GameDataKind.Screenshots => Localization.GameDataNameScreenshots,
+        GameDataKind.Exports => Localization.GameDataNameExports,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+    };
+
     internal string FormatGameDataSize(long bytes) => bytes <= 0 ? Localization.GameDataEmpty : SizeText(bytes);
 
     internal static string SizeText(long bytes) => ByteSize.Format(bytes, CultureInfo.CurrentCulture);
@@ -99,7 +109,12 @@ public sealed partial class GameDataItem
 {
     private readonly MainViewModel _owner;
 
+    public GameDataKind Kind { get; }
+
     public string Name { get; }
+
+    /// <summary>The name of the file or folder on the disk, which the row shows as a tooltip.</summary>
+    public string DiskName { get; }
 
     public string SizeText { get; }
 
@@ -110,8 +125,12 @@ public sealed partial class GameDataItem
     public GameDataItem(MainViewModel owner, GameDataEntry entry)
     {
         _owner = owner;
-        Name = entry.Name;
-        SizeText = owner.FormatGameDataSize(entry.SizeBytes);
+        Kind = entry.Kind;
+        Name = owner.GameDataName(entry.Kind);
+        DiskName = entry.Name;
+        SizeText = entry.ScreenshotCount > 0
+            ? owner.Localization.FormatGameDataScreenshots(entry.ScreenshotCount, MainViewModel.SizeText(entry.SizeBytes))
+            : owner.FormatGameDataSize(entry.SizeBytes);
         Exists = entry.Exists;
         FolderPath = entry.IsFolder ? entry.Path : Path.GetDirectoryName(entry.Path) ?? entry.Path;
     }

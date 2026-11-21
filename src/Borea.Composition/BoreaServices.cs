@@ -639,6 +639,8 @@ public sealed class BoreaServices : IDisposable
         var gitHubPullRequests = new GitHubPullRequestReviews(gitHubSession, http, listingFormat, listingOwnership);
         var gitHubReports = new GitHubIndexReports(gitHubSession, http);
 
+        var screenshots = new FileScreenshotStore();
+
         return new BoreaServices(http)
         {
             Settings = settings,
@@ -652,8 +654,8 @@ public sealed class BoreaServices : IDisposable
             AppPreferences = new FileAppPreferencesRepository(paths),
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
-            GameData = new FileGameDataReader(paths),
-            Screenshots = new FileScreenshotStore(),
+            GameData = new FileGameDataReader(paths, screenshots),
+            Screenshots = screenshots,
             GameSaves = new FileGameSaveStore(paths, records: installedContent, sharedContent: sharedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths, records: installedContent),
             InstalledContent = installedContent,

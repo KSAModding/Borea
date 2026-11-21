@@ -1,4 +1,6 @@
+using Borea.Core.Instances;
 using Borea.Storage.Instances;
+using Borea.Storage.Screenshots;
 using Borea.Storage.Tests.Paths;
 
 namespace Borea.Storage.Tests.Instances;
@@ -13,7 +15,7 @@ public sealed class FileGameDataReaderTests : IDisposable
     public FileGameDataReaderTests()
     {
         _paths = new TestGamePathProvider(_tempRoot);
-        _reader = new FileGameDataReader(_paths);
+        _reader = new FileGameDataReader(_paths, new FileScreenshotStore());
     }
 
     public void Dispose()
@@ -32,11 +34,32 @@ public sealed class FileGameDataReaderTests : IDisposable
 
         var entries = await _reader.ReadAsync(_instanceId);
 
-        Assert.Equal(["settings.toml", "HUDLayouts", "crashdumps", "exports"], entries.Select(entry => entry.Name));
-        Assert.Equal([12L, 500L, 0L, 0L], entries.Select(entry => entry.SizeBytes));
-        Assert.Equal([true, true, false, true], entries.Select(entry => entry.Exists));
-        Assert.Equal([false, true, true, true], entries.Select(entry => entry.IsFolder));
+        Assert.Equal([GameDataKind.Settings, GameDataKind.HudLayouts, GameDataKind.CrashDumps, GameDataKind.Screenshots, GameDataKind.Exports], entries.Select(entry => entry.Kind));
+        Assert.Equal(["settings.toml", "HUDLayouts", "crashdumps", "screenshots", "exports"], entries.Select(entry => entry.Name));
+        Assert.Equal([12L, 500L, 0L, 0L, 0L], entries.Select(entry => entry.SizeBytes));
+        Assert.Equal([true, true, false, false, true], entries.Select(entry => entry.Exists));
+        Assert.Equal([false, true, true, true, true], entries.Select(entry => entry.IsFolder));
         Assert.Equal(_paths.GetInstanceHudLayoutsFolder(_instanceId), entries[1].Path);
+    }
+
+    [Fact]
+    public async Task ReadAsync_ScreenshotsInsideExports_CountsThemOnTheirOwnRow()
+    {
+        var screenshots = _paths.GetInstanceScreenshotsFolder(_instanceId);
+        Write(Path.Combine(screenshots, "ksa_20261120_101500_1920x1080.png"), 700);
+        Write(Path.Combine(screenshots, "ksa_20261120_101600_1920x1080.png"), 300);
+        Write(Path.Combine(screenshots, "notes.txt"), 40);
+        Write(Path.Combine(_paths.GetInstanceExportsFolder(_instanceId), "planets", "earth.png"), 90);
+
+        var entries = await _reader.ReadAsync(_instanceId);
+
+        var screenshotsEntry = entries.Single(entry => entry.Kind == GameDataKind.Screenshots);
+        Assert.Equal(2, screenshotsEntry.ScreenshotCount);
+        Assert.Equal(1000, screenshotsEntry.SizeBytes);
+        Assert.Equal(screenshots, screenshotsEntry.Path);
+        var exports = entries.Single(entry => entry.Kind == GameDataKind.Exports);
+        Assert.Equal(90, exports.SizeBytes);
+        Assert.Equal(_paths.GetInstanceExportsFolder(_instanceId), exports.Path);
     }
 
     [Fact]
@@ -44,7 +67,7 @@ public sealed class FileGameDataReaderTests : IDisposable
     {
         var entries = await _reader.ReadAsync(_instanceId);
 
-        Assert.Equal(4, entries.Count);
+        Assert.Equal(5, entries.Count);
         Assert.All(entries, entry =>
         {
             Assert.False(entry.Exists);

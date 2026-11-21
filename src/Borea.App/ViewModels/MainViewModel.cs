@@ -15,6 +15,7 @@ using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
+using Borea.Core.Screenshots;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -289,7 +290,7 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>The row the delete modal asks about. Null while the modal is closed.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDeleteModalOpen), nameof(DeleteModalText), nameof(DeleteModalKeptBuildText))]
+    [NotifyPropertyChangedFor(nameof(IsDeleteModalOpen), nameof(DeleteModalText), nameof(DeleteModalKeptBuildText), nameof(DeleteModalScreenshotsText), nameof(DeleteModalKeepScreenshotsTip))]
     private InstanceItem? _deletingInstance;
 
     public bool IsDeleteModalOpen => DeletingInstance is not null;
@@ -854,6 +855,7 @@ public partial class MainViewModel : ViewModelBase
     internal void BeginDeleteInstance(InstanceItem item)
     {
         DeletingInstance = item;
+        StartDeleteModalScreenshotsLoad(item);
         if (LastKeptBuildOf(item) is not null)
             _ = StartKeptGameBuildLoad();
     }
@@ -862,22 +864,40 @@ public partial class MainViewModel : ViewModelBase
     private void CancelDeleteModal() => DeletingInstance = null;
 
     [RelayCommand]
-    private Task ConfirmDeleteModalAsync()
+    private async Task ConfirmDeleteModalAsync()
     {
         if (DeletingInstance is not { } item)
-            return Task.CompletedTask;
+            return;
 
+        // a cancel and a new open of the modal during the read start a new read, which only a new click confirms
+        var load = _deleteModalScreenshotsLoad;
+        await load;
+        if (DeletingInstance != item || load != _deleteModalScreenshotsLoad)
+            return;
+
+        var kept = KeepScreenshotsOnDelete ? _deleteModalScreenshots : [];
         DeletingInstance = null;
-        return DeleteInstanceAsync(item.InstanceId);
+        await DeleteInstanceAsync(item.InstanceId, kept);
     }
 
-    private async Task DeleteInstanceAsync(Guid instanceId)
+    private async Task DeleteInstanceAsync(Guid instanceId, IReadOnlyList<Screenshot> screenshotsToKeep)
     {
         var name = InstanceName(instanceId);
 
         // a preview that closed can still read the mods of this instance
         await WhenVehiclePreviewReadsEndedAsync();
-        await RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId), () => Localization.FormatToastDeleteFailed(name));
+        ScreenshotCopyResult? kept = null;
+        if (screenshotsToKeep.Count > 0 && _services is { } services)
+        {
+            kept = await TryKeepScreenshotsAsync(services.Screenshots, name, screenshotsToKeep);
+            if (kept is null)
+                return;
+        }
+
+        if (await TryInstanceOperationAsync(instances => instances.DeleteAsync(instanceId)) is { } error)
+            ShowErrorToast(() => Localization.FormatToastDeleteFailed(name), error);
+        else if (kept is not null)
+            ShowScreenshotsKeptToast(kept);
     }
 
     internal string InstanceName(Guid instanceId) => Instances.FirstOrDefault(instance => instance.InstanceId == instanceId)?.Name ?? instanceId.ToString();
@@ -1154,6 +1174,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(NameModalSkipText));
         OnPropertyChanged(nameof(DeleteModalText));
         OnPropertyChanged(nameof(DeleteModalKeptBuildText));
+        OnPropertyChanged(nameof(DeleteModalScreenshotsText));
+        OnPropertyChanged(nameof(DeleteModalKeepScreenshotsTip));
         RefreshKeepGameBuildText();
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
         OnPropertyChanged(nameof(DiscoverSortText));
@@ -1407,6 +1429,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenInstanceFolder(InstanceId);
+
+    [RelayCommand]
+    private void OpenScreenshotsFolder() => _owner.OpenInstanceScreenshotsFolder(InstanceId);
 
     [RelayCommand]
     private Task DuplicateAsync() => _owner.BeginDuplicateAsync(InstanceId);
