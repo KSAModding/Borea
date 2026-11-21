@@ -41,6 +41,20 @@ public sealed class FileScreenshotStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task AnyAsync_AbsentOrWithoutImages_IsFalse_AndOnePngInAnyFolderIsTrue()
+    {
+        var missing = Path.Combine(_tempRoot, "missing");
+        var notes = Path.Combine(_tempRoot, "notes");
+        Write(Path.Combine(notes, "notes.txt"), 5);
+        Write(Path.Combine(notes, "old", "ksa_20261201_100000_1920x1080.png"), 5);
+        var shots = Path.Combine(_tempRoot, "shots");
+        Write(Path.Combine(shots, "ksa_20261117_100000_1920x1080.PNG"), 10);
+
+        Assert.False(await _store.AnyAsync([missing, notes]));
+        Assert.True(await _store.AnyAsync([missing, notes, shots]));
+    }
+
+    [Fact]
     public async Task CopyAsync_TakenName_CreatesTheFolderAndNumbersTheCopy()
     {
         var source = Path.Combine(_tempRoot, "source", "ksa_20261117_100000_1920x1080.png");

@@ -623,6 +623,8 @@ public partial class MainViewModel : ViewModelBase
         foreach (var row in Sorted(rows))
             Instances.Add(row);
         RefreshOtherInstances();
+        if (CurrentWindowLibrary)
+            StartAnyScreenshotCheck();
         _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
         var activeGame = _services is null || _activeInstanceEntity is null ? null : _services.InstanceGames.Resolve(_activeInstanceEntity);
 

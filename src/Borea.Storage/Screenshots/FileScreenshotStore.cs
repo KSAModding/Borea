@@ -9,6 +9,9 @@ public sealed class FileScreenshotStore : IScreenshotStore
     public Task<IReadOnlyList<Screenshot>> ListAsync(string folder, CancellationToken cancellationToken = default)
         => Task.Run(() => List(folder, cancellationToken), cancellationToken);
 
+    public Task<bool> AnyAsync(IReadOnlyList<string> folders, CancellationToken cancellationToken = default)
+        => Task.Run(() => folders.Any(folder => HasImage(folder, cancellationToken)), cancellationToken);
+
     public Task<ScreenshotCopyResult> CopyAsync(IReadOnlyList<Screenshot> screenshots, string targetFolder, CancellationToken cancellationToken = default)
         => Task.Run(() => Copy(screenshots, targetFolder, cancellationToken), cancellationToken);
 
@@ -42,6 +45,26 @@ public sealed class FileScreenshotStore : IScreenshotStore
             .OrderByDescending(screenshot => screenshot.TakenAt)
             .ThenBy(screenshot => Path.GetFileName(screenshot.Path), StringComparer.Ordinal)
             .ToList();
+    }
+
+    /// <summary>Reads only the file names and stops at the first image, because a folder can hold thousands of screenshots.</summary>
+    private static bool HasImage(string folder, CancellationToken cancellationToken)
+    {
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(folder))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (ImageExtensions.Contains(Path.GetExtension(file)))
+                    return true;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // An absent folder is an IOException too, and neither it nor a folder that cannot be read holds a screenshot to show.
+        }
+
+        return false;
     }
 
     private static ScreenshotCopyResult Copy(IReadOnlyList<Screenshot> screenshots, string targetFolder, CancellationToken cancellationToken)

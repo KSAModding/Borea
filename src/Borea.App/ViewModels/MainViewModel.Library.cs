@@ -31,11 +31,23 @@ public partial class MainViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLibraryInstancesTab))]
     [NotifyPropertyChangedFor(nameof(IsLibraryScreenshotsTab))]
+    [NotifyPropertyChangedFor(nameof(ShowsLibraryTabs))]
     private LibraryTab _libraryTab;
 
     public bool IsLibraryInstancesTab => LibraryTab == LibraryTab.Instances;
 
     public bool IsLibraryScreenshotsTab => LibraryTab == LibraryTab.Screenshots;
+
+    /// <summary>Whether the last check found a screenshot in an instance or the game profile.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsLibraryTabs))]
+    private bool _hasAnyScreenshot;
+
+    /// <summary>
+    /// A player who never took a screenshot sees only the instances, as before the Screenshots tab. The tab row also stays while
+    /// the Screenshots tab is open, so the way back to the instances never goes away.
+    /// </summary>
+    public bool ShowsLibraryTabs => HasAnyScreenshot || IsLibraryScreenshotsTab;
 
     [RelayCommand]
     private void ShowLibraryInstances() => LibraryTab = LibraryTab.Instances;
