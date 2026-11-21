@@ -401,6 +401,24 @@ public sealed partial class GitHubIndexStatusEditorTests
     }
 
     [Fact]
+    public async Task OpenAsync_LiftOfAStateThatTheOpenBranchOfTheStewardDoesNotHold_OpensAPullRequestOfItsOwn()
+    {
+        var editor = await SignedInAsync();
+        await editor.OpenAsync(IndexStatusChange.Delist("mine", "The author asked for it."));
+        _index.Main["index-status.toml"] = IndexStatusDocument.Parse(Current).Apply(IndexStatusChange.Delist("MyMod", "Taken down."), Contents(), Now).Text;
+        var entry = (await editor.ReadAsync()).Entries.Single();
+
+        var check = await editor.CheckAsync(IndexStatusChange.Lift(entry, "The takedown did not hold."));
+        var lift = await editor.OpenAsync(IndexStatusChange.Lift(entry, "The takedown did not hold."));
+
+        Assert.Null(check.Refusal);
+        Assert.Null(check.Reuses);
+        Assert.Equal((2, false), (lift.Number, lift.IsReused));
+        Assert.Equal(Current, _index.Branches["steward/lift-mymod"].Files["index-status.toml"]);
+        Assert.Equal("Delist Mine", _index.Pulls[0].Title);
+    }
+
+    [Fact]
     public async Task CheckAsync_OpenPullRequestsThatCannotBeRead_AreUnknownAndTheCheckStillAnswers()
     {
         _hosts[Upstream + "/pulls?state=open&base=main&per_page=100&page=1"] = () => Json("""{"message":"Server Error"}""", HttpStatusCode.BadGateway);

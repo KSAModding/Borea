@@ -79,6 +79,11 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
                     {
                         (await ReadStatusAsync(own.Head, cancellationToken).ConfigureAwait(false)).Document.Check(change, commit.Contents);
                     }
+                    catch (IndexStatusRefusedException exception) when (exception.Refusal == IndexStatusRefusal.NotInFile)
+                    {
+                        // The branch does not hold the state to lift yet, so the lift goes to a pull request of its own.
+                        reuses = null;
+                    }
                     catch (IndexStatusRefusedException exception)
                     {
                         refusal = exception.Refusal;
@@ -106,7 +111,16 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
         change = change with { Id = id, Version = change.Version is { } version ? commit.Contents.PackVersion(id, version) ?? version : null };
         var (owners, _) = await OwnersAsync(change.Id, commit, login, cancellationToken).ConfigureAwait(false);
         if (await OwnPullAsync(await StatusPullsAsync(cancellationToken).ConfigureAwait(false), login, cancellationToken).ConfigureAwait(false) is { } own)
-            return await AddToPullRequestAsync(own, commit, change, change.Body(owners), login, cancellationToken).ConfigureAwait(false);
+        {
+            try
+            {
+                return await AddToPullRequestAsync(own, commit, change, change.Body(owners), login, cancellationToken).ConfigureAwait(false);
+            }
+            catch (IndexStatusRefusedException exception) when (exception.Refusal == IndexStatusRefusal.NotInFile)
+            {
+                // The branch does not hold the state to lift yet, and nothing was written, so the lift opens a pull request of its own.
+            }
+        }
 
         return await OpenPullRequestAsync(commit, changed, change.Branch, change.Title, change.Body(owners), login, cancellationToken).ConfigureAwait(false);
     });
