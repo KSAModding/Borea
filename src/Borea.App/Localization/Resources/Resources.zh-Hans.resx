@@ -1002,6 +1002,9 @@
   <data name="StewardOpenPullRequestsUnknown" xml:space="preserve">
     <value>Borea 无法检查是否有其他未关闭 PR 正在修改 index-status.toml。</value>
   </data>
+  <data name="StewardReusesPullRequestFormat" xml:space="preserve">
+    <value>为避免冲突，Borea 会将此次更改追加到你尚未关闭的 PR #{0}，不会另建 PR。</value>
+  </data>
   <data name="StewardOwnerWarning" xml:space="preserve">
     <value>你是所有者。POLICY.md 要求涉及下架或争议事项的管理员交由其他管理员处理。</value>
   </data>
@@ -1016,6 +1019,9 @@
   </data>
   <data name="StewardOpenedFormat" xml:space="preserve">
     <value>PR #{0} 已创建，等待管理员合并。</value>
+  </data>
+  <data name="StewardAddedToPullRequestFormat" xml:space="preserve">
+    <value>Borea 已将此次更改追加到 PR #{0}，等待管理员合并。</value>
   </data>
   <data name="StewardRefusedInvalidReason" xml:space="preserve">
     <value>请将原因写成一行中的一句话。</value>
