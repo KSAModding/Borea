@@ -17,6 +17,9 @@ namespace Borea.App.ViewModels;
 /// </summary>
 public partial class MainViewModel
 {
+    /// <summary>How many of the newest screenshots the Game data tab and the share step offer.</summary>
+    internal const int RecentScreenshotCount = 6;
+
     private IReadOnlyList<ScreenshotItem> _screenshots = [];
     private Task _screenshotLoad = Task.CompletedTask;
     private int _screenshotLoadGeneration;
@@ -38,6 +41,10 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(HasScreenshots))]
     [NotifyPropertyChangedFor(nameof(ShowsScreenshotsEmpty))]
     private bool _isLoadingScreenshots;
+
+    /// <summary>The newest screenshots of the instance page, or null when it has none, so an instance without screenshots builds no tiles.</summary>
+    [ObservableProperty]
+    private ScreenshotStrip? _instanceScreenshots;
 
     public bool HasScreenshots => !IsLoadingScreenshots && _screenshots.Count > 0;
 
@@ -134,6 +141,24 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(ShowsScreenshotsEmpty));
     }
 
+    private async Task LoadInstanceScreenshotsAsync()
+    {
+        InstanceScreenshots = null;
+        if (_services is not { } services || SelectedInstance is not { } instance)
+            return;
+
+        var screenshots = await ListScreenshotsAsync(services.Paths.GetInstanceScreenshotsFolder(instance.InstanceId));
+        if (SelectedInstance?.InstanceId != instance.InstanceId || screenshots.Count == 0)
+            return;
+
+        var source = new ScreenshotSource(instance.InstanceId);
+        var name = instance.Name;
+        InstanceScreenshots = new ScreenshotStrip(this, instance.InstanceId, screenshots
+            .Take(RecentScreenshotCount)
+            .Select(screenshot => new ScreenshotItem(this, screenshot, source, () => name))
+            .ToList());
+    }
+
     /// <summary>The screenshots in <paramref name="folder"/>, newest first. A folder that cannot be read gives none and a line in the log.</summary>
     internal async Task<IReadOnlyList<Screenshot>> ListScreenshotsAsync(string folder)
     {
@@ -167,6 +192,8 @@ public partial class MainViewModel
         foreach (var filter in ScreenshotFilters)
             filter.RefreshText();
         foreach (var item in _screenshots)
+            item.RefreshText();
+        foreach (var item in InstanceScreenshots?.Items ?? [])
             item.RefreshText();
         OnPropertyChanged(nameof(ScreenshotCountText));
     }

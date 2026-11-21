@@ -679,6 +679,7 @@
             <views:PageBodyPanel HasTopMargin="False">
                 <!-- the rows of each table share their columns, so each column starts at the same place in every row -->
                 <StackPanel IsVisible="{Binding IsGameDataTab}" Margin="0,32,0,0" Grid.IsSharedSizeScope="True">
+                    <ContentControl Content="{Binding InstanceScreenshots}" ContentTemplate="{StaticResource ScreenshotStrip}" Margin="0,0,0,16" IsVisible="{Binding InstanceScreenshots, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,0,0,16">
                         <StackPanel>
                             <Border Background="{StaticResource Brush.Surface}" Padding="16,11">

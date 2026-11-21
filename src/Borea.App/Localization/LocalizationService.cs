@@ -1626,6 +1626,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ScreenshotPathCopied => Resources.ScreenshotPathCopied;
 
+    public string InstanceScreenshotsHeading => Resources.InstanceScreenshotsHeading;
+
+    public string ScreenshotsShowAll => Resources.ScreenshotsShowAll;
+
     public string FormatLibraryLastPlayed(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryLastPlayedFormat, date);
 

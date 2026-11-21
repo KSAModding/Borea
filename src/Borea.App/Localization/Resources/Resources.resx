@@ -1797,6 +1797,12 @@
   <data name="ScreenshotPathCopied" xml:space="preserve">
     <value>Path copied</value>
   </data>
+  <data name="InstanceScreenshotsHeading" xml:space="preserve">
+    <value>Screenshots</value>
+  </data>
+  <data name="ScreenshotsShowAll" xml:space="preserve">
+    <value>Show all</value>
+  </data>
   <data name="LibraryImportModList" xml:space="preserve">
     <value>Import modlist</value>
   </data>

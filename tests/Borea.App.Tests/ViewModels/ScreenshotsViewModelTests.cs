@@ -66,4 +66,46 @@ public sealed class ScreenshotsViewModelTests
         Assert.False(viewModel.HasScreenshots);
         Assert.Empty(viewModel.ShownScreenshots);
     }
+
+    [Fact]
+    public async Task GameData_InstanceWithScreenshots_ShowsTheNewestAndShowAllFiltersTheLibraryToIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var paths = harness.Services.Paths;
+        var main = await CreateInstanceAsync(harness, "Main");
+        var other = await CreateInstanceAsync(harness, "Other");
+        var names = Enumerable.Range(1, 7).Select(day => WriteScreenshot(paths.GetInstanceScreenshotsFolder(main.InstanceId), new DateTime(2026, 11, day, 10, 0, 0))).ToList();
+        WriteScreenshot(paths.GetInstanceScreenshotsFolder(other.InstanceId), new DateTime(2026, 11, 20, 10, 0, 0));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single(item => item.Name == "Main").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
+
+        var strip = Assert.IsType<ScreenshotStrip>(viewModel.InstanceScreenshots);
+        Assert.Equal(Enumerable.Reverse(names).Take(MainViewModel.RecentScreenshotCount), FileNames(strip.Items));
+
+        await strip.ShowAllCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowLibrary);
+        Assert.True(viewModel.IsLibraryScreenshotsTab);
+        Assert.Equal("Main", viewModel.SelectedScreenshotFilter?.Name);
+        Assert.Equal(Enumerable.Reverse(names), FileNames(viewModel.ShownScreenshots));
+    }
+
+    [Fact]
+    public async Task GameData_InstanceWithoutScreenshots_HasNoStrip()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var other = await CreateInstanceAsync(harness, "Other");
+        await CreateInstanceAsync(harness, "Main");
+        WriteScreenshot(harness.Services.Paths.GetInstanceScreenshotsFolder(other.InstanceId), new DateTime(2026, 11, 20, 10, 0, 0));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single(item => item.Name == "Main").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.InstanceScreenshots);
+    }
 }
