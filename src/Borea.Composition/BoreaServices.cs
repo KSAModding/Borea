@@ -16,6 +16,7 @@ using Borea.Core.Paths;
 using Borea.Core.Planning;
 using Borea.Core.Preferences;
 using Borea.Core.Preview;
+using Borea.Core.Screenshots;
 using Borea.Core.Settings;
 using Borea.Core.Sharing;
 using Borea.Core.State;
@@ -50,6 +51,7 @@ using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Preferences;
 using Borea.Storage.Preview;
+using Borea.Storage.Screenshots;
 using Borea.Storage.Secrets;
 using Borea.Storage.Settings;
 using Borea.Storage.Sharing;
@@ -125,6 +127,8 @@ public sealed class BoreaServices : IDisposable
     public required ISharedProfileSettings SharedProfileSettings { get; init; }
 
     public required IGameDataReader GameData { get; init; }
+
+    public required IScreenshotStore Screenshots { get; init; }
 
     public required IGameSaveStore GameSaves { get; init; }
 
@@ -649,6 +653,7 @@ public sealed class BoreaServices : IDisposable
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
             GameData = new FileGameDataReader(paths),
+            Screenshots = new FileScreenshotStore(),
             GameSaves = new FileGameSaveStore(paths, records: installedContent, sharedContent: sharedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths, records: installedContent),
             InstalledContent = installedContent,

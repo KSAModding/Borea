@@ -47,6 +47,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetInstanceHudLayoutsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "HUDLayouts");
     public string GetInstanceCrashDumpsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "crashdumps");
     public string GetInstanceExportsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "exports");
+    public string GetInstanceScreenshotsFolder(Guid instanceId) => Path.Combine(GetInstanceExportsFolder(instanceId), "screenshots");
     public string GetInstanceGameLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "KittenSpaceAgency.log");
     public string GetInstanceLaunchLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "borea-launch.log");
     public string GetInstancePlaytimePath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "playtime.toml");
@@ -70,6 +71,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetLogsFolder() => Path.Combine(_root, "Logs");
     public string GetLanguagesFolder() => Path.Combine(_root, "Languages");
     public string GetSharedProfileRoot() => Path.Combine(_root, "GameProfile");
+    public string GetSharedProfileScreenshotsFolder() => Path.Combine(GetSharedProfileRoot(), "exports", "screenshots");
     public string? GetGameDirectoryPath() => _hasGameDirectory ? Path.Combine(_root, "Game") : null;
     public string? GetLoaderDirectoryPath(string loaderId)
     {

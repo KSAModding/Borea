@@ -150,6 +150,11 @@ public interface IGamePathProvider
     string GetInstanceExportsFolder(Guid instanceId);
 
     /// <summary>
+    /// Where the game saves the screenshots of the instance, ScreenshotCapture.ScreenshotsFolderPath when the loader redirects the profile to the instance.
+    /// </summary>
+    string GetInstanceScreenshotsFolder(Guid instanceId);
+
+    /// <summary>
     /// The log the game writes in the instance, Constants.LogsFolderPath below the instance root.
     /// </summary>
     string GetInstanceGameLogPath(Guid instanceId);
@@ -185,6 +190,11 @@ public interface IGamePathProvider
     /// The profile the game uses when it starts without a loader, Constants.DocumentsFolderPath.
     /// </summary>
     string GetSharedProfileRoot();
+
+    /// <summary>
+    /// Where the game saves its screenshots when it starts without a loader, ScreenshotCapture.ScreenshotsFolderPath of the shared profile.
+    /// </summary>
+    string GetSharedProfileScreenshotsFolder();
 
     /// <summary>
     /// The folder of the installation that the settings record for a loader, which an older Borea starts. Other

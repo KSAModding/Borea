@@ -554,6 +554,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetLogsFolder() => throw new NotSupportedException();
         public string GetLanguagesFolder() => throw new NotSupportedException();
         public string GetSharedProfileRoot() => throw new NotSupportedException();
+        public string GetSharedProfileScreenshotsFolder() => throw new NotSupportedException();
         public string GetInstanceRoot(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceModsFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceSavesFolder(Guid instanceId) => throw new NotSupportedException();
@@ -562,6 +563,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetInstanceHudLayoutsFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceCrashDumpsFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceExportsFolder(Guid instanceId) => throw new NotSupportedException();
+        public string GetInstanceScreenshotsFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceGameLogPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceLaunchLogPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstancePlaytimePath(Guid instanceId) => throw new NotSupportedException();

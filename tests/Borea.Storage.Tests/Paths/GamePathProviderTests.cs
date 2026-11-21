@@ -105,6 +105,7 @@ public sealed class GamePathProviderTests
 
         Assert.Equal(Path.Combine(documents, "My Games", "Kitten Space Agency"), new GamePathProvider(null).GetSharedProfileRoot());
         Assert.Equal(@"E:\Profile", new GamePathProvider(null, sharedProfileRoot: @"E:\Profile").GetSharedProfileRoot());
+        Assert.Equal(Path.Combine(@"E:\Profile", "exports", "screenshots"), new GamePathProvider(null, sharedProfileRoot: @"E:\Profile").GetSharedProfileScreenshotsFolder());
     }
 
     [Fact]
@@ -221,6 +222,7 @@ public sealed class GamePathProviderTests
         Assert.Equal(Path.Combine(root, "HUDLayouts"), provider.GetInstanceHudLayoutsFolder(instanceId));
         Assert.Equal(Path.Combine(root, "crashdumps"), provider.GetInstanceCrashDumpsFolder(instanceId));
         Assert.Equal(Path.Combine(root, "exports"), provider.GetInstanceExportsFolder(instanceId));
+        Assert.Equal(Path.Combine(root, "exports", "screenshots"), provider.GetInstanceScreenshotsFolder(instanceId));
     }
 
     [Fact]
