@@ -159,6 +159,21 @@ public partial class MainViewModel
             .ToList());
     }
 
+    /// <summary>
+    /// Tells in a toast how many screenshots the instance got since <paramref name="launchedAt"/>, after the game of that launch closed.
+    /// The game names a screenshot by the second of its local time, so the count starts at the second of the launch.
+    /// </summary>
+    private async Task ShowNewScreenshotsAsync(Guid instanceId, DateTime launchedAt)
+    {
+        if (_services is not { } services)
+            return;
+
+        var since = launchedAt.AddTicks(-(launchedAt.Ticks % TimeSpan.TicksPerSecond));
+        var count = (await ListScreenshotsAsync(services.Paths.GetInstanceScreenshotsFolder(instanceId))).Count(screenshot => screenshot.TakenAt >= since);
+        if (count > 0)
+            Toasts.ShowMessage(ToastKind.Success, () => Localization.FormatNewScreenshots(count), action: new ToastAction(() => Localization.ScreenshotsShow, () => _ = ShowScreenshotsAsync(new ScreenshotSource(instanceId))));
+    }
+
     /// <summary>The screenshots in <paramref name="folder"/>, newest first. A folder that cannot be read gives none and a line in the log.</summary>
     internal async Task<IReadOnlyList<Screenshot>> ListScreenshotsAsync(string folder)
     {

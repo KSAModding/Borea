@@ -135,4 +135,33 @@ public sealed class ScreenshotsViewModelTests
         Assert.Equal([small, Path.ChangeExtension(large, ".jpg")], editor.SharePictures.Select(row => row.Name));
         Assert.InRange(editor.SharePictures[1].Bytes.Length, 1, ShareImageLimits.MaxBytes);
     }
+
+    [Fact]
+    public async Task GameEnds_InstanceGotScreenshotsDuringTheSession_OneToastCountsThemAndShowsThem()
+    {
+        var (harness, starter, instance) = await GameCrashToastTests.PlayAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+
+        // the toast closes after its time, which a busy test run can pass before the check after the game ends is done
+        viewModel.Toasts.Clock = new ToastViewModelTests.ManualTimeProvider();
+        var folder = harness.Services.Paths.GetInstanceScreenshotsFolder(instance.InstanceId);
+        WriteScreenshot(folder, DateTime.Now.AddDays(-1));
+        WriteScreenshot(folder, DateTime.Now.AddMinutes(1));
+        WriteScreenshot(folder, DateTime.Now.AddMinutes(2));
+
+        starter.Exit(0);
+        await viewModel.WhenGameExitCheckedAsync().WaitAsync(TimeSpan.FromSeconds(60));
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.FormatNewScreenshots(2), toast.Message);
+        Assert.Equal(harness.Localization.ScreenshotsShow, toast.ActionText);
+
+        toast.RunActionCommand.Execute(null);
+        await viewModel.WhenScreenshotsLoadedAsync();
+
+        Assert.True(viewModel.IsLibraryScreenshotsTab);
+        Assert.Equal("Main", viewModel.SelectedScreenshotFilter?.Name);
+        Assert.Equal(3, viewModel.ShownScreenshots.Count);
+    }
 }

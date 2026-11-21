@@ -882,6 +882,7 @@ public partial class MainViewModel
                 services.Log.Write($"Instance {instance.InstanceId}: the game's own content now loads before the mods.");
             }
 
+            var launchedAt = Clock.GetLocalNow().DateTime;
             var result = services.Launcher.Launch(instance, loader, start.DirectoryPath, arguments: null, start.IsAdopted);
             if (result.Outcome == LaunchOutcome.WrapperRuntimeMissing)
             {
@@ -914,7 +915,7 @@ public partial class MainViewModel
 
             if (result.Started)
             {
-                StartCrashWatch(instance, result);
+                StartGameExitWatch(instance, result, launchedAt);
                 await RefreshLastPlayedAsync(instance.InstanceId);
                 StartModStoreCheckAfterGame(instance.InstanceId);
             }

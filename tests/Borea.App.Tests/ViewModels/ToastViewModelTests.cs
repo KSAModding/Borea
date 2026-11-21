@@ -538,7 +538,7 @@ public sealed class ToastViewModelTests
     }
 
     /// <summary>A clock that moves only when the test moves it, and then runs the timers that came due.</summary>
-    private sealed class ManualTimeProvider : TimeProvider
+    internal sealed class ManualTimeProvider : TimeProvider
     {
         private readonly List<ManualTimer> _timers = [];
         private DateTimeOffset _now = new(2026, 9, 17, 12, 0, 0, TimeSpan.Zero);

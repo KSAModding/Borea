@@ -1803,6 +1803,15 @@
   <data name="ScreenshotsShowAll" xml:space="preserve">
     <value>Show all</value>
   </data>
+  <data name="ScreenshotsNewOne" xml:space="preserve">
+    <value>1 new screenshot</value>
+  </data>
+  <data name="ScreenshotsNewFormat" xml:space="preserve">
+    <value>{0} new screenshots</value>
+  </data>
+  <data name="ScreenshotsShow" xml:space="preserve">
+    <value>Show</value>
+  </data>
   <data name="LibraryImportModList" xml:space="preserve">
     <value>Import modlist</value>
   </data>

@@ -1630,6 +1630,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ScreenshotsShowAll => Resources.ScreenshotsShowAll;
 
+    public string FormatNewScreenshots(int count)
+        => FormatCount(count, Resources.ScreenshotsNewOne, Resources.ScreenshotsNewFormat);
+
+    public string ScreenshotsShow => Resources.ScreenshotsShow;
+
     public string FormatLibraryLastPlayed(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryLastPlayedFormat, date);
 
