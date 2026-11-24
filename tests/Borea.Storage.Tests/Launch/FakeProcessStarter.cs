@@ -17,6 +17,12 @@ internal sealed class FakeProcessStarter : IProcessStarter
     /// <summary>Thrown by the next start when set.</summary>
     public Exception? Failure { get; set; }
 
+    /// <summary>
+    /// Whether the processes carry a start time, so a launcher records them and a later launcher finds them. Off by
+    /// default, because a find holds the process of another test as well.
+    /// </summary>
+    public bool GivesStartTimes { get; set; }
+
     public IStartedProcess Start(LaunchPlan plan)
     {
         Plans.Add(plan);
@@ -25,8 +31,36 @@ internal sealed class FakeProcessStarter : IProcessStarter
             throw Failure;
 
         var process = new FakeStartedProcess(_nextId++);
+        if (GivesStartTimes)
+            process.StartedAt = new DateTime(2026, 11, 24, 8, 0, 0, DateTimeKind.Utc).AddSeconds(process.Id);
         Processes.Add(process);
         return process;
+    }
+
+    /// <summary>A view of a started process that still runs, as a later Borea finds it. Disposing the view keeps the process.</summary>
+    public IStartedProcess? Find(int processId, DateTime startedAt)
+    {
+        var process = Processes.FirstOrDefault(process => process.Id == processId && process.StartedAt == startedAt && !process.HasExited);
+        return process is null ? null : new FoundProcess(process);
+    }
+
+    private sealed class FoundProcess(FakeStartedProcess process) : IStartedProcess
+    {
+        public int Id => process.Id;
+
+        public DateTime? StartedAt => process.StartedAt;
+
+        public bool HasExited => process.HasExited;
+
+        public int? ExitCode => null;
+
+        public IReadOnlyList<string> RecentOutput => [];
+
+        public Task<bool> WaitForExitAsync(TimeSpan timeout, CancellationToken cancellationToken = default) => process.WaitForExitAsync(timeout, cancellationToken);
+
+        public void Dispose()
+        {
+        }
     }
 }
 
@@ -49,6 +83,8 @@ internal sealed class FakeStartedProcess : IStartedProcess
         get => _hasEnded ?? HasExited;
         set => _hasEnded = value;
     }
+
+    public DateTime? StartedAt { get; set; }
 
     public int? ExitCode { get; set; }
 

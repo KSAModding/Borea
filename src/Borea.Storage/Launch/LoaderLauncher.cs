@@ -19,7 +19,9 @@ namespace Borea.Storage.Launch;
 /// It remembers every launch per instance until the process has ended, which
 /// includes a restart that took over its streams, so a second launch of a
 /// running instance is refused, and then until the next launch of the
-/// instance, so its exit watch still finds it.
+/// instance, so its exit watch still finds it. It also writes each launch to
+/// the file of running games, so a Borea that opens while the game runs
+/// refuses that second launch too.
 /// </summary>
 public sealed class LoaderLauncher : ILauncher, IDisposable
 {
@@ -130,6 +132,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
         lock (_gate)
         {
+            FindRecordedLaunches();
             _launches.Forget(ended: true, HasEnded);
 
             if (_running.ContainsKey(instance.InstanceId))
@@ -320,6 +323,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
             var gameLog = _pathProvider.GetInstanceGameLogPath(instance.InstanceId);
             _running[instance.InstanceId] = process;
+            Record(instance.InstanceId, process);
             _starts[instance.InstanceId] = (LastWrite(gameLog), LastCrashLogWrite(gameLog), loader.Name, LoaderCrashReport.ReleasesPage(loader), _profiles.For(loader.ModId));
             _ended.Remove(instance.InstanceId);
             if (wrapped is not null)
@@ -827,9 +831,53 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     {
         lock (_gate)
         {
+            FindRecordedLaunches();
             _launches.Forget(ended: true, HasEnded);
             return _running.ContainsKey(instanceId);
         }
+    }
+
+    /// <summary>
+    /// Takes over the launches that an earlier Borea recorded and that still run, once for the shared launches. Borea
+    /// can close while the game runs, and without this a Borea that opens again would start the same instance a second
+    /// time or change its mods under the running game. Called under the gate.
+    /// </summary>
+    private void FindRecordedLaunches()
+    {
+        if (_launches.RecordsRead)
+            return;
+
+        _launches.RecordsRead = true;
+        foreach (var record in RunningGameRecords.Read(_pathProvider.GetRunningGamesPath()))
+        {
+            if (_running.ContainsKey(record.InstanceId) || _starter.Find(record.ProcessId, record.StartedAt) is not { } process)
+                continue;
+
+            _running[record.InstanceId] = process;
+            _log?.Write($"Instance {record.InstanceId} still runs in process {record.ProcessId}, which an earlier Borea started.");
+        }
+    }
+
+    /// <summary>Writes the launch to the file of running games. A launch does not depend on it, so a failed write is only logged.</summary>
+    private void Record(Guid instanceId, IStartedProcess process)
+    {
+        if (process.StartedAt is not { } startedAt)
+            return;
+
+        try
+        {
+            RunningGameRecords.Put(_pathProvider.GetRunningGamesPath(), new RunningGameRecord(instanceId, process.Id, startedAt), StillRuns);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _log?.Write($"Borea could not record that instance {instanceId} runs in process {process.Id}, so a Borea that opens while the game runs can start it again.", exception);
+        }
+    }
+
+    private bool StillRuns(RunningGameRecord record)
+    {
+        using var process = _starter.Find(record.ProcessId, record.StartedAt);
+        return process is not null;
     }
 
     /// <summary>

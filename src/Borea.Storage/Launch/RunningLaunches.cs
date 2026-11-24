@@ -31,6 +31,9 @@ public sealed class RunningLaunches
     /// <summary>The Wine wrapper install each launch through a wrapper started, by the key of its process.</summary>
     internal Dictionary<Guid, WineInstall> Wrappers { get; } = new();
 
+    /// <summary>Whether a launcher has taken over the launches that the file of running games names, which it does once.</summary>
+    internal bool RecordsRead { get; set; }
+
     /// <summary>
     /// The game path that the last launch per instance wrote for its kept
     /// build, with the loader that reads it, until the next launch of the

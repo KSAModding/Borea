@@ -56,6 +56,116 @@ public sealed class ProcessStarter : IProcessStarter
         return new StartedProcess(process);
     }
 
+    /// <summary>
+    /// The start time of each system has its own precision, and Linux derives it from the boot time on every read, so
+    /// two reads of one process can differ a little.
+    /// </summary>
+    private static readonly TimeSpan StartTimeTolerance = TimeSpan.FromSeconds(1);
+
+    public IStartedProcess? Find(int processId, DateTime startedAt)
+    {
+        Process process;
+        try
+        {
+            process = Process.GetProcessById(processId);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+        {
+            // no process runs with this id
+            return null;
+        }
+
+        if (!HasExitedSafely(process)
+            && StartTimeOf(process) is { } start
+            && (start - startedAt.ToUniversalTime()).Duration() <= StartTimeTolerance)
+        {
+            return new FoundProcess(process, start);
+        }
+
+        process.Dispose();
+        return null;
+    }
+
+    private static bool HasExitedSafely(Process process)
+    {
+        try
+        {
+            return process.HasExited;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+        {
+            // a process that Borea may not read is not one that Borea started
+            return true;
+        }
+    }
+
+    private static DateTime? StartTimeOf(Process process)
+    {
+        try
+        {
+            return process.StartTime.ToUniversalTime();
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// A process that an earlier Borea started. Its output went to that Borea, so this one reads none, and its end is
+    /// the exit of the process alone.
+    /// </summary>
+    private sealed class FoundProcess : IStartedProcess
+    {
+        private readonly Process _process;
+        private volatile bool _disposed;
+        private bool _exitedAtRelease;
+
+        public FoundProcess(Process process, DateTime startedAt)
+        {
+            _process = process;
+            Id = process.Id;
+            StartedAt = startedAt;
+        }
+
+        public int Id { get; }
+
+        public DateTime? StartedAt { get; }
+
+        public bool HasExited => _disposed ? _exitedAtRelease : HasExitedSafely(_process);
+
+        // the exit code of a process that Borea did not start is not always readable, and no answer depends on it
+        public int? ExitCode => null;
+
+        public IReadOnlyList<string> RecentOutput => [];
+
+        public async Task<bool> WaitForExitAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            using var window = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            window.CancelAfter(timeout);
+            try
+            {
+                await _process.WaitForExitAsync(window.Token).ConfigureAwait(false);
+                return true;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return false;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _exitedAtRelease = HasExitedSafely(_process);
+            _disposed = true;
+            _process.Dispose();
+        }
+    }
+
     private sealed class StartedProcess : IStartedProcess
     {
         private readonly Process _process;
@@ -71,6 +181,7 @@ public sealed class ProcessStarter : IProcessStarter
         {
             _process = process;
             Id = process.Id;
+            StartedAt = StartTimeOf(process);
             _process.OutputDataReceived += (_, e) => Keep(e.Data, error: false);
             _process.ErrorDataReceived += (_, e) => Keep(e.Data, error: true);
             _process.BeginOutputReadLine();
@@ -79,6 +190,8 @@ public sealed class ProcessStarter : IProcessStarter
 
         // read once, because a released Process no longer tells its id
         public int Id { get; }
+
+        public DateTime? StartedAt { get; }
 
         // a released handle keeps what it knew, so a watch that still holds it can tell how the process ended
         public bool HasExited => _disposed ? _exitCodeAtRelease is not null : _process.HasExited;

@@ -3881,6 +3881,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LaunchInstanceMissing => Resources.LaunchInstanceMissing;
 
+    public string LaunchAlreadyRunning => Resources.LaunchAlreadyRunning;
+
     public string ModalGameSettingsLabel => Resources.ModalGameSettingsLabel;
 
     public string ModalGameSettingsHint => Resources.ModalGameSettingsHint;

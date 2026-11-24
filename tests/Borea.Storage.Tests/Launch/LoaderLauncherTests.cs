@@ -1353,6 +1353,49 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
+    public void Launch_FromABoreaThatOpenedWhileTheGameRuns_IsRefusedUntilTheGameEnds()
+    {
+        PlaceStarMap();
+        _starter.GivesStartTimes = true;
+        var listing = LoaderListing(provides: StarMapProvides());
+        _launcher.Launch(_instance, listing);
+        var process = Assert.Single(_starter.Processes);
+
+        // a Borea that closed for the game and opened again shares no launches with the one that started it
+        using var later = new LoaderLauncher(_paths, _starter, new RunningLaunches());
+
+        Assert.True(later.IsRunning(_instance.InstanceId));
+        Assert.Equal(LaunchOutcome.AlreadyRunning, later.Launch(_instance, listing).Outcome);
+        Assert.Single(_starter.Plans);
+
+        process.Exit(0);
+
+        Assert.False(later.IsRunning(_instance.InstanceId));
+        Assert.True(later.Launch(_instance, listing).Started);
+    }
+
+    [Fact]
+    public void Launch_RecordOfAGameThatEnded_IsDroppedAndKeepsNoInstanceRunning()
+    {
+        PlaceStarMap();
+        _starter.GivesStartTimes = true;
+        var listing = LoaderListing(provides: StarMapProvides());
+        var other = new Instance("Other", InstanceSource.Custom.Value);
+        _launcher.Launch(other, listing);
+        _launcher.Launch(_instance, listing);
+        _starter.Processes[0].Exit(0);
+
+        using var later = new LoaderLauncher(_paths, _starter, new RunningLaunches());
+        later.Launch(new Instance("Third", InstanceSource.Custom.Value), listing);
+
+        Assert.False(later.IsRunning(other.InstanceId));
+        Assert.True(later.IsRunning(_instance.InstanceId));
+        var text = File.ReadAllText(_paths.GetRunningGamesPath());
+        Assert.DoesNotContain(other.InstanceId.ToString(), text);
+        Assert.Contains(_instance.InstanceId.ToString(), text);
+    }
+
+    [Fact]
     public void Constructor_NullDependency_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(null!, _starter));

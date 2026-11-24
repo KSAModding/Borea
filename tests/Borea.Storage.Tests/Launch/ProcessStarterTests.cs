@@ -309,6 +309,30 @@ public sealed class ProcessStarterTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => _starter.Start(null!));
     }
 
+    [Fact]
+    public void Find_RunningProcessWithItsStartTime_FindsItAndKeepsItRunning()
+    {
+        using var current = Process.GetCurrentProcess();
+        var startedAt = current.StartTime.ToUniversalTime();
+
+        var found = _starter.Find(current.Id, startedAt);
+
+        Assert.NotNull(found);
+        Assert.Equal(current.Id, found.Id);
+        Assert.False(found.HasExited);
+        found.Dispose();
+        Assert.False(current.HasExited);
+    }
+
+    [Fact]
+    public void Find_SameIdWithAnotherStartTime_FindsNothing()
+    {
+        // a process that got the id of an ended game started at another time
+        using var current = Process.GetCurrentProcess();
+
+        Assert.Null(_starter.Find(current.Id, current.StartTime.ToUniversalTime().AddMinutes(-5)));
+    }
+
     public void Dispose()
     {
         try

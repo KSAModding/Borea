@@ -6189,6 +6189,9 @@
   <data name="LaunchInstanceMissing" xml:space="preserve">
     <value>This instance no longer exists.</value>
   </data>
+  <data name="LaunchAlreadyRunning" xml:space="preserve">
+    <value>This instance is already running. Close the game first.</value>
+  </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
     <value>The mod loader {0} is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
