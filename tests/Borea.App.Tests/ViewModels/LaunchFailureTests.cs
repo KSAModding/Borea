@@ -389,6 +389,25 @@ public sealed class LaunchFailureTests
     }
 
     [Fact]
+    public async Task PlayActiveInstance_InstanceRunsAlready_SaysSoAndStartsNothing()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateAsync(starter);
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.Single(starter.Plans);
+        Assert.Equal(harness.Localization.LaunchAlreadyRunning, viewModel.LaunchMessage);
+        Assert.True(viewModel.HasLaunchFailed);
+    }
+
+    [Fact]
     public async Task PlayActiveInstance_WithoutAnOpenedPage_StartsTheActiveInstance()
     {
         var starter = new RunningStarter();

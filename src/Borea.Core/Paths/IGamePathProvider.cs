@@ -114,6 +114,11 @@ public interface IGamePathProvider
     string GetAppLockPath();
 
     /// <summary>
+    /// File of the game processes that Borea started for an instance, so a Borea that starts later knows which instances still run.
+    /// </summary>
+    string GetRunningGamesPath();
+
+    /// <summary>
     /// Folder of the secrets that the secret store of the system protects, where that store needs a file, as DPAPI on Windows does.
     /// </summary>
     string GetSecretsFolder();

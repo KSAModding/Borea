@@ -6180,6 +6180,9 @@
   <data name="LaunchInstanceMissing" xml:space="preserve">
     <value>Diese Instanz existiert nicht mehr.</value>
   </data>
+  <data name="LaunchAlreadyRunning" xml:space="preserve">
+    <value>Diese Instanz läuft schon. Schließe zuerst das Spiel.</value>
+  </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
     <value>Der Mod-Loader {0} ist nicht installiert. Installiere ihn in der Zeile Mod-Loader auf der Seite der Instanz.</value>
   </data>

@@ -795,6 +795,14 @@ public partial class MainViewModel
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.LaunchInstanceMissing);
 
+            // the steps below write the load order and can install a loader, which a running game must not see
+            if (services.Launcher.IsRunning(instanceId))
+            {
+                services.Log.Write($"Launch of instance {instanceId} did not start, the instance is already running.");
+                RefuseLaunch(Localization.LaunchAlreadyRunning);
+                return false;
+            }
+
             // a kept build that is not there has no version to rate a loader against
             var game = services.InstanceGames.Resolve(instance);
 
@@ -1214,6 +1222,7 @@ public partial class MainViewModel
         LaunchOutcome.WrapperRuntime => Localization.FormatLaunchWrapperRuntime(loader.Name, result.Wine!.Wrapper!.BundlePath),
         LaunchOutcome.GameBuildMissing when instance.GameBuild is { } kept && GameBuildMissingText(kept) is { } missing => missing,
         LaunchOutcome.OtherBuildRunning => Localization.FormatLaunchOtherBuildRunning(loader.Name),
+        LaunchOutcome.AlreadyRunning => Localization.LaunchAlreadyRunning,
         LaunchOutcome.LoaderTakesNoGamePath => Localization.FormatLaunchLoaderTakesNoGamePath(loader.Name),
         LaunchOutcome.LoaderConfigurationUnreadable when result.ConfigurationFile is { } file => Localization.FormatLaunchLoaderConfigurationUnreadable(file, loader.Name),
         _ => result.Message,

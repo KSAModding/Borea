@@ -19,6 +19,12 @@ public interface IStartedProcess : IDisposable
     /// </summary>
     bool HasEnded => HasExited;
 
+    /// <summary>
+    /// When the process started, which tells it apart from a later process that got the same id. Null when it is not
+    /// known, and then no later Borea can find the process again.
+    /// </summary>
+    DateTime? StartedAt => null;
+
     /// <summary>The exit code once the process has exited, otherwise null.</summary>
     int? ExitCode { get; }
 
