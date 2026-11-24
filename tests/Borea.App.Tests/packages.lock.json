@@ -141,10 +141,10 @@
       },
       "Avalonia.Themes.Fluent": {
         "type": "Transitive",
-        "resolved": "12.1.6",
-        "contentHash": "CafSFU8q6I2ij7VRWy3D5qw3ObrDEOXRqIvFqVuEh7vqk1EC9ob94KYRmbHLZRsyj3Ob2xsF/tgcF5YF2uiKzQ==",
+        "resolved": "12.2.0",
+        "contentHash": "YjQJdDq3oodw21stIFyk55yqacDBe6Tw0nfgZgFHklegHW01T5iPjLN8t4W9nLDZ6ezMCH4fHdvavxYmCzMQ3w==",
         "dependencies": {
-          "Avalonia": "12.1.6"
+          "Avalonia": "12.2.0"
         }
       },
       "Avalonia.Win32": {
@@ -385,7 +385,7 @@
         "dependencies": {
           "Avalonia": "[12.2.0, )",
           "Avalonia.Desktop": "[12.2.0, )",
-          "Avalonia.Themes.Fluent": "[12.1.6, )",
+          "Avalonia.Themes.Fluent": "[12.2.0, )",
           "AvaloniaUI.DiagnosticsSupport": "[2.2.3, )",
           "Borea.Composition": "[1.0.0, )",
           "Borea.Core": "[1.0.0, )",
