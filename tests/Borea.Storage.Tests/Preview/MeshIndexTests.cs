@@ -41,6 +41,25 @@ public sealed class MeshIndexTests : IDisposable
     }
 
     [Fact]
+    public void AnInvertedAtlas_DoesNotRegisterItsMeshesUnderTheExteriorNames()
+    {
+        const string assets = """
+            <MeshAtlas Id="Interior" Path="Hull.glb" Inverted="true">
+              <Meshes><Mesh>Hull</Mesh></Meshes>
+            </MeshAtlas>
+            <MeshAtlas Id="Exterior" Path="Hull.glb" />
+            """;
+        var core = _mods.Mod("Core", ["A.xml"], ("A.xml", CatalogTestMods.Assets(assets)));
+        _mods.Write("Core", "Hull.glb", Glb("Hull"));
+
+        var catalog = PartCatalog.Build([core], CancellationToken.None);
+        var index = MeshIndex.Build([core], catalog.MeshFiles, CancellationToken.None);
+
+        Assert.Equal(new PreviewMeshRef(new PreviewAssetRef("Core", "Hull.glb"), 0, "Hull"), Find(index, "Hull"));
+        Assert.Empty(index.DuplicateNames);
+    }
+
+    [Fact]
     public void ATruncatedGlb_GivesANotice_TheNextAtlasStillLoads_AndNoBinByteIsRead()
     {
         const string assets = """

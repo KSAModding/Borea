@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Xml;
 using System.Xml.Linq;
 using Borea.Core.Preview;
+using Borea.Storage.Game;
 using Borea.Storage.Preview.Ksa;
 using Borea.Storage.Preview.Sources;
 using Tomlyn;
@@ -16,10 +17,8 @@ namespace Borea.Storage.Tests.Preview;
 /// <see cref="InstalledGame.Variable"/> names a folder that holds Content/Core.
 /// </summary>
 /// <remarks>
-/// The expected counts are for KSA 2026.11.10.5801 (<see cref="KsaPartSchema.VerifiedGameBuild"/>). The merge checks
-/// read the asset files a second time with plain XML and compare the patches and the Parent rows with the merged
-/// catalog: an item that a list with Modify="Extend" adds or patches is in the template, and a variant that does not
-/// write a list has the list of its parent.
+/// The merge checks read the asset files a second time with plain XML. An item that a list with Modify="Extend"
+/// adds or patches is in the template, and a variant that does not write a list has the list of its parent.
 /// </remarks>
 public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixture core, ITestOutputHelper output)
     : IClassFixture<InstalledGameResolveTests.CoreFixture>
@@ -29,9 +28,11 @@ public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixt
     {
         // The kitten vehicles hold only KittenBackPackPart, which has no render model, because the kitten model
         // comes from the Character and not from a part.
+        // The earlier Gemini7 range comes from KSA 2026.11.10.5801. In 5949, Gemini7 uses the same part tree as Rocket.
+        var geminiUsesRocketTree = InstalledGameVersionProvider.Read(InstalledGame.Directory)?.Version?.Revision is >= 5949;
         var expected = new Dictionary<string, (int Min, int Max)>(StringComparer.Ordinal)
         {
-            ["Gemini7"] = (260, 300),
+            ["Gemini7"] = geminiUsesRocketTree ? (520, 560) : (260, 300),
             ["Rocket"] = (520, 560),
             ["Banjo"] = (0, 0),
             ["Hunter"] = (0, 0),
@@ -67,6 +68,8 @@ public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixt
             draws += vehicle.Draws.Count;
             exceptions.AddRange(vehicle.Placeholders.Select(placeholder => $"{id}: {placeholder.Reason} {placeholder.MissingId}"));
             exceptions.AddRange(vehicle.Notices.Select(notice => $"{id}: notice {notice.Kind} {notice.Subject}"));
+            if (id.StartsWith("CoreThermalA_Prefab_", StringComparison.Ordinal) && vehicle.Draws.Count == 0)
+                exceptions.Add($"{id}: no heat shield or fairing geometry to draw");
         }
 
         output.WriteLine($"{core.Value.Xml.PartIds.Count} Part templates, {draws} draws in all");
