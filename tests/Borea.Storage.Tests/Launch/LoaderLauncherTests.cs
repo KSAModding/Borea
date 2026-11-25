@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Borea.Core.Game;
@@ -2093,20 +2092,27 @@ public sealed class LoaderLauncherTests : IDisposable
     public async Task WatchStart_LoaderStillRunningWithoutAStartTime_LogsWhenItWasLaunched()
     {
         PlaceStarMap();
-        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMilliseconds(50));
-        var beforeLaunch = DateTime.UtcNow;
+        var launchedAt = new DateTimeOffset(2026, 11, 25, 8, 0, 0, TimeSpan.Zero);
+        var time = new LaunchClock { UtcNow = launchedAt };
+        using var launcher = new LoaderLauncher(_paths, _starter, SharedProfileLauncher.CurrentPlatform(),
+            NoDotnetNeeded, TimeSpan.Zero, time: time);
         var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
-        var afterLaunch = DateTime.UtcNow;
+        time.UtcNow = launchedAt.AddSeconds(10);
 
         var result = await launcher.WatchStartAsync(_instance, started);
 
         Assert.True(result.Started);
         Assert.True(launcher.IsRunning(_instance.InstanceId));
         var log = File.ReadAllLines(_paths.GetInstanceLaunchLogPath(_instance.InstanceId));
-        var loggedStart = DateTime.ParseExact(log[0], "'Launch at 'yyyy-MM-dd HH:mm:ss' UTC'", CultureInfo.CurrentCulture,
-            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
-        Assert.InRange(loggedStart, beforeLaunch.AddTicks(-(beforeLaunch.Ticks % TimeSpan.TicksPerSecond)), afterLaunch);
+        Assert.Equal($"Launch at {launchedAt:yyyy-MM-dd HH:mm:ss} UTC", log[0]);
         Assert.Contains("The loader was still running when Borea stopped watching.", log);
+    }
+
+    private sealed class LaunchClock : TimeProvider
+    {
+        public DateTimeOffset UtcNow { get; set; }
+
+        public override DateTimeOffset GetUtcNow() => UtcNow;
     }
 
     [Fact]

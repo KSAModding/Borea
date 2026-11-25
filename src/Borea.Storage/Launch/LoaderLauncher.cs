@@ -42,6 +42,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     private readonly Dictionary<Guid, WineInstall> _wrappers;
     private readonly Dictionary<Guid, (int ProcessId, ModMetadata Loader, string LoaderDirectory, string GamePath, string? PlayerGamePath)> _keptBuilds;
     private readonly IBoreaLog? _log;
+    private readonly TimeProvider _time;
     private readonly bool _ownsLaunches;
     private readonly TimeSpan _startupWindow;
     private readonly TimeSpan _crashLogWait;
@@ -85,7 +86,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     {
     }
 
-    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null, Func<bool>? isGameRunning = null, TimeSpan? crashLogWait = null, IWinePrefixProbe? wine = null, IInstanceGameResolver? games = null, IBoreaLog? log = null, LoaderProfiles? profiles = null)
+    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null, Func<bool>? isGameRunning = null, TimeSpan? crashLogWait = null, IWinePrefixProbe? wine = null, IInstanceGameResolver? games = null, IBoreaLog? log = null, LoaderProfiles? profiles = null, TimeProvider? time = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _starter = starter ?? throw new ArgumentNullException(nameof(starter));
@@ -110,6 +111,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         _wrappers = _launches.Wrappers;
         _keptBuilds = _launches.KeptBuilds;
         _log = log;
+        _time = time ?? TimeProvider.System;
     }
 
     public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
@@ -306,7 +308,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 return refused;
 
             IStartedProcess process;
-            var launchRequestedAt = DateTime.UtcNow;
+            var launchRequestedAt = _time.GetUtcNow().UtcDateTime;
             try
             {
                 process = _starter.Start(plan);
