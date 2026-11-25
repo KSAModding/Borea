@@ -28,11 +28,16 @@ public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixt
     {
         // The kitten vehicles hold only KittenBackPackPart, which has no render model, because the kitten model
         // comes from the Character and not from a part.
-        // The earlier Gemini7 range comes from KSA 2026.11.10.5801. In 5949, Gemini7 uses the same part tree as Rocket.
-        var geminiUsesRocketTree = InstalledGameVersionProvider.Read(InstalledGame.Directory)?.Version?.Revision is >= 5949;
+        // In 5949, Gemini7 uses the same part tree as Rocket. The 5638 preview resolved 301 draws.
+        var geminiDraws = InstalledGameVersionProvider.Read(InstalledGame.Directory)?.Version?.Revision switch
+        {
+            >= 5949 => (520, 560),
+            5638 => (300, 310),
+            _ => (260, 300),
+        };
         var expected = new Dictionary<string, (int Min, int Max)>(StringComparer.Ordinal)
         {
-            ["Gemini7"] = geminiUsesRocketTree ? (520, 560) : (260, 300),
+            ["Gemini7"] = geminiDraws,
             ["Rocket"] = (520, 560),
             ["Banjo"] = (0, 0),
             ["Hunter"] = (0, 0),
@@ -68,13 +73,36 @@ public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixt
             draws += vehicle.Draws.Count;
             exceptions.AddRange(vehicle.Placeholders.Select(placeholder => $"{id}: {placeholder.Reason} {placeholder.MissingId}"));
             exceptions.AddRange(vehicle.Notices.Select(notice => $"{id}: notice {notice.Kind} {notice.Subject}"));
-            if (id.StartsWith("CoreThermalA_Prefab_", StringComparison.Ordinal) && vehicle.Draws.Count == 0)
-                exceptions.Add($"{id}: no heat shield or fairing geometry to draw");
         }
 
         output.WriteLine($"{core.Value.Xml.PartIds.Count} Part templates, {draws} draws in all");
         Assert.NotEmpty(core.Value.Xml.PartIds);
         Assert.True(exceptions.Count == 0, "These Part templates do not resolve:" + Environment.NewLine + string.Join(Environment.NewLine, exceptions));
+    }
+
+    [InstalledGameFact]
+    public void TheThermalParts_DrawTheirAblatorsAndFairingSkins()
+    {
+        if (InstalledGameVersionProvider.Read(InstalledGame.Directory)?.Version?.Revision is not >= 5949)
+            return;
+
+        foreach (var size in new[] { "2W", "2HalfW", "3W" })
+        {
+            AssertThermalMesh($"{size}A", $"{size}AblatorA");
+            AssertThermalMesh($"{size}FairingA", $"{size}FairingSkinA");
+            AssertThermalMesh($"{size}FairingB", $"{size}FairingSkinB");
+        }
+    }
+
+    private void AssertThermalMesh(string partSuffix, string meshSuffix)
+    {
+        var partId = $"CoreThermalA_Prefab_Heatshield{partSuffix}";
+        var meshName = $"CoreThermalA_Subpart_Heatshield{meshSuffix}";
+        Assert.Contains(partId, core.Value.Xml.PartIds);
+
+        var vehicle = VehicleSceneResolver.Resolve(
+            [new VehiclePartRef(partId, 1, Matrix4x4.Identity)], core.Value.Catalog, core.Value.Meshes, null);
+        Assert.Contains(vehicle.Draws, draw => vehicle.Meshes[draw.Mesh].Name == meshName);
     }
 
     [InstalledGameFact]
