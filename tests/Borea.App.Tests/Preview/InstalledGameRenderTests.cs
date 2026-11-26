@@ -16,6 +16,7 @@ using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
 using Borea.Preview.Tests;
 using Borea.Preview.Textures;
+using Borea.Storage.Game;
 using Borea.Storage.Paths;
 using Borea.Storage.Preview;
 using Borea.Storage.Settings;
@@ -63,13 +64,18 @@ public sealed class InstalledGameRenderTests(ITestOutputHelper output) : IDispos
         var game = GameDirFactAttribute.GameDir!;
         var defaults = Path.Combine(game, "Content", "Core", "defaultvehicles");
         var mods = PathList("BOREA_PREVIEW_MODS").Select(ModArchiveOf).ToList();
-        List<(string Folder, long? Triangles, IReadOnlyList<ModDependency> Needs)> vehicles = [(Path.Combine(defaults, "Gemini7"), 137_000, []), (Path.Combine(defaults, "Rocket"), 445_000, [])];
+        var paths = new GamePathProvider(gameDirectory: game, boreaRoot: _root);
+        const long rocketTriangles = 445_000;
+        var installed = new InstalledGameVersionProvider(paths).GetInstalledVersion();
+        var geminiTriangles = installed?.Version?.Revision is >= 5949 ? rocketTriangles : 137_000;
+        List<(string Folder, long? Triangles, IReadOnlyList<ModDependency> Needs)> vehicles =
+            [(Path.Combine(defaults, "Gemini7"), geminiTriangles, []), (Path.Combine(defaults, "Rocket"), rocketTriangles, [])];
         IReadOnlyList<ModDependency> needs = [.. mods.Select(mod => new ModDependency(mod.Id, ModDependencyKind.Required))];
         vehicles.AddRange(PathList("BOREA_PREVIEW_VEHICLES").Select(folder => (folder, (long?)null, needs)));
         var outFolder = Environment.GetEnvironmentVariable("BOREA_PREVIEW_OUT") is { Length: > 0 } named ? named : Path.Combine(_root, "png");
         Directory.CreateDirectory(outFolder);
 
-        await new FileBoreaSettingsRepository(new GamePathProvider(gameDirectory: null, boreaRoot: _root)).SaveAsync(new BoreaSettings(game));
+        await new FileBoreaSettingsRepository(paths).SaveAsync(new BoreaSettings(game));
         var offline = new ViewModelHarness.FakeSpaceDock();
         using var services = await BoreaServices.BuildAsync(
             _root,

@@ -5,8 +5,8 @@ namespace Borea.Storage.Preview.Ksa;
 /// </summary>
 /// <remarks>
 /// <para>
-/// These names are the one place to check again after a game update. They match KSA build 2026.11.10.5801, in the
-/// XmlElement, XmlArray, XmlArrayItem, XmlAttribute and XmlType attributes of PartTemplate, TransformDataReference,
+/// These names are the one place to check again after a game update. The list layout introduced in KSA build
+/// 2026.11.10.5801 is defined by the XML serialization attributes of PartTemplate, TransformDataReference,
 /// DataReference, KeyReference, PartModelModule.Template, PartModelDynamicModule.Template,
 /// PartModelGlassModule.Template, FuelPort.TemplateData, PbrMaterialReference, TextureReference,
 /// MeshAtlasFileReference, MeshFileReference, FileReference, TransformReference, Vector3Reference and
@@ -35,8 +35,6 @@ namespace Borea.Storage.Preview.Ksa;
 /// </remarks>
 internal static class KsaPartSchema
 {
-    public const string VerifiedGameBuild = "2026.11.10.5801";
-
     public const string Assets = "Assets";
     public const string Part = "Part";
     public const string SubPart = "SubPart";
@@ -108,6 +106,7 @@ internal static class KsaPartSchema
     public const string Modify = "Modify";
     public const string Path = "Path";
     public const string HostOnly = "HostOnly";
+    public const string Inverted = "Inverted";
     public const string InstanceOf = "InstanceOf";
     public const string LocalInstanceId = "LocalInstanceId";
     public const string X = "X";

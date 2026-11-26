@@ -314,6 +314,10 @@ internal sealed class PartCatalog
             if (row.Id is not null && RegisterFile(row) is null)
                 return;
 
+            // MeshAtlasFileReference.GetMeshId adds _Inverted to these meshes. Stock uses them for internal models.
+            if (kind == MeshFileKind.Atlas && element.Attribute(KsaPartSchema.Inverted)?.Value is { } inverted && XmlConvert.ToBoolean(inverted))
+                return;
+
             if (_reader.ResolvePath(row, element.Attribute(KsaPartSchema.Path)?.Value) is { } file)
                 _meshFiles.Add(new MeshFileDeclaration(kind, file, row.Id, hostOnly));
         }

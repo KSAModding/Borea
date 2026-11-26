@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Xml;
 using System.Xml.Linq;
 using Borea.Core.Preview;
+using Borea.Storage.Game;
 using Borea.Storage.Preview.Ksa;
 using Borea.Storage.Preview.Sources;
 using Tomlyn;
@@ -16,10 +17,8 @@ namespace Borea.Storage.Tests.Preview;
 /// <see cref="InstalledGame.Variable"/> names a folder that holds Content/Core.
 /// </summary>
 /// <remarks>
-/// The expected counts are for KSA 2026.11.10.5801 (<see cref="KsaPartSchema.VerifiedGameBuild"/>). The merge checks
-/// read the asset files a second time with plain XML and compare the patches and the Parent rows with the merged
-/// catalog: an item that a list with Modify="Extend" adds or patches is in the template, and a variant that does not
-/// write a list has the list of its parent.
+/// The merge checks read the asset files a second time with plain XML. An item that a list with Modify="Extend"
+/// adds or patches is in the template, and a variant that does not write a list has the list of its parent.
 /// </remarks>
 public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixture core, ITestOutputHelper output)
     : IClassFixture<InstalledGameResolveTests.CoreFixture>
@@ -29,9 +28,16 @@ public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixt
     {
         // The kitten vehicles hold only KittenBackPackPart, which has no render model, because the kitten model
         // comes from the Character and not from a part.
+        // In 5949, Gemini7 uses the same part tree as Rocket. The 5638 preview resolved 301 draws.
+        var geminiDraws = InstalledGameVersionProvider.Read(InstalledGame.Directory)?.Version?.Revision switch
+        {
+            >= 5949 => (520, 560),
+            5638 => (300, 310),
+            _ => (260, 300),
+        };
         var expected = new Dictionary<string, (int Min, int Max)>(StringComparer.Ordinal)
         {
-            ["Gemini7"] = (260, 300),
+            ["Gemini7"] = geminiDraws,
             ["Rocket"] = (520, 560),
             ["Banjo"] = (0, 0),
             ["Hunter"] = (0, 0),
@@ -72,6 +78,31 @@ public sealed class InstalledGameResolveTests(InstalledGameResolveTests.CoreFixt
         output.WriteLine($"{core.Value.Xml.PartIds.Count} Part templates, {draws} draws in all");
         Assert.NotEmpty(core.Value.Xml.PartIds);
         Assert.True(exceptions.Count == 0, "These Part templates do not resolve:" + Environment.NewLine + string.Join(Environment.NewLine, exceptions));
+    }
+
+    [InstalledGameFact]
+    public void TheThermalParts_DrawTheirAblatorsAndFairingSkins()
+    {
+        if (InstalledGameVersionProvider.Read(InstalledGame.Directory)?.Version?.Revision is not >= 5949)
+            return;
+
+        foreach (var size in new[] { "2W", "2HalfW", "3W" })
+        {
+            AssertThermalMesh($"{size}A", $"{size}AblatorA");
+            AssertThermalMesh($"{size}FairingA", $"{size}FairingSkinA");
+            AssertThermalMesh($"{size}FairingB", $"{size}FairingSkinB");
+        }
+    }
+
+    private void AssertThermalMesh(string partSuffix, string meshSuffix)
+    {
+        var partId = $"CoreThermalA_Prefab_Heatshield{partSuffix}";
+        var meshName = $"CoreThermalA_Subpart_Heatshield{meshSuffix}";
+        Assert.Contains(partId, core.Value.Xml.PartIds);
+
+        var vehicle = VehicleSceneResolver.Resolve(
+            [new VehiclePartRef(partId, 1, Matrix4x4.Identity)], core.Value.Catalog, core.Value.Meshes, null);
+        Assert.Contains(vehicle.Draws, draw => vehicle.Meshes[draw.Mesh].Name == meshName);
     }
 
     [InstalledGameFact]
