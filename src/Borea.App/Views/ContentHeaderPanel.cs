@@ -33,26 +33,8 @@ public enum ContentHeaderActionsPlace
 /// an install, and the measured widths are the fallback for a longer
 /// translation.
 /// </summary>
-public sealed class ContentHeaderPanel : Panel
+public sealed partial class ContentHeaderPanel : Panel
 {
-    public static readonly StyledProperty<double> ColumnSpacingProperty =
-        AvaloniaProperty.Register<ContentHeaderPanel, double>(nameof(ColumnSpacing), 32);
-
-    public static readonly StyledProperty<double> ActionsSpacingProperty =
-        AvaloniaProperty.Register<ContentHeaderPanel, double>(nameof(ActionsSpacing), 24);
-
-    public static readonly StyledProperty<double> RowSpacingProperty =
-        AvaloniaProperty.Register<ContentHeaderPanel, double>(nameof(RowSpacing), 16);
-
-    public static readonly StyledProperty<double> MinTextWidthProperty =
-        AvaloniaProperty.Register<ContentHeaderPanel, double>(nameof(MinTextWidth), 280);
-
-    public static readonly StyledProperty<double> BesideMinColumnWidthProperty =
-        AvaloniaProperty.Register<ContentHeaderPanel, double>(nameof(BesideMinColumnWidth), 760);
-
-    public static readonly StyledProperty<double> BelowTextMinColumnWidthProperty =
-        AvaloniaProperty.Register<ContentHeaderPanel, double>(nameof(BelowTextMinColumnWidth), 280);
-
     private Rect _text;
     private Rect _actions;
     private Rect _meta;
@@ -63,32 +45,20 @@ public sealed class ContentHeaderPanel : Panel
     }
 
     /// <summary>The space between the image and the column of the text.</summary>
-    public double ColumnSpacing
-    {
-        get => GetValue(ColumnSpacingProperty);
-        set => SetValue(ColumnSpacingProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 32.0)]
+    public partial double ColumnSpacing { get; set; }
 
     /// <summary>The space between the text and the actions beside it.</summary>
-    public double ActionsSpacing
-    {
-        get => GetValue(ActionsSpacingProperty);
-        set => SetValue(ActionsSpacingProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 24.0)]
+    public partial double ActionsSpacing { get; set; }
 
     /// <summary>The space above the actions when they are below the text or the image.</summary>
-    public double RowSpacing
-    {
-        get => GetValue(RowSpacingProperty);
-        set => SetValue(RowSpacingProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 16.0)]
+    public partial double RowSpacing { get; set; }
 
     /// <summary>The least width the text keeps beside the actions.</summary>
-    public double MinTextWidth
-    {
-        get => GetValue(MinTextWidthProperty);
-        set => SetValue(MinTextWidthProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 280.0)]
+    public partial double MinTextWidth { get; set; }
 
     /// <summary>
     /// The least width of the column right of the image in which the actions sit
@@ -96,11 +66,8 @@ public sealed class ContentHeaderPanel : Panel
     /// pages next to <see cref="MinTextWidth"/>, so the actions do not move when
     /// the buttons change.
     /// </summary>
-    public double BesideMinColumnWidth
-    {
-        get => GetValue(BesideMinColumnWidthProperty);
-        set => SetValue(BesideMinColumnWidthProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 760.0)]
+    public partial double BesideMinColumnWidth { get; set; }
 
     /// <summary>
     /// The least width of the column right of the image in which the actions wrap
@@ -108,11 +75,8 @@ public sealed class ContentHeaderPanel : Panel
     /// so the actions do not move between the column and the full width when the
     /// buttons change.
     /// </summary>
-    public double BelowTextMinColumnWidth
-    {
-        get => GetValue(BelowTextMinColumnWidthProperty);
-        set => SetValue(BelowTextMinColumnWidthProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 280.0)]
+    public partial double BelowTextMinColumnWidth { get; set; }
 
     /// <summary>Where the last layout put the actions.</summary>
     public ContentHeaderActionsPlace ActionsPlace { get; private set; }

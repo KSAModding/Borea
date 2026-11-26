@@ -12,17 +12,8 @@ namespace Borea.App.Views;
 /// panel, the body keeps the same place and width, so it does not jump between
 /// pages, and gives up only the room on its right that the panel needs.
 /// </summary>
-public sealed class PageBodyPanel : Panel
+public sealed partial class PageBodyPanel : Panel
 {
-    public static readonly StyledProperty<bool> HasSidePanelProperty =
-        AvaloniaProperty.Register<PageBodyPanel, bool>(nameof(HasSidePanel));
-
-    public static readonly StyledProperty<bool> HasTopMarginProperty =
-        AvaloniaProperty.Register<PageBodyPanel, bool>(nameof(HasTopMargin), defaultValue: true);
-
-    public static readonly StyledProperty<bool> HasBottomMarginProperty =
-        AvaloniaProperty.Register<PageBodyPanel, bool>(nameof(HasBottomMargin), defaultValue: true);
-
     /// <summary>
     /// Whether the body is at most <see cref="MediumBodyWidth"/> wide. Every control in the panel inherits the
     /// width properties, and a style reads one with a property selector, such as
@@ -111,25 +102,16 @@ public sealed class PageBodyPanel : Panel
     }
 
     /// <summary>Keeps the body left of the side panel that the page shows along its right edge.</summary>
-    public bool HasSidePanel
-    {
-        get => GetValue(HasSidePanelProperty);
-        set => SetValue(HasSidePanelProperty, value);
-    }
+    [GeneratedStyledProperty]
+    public partial bool HasSidePanel { get; set; }
 
     /// <summary>False for the part of a page that scrolls below a fixed header.</summary>
-    public bool HasTopMargin
-    {
-        get => GetValue(HasTopMarginProperty);
-        set => SetValue(HasTopMarginProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = true)]
+    public partial bool HasTopMargin { get; set; }
 
     /// <summary>False for the fixed header of a page whose rest scrolls.</summary>
-    public bool HasBottomMargin
-    {
-        get => GetValue(HasBottomMarginProperty);
-        set => SetValue(HasBottomMarginProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = true)]
+    public partial bool HasBottomMargin { get; set; }
 
     public static bool GetIsMedium(Control control) => control.GetValue(IsMediumProperty);
 

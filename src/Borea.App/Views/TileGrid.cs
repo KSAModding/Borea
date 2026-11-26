@@ -13,20 +13,8 @@ namespace Borea.App.Views;
 /// no virtualizing wrap panel and the screenshots of a library can be thousands. Only the rows near the window exist, and a row that the
 /// list recycles keeps the tiles that <see cref="ItemTemplate"/> built, so only their data moves, as in <see cref="RowList"/>.
 /// </summary>
-public sealed class TileGrid : Decorator
+public sealed partial class TileGrid : Decorator
 {
-    public static readonly StyledProperty<IReadOnlyList<object>?> ItemsProperty =
-        AvaloniaProperty.Register<TileGrid, IReadOnlyList<object>?>(nameof(Items));
-
-    public static readonly StyledProperty<IDataTemplate?> ItemTemplateProperty =
-        AvaloniaProperty.Register<TileGrid, IDataTemplate?>(nameof(ItemTemplate));
-
-    public static readonly StyledProperty<double> MinTileWidthProperty =
-        AvaloniaProperty.Register<TileGrid, double>(nameof(MinTileWidth), 200);
-
-    public static readonly StyledProperty<double> SpacingProperty =
-        AvaloniaProperty.Register<TileGrid, double>(nameof(Spacing), 16);
-
     private readonly RowList _rows = new()
     {
         ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel { CacheLength = 2 }),
@@ -40,30 +28,18 @@ public sealed class TileGrid : Decorator
         Child = _rows;
     }
 
-    public IReadOnlyList<object>? Items
-    {
-        get => GetValue(ItemsProperty);
-        set => SetValue(ItemsProperty, value);
-    }
+    [GeneratedStyledProperty]
+    public partial IReadOnlyList<object>? Items { get; set; }
 
-    public IDataTemplate? ItemTemplate
-    {
-        get => GetValue(ItemTemplateProperty);
-        set => SetValue(ItemTemplateProperty, value);
-    }
+    [GeneratedStyledProperty]
+    public partial IDataTemplate? ItemTemplate { get; set; }
 
-    public double MinTileWidth
-    {
-        get => GetValue(MinTileWidthProperty);
-        set => SetValue(MinTileWidthProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 200.0)]
+    public partial double MinTileWidth { get; set; }
 
     /// <summary>The space between two tiles, across and down.</summary>
-    public double Spacing
-    {
-        get => GetValue(SpacingProperty);
-        set => SetValue(SpacingProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 16.0)]
+    public partial double Spacing { get; set; }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
