@@ -56,7 +56,7 @@ jobs:
       # source paths Coveralls needs, and the filter drops generated code under obj/.
       - name: Merge coverage reports
         if: matrix.os == 'ubuntu-24.04'
-        uses: danielpalme/ReportGenerator-GitHub-Action@5f3701a41d14548c9b8e575a5c235230e515cbc0 # 5.6.0
+        uses: danielpalme/ReportGenerator-GitHub-Action@70c37c4d588cff5bf9cf190830c6f01dfcfb884b # 5.6.1
         with:
           reports: coverage/**/coverage.cobertura.xml
           targetdir: coverage/merged
