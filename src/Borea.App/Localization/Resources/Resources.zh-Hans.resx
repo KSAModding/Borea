@@ -1713,6 +1713,9 @@
   <data name="LibraryOpenFolder" xml:space="preserve">
     <value>打开文件夹</value>
   </data>
+  <data name="LibraryOpenScreenshotsFolder" xml:space="preserve">
+    <value>打开截图文件夹</value>
+  </data>
   <data name="LibraryDelete" xml:space="preserve">
     <value>删除</value>
   </data>
@@ -1757,6 +1760,57 @@
   </data>
   <data name="LibraryOtherInstancesHeading" xml:space="preserve">
     <value>实例</value>
+  </data>
+  <data name="LibraryTabInstances" xml:space="preserve">
+    <value>实例</value>
+  </data>
+  <data name="LibraryTabScreenshots" xml:space="preserve">
+    <value>截图</value>
+  </data>
+  <data name="ScreenshotsFilterName" xml:space="preserve">
+    <value>实例</value>
+  </data>
+  <data name="ScreenshotsAll" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="ScreenshotsCountOne" xml:space="preserve">
+    <value>1 张截图</value>
+  </data>
+  <data name="ScreenshotsCountFormat" xml:space="preserve">
+    <value>{0} 张截图</value>
+  </data>
+  <data name="ScreenshotsRefresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="ScreenshotsEmpty" xml:space="preserve">
+    <value>暂无截图。在游戏中按 Print Screen 键即可保存截图。Borea 会在这里显示所有实例的截图。</value>
+  </data>
+  <data name="ScreenshotOpen" xml:space="preserve">
+    <value>打开</value>
+  </data>
+  <data name="ScreenshotShowInFolder" xml:space="preserve">
+    <value>在文件夹中显示</value>
+  </data>
+  <data name="ScreenshotCopyPath" xml:space="preserve">
+    <value>复制路径</value>
+  </data>
+  <data name="ScreenshotPathCopied" xml:space="preserve">
+    <value>已复制路径</value>
+  </data>
+  <data name="InstanceScreenshotsHeading" xml:space="preserve">
+    <value>截图</value>
+  </data>
+  <data name="ScreenshotsShowAll" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="ScreenshotsNewOne" xml:space="preserve">
+    <value>新增 1 张截图</value>
+  </data>
+  <data name="ScreenshotsNewFormat" xml:space="preserve">
+    <value>新增 {0} 张截图</value>
+  </data>
+  <data name="ScreenshotsShow" xml:space="preserve">
+    <value>查看</value>
   </data>
   <data name="LibraryImportModList" xml:space="preserve">
     <value>导入模组列表</value>
@@ -2013,6 +2067,15 @@
   <data name="ToastDeleteFailedFormat" xml:space="preserve">
     <value>无法删除 {0}</value>
   </data>
+  <data name="ToastScreenshotsKeepFailedFormat" xml:space="preserve">
+    <value>无法复制截图，已取消删除实例“{0}”</value>
+  </data>
+  <data name="ToastScreenshotsKeptOneFormat" xml:space="preserve">
+    <value>已将 1 张截图保留在 {0}</value>
+  </data>
+  <data name="ToastScreenshotsKeptFormat" xml:space="preserve">
+    <value>已将 {0} 张截图保留在 {1}</value>
+  </data>
   <data name="ToastDuplicateFailedFormat" xml:space="preserve">
     <value>无法复制 {0}</value>
   </data>
@@ -2168,6 +2231,27 @@
   </data>
   <data name="ManualInstallsInstanceChanged" xml:space="preserve">
     <value>实例已更改，请重试。</value>
+  </data>
+  <data name="GameDataNameSettings" xml:space="preserve">
+    <value>游戏设置</value>
+  </data>
+  <data name="GameDataNameHudLayouts" xml:space="preserve">
+    <value>HUD 布局</value>
+  </data>
+  <data name="GameDataNameCrashDumps" xml:space="preserve">
+    <value>崩溃转储</value>
+  </data>
+  <data name="GameDataNameScreenshots" xml:space="preserve">
+    <value>截图</value>
+  </data>
+  <data name="GameDataNameExports" xml:space="preserve">
+    <value>其他导出文件</value>
+  </data>
+  <data name="GameDataScreenshotsOneFormat" xml:space="preserve">
+    <value>1 张截图，共 {0}</value>
+  </data>
+  <data name="GameDataScreenshotsFormat" xml:space="preserve">
+    <value>{0} 张截图，共 {1}</value>
   </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>空</value>
@@ -3967,13 +4051,16 @@
     <value>图片</value>
   </data>
   <data name="SharePicturesHintFormat" xml:space="preserve">
-    <value>可选。最多添加 {0} 张图片，支持 PNG、JPEG 或 WebP 格式，每张不超过 {1}。第一张为封面。发布时，这些图片也会公开。</value>
+    <value>可选。最多添加 {0} 张图片，支持 PNG、JPEG 或 WebP 格式。Borea 会自动缩小超过 {1} 的图片。第一张为封面。发布时，这些图片也会公开。</value>
   </data>
   <data name="SharePicturesNewVersionHintFormat" xml:space="preserve">
-    <value>可选。这些图片将追加到页面已有的图片中，每个页面最多显示 {0} 张。请使用 PNG、JPEG 或 WebP 格式，每张不超过 {1}。发布时，这些图片也会公开。</value>
+    <value>可选。这些图片将追加到页面已有的图片中，每个页面最多显示 {0} 张。请使用 PNG、JPEG 或 WebP 格式。Borea 会自动缩小超过 {1} 的图片。发布时，这些图片也会公开。</value>
   </data>
   <data name="SharePictureAdd" xml:space="preserve">
     <value>添加图片</value>
+  </data>
+  <data name="ShareScreenshotsHeading" xml:space="preserve">
+    <value>此实例的截图</value>
   </data>
   <data name="SharePictureCover" xml:space="preserve">
     <value>封面</value>
@@ -4907,6 +4994,18 @@
   </data>
   <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
     <value>是否删除 {0}、其文件夹及备份？此操作无法撤销。</value>
+  </data>
+  <data name="ModalDeleteInstanceScreenshotsOne" xml:space="preserve">
+    <value>实例中的 1 张截图也将一并删除。</value>
+  </data>
+  <data name="ModalDeleteInstanceScreenshotsFormat" xml:space="preserve">
+    <value>实例中的 {0} 张截图也将一并删除。</value>
+  </data>
+  <data name="ModalDeleteInstanceKeepScreenshots" xml:space="preserve">
+    <value>保留截图</value>
+  </data>
+  <data name="ModalDeleteInstanceKeepScreenshotsTipFormat" xml:space="preserve">
+    <value>删除实例前，先将截图复制到 {0}。</value>
   </data>
   <data name="ModalDeleteInstanceKeptBuildFormat" xml:space="preserve">
     <value>此实例保留的 KSA {0}（{1}）将留在 Game Builds 中。你可以在“设置”的“游戏”选项卡中将其删除。</value>
