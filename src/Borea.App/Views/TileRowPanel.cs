@@ -14,17 +14,8 @@ namespace Borea.App.Views;
 /// the right edge. The tile edges sit on device pixels, so layout rounding cannot
 /// push the last tile of a row past that edge.
 /// </summary>
-public sealed class TileRowPanel : Panel
+public sealed partial class TileRowPanel : Panel
 {
-    public static readonly StyledProperty<double> MinTileSizeProperty =
-        AvaloniaProperty.Register<TileRowPanel, double>(nameof(MinTileSize), 171);
-
-    public static readonly StyledProperty<double> SpacingProperty =
-        AvaloniaProperty.Register<TileRowPanel, double>(nameof(Spacing), 5);
-
-    public static readonly StyledProperty<int> MaxRowsProperty =
-        AvaloniaProperty.Register<TileRowPanel, int>(nameof(MaxRows));
-
     /// <summary>The tiles this panel hid because they did not fit in <see cref="MaxRows"/>.</summary>
     private readonly HashSet<Control> _cut = [];
 
@@ -33,25 +24,16 @@ public sealed class TileRowPanel : Panel
         AffectsMeasure<TileRowPanel>(MinTileSizeProperty, SpacingProperty, MaxRowsProperty);
     }
 
-    public double MinTileSize
-    {
-        get => GetValue(MinTileSizeProperty);
-        set => SetValue(MinTileSizeProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 171.0)]
+    public partial double MinTileSize { get; set; }
 
     /// <summary>The space between two tiles, across and down.</summary>
-    public double Spacing
-    {
-        get => GetValue(SpacingProperty);
-        set => SetValue(SpacingProperty, value);
-    }
+    [GeneratedStyledProperty(DefaultValue = 5.0)]
+    public partial double Spacing { get; set; }
 
     /// <summary>The most rows the panel shows, or 0 for no limit. With a limit, a row shows only when it is full, unless it is the only row.</summary>
-    public int MaxRows
-    {
-        get => GetValue(MaxRowsProperty);
-        set => SetValue(MaxRowsProperty, value);
-    }
+    [GeneratedStyledProperty]
+    public partial int MaxRows { get; set; }
 
     /// <summary>How many tiles a row that is <paramref name="width"/> wide holds, and the size of each.</summary>
     internal static (int Columns, double Size) Fit(double width, double minTileSize, double spacing)

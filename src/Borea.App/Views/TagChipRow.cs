@@ -12,23 +12,11 @@ namespace Borea.App.Views;
 /// A row can lead with a green chip of its own, such as Installed, which comes first, counts as one of the chips that fit,
 /// and gives way only after every tag and the count chip.
 /// </summary>
-public sealed class TagChipRow : Panel
+public sealed partial class TagChipRow : Panel
 {
     internal const int MaxShown = 6;
 
     private const double Spacing = 4;
-
-    public static readonly StyledProperty<IReadOnlyList<string>?> TagsProperty =
-        AvaloniaProperty.Register<TagChipRow, IReadOnlyList<string>?>(nameof(Tags));
-
-    public static readonly StyledProperty<string?> LeadProperty =
-        AvaloniaProperty.Register<TagChipRow, string?>(nameof(Lead));
-
-    public static readonly StyledProperty<bool> ShowsLeadProperty =
-        AvaloniaProperty.Register<TagChipRow, bool>(nameof(ShowsLead));
-
-    public static readonly StyledProperty<string?> LeadTipProperty =
-        AvaloniaProperty.Register<TagChipRow, string?>(nameof(LeadTip));
 
     private readonly TextBlock _moreText = new();
     private readonly Border _more;
@@ -47,30 +35,18 @@ public sealed class TagChipRow : Panel
         Children.Add(_more);
     }
 
-    public IReadOnlyList<string>? Tags
-    {
-        get => GetValue(TagsProperty);
-        set => SetValue(TagsProperty, value);
-    }
+    [GeneratedStyledProperty]
+    public partial IReadOnlyList<string>? Tags { get; set; }
 
     /// <summary>The text of the green chip that comes before the tags while <see cref="ShowsLead"/> is true.</summary>
-    public string? Lead
-    {
-        get => GetValue(LeadProperty);
-        set => SetValue(LeadProperty, value);
-    }
+    [GeneratedStyledProperty]
+    public partial string? Lead { get; set; }
 
-    public bool ShowsLead
-    {
-        get => GetValue(ShowsLeadProperty);
-        set => SetValue(ShowsLeadProperty, value);
-    }
+    [GeneratedStyledProperty]
+    public partial bool ShowsLead { get; set; }
 
-    public string? LeadTip
-    {
-        get => GetValue(LeadTipProperty);
-        set => SetValue(LeadTipProperty, value);
-    }
+    [GeneratedStyledProperty]
+    public partial string? LeadTip { get; set; }
 
     /// <summary>The chip that names the left out tags, which the layout shows only when there are some.</summary>
     internal Border MoreChip => _more;
