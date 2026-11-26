@@ -82,7 +82,7 @@ public sealed class ListingHostClient : IListingHostClient
 
         var names = archives.Select(asset => asset.Name.ToLowerInvariant()).ToHashSet();
         var pool = archives.Where(asset => !IsPlatformArchive(asset.Name, names)).ToList();
-        var chosen = pool.Count <= 1 ? pool.FirstOrDefault() : ArchiveNamedAfter(listingId, release.TagName[tagPrefix.Length..], pool);
+        var chosen = pool.Count <= 1 ? pool.FirstOrDefault() : ArchiveNamedAfter(listingId, release.TagName, tagPrefix, pool);
 
         return new ListingHostRelease(
             release.TagName,
@@ -100,13 +100,15 @@ public sealed class ListingHostClient : IListingHostClient
             .Any(ending => lower.Length > ending.Length && lower.EndsWith(ending, StringComparison.Ordinal) && names.Contains($"{lower[..^ending.Length]}.zip"));
     }
 
-    /// <summary>The archive named id.zip, id-tag.zip or id_tag.zip, in that order, where the tag has no tag_prefix and no leading v, or null.</summary>
-    private static GitHubAssetDto? ArchiveNamedAfter(string listingId, string tagName, List<GitHubAssetDto> archives)
+    /// <summary>Finds the first exact archive name, using the full tag as the last match for a prefixed listing.</summary>
+    private static GitHubAssetDto? ArchiveNamedAfter(string listingId, string fullTag, string tagPrefix, List<GitHubAssetDto> archives)
     {
-        var id = listingId.ToLowerInvariant();
-        var tag = tagName.TrimStart('v', 'V').ToLowerInvariant();
-        return new[] { $"{id}.zip", $"{id}-{tag}.zip", $"{id}_{tag}.zip" }
-            .Select(wanted => archives.FirstOrDefault(asset => asset.Name.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+        var tag = fullTag[tagPrefix.Length..].TrimStart('v', 'V');
+        List<string> names = [$"{listingId}.zip", $"{listingId}-{tag}.zip", $"{listingId}_{tag}.zip"];
+        if (tagPrefix.Length > 0)
+            names.Add($"{listingId}-{fullTag}.zip");
+
+        return names.Select(wanted => archives.FirstOrDefault(asset => asset.Name.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
             .FirstOrDefault(asset => asset is not null);
     }
 
