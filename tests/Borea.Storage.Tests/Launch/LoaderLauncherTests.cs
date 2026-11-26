@@ -2028,6 +2028,7 @@ public sealed class LoaderLauncherTests : IDisposable
     public async Task WatchStart_LoaderExitsWithZeroWhileItsRestartRuns_StaysStarted()
     {
         PlaceStarMap();
+        _starter.GivesStartTimes = true;
         using var launcher = LauncherSeeingGame(() => true, TimeSpan.FromMilliseconds(100));
         var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
         var process = Assert.Single(_starter.Processes);
@@ -2041,7 +2042,15 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.True(result.Started);
         Assert.Equal(["StarMap - RESTARTING"], result.Output);
         Assert.True(launcher.IsRunning(_instance.InstanceId));
-        Assert.Contains("restarted itself", File.ReadAllText(_paths.GetInstanceLaunchLogPath(_instance.InstanceId)));
+        Assert.Equal(
+            [
+                $"Launch at {process.StartedAt:yyyy-MM-dd HH:mm:ss} UTC",
+                $"Executable: {started.Plan!.Executable}",
+                "The loader restarted itself. Its new process was still running when Borea stopped watching.",
+                string.Empty,
+                "StarMap - RESTARTING",
+            ],
+            File.ReadAllLines(_paths.GetInstanceLaunchLogPath(_instance.InstanceId)));
     }
 
     [Fact]
@@ -2080,17 +2089,30 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
-    public async Task WatchStart_LoaderStillRunningAfterTheWindow_StaysStarted()
+    public async Task WatchStart_LoaderStillRunningWithoutAStartTime_LogsWhenItWasLaunched()
     {
         PlaceStarMap();
-        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMilliseconds(50));
+        var launchedAt = new DateTimeOffset(2026, 11, 25, 8, 0, 0, TimeSpan.Zero);
+        var time = new LaunchClock { UtcNow = launchedAt };
+        using var launcher = new LoaderLauncher(_paths, _starter, SharedProfileLauncher.CurrentPlatform(),
+            NoDotnetNeeded, TimeSpan.Zero, time: time);
         var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        time.UtcNow = launchedAt.AddSeconds(10);
 
         var result = await launcher.WatchStartAsync(_instance, started);
 
         Assert.True(result.Started);
         Assert.True(launcher.IsRunning(_instance.InstanceId));
-        Assert.Contains("still running", File.ReadAllText(_paths.GetInstanceLaunchLogPath(_instance.InstanceId)));
+        var log = File.ReadAllLines(_paths.GetInstanceLaunchLogPath(_instance.InstanceId));
+        Assert.Equal($"Launch at {launchedAt:yyyy-MM-dd HH:mm:ss} UTC", log[0]);
+        Assert.Contains("The loader was still running when Borea stopped watching.", log);
+    }
+
+    private sealed class LaunchClock : TimeProvider
+    {
+        public DateTimeOffset UtcNow { get; set; }
+
+        public override DateTimeOffset GetUtcNow() => UtcNow;
     }
 
     [Fact]

@@ -37,11 +37,12 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     private readonly RunningLaunches _launches;
     private readonly object _gate;
     private readonly Dictionary<Guid, IStartedProcess> _running;
-    private readonly Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases, ILoaderProfile Profile)> _starts;
+    private readonly Dictionary<Guid, (DateTime LaunchedAt, DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases, ILoaderProfile Profile)> _starts;
     private readonly Dictionary<Guid, (IStartedProcess Process, DateTime? CrashLogAtLaunch)> _ended;
     private readonly Dictionary<Guid, WineInstall> _wrappers;
     private readonly Dictionary<Guid, (int ProcessId, ModMetadata Loader, string LoaderDirectory, string GamePath, string? PlayerGamePath)> _keptBuilds;
     private readonly IBoreaLog? _log;
+    private readonly TimeProvider _time;
     private readonly bool _ownsLaunches;
     private readonly TimeSpan _startupWindow;
     private readonly TimeSpan _crashLogWait;
@@ -85,7 +86,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     {
     }
 
-    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null, Func<bool>? isGameRunning = null, TimeSpan? crashLogWait = null, IWinePrefixProbe? wine = null, IInstanceGameResolver? games = null, IBoreaLog? log = null, LoaderProfiles? profiles = null)
+    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null, Func<bool>? isGameRunning = null, TimeSpan? crashLogWait = null, IWinePrefixProbe? wine = null, IInstanceGameResolver? games = null, IBoreaLog? log = null, LoaderProfiles? profiles = null, TimeProvider? time = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _starter = starter ?? throw new ArgumentNullException(nameof(starter));
@@ -110,6 +111,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         _wrappers = _launches.Wrappers;
         _keptBuilds = _launches.KeptBuilds;
         _log = log;
+        _time = time ?? TimeProvider.System;
     }
 
     public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
@@ -306,6 +308,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 return refused;
 
             IStartedProcess process;
+            var launchRequestedAt = _time.GetUtcNow().UtcDateTime;
             try
             {
                 process = _starter.Start(plan);
@@ -324,7 +327,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             var gameLog = _pathProvider.GetInstanceGameLogPath(instance.InstanceId);
             _running[instance.InstanceId] = process;
             Record(instance.InstanceId, process);
-            _starts[instance.InstanceId] = (LastWrite(gameLog), LastCrashLogWrite(gameLog), loader.Name, LoaderCrashReport.ReleasesPage(loader), _profiles.For(loader.ModId));
+            _starts[instance.InstanceId] = (process.StartedAt ?? launchRequestedAt, LastWrite(gameLog), LastCrashLogWrite(gameLog), loader.Name, LoaderCrashReport.ReleasesPage(loader), _profiles.For(loader.ModId));
             _ended.Remove(instance.InstanceId);
             if (wrapped is not null)
                 _wrappers[instance.InstanceId] = wrapped;
@@ -536,7 +539,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             return started;
 
         IStartedProcess? process;
-        (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases, ILoaderProfile Profile) start;
+        (DateTime LaunchedAt, DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases, ILoaderProfile Profile) start;
         WineInstall? wrapped;
         lock (_gate)
         {
@@ -591,7 +594,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         // a loader that exits with 0 and leaves a game process that holds its streams has restarted itself
         var restarted = exitCode == 0 && !ended && _isGameRunning();
         var output = process.RecentOutput;
-        WriteLaunchLog(_pathProvider.GetInstanceLaunchLogPath(instance.InstanceId), started.Plan, output, exitCode, restarted, _platform == OsPlatform.Windows);
+        WriteLaunchLog(_pathProvider.GetInstanceLaunchLogPath(instance.InstanceId), start.LaunchedAt, started.Plan, output, exitCode, restarted, _platform == OsPlatform.Windows);
 
         // the exit code of the launcher of a wrapper says nothing about the game, so only the game log decides
         if (wrapped is not null)
@@ -800,14 +803,14 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     /// What the loader wrote while it was watched, next to the game's log, so
     /// the player can open it later. Each launch replaces the file.
     /// </summary>
-    private static void WriteLaunchLog(string path, LaunchPlan plan, IReadOnlyList<string> output, int? exitCode, bool restarted, bool windows)
+    private static void WriteLaunchLog(string path, DateTime launchedAt, LaunchPlan plan, IReadOnlyList<string> output, int? exitCode, bool restarted, bool windows)
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var header = new[]
             {
-                $"Launch at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC",
+                $"Launch at {launchedAt:yyyy-MM-dd HH:mm:ss} UTC",
                 $"Executable: {plan.Executable}",
                 (exitCode, restarted) switch
                 {
