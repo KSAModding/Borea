@@ -107,7 +107,8 @@ public sealed class ListingHostClientTests
     [Theory]
     [InlineData("kRPC-0.2.0.zip")]
     [InlineData("krpc_0.2.0.zip")]
-    public async Task ReadAsync_TagPrefix_NamesTheArchiveAfterTheTagWithoutThePrefix(string named)
+    [InlineData("krpc-ksa-v0.2.0.zip")]
+    public async Task ReadAsync_TagPrefix_SelectsAnExactArchiveName(string named)
     {
         var releases = $$"""
             [ { "tag_name": "ksa-v0.2.0", "draft": false, "published_at": "2026-09-08T00:00:00Z", "assets": [
